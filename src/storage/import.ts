@@ -13,7 +13,9 @@ export const IMPORT_NEWER = 'IMPORT_NEWER'
 const pairIds = PAIRS.map((pair) => pair.id) as [string, ...string[]]
 const knownPairs = new Set<string>(pairIds)
 
-const settingsSchema = z.strictObject({
+const speedChoice = z.union([z.literal('auto'), z.literal(0.7), z.literal(0.85), z.literal(1)])
+
+const settingsFields = {
   pairId: z.enum(pairIds).nullable(),
   uiLang: z.enum(['de', 'source']),
   viRegion: z.enum(['south', 'north']),
@@ -24,8 +26,19 @@ const settingsSchema = z.strictObject({
   viContact: z.enum(['phone', 'zalo']),
   retention: z.number().finite().min(0.8).max(0.97),
   personalNote: z.string().max(500).refine((value) => !/[^\P{C}\n\t]/u.test(value)),
+}
+
+/** Format 1, unchanged: optional `slow` from 0.1.0, optional `speed`. */
+const settingsSchemaV1 = z.strictObject({
+  ...settingsFields,
   slow: z.boolean().optional(),
-  speed: z.union([z.literal('auto'), z.literal(0.7), z.literal(0.85), z.literal(1)]).optional(),
+  speed: speedChoice.optional(),
+})
+
+/** Format 2 requires `speed`. `slow` is not a field, so a present `slow` is rejected. */
+const settingsSchemaV2 = z.strictObject({
+  ...settingsFields,
+  speed: speedChoice,
 })
 
 const stamp = z.iso.datetime().max(40)
@@ -44,13 +57,24 @@ const cardSchema = z.strictObject({
   last_review: stamp.nullable(),
 })
 
-const bundleSchema = z.strictObject({
+const bundleEnvelope = {
   app: z.literal('travel-talk'),
-  format: z.union([z.literal(1), z.literal(2)]),
   exportedAt: z.string().max(40),
-  settings: settingsSchema,
   cards: z.array(cardSchema).max(2000),
-})
+}
+
+const bundleSchema = z.discriminatedUnion('format', [
+  z.strictObject({
+    ...bundleEnvelope,
+    format: z.literal(1),
+    settings: settingsSchemaV1,
+  }),
+  z.strictObject({
+    ...bundleEnvelope,
+    format: z.literal(2),
+    settings: settingsSchemaV2,
+  }),
+])
 
 export type ImportOutcome = {
   snapshot: ProgressSnapshot
@@ -71,11 +95,17 @@ function parseJson(text: string): unknown {
   }) as unknown
 }
 
-/** Reads only `app` and `format`, before the strict schema looks at the rest. */
+/**
+ * Reads only `app` and `format`, before the strict schema looks at the rest.
+ * The update message is only for a safe integer above the current format.
+ * 2.5, 1e308, Infinity (JSON `1e400`) and a string such as `"3"` fall through
+ * to the generic rejection.
+ */
 function isNewerExport(raw: unknown): boolean {
   if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return false
   const header = raw as { app?: unknown; format?: unknown }
-  return header.app === 'travel-talk' && typeof header.format === 'number' && Number.isFinite(header.format) && header.format > EXPORT_FORMAT
+  const format = header.format
+  return header.app === 'travel-talk' && typeof format === 'number' && Number.isSafeInteger(format) && format > EXPORT_FORMAT
 }
 
 function knownCard(cardId: string, conceptIds: ReadonlySet<string>): boolean {
@@ -108,14 +138,19 @@ export function parseImport(text: string, conceptIds: ReadonlySet<string>): Impo
     }
     cards.push(card)
   }
-  const { slow, speed, ...rest } = parsed.data.settings
   return {
     snapshot: {
-      settings: { ...rest, speed: normalizeSpeed(speed, slow) } as Settings,
+      settings: settingsFromBundle(parsed.data),
       cards,
     },
     skipped,
   }
+}
+
+function settingsFromBundle(data: z.infer<typeof bundleSchema>): Settings {
+  if (data.format === 2) return data.settings as Settings
+  const { slow, speed, ...rest } = data.settings
+  return { ...rest, speed: normalizeSpeed(speed, slow) } as Settings
 }
 
 export function previewImport(snapshot: ProgressSnapshot): ImportPreview {

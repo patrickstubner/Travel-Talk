@@ -131,6 +131,34 @@ describe('import', () => {
     }
   })
 
+  it('asks for an update only when format is a safe integer above 2', () => {
+    const header = (format: string) => `{"app":"travel-talk","format":${format}}`
+    expect(JSON.parse('1e400')).toBe(Number.POSITIVE_INFINITY)
+    expect(Number.isSafeInteger(2.5)).toBe(false)
+    expect(Number.isSafeInteger(JSON.parse('1e308'))).toBe(false)
+    for (const format of ['2.5', '1e308', '1e400', '"3"']) {
+      try {
+        parseImport(header(format), concepts)
+        expect.fail('expected a rejection')
+      } catch (error) {
+        expect((error as Error).message).toBe('IMPORT_REJECTED')
+        expect((error as Error).message).not.toBe(IMPORT_NEWER)
+      }
+    }
+  })
+
+  it('rejects format 2 when slow is present or speed is missing', () => {
+    const base = JSON.parse(bundle()) as { format: number; settings: Record<string, unknown> }
+    base.format = 2
+    delete base.settings.speed
+    expect(() => parseImport(JSON.stringify(base), concepts)).toThrow('IMPORT_REJECTED')
+    base.settings.speed = 0.85
+    base.settings.slow = false
+    expect(() => parseImport(JSON.stringify(base), concepts)).toThrow('IMPORT_REJECTED')
+    delete base.settings.slow
+    expect(parseImport(JSON.stringify(base), concepts).snapshot.settings.speed).toBe(0.85)
+  })
+
   it('asks for an update when the format is newer than this app', () => {
     const raw = JSON.parse(bundle()) as { format: number; settings: Record<string, unknown> }
     raw.format = EXPORT_FORMAT + 1
