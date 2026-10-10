@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2 — 2026-10-10
+
+- Der Hinweis auf eine neuere Datei erscheint nur, wenn `format` eine sichere ganze Zahl über 2 ist. 2.5, `1e308`, `1e400` und der Text `"3"` bleiben ein normaler Ablehnungsfehler.
+- Format 1 bleibt wie bisher. Format 2 verlangt `speed` und lehnt `slow` ab.
+- `@types/react` 19.3.0 und `@types/react-dom` 19.3.0.
+
 ## 0.2.1 — 2026-10-10
 
 - Der Export schreibt `format` 2. Der Import nimmt 1 und 2 und liest 1 wie bisher. Eine höhere Nummer sagt, die Datei stamme aus einer neueren Version, und bittet darum, die App zu aktualisieren. Unbekannte Felder bei einem bekannten Format lehnen die Datei weiter ab.
