@@ -1,0 +1,17 @@
+Travel Talk 0.1.0 — Audio-Hinweise
+
+Die Audiodateien in diesem Ordner sind mit Piper erzeugt. Die Modelle selbst sind nicht Teil dieses Repos.
+
+Deutsch: de_DE-thorsten-medium. Datensatz Thorsten-Voice, CC0. Deutsch aus Deutschland, nicht Schweizerdeutsch. Das Modell ist laut Modellkarte von lessac feinjustiert. Die lessac-Gewichte haben eine Forschungslizenz; hier liegt nur das erzeugte Audio.
+
+Portugiesisch (Brasilien): pt_BR-faber-medium. Datensatz über OHF-Voice, CC0. Ebenfalls von lessac feinjustiert. Das Geschlecht der Stimme steht nicht in der Modellkarte.
+
+Englisch: en_US-ljspeech-medium. LJ Speech, gemeinfrei, von Grund auf trainiert. Englisch (USA), eine Sprecherin.
+
+Vietnamesisch: vi_VN-vais1000-medium. Datensatz VAIS-1000, CC BY 4.0. Nördlicher Akzent, eine Sprecherin. Keine südliche Stimme. Namensnennung: VAIS-1000, IEEE DataPort, Lizenz CC BY 4.0.
+
+Piper wird nicht mitgeliefert. Die Engine von OHF-Voice steht unter GPL-3.0. lessac selbst wird nicht als Stimme verwendet.
+
+Qualität und Akzent sind nicht von einer muttersprachlichen Person geprüft. Für Vietnamesisch gilt das besonders: die Dateien sind nördlich, auch wenn der Text südlich ist.
+
+Langsame Dateien (Dateiname .slow.m4a) sind mit ffmpeg atempo=0.8 erzeugt. Die Tonhöhe bleibt dabei erhalten.

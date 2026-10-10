@@ -1,2 +1,65 @@
-# Travel-Talk
-Travel Talk – Reise-Sprach-App (PWA) für die Familie
+# Travel Talk
+
+Reise-Sprachhilfe für eine Familie. Version 0.1.0. Offline, ohne Konto, ohne Tracking.
+
+Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Oberfläche ist auf Deutsch (Schweizer Schreibung) und lässt sich auf die Ausgangssprache des gewählten Paars umstellen.
+
+Die Sätze auf Vietnamesisch und Portugiesisch (Brasilien) sind noch nicht von einer muttersprachlichen Person geprüft. Dasselbe gilt für Deutsch und Englisch. Im UI steht das an den Sätzen.
+
+## Sprachpaare in 0.1.0
+
+Deutsch nach Vietnamesisch. Portugiesisch (Brasilien) in beide Richtungen mit Deutsch, Englisch und Vietnamesisch. Weitere Paare kommen später. Jedes Paar nutzt dieselben 103 Konzepte. Die Zahlen pro Situation stehen unten. Ein Konzept kann in zwei Situationen hängen, zum Beispiel die Allergie im Notfall und im Restaurant. Deshalb ist die Summe der Situationen grösser als 103.
+
+| Situation | Stand | Konzepte |
+| --- | --- | --- |
+| Notfall | ausgearbeitet | 20 |
+| Menschen treffen | ausgearbeitet | 29 |
+| Ankunft und Einreise | kleiner Satz | 11 |
+| Restaurant, Essen, Trinken | kleiner Satz | 14 |
+| Visum vor der Reise | Anfang | 8 |
+| Unterkunft | Anfang | 8 |
+| Alltag | Anfang | 8 |
+| Einkaufen | Anfang | 7 |
+| Sehenswürdigkeiten | Anfang | 6 |
+
+Vietnamesisch ist im Text südlich voreingestellt. Nord ist eine Variante, zum Beispiel `đậu phộng` und `lạc`. Die Audiodatei ist trotzdem eine nördliche Stimme. Details in [docs/audio.md](docs/audio.md).
+
+## Lokal entwickeln
+
+Voraussetzung: Node 22.
+
+```bash
+npm ci
+npm run dev
+```
+
+Die App liegt unter `http://localhost:5173/Travel-Talk/`. Weitere Befehle:
+
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
+
+Der Build schreibt die App nach `dist/` und kopiert `index.html` nach `404.html`, weil GitHub Pages kein SPA-Fallback hat. Die Navigation läuft über den Hash. Die Basis ist `/Travel-Talk/`.
+
+Lernstand, Aufnahmen und die persönliche Notiz bleiben im Browser. Export und Import sind JSON. Der Import prüft die Datei und lehnt Unpassendes ab, ohne den Inhalt anzuzeigen.
+
+## Inhalt ergänzen
+
+Die Daten sind konzept-zentriert. Ein Konzept hat pro Sprache eine Realisierung. Die Seiten lesen diese Realisierung, sie enthalten keine eigenen Sätze.
+
+**Situation.** Ein Eintrag in `content/situations.ts` mit `id`, Reihenfolge, Tiefe (`core`, `sample` oder `starter`) und Titel plus Kurztext in `de`, `en`, `pt-BR` und `vi`. Die Navigation nimmt jede Situation aus dieser Liste.
+
+**Sätze.** Eine Datei unter `content/phrases/` und der Eintrag in `content/index.ts`. `phrase()` setzt `geprueft` auf `false`. Vietnamesisch mit allen Zeichen. Portugiesisch in brasilianischer Verwendung: `você`, nicht das europäische `tu`. Beispielnamen sind erfunden. Wo die Anrede die Grammatik nicht bricht, steht `{addr}` oder `{Addr}`. Deutsch mit wechselndem Verb bekommt volle Varianten (`Sie` und `du`), keine Token. Tests in `src/content/catalog.test.ts` prüfen das Schema.
+
+**Kulturhinweis.** Ein Eintrag in `content/culture.ts` mit Situationen, Regionen (`VN`, `BR`, `DE-CH`, `EN`), Text in vier Sprachen, mindestens einer `https`-Quelle und dem Lesedatum. Im Text «häufig» oder «vielerorts», keine Regel für alle Menschen. Die Quelle erscheint in der Oberfläche.
+
+**Sprache.** Eine weitere Sprache ist eine weitere Realisierung pro Konzept, kein neues Layout. In 0.1.0 ist die Liste der Sprachen in `content/phrase.ts` und im Schema geschlossen, weil nur diese vier vorkommen. Für eine fünfte Sprache kommt der Code dort dazu, plus ein Paar in `src/domain/pairs.ts` und, wenn Audio mitgeliefert wird, eine Stimme in `tools/generate_audio.py` und `docs/audio.md`. Die Seiten bleiben dieselben.
+
+Audio neu bauen steht in [docs/audio.md](docs/audio.md). Die Prüfung der Abhängigkeiten und der Eingaben steht in [docs/SECURITY.md](docs/SECURITY.md).
+
+## Veröffentlichung
+
+GitHub Pages baut über die Action in `.github/workflows/ci.yml`, nur beim Push auf `main`. Lint, Typprüfung, Tests, Build und `npm audit` laufen auch auf Pull Requests. Der Audit bricht ab der Stufe moderate ab.

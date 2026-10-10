@@ -1,0 +1,15 @@
+node_modules/
+dist/
+dev-dist/
+.vite/
+coverage/
+*.local
+.env
+.env.*
+tools/lines.json
+tools/voices/
+test-results/
+playwright-report/
+.DS_Store
+*.wav
+*.onnx
