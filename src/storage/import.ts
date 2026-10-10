@@ -5,6 +5,11 @@ import { defaultSettings, normalizeSpeed, type ProgressSnapshot, type Settings, 
 
 export const IMPORT_LIMIT = 2_000_000
 
+/** Current export. Bump this whenever the exported shape changes. */
+export const EXPORT_FORMAT = 2
+
+export const IMPORT_NEWER = 'IMPORT_NEWER'
+
 const pairIds = PAIRS.map((pair) => pair.id) as [string, ...string[]]
 const knownPairs = new Set<string>(pairIds)
 
@@ -41,7 +46,7 @@ const cardSchema = z.strictObject({
 
 const bundleSchema = z.strictObject({
   app: z.literal('travel-talk'),
-  format: z.literal(1),
+  format: z.union([z.literal(1), z.literal(2)]),
   exportedAt: z.string().max(40),
   settings: settingsSchema,
   cards: z.array(cardSchema).max(2000),
@@ -66,6 +71,13 @@ function parseJson(text: string): unknown {
   }) as unknown
 }
 
+/** Reads only `app` and `format`, before the strict schema looks at the rest. */
+function isNewerExport(raw: unknown): boolean {
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return false
+  const header = raw as { app?: unknown; format?: unknown }
+  return header.app === 'travel-talk' && typeof header.format === 'number' && Number.isFinite(header.format) && header.format > EXPORT_FORMAT
+}
+
 function knownCard(cardId: string, conceptIds: ReadonlySet<string>): boolean {
   const split = cardId.indexOf(':')
   if (split < 1) return false
@@ -82,6 +94,7 @@ export function parseImport(text: string, conceptIds: ReadonlySet<string>): Impo
   } catch {
     throw new Error('IMPORT_REJECTED')
   }
+  if (isNewerExport(raw)) throw new Error(IMPORT_NEWER)
   const parsed = bundleSchema.safeParse(raw)
   if (!parsed.success) throw new Error('IMPORT_REJECTED')
   const ids = parsed.data.cards.map((card) => card.cardId)
@@ -136,7 +149,7 @@ export function toExport(snapshot: ProgressSnapshot, now: Date, includeNote = fa
   return JSON.stringify(
     {
       app: 'travel-talk',
-      format: 1,
+      format: EXPORT_FORMAT,
       exportedAt: now.toISOString(),
       settings,
       cards: snapshot.cards,

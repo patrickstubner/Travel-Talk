@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Rating, emptyCard, reviewCard, toStored } from '../srs/scheduler'
-import { IMPORT_LIMIT, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport } from './import'
+import { EXPORT_FORMAT, IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport } from './import'
 import { coerceSettings, defaultSettings } from './types'
 
 const settings = { ...defaultSettings, pairId: 'de-vi' as const, personalNote: 'Erdnüsse' }
@@ -32,6 +32,7 @@ describe('import', () => {
     const now = new Date('2026-10-10T12:00:00.000Z')
     const text = toExport({ settings, cards: [] }, now)
     expect(text).not.toContain('Erdnüsse')
+    expect(JSON.parse(text).format).toBe(EXPORT_FORMAT)
     expect(text).toContain('"speed"')
     expect(text).not.toContain('"slow"')
     expect(parseImport(text, concepts).snapshot.settings.personalNote).toBe('')
@@ -116,15 +117,32 @@ describe('import', () => {
   })
 
   it('rejects a settings object that carries an unknown field', () => {
-    const raw = JSON.parse(bundle()) as { settings: Record<string, unknown> }
-    raw.settings.extra = 'nope'
-    expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow('IMPORT_REJECTED')
+    for (const format of [1, 2]) {
+      const raw = JSON.parse(bundle()) as { format: number; settings: Record<string, unknown> }
+      raw.format = format
+      raw.settings.extra = 'nope'
+      expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow('IMPORT_REJECTED')
+      try {
+        parseImport(JSON.stringify(raw), concepts)
+      } catch (error) {
+        expect((error as Error).message).toBe('IMPORT_REJECTED')
+        expect((error as Error).message).not.toContain('extra')
+      }
+    }
+  })
+
+  it('asks for an update when the format is newer than this app', () => {
+    const raw = JSON.parse(bundle()) as { format: number; settings: Record<string, unknown> }
+    raw.format = EXPORT_FORMAT + 1
+    raw.settings.future = true
+    expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow(IMPORT_NEWER)
     try {
       parseImport(JSON.stringify(raw), concepts)
     } catch (error) {
-      expect((error as Error).message).toBe('IMPORT_REJECTED')
-      expect((error as Error).message).not.toContain('extra')
+      expect((error as Error).message).toBe(IMPORT_NEWER)
+      expect((error as Error).message).not.toContain('future')
     }
+    expect(() => parseImport(JSON.stringify({ app: 'other', format: 9 }), concepts)).toThrow('IMPORT_REJECTED')
   })
 
   it('starts from an empty snapshot', () => {

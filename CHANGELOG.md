@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 — 2026-10-10
+
+- Der Export schreibt `format` 2. Der Import nimmt 1 und 2 und liest 1 wie bisher. Eine höhere Nummer sagt, die Datei stamme aus einer neueren Version, und bittet darum, die App zu aktualisieren. Unbekannte Felder bei einem bekannten Format lehnen die Datei weiter ab.
+
 ## 0.2.0 — 2026-10-10
 
 Tempo fürs Hören, in drei festen Stufen.

@@ -124,6 +124,21 @@ describe('settings import', () => {
     expect((screen.getByLabelText('Persönliche Notiz') as HTMLTextAreaElement).value).toBe('Pollen')
   })
 
+  it('asks to reload when the file comes from a newer app', async () => {
+    const file = new File([JSON.stringify({ app: 'travel-talk', format: 3, surprise: true })], 'new.json', { type: 'application/json' })
+    render(
+      <AppProvider>
+        <SettingsPage />
+      </AppProvider>,
+    )
+    fireEvent.change(await screen.findByLabelText('Fortschritt importieren'), { target: { files: [file] } })
+    expect(await screen.findByRole('alert')).toHaveProperty(
+      'textContent',
+      'Datei aus neuerer Version – bitte App aktualisieren (Seite neu laden)',
+    )
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('keeps import disabled until a catalog is loaded', () => {
     render(
       <AppContext.Provider
