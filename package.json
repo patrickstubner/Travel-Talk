@@ -1,0 +1,45 @@
+{
+  "name": "travel-talk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "rsbuild dev",
+    "build": "rsbuild build",
+    "preview": "rsbuild preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "export-speech": "tsx tools/export-speech.ts"
+  },
+  "dependencies": {
+    "dexie": "4.4.6",
+    "pitchy": "4.1.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "7.18.4",
+    "ts-fsrs": "5.4.2",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "@rsbuild/core": "2.2.12",
+    "@rsbuild/plugin-react": "2.1.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "22.19.11",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "10.12.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "fake-indexeddb": "6.2.5",
+    "happy-dom": "20.14.6",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.1",
+    "vitest": "5.0.3",
+    "workbox-build": "7.4.1"
+  }
+}
