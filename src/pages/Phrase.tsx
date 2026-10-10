@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { addressForms, hasAddressToken } from '../../content/address'
 import type { Lang } from '../../content/phrase'
 import { pickRealization, resolvePlayback } from '../content/resolve'
 import { pairById } from '../domain/pairs'
 import { decodeContourFile, playClip } from '../audio/player'
-import { startMicrophone } from '../audio/recorder'
+import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
@@ -40,8 +40,10 @@ export function PhrasePage() {
   const ui = interfaceLang(settings)
   const [heard, setHeard] = useState<'file' | 'synth' | null>(null)
   const [recording, setRecording] = useState(false)
-  const [recorder, setRecorder] = useState<MediaRecorder | null>(null)
   const [mineUrl, setMineUrl] = useState<string | null>(null)
+  const sessionRef = useRef<CaptureSession | null>(null)
+  const urlRef = useRef<string | null>(null)
+  const aliveRef = useRef(true)
   const [micError, setMicError] = useState(false)
   const [userContour, setUserContour] = useState<Contour>([])
   const [modelContour, setModelContour] = useState<Contour>([])
@@ -50,6 +52,18 @@ export function PhrasePage() {
   const target = concept && pair ? resolvePlayback(concept, pair.target, settings.viRegion, prefsFromSettings(pair.target, settings)) : undefined
   const source = concept && pair ? resolvePlayback(concept, pair.source, settings.viRegion, prefsFromSettings(pair.source, settings)) : undefined
   const targetFile = target?.file ?? ''
+
+  useEffect(() => {
+    aliveRef.current = true
+    return () => {
+      aliveRef.current = false
+      sessionRef.current?.release(urlRef.current)
+      sessionRef.current = null
+      urlRef.current = null
+      setMineUrl(null)
+      setRecording(false)
+    }
+  }, [conceptId])
 
   useEffect(() => {
     let active = true
@@ -86,23 +100,31 @@ export function PhrasePage() {
     setHeard(result)
   }
 
+  function rememberUrl(url: string | null): void {
+    if (urlRef.current && urlRef.current !== url) URL.revokeObjectURL(urlRef.current)
+    urlRef.current = url
+    setMineUrl(url)
+  }
+
   async function onRecord(): Promise<void> {
     setMicError(false)
     try {
       const next = await startMicrophone((taken) => {
-        setMineUrl((previous) => {
-          if (previous) URL.revokeObjectURL(previous)
-          return taken.url
-        })
+        if (!aliveRef.current) {
+          if (taken.url) URL.revokeObjectURL(taken.url)
+          return
+        }
+        rememberUrl(taken.url)
         setUserContour(taken.samples && taken.sampleRate ? contourFromSamples(taken.samples, taken.sampleRate) : [])
         setRecording(false)
-        setRecorder(null)
       })
-      if (!next) {
-        setMicError(true)
+      if (!next || !aliveRef.current) {
+        next?.release(null)
+        if (!next) setMicError(true)
         return
       }
-      setRecorder(next)
+      sessionRef.current?.release(null)
+      sessionRef.current = next
       setRecording(true)
     } catch {
       setMicError(true)
@@ -193,7 +215,7 @@ export function PhrasePage() {
         {micError ? <p role="alert">{copy.micDenied}</p> : null}
         <div className="row">
           {recording ? (
-            <button type="button" onClick={() => recorder?.stop()}>
+            <button type="button" onClick={() => sessionRef.current?.recorder.stop()}>
               {copy.stop}
             </button>
           ) : (

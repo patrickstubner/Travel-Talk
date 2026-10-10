@@ -23,7 +23,7 @@ Die Modelle liegen nicht im Repo. Erzeugt wurde nur das Audio, am 10. Oktober 20
 
 Namensnennung für VAIS-1000 steht in `public/audio/NOTICE.txt` und hier. Quelle der Lizenz: Modellkarte bei Hugging Face (`rhasspy/piper-voices`, Tag `v1.0.0`) und die Beschreibung von VAIS-1000 (IEEE DataPort, nördlicher Akzent).
 
-lessac (Blizzard 2013) ist eine Forschungslizenz und wird nicht als Stimme verwendet. Drei der vier Modelle sind davon feinjustiert. Im Repo liegt nur das erzeugte Audio, nicht die Gewichte. Das ist ein offener rechtlicher Vorbehalt, kein Freibrief.
+lessac (Blizzard 2013, Lessac Technologies) ist laut der Upstream-Lizenz nur für Research Purposes da: https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html. Kommerzielle Sprachsynthese ist dort ausgeschlossen. Deutsch, Portugiesisch und Vietnamesisch sind davon feinjustiert. Englisch ist von Grund auf trainiert. lessac selbst wird nicht als Stimme verwendet. Im Repo liegt nur das erzeugte Audio, nicht die Gewichte. Das ist ein offener rechtlicher Vorbehalt, kein Freibrief.
 
 Nicht verwendet:
 

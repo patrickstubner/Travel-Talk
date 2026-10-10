@@ -86,6 +86,21 @@ export type Dictionary = {
   importLabel: string
   importOk: string
   importBad: string
+  importSkipped: (count: number) => string
+  importSummary: (cards: number, from: string | null, to: string | null, hasNote: boolean) => string
+  importBackup: string
+  exportNote: string
+  exportNoteHint: string
+  confirmImport: string
+  confirmReset: string
+  cancel: string
+  resetAsk: string
+  backupDownload: string
+  voicesTitle: string
+  voicesVi: string
+  voicesCc: string
+  voicesSlow: string
+  voicesNotice: string
   reset: string
   resetOk: string
   persist: string
@@ -186,12 +201,35 @@ export const de: Dictionary = {
   viRegion: 'Vietnamesisch',
   retention: 'Behaltensrate',
   personalNote: 'Persönliche Notiz',
-  personalNoteHelp: 'Nur auf diesem Gerät. Der Export enthält die Notiz. Nützlich für eine Allergie im Zeigen-Modus.',
+  personalNoteHelp: 'Nur auf diesem Gerät. Der Export enthält die Notiz nur mit dem Haken. Nützlich für eine Allergie im Zeigen-Modus.',
   slowToggle: 'Langsame Audiodatei, wenn vorhanden',
   exportLabel: 'Fortschritt exportieren',
   importLabel: 'Fortschritt importieren',
   importOk: 'Import gespeichert.',
   importBad: 'Die Datei ist kein gültiger Travel-Talk-Export.',
+  importSkipped: (count) =>
+    count === 1
+      ? '1 Karte gehört nicht zu dieser Version und wurde nicht übernommen.'
+      : `${count} Karten gehören nicht zu dieser Version und wurden nicht übernommen.`,
+  importSummary: (cards, from, to, hasNote) => {
+    const count = cards === 1 ? '1 Karte.' : `${cards} Karten.`
+    const range = from && to ? ` Zeitraum ${from} bis ${to}.` : ''
+    const note = hasNote ? ' Eine Notiz ist enthalten.' : ' Keine Notiz.'
+    return `${count}${range}${note}`
+  },
+  importBackup: 'Die Sicherung des jetzigen Lernstands enthält die Notiz, wenn eine gespeichert ist.',
+  exportNote: 'Notiz mitexportieren',
+  exportNoteHint: 'Die Notiz kann Gesundheitsangaben enthalten, zum Beispiel eine Allergie. Ohne Haken bleibt sie nur auf diesem Gerät.',
+  confirmImport: 'Importieren',
+  confirmReset: 'Wirklich löschen',
+  cancel: 'Abbrechen',
+  resetAsk: 'Der Lernstand auf diesem Gerät wird gelöscht. Das lässt sich hier nicht zurückholen.',
+  backupDownload: 'Sicherung herunterladen',
+  voicesTitle: 'Stimmen und Lizenzen',
+  voicesVi: 'Vietnamesisch spricht vais1000 aus dem Datensatz VAIS-1000, eine nördliche Sprecherin.',
+  voicesCc: 'CC BY 4.0',
+  voicesSlow: 'Die langsamen Dateien sind verändert (ffmpeg atempo 0.8). Die Tonhöhe bleibt erhalten.',
+  voicesNotice: 'NOTICE.txt',
   reset: 'Lernstand auf diesem Gerät löschen',
   resetOk: 'Der lokale Lernstand ist gelöscht.',
   persist: 'Speicher behalten anfragen',
@@ -293,12 +331,33 @@ export const en: Dictionary = {
   viRegion: 'Vietnamese',
   retention: 'Retention',
   personalNote: 'Personal note',
-  personalNoteHelp: 'Only on this device. The export includes the note. Useful for an allergy in show mode.',
+  personalNoteHelp: 'Only on this device. The export includes the note only when the box is checked. Useful for an allergy in show mode.',
   slowToggle: 'Slow audio file when one exists',
   exportLabel: 'Export progress',
   importLabel: 'Import progress',
   importOk: 'Import saved.',
   importBad: 'This file is not a valid Travel Talk export.',
+  importSkipped: (count) =>
+    count === 1 ? '1 card is not part of this version and was left out.' : `${count} cards are not part of this version and were left out.`,
+  importSummary: (cards, from, to, hasNote) => {
+    const count = cards === 1 ? '1 card.' : `${cards} cards.`
+    const range = from && to ? ` Range ${from} to ${to}.` : ''
+    const note = hasNote ? ' A note is included.' : ' No note.'
+    return `${count}${range}${note}`
+  },
+  importBackup: 'The backup of the current progress includes the note when one is stored.',
+  exportNote: 'Include the note in the export',
+  exportNoteHint: 'The note may contain health information, for example an allergy. Without the box it stays on this device.',
+  confirmImport: 'Import',
+  confirmReset: 'Delete for sure',
+  cancel: 'Cancel',
+  resetAsk: 'Progress on this device will be deleted. This screen cannot bring it back.',
+  backupDownload: 'Download a backup',
+  voicesTitle: 'Voices and licences',
+  voicesVi: 'Vietnamese uses vais1000 from the VAIS-1000 dataset, a northern speaker.',
+  voicesCc: 'CC BY 4.0',
+  voicesSlow: 'The slow files are modified (ffmpeg atempo 0.8). The pitch stays the same.',
+  voicesNotice: 'NOTICE.txt',
   reset: 'Delete progress on this device',
   resetOk: 'Local progress was deleted.',
   persist: 'Ask to keep storage',
@@ -398,12 +457,35 @@ export const pt: Dictionary = {
   viRegion: 'Vietnamita',
   retention: 'Retenção',
   personalNote: 'Nota pessoal',
-  personalNoteHelp: 'Só neste aparelho. A exportação inclui a nota. Útil para uma alergia no modo mostrar.',
+  personalNoteHelp: 'Só neste aparelho. A exportação inclui a nota só com a caixa marcada. Útil para uma alergia no modo mostrar.',
   slowToggle: 'Arquivo de áudio lento, quando existir',
   exportLabel: 'Exportar progresso',
   importLabel: 'Importar progresso',
   importOk: 'Importação salva.',
   importBad: 'O arquivo não é uma exportação válida do Travel Talk.',
+  importSkipped: (count) =>
+    count === 1
+      ? '1 cartão não faz parte desta versão e ficou de fora.'
+      : `${count} cartões não fazem parte desta versão e ficaram de fora.`,
+  importSummary: (cards, from, to, hasNote) => {
+    const count = cards === 1 ? '1 cartão.' : `${cards} cartões.`
+    const range = from && to ? ` Período ${from} até ${to}.` : ''
+    const note = hasNote ? ' Uma nota está incluída.' : ' Nenhuma nota.'
+    return `${count}${range}${note}`
+  },
+  importBackup: 'A cópia do progresso atual inclui a nota, se houver uma salva.',
+  exportNote: 'Incluir a nota na exportação',
+  exportNoteHint: 'A nota pode ter dados de saúde, por exemplo uma alergia. Sem a caixa ela fica só neste aparelho.',
+  confirmImport: 'Importar',
+  confirmReset: 'Apagar de verdade',
+  cancel: 'Cancelar',
+  resetAsk: 'O progresso neste aparelho será apagado. Esta tela não o traz de volta.',
+  backupDownload: 'Baixar uma cópia',
+  voicesTitle: 'Vozes e licenças',
+  voicesVi: 'O vietnamita usa vais1000 do conjunto VAIS-1000, uma falante do norte.',
+  voicesCc: 'CC BY 4.0',
+  voicesSlow: 'Os arquivos lentos são alterados (ffmpeg atempo 0.8). O tom fica igual.',
+  voicesNotice: 'NOTICE.txt',
   reset: 'Apagar o progresso neste aparelho',
   resetOk: 'O progresso local foi apagado.',
   persist: 'Pedir para manter o armazenamento',
@@ -503,12 +585,33 @@ export const vi: Dictionary = {
   viRegion: 'Tiếng Việt',
   retention: 'Mức nhớ',
   personalNote: 'Ghi chú cá nhân',
-  personalNoteHelp: 'Chỉ trên máy này. Bản xuất có ghi chú. Hữu ích cho dị ứng ở chế độ đưa màn hình.',
+  personalNoteHelp: 'Chỉ trên máy này. Bản xuất chỉ có ghi chú khi đánh dấu. Hữu ích cho dị ứng ở chế độ đưa màn hình.',
   slowToggle: 'Tệp âm thanh chậm, nếu có',
   exportLabel: 'Xuất tiến độ',
   importLabel: 'Nhập tiến độ',
   importOk: 'Đã lưu bản nhập.',
   importBad: 'Tệp này không phải bản xuất hợp lệ của Travel Talk.',
+  importSkipped: (count) =>
+    count === 1 ? '1 thẻ không thuộc phiên bản này và không được lấy.' : `${count} thẻ không thuộc phiên bản này và không được lấy.`,
+  importSummary: (cards, from, to, hasNote) => {
+    const count = cards === 1 ? '1 thẻ.' : `${cards} thẻ.`
+    const range = from && to ? ` Khoảng ${from} đến ${to}.` : ''
+    const note = hasNote ? ' Có ghi chú.' : ' Không có ghi chú.'
+    return `${count}${range}${note}`
+  },
+  importBackup: 'Bản sao tiến độ hiện tại có ghi chú nếu máy đang lưu một ghi chú.',
+  exportNote: 'Xuất kèm ghi chú',
+  exportNoteHint: 'Ghi chú có thể chứa thông tin sức khoẻ, ví dụ dị ứng. Không đánh dấu thì ghi chú chỉ ở trên máy này.',
+  confirmImport: 'Nhập',
+  confirmReset: 'Xóa hẳn',
+  cancel: 'Huỷ',
+  resetAsk: 'Tiến độ trên máy này sẽ bị xoá. Màn hình này không lấy lại được.',
+  backupDownload: 'Tải bản sao',
+  voicesTitle: 'Giọng và giấy phép',
+  voicesVi: 'Tiếng Việt dùng vais1000 từ bộ VAIS-1000, một giọng nữ miền Bắc.',
+  voicesCc: 'CC BY 4.0',
+  voicesSlow: 'Tệp chậm đã được sửa (ffmpeg atempo 0.8). Độ cao giọng giữ nguyên.',
+  voicesNotice: 'NOTICE.txt',
   reset: 'Xóa tiến độ trên máy này',
   resetOk: 'Tiến độ trên máy đã được xoá.',
   persist: 'Xin trình duyệt giữ bộ nhớ',

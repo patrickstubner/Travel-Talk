@@ -1,23 +1,35 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { DE_ADDRESS, PT_ADDRESS, PT_SPEAKER, VI_ADDRESS } from '../../content/address'
 import { pairById, pairUses } from '../domain/pairs'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
-import { IMPORT_LIMIT, emptySnapshot, parseImport, toExport } from '../storage/import'
-import type { Settings } from '../storage/types'
+import { publicUrl } from '../public-url'
+import { IMPORT_LIMIT, emptySnapshot, parseImport, previewImport, toExport, type ImportPreview } from '../storage/import'
+import type { ProgressSnapshot, Settings } from '../storage/types'
 
 function cleanNote(value: string): string {
   return value.replace(/[^\P{C}\n\t]/gu, '').slice(0, 500)
 }
 
+type PendingImport = {
+  snapshot: ProgressSnapshot
+  skipped: number
+  preview: ImportPreview
+}
+
 export function SettingsPage() {
-  const { snapshot, saveSettings, replaceAll } = useApp()
+  const { catalog, snapshot, saveSettings, replaceAll } = useApp()
   const settings = useSettings()
   const copy = useCopy()
   const ui = interfaceLang(settings)
   const pair = pairById(settings.pairId)
+  const conceptIds = useMemo(() => new Set(catalog?.concepts.map((concept) => concept.id) ?? []), [catalog])
   const [importState, setImportState] = useState<'ok' | 'bad' | 'reset' | null>(null)
+  const [skipped, setSkipped] = useState(0)
+  const [pending, setPending] = useState<PendingImport | null>(null)
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [includeNote, setIncludeNote] = useState(false)
   const [persistState, setPersistState] = useState<'ok' | 'no' | null>(null)
   if (!snapshot) return null
   const current = snapshot
@@ -26,27 +38,29 @@ export function SettingsPage() {
     void saveSettings({ ...settings, ...patch })
   }
 
-  function exportFile(): void {
-    const blob = new Blob([toExport(current, new Date())], { type: 'application/json' })
+  function downloadSnapshot(include: boolean, name: string): void {
+    const blob = new Blob([toExport(current, new Date(), include)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = 'travel-talk.json'
+    link.download = name
     link.click()
     URL.revokeObjectURL(url)
   }
 
   async function onImport(file: File | undefined): Promise<void> {
     setImportState(null)
+    setPending(null)
+    setSkipped(0)
     if (!file || file.size > IMPORT_LIMIT) {
       setImportState('bad')
       return
     }
     try {
       const text = await file.text()
-      const next = parseImport(text)
-      await replaceAll(next)
-      setImportState('ok')
+      const outcome = parseImport(text, conceptIds)
+      downloadSnapshot(true, 'travel-talk-sicherung.json')
+      setPending({ snapshot: outcome.snapshot, skipped: outcome.skipped, preview: previewImport(outcome.snapshot) })
     } catch {
       setImportState('bad')
     }
@@ -165,8 +179,13 @@ export function SettingsPage() {
         <textarea value={settings.personalNote} maxLength={500} onChange={(event) => update({ personalNote: cleanNote(event.target.value) })} />
       </label>
       <p className="hint">{copy.personalNoteHelp}</p>
+      <label className="choice">
+        <input type="checkbox" checked={includeNote} onChange={(event) => setIncludeNote(event.target.checked)} />
+        {copy.exportNote}
+      </label>
+      <p className="hint">{copy.exportNoteHint}</p>
       <div className="row">
-        <button type="button" onClick={exportFile}>
+        <button type="button" onClick={() => downloadSnapshot(includeNote, 'travel-talk.json')}>
           {copy.exportLabel}
         </button>
         <label className="button">
@@ -183,22 +202,87 @@ export function SettingsPage() {
           />
         </label>
       </div>
+      {pending ? (
+        <div className="card dialog" role="dialog" aria-modal="true" aria-labelledby="import-title">
+          <h2 id="import-title">{copy.confirmImport}</h2>
+          <p>{copy.importSummary(pending.preview.cards, pending.preview.earliest, pending.preview.latest, pending.preview.hasNote)}</p>
+          <p className="hint">{copy.importBackup}</p>
+          {pending.skipped > 0 ? <p>{copy.importSkipped(pending.skipped)}</p> : null}
+          <div className="row">
+            <button type="button" onClick={() => downloadSnapshot(true, 'travel-talk-sicherung.json')}>
+              {copy.backupDownload}
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                const next = pending.snapshot
+                const leftOut = pending.skipped
+                setPending(null)
+                void replaceAll(next).then(() => {
+                  setSkipped(leftOut)
+                  setImportState('ok')
+                })
+              }}
+            >
+              {copy.confirmImport}
+            </button>
+            <button type="button" onClick={() => setPending(null)}>
+              {copy.cancel}
+            </button>
+          </div>
+        </div>
+      ) : null}
       {importState === 'ok' ? <p role="status">{copy.importOk}</p> : null}
+      {skipped > 0 && importState === 'ok' ? <p role="status">{copy.importSkipped(skipped)}</p> : null}
       {importState === 'bad' ? <p role="alert">{copy.importBad}</p> : null}
-      <button
-        type="button"
-        onClick={() => {
-          void replaceAll(emptySnapshot()).then(() => setImportState('reset'))
-        }}
-      >
+      <button type="button" onClick={() => setConfirmReset(true)}>
         {copy.reset}
       </button>
+      {confirmReset ? (
+        <div className="card dialog" role="dialog" aria-modal="true" aria-labelledby="reset-title">
+          <h2 id="reset-title">{copy.confirmReset}</h2>
+          <p>{copy.resetAsk}</p>
+          <p className="hint">{copy.importBackup}</p>
+          <div className="row">
+            <button type="button" onClick={() => downloadSnapshot(true, 'travel-talk-sicherung.json')}>
+              {copy.backupDownload}
+            </button>
+            <button
+              type="button"
+              className="button clay"
+              onClick={() => {
+                setConfirmReset(false)
+                void replaceAll(emptySnapshot()).then(() => setImportState('reset'))
+              }}
+            >
+              {copy.confirmReset}
+            </button>
+            <button type="button" onClick={() => setConfirmReset(false)}>
+              {copy.cancel}
+            </button>
+          </div>
+        </div>
+      ) : null}
       {importState === 'reset' ? <p role="status">{copy.resetOk}</p> : null}
       <button type="button" onClick={() => void persist()}>
         {copy.persist}
       </button>
       {persistState === 'ok' ? <p>{copy.persistOk}</p> : null}
       {persistState === 'no' ? <p>{copy.persistNo}</p> : null}
+      <section className="card stack" aria-labelledby="voices-title">
+        <h2 id="voices-title">{copy.voicesTitle}</h2>
+        <p>{copy.voicesVi}</p>
+        <p>
+          <a href="https://creativecommons.org/licenses/by/4.0/" rel="noreferrer noopener">
+            {copy.voicesCc}
+          </a>
+        </p>
+        <p>{copy.voicesSlow}</p>
+        <p>
+          <a href={publicUrl('audio/NOTICE.txt')}>{copy.voicesNotice}</a>
+        </p>
+      </section>
       <p className="hint">{copy.privacy}</p>
       {pair ? null : <p>{copy.needPair}</p>}
     </section>

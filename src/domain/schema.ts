@@ -1,3 +1,4 @@
+import '../zod-setup'
 import { z } from 'zod'
 
 const lang = z.enum(['de', 'en', 'pt-BR', 'vi'])

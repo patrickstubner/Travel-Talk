@@ -11,3 +11,5 @@ Erste Fassung für eine Familie, offline, ohne Konto.
 - Kulturhinweise mit Quellen, noch nicht muttersprachlich geprüft.
 - Lernstand lokal, Export und Import als geprüftes JSON.
 - Audio: Piper-Dateien im Repo, Browserstimme nur als Ausweg. Vietnamesisch ist eine nördliche Stimme.
+- Vor dem Merge: Mikrofon stoppt beim Verlassen der Satzseite. Import und Löschen fragen nach. Unbekannte Karten werden ausgelassen. Die Notiz kommt nur mit Haken in den Export. Einstellungen nennen Stimmen und Lizenzen.
+- Build mit Rsbuild statt Vite. Offline-Cache über Workbox (`workbox-build`), Scope `/Travel-Talk/`. Tests bleiben bei Vitest.

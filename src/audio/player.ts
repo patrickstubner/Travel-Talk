@@ -1,6 +1,7 @@
 import type { Lang } from '../../content/phrase'
 import { AUDIO_FILE } from '../content/resolve'
 import { mixToMono } from '../pitch/contour'
+import { publicUrl } from '../public-url'
 
 const SPEECH_LANG: Record<Lang, string> = {
   de: 'de-DE',
@@ -16,7 +17,7 @@ let current: HTMLAudioElement | null = null
 export function loadManifest(): Promise<Set<string>> {
   if (known) return Promise.resolve(known)
   if (!loading) {
-    loading = fetch(`${import.meta.env.BASE_URL}audio/manifest.json`)
+    loading = fetch(publicUrl('audio/manifest.json'))
       .then((response) => (response.ok ? response.json() : []))
       .then((data: unknown) => {
         const files = new Set<string>()
@@ -49,7 +50,7 @@ export async function playClip(file: string, speech: string, lang: Lang): Promis
   const files = await loadManifest()
   if (AUDIO_FILE.test(file) && files.has(file)) {
     current?.pause()
-    const audio = new Audio(`${import.meta.env.BASE_URL}audio/${file}`)
+    const audio = new Audio(publicUrl(`audio/${file}`))
     current = audio
     await audio.play()
     return 'file'
@@ -61,7 +62,7 @@ export async function playClip(file: string, speech: string, lang: Lang): Promis
 export async function decodeContourFile(file: string): Promise<{ samples: Float32Array; sampleRate: number } | null> {
   const files = await loadManifest()
   if (!AUDIO_FILE.test(file) || !files.has(file)) return null
-  const response = await fetch(`${import.meta.env.BASE_URL}audio/${file}`)
+  const response = await fetch(publicUrl(`audio/${file}`))
   if (!response.ok) return null
   const context = new AudioContext()
   try {

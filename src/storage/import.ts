@@ -1,10 +1,12 @@
+import '../zod-setup'
 import { z } from 'zod'
 import { PAIRS } from '../domain/pairs'
-import { defaultSettings, type ProgressSnapshot, type Settings } from './types'
+import { defaultSettings, type ProgressSnapshot, type Settings, type StoredCard } from './types'
 
 export const IMPORT_LIMIT = 2_000_000
 
 const pairIds = PAIRS.map((pair) => pair.id) as [string, ...string[]]
+const knownPairs = new Set<string>(pairIds)
 
 const settingsSchema = z.strictObject({
   pairId: z.enum(pairIds).nullable(),
@@ -20,9 +22,11 @@ const settingsSchema = z.strictObject({
   slow: z.boolean(),
 })
 
+const stamp = z.iso.datetime().max(40)
+
 const cardSchema = z.strictObject({
-  cardId: z.string().regex(/^[a-z0-9-]+:[a-z0-9.-]+$/),
-  due: z.string().refine((value) => !Number.isNaN(Date.parse(value))),
+  cardId: z.string().max(80).regex(/^[a-z0-9-]+:[a-z0-9.-]+$/),
+  due: stamp,
   stability: z.number().finite().min(0).max(100000),
   difficulty: z.number().finite().min(0).max(10),
   elapsed_days: z.number().finite().min(0).max(100000),
@@ -31,7 +35,7 @@ const cardSchema = z.strictObject({
   reps: z.number().int().min(0).max(100000),
   lapses: z.number().int().min(0).max(100000),
   state: z.number().int().min(0).max(3),
-  last_review: z.string().nullable().refine((value) => value == null || !Number.isNaN(Date.parse(value))),
+  last_review: stamp.nullable(),
 })
 
 const bundleSchema = z.strictObject({
@@ -42,6 +46,18 @@ const bundleSchema = z.strictObject({
   cards: z.array(cardSchema).max(2000),
 })
 
+export type ImportOutcome = {
+  snapshot: ProgressSnapshot
+  skipped: number
+}
+
+export type ImportPreview = {
+  cards: number
+  earliest: string | null
+  latest: string | null
+  hasNote: boolean
+}
+
 function parseJson(text: string): unknown {
   return JSON.parse(text, (key, value) => {
     if (key === '__proto__' || key === 'constructor' || key === 'prototype') return undefined
@@ -49,7 +65,15 @@ function parseJson(text: string): unknown {
   }) as unknown
 }
 
-export function parseImport(text: string): ProgressSnapshot {
+function knownCard(cardId: string, conceptIds: ReadonlySet<string>): boolean {
+  const split = cardId.indexOf(':')
+  if (split < 1) return false
+  const pairId = cardId.slice(0, split)
+  const conceptId = cardId.slice(split + 1)
+  return knownPairs.has(pairId) && conceptIds.has(conceptId)
+}
+
+export function parseImport(text: string, conceptIds: ReadonlySet<string>): ImportOutcome {
   if (text.length > IMPORT_LIMIT) throw new Error('IMPORT_REJECTED')
   let raw: unknown
   try {
@@ -61,19 +85,49 @@ export function parseImport(text: string): ProgressSnapshot {
   if (!parsed.success) throw new Error('IMPORT_REJECTED')
   const ids = parsed.data.cards.map((card) => card.cardId)
   if (new Set(ids).size !== ids.length) throw new Error('IMPORT_REJECTED')
+  const cards: StoredCard[] = []
+  let skipped = 0
+  for (const card of parsed.data.cards) {
+    if (!knownCard(card.cardId, conceptIds)) {
+      skipped += 1
+      continue
+    }
+    cards.push(card)
+  }
   return {
-    settings: parsed.data.settings as Settings,
-    cards: parsed.data.cards,
+    snapshot: {
+      settings: parsed.data.settings as Settings,
+      cards,
+    },
+    skipped,
   }
 }
 
-export function toExport(snapshot: ProgressSnapshot, now: Date): string {
+export function previewImport(snapshot: ProgressSnapshot): ImportPreview {
+  const times: number[] = []
+  for (const card of snapshot.cards) {
+    times.push(Date.parse(card.due))
+    if (card.last_review) times.push(Date.parse(card.last_review))
+  }
+  const finite = times.filter((value) => !Number.isNaN(value)).sort((a, b) => a - b)
+  const earliest = finite[0]
+  const latest = finite[finite.length - 1]
+  return {
+    cards: snapshot.cards.length,
+    earliest: earliest == null ? null : new Date(earliest).toISOString().slice(0, 10),
+    latest: latest == null ? null : new Date(latest).toISOString().slice(0, 10),
+    hasNote: snapshot.settings.personalNote.trim().length > 0,
+  }
+}
+
+export function toExport(snapshot: ProgressSnapshot, now: Date, includeNote = false): string {
+  const settings = includeNote ? snapshot.settings : { ...snapshot.settings, personalNote: '' }
   return JSON.stringify(
     {
       app: 'travel-talk',
       format: 1,
       exportedAt: now.toISOString(),
-      settings: snapshot.settings,
+      settings,
       cards: snapshot.cards,
     },
     null,

@@ -2,9 +2,9 @@ Travel Talk 0.1.0 — Audio-Hinweise
 
 Die Audiodateien in diesem Ordner sind mit Piper erzeugt. Die Modelle selbst sind nicht Teil dieses Repos.
 
-Deutsch: de_DE-thorsten-medium. Datensatz Thorsten-Voice, CC0. Deutsch aus Deutschland, nicht Schweizerdeutsch. Das Modell ist laut Modellkarte von lessac feinjustiert. Die lessac-Gewichte haben eine Forschungslizenz; hier liegt nur das erzeugte Audio.
+Deutsch: de_DE-thorsten-medium. Datensatz Thorsten-Voice, CC0. Deutsch aus Deutschland, nicht Schweizerdeutsch. Das Modell ist laut Modellkarte von lessac feinjustiert. lessac (Blizzard 2013, Lessac Technologies) steht laut der Upstream-Lizenz nur für Research Purposes zur Verfügung: https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html. Kommerzielle Sprachsynthese ist dort ausgeschlossen. Die lessac-Gewichte liegen nicht in diesem Repo, nur das erzeugte Audio.
 
-Portugiesisch (Brasilien): pt_BR-faber-medium. Datensatz über OHF-Voice, CC0. Ebenfalls von lessac feinjustiert. Das Geschlecht der Stimme steht nicht in der Modellkarte.
+Portugiesisch (Brasilien): pt_BR-faber-medium. Datensatz über OHF-Voice, CC0. Ebenfalls von lessac feinjustiert, mit derselben Upstream-Lizenz wie oben. Das Geschlecht der Stimme steht nicht in der Modellkarte.
 
 Englisch: en_US-ljspeech-medium. LJ Speech, gemeinfrei, von Grund auf trainiert. Englisch (USA), eine Sprecherin.
 

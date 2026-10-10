@@ -14,7 +14,7 @@
     "noEmit": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
-    "types": ["vite/client"]
+    "types": ["node"]
   },
-  "include": ["src", "content", "tools", "vite.config.ts"]
+  "include": ["src", "content", "tools", "rsbuild.config.ts", "vitest.config.ts"]
 }

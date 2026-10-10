@@ -33,7 +33,7 @@ npm ci
 npm run dev
 ```
 
-Die App liegt unter `http://localhost:5173/Travel-Talk/`. Weitere Befehle:
+Die App liegt unter `http://127.0.0.1:5173/Travel-Talk/`. Der Build ist Rsbuild. Der Service Worker entsteht nach dem Build mit `workbox-build`: er liest das fertige `dist/` und nimmt damit auch die kopierten Audiodateien in den Cache. Ein Rspack-Plugin sähe nur die kompilierten Assets. Die Tests laufen mit Vitest, getrennt vom Build. Weitere Befehle:
 
 ```bash
 npm test
@@ -44,7 +44,7 @@ npm run build
 
 Der Build schreibt die App nach `dist/` und kopiert `index.html` nach `404.html`, weil GitHub Pages kein SPA-Fallback hat. Die Navigation läuft über den Hash. Die Basis ist `/Travel-Talk/`.
 
-Lernstand, Aufnahmen und die persönliche Notiz bleiben im Browser. Export und Import sind JSON. Der Import prüft die Datei und lehnt Unpassendes ab, ohne den Inhalt anzuzeigen.
+Lernstand, Aufnahmen und die persönliche Notiz bleiben im Browser. Export und Import sind JSON. Die Notiz kommt nur in den Export, wenn der Haken gesetzt ist, weil sie Gesundheitsangaben enthalten kann. Der Import prüft die Datei, zeigt eine Zusammenfassung und lehnt Unpassendes ab, ohne den Inhalt anzuzeigen.
 
 ## Inhalt ergänzen
 

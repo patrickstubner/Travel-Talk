@@ -114,6 +114,7 @@ h1 { font-size: 2rem; line-height: 1.15; margin: 0.2rem 0; }
   color: inherit;
 }
 .card.emergency { border-left: 4px solid var(--clay); }
+.dialog, section.card { padding: 0.9rem; }
 .phrase-list a strong, .show h1, .phrase h1 { font-family: var(--serif); }
 .choices button { width: 100%; text-align: left; border-radius: 0.9rem; }
 label { display: grid; gap: 0.3rem; }
