@@ -6,6 +6,13 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    ignore:
+      # «bis typescript-eslint TS 7 erlaubt»
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # «passend zu Node 22 in der CI»
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
