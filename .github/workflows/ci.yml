@@ -66,6 +66,7 @@ jobs:
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
     needs: [lint, typecheck, test, build, audit]
     permissions:
       contents: read
