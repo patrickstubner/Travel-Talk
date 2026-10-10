@@ -49,9 +49,9 @@ Mit dem Standard-Planer, Behaltensrate 0.9 und ohne Zufall erreicht eine neue Ka
 
 Die Hörübung benutzt dieselbe Funktion. Eine bekannte Karte wird bei «Automatisch» mit 100 % geprüft.
 
-Die einzige Wahl sitzt am Player des Satzes: Automatisch, 70 %, 85 %, 100 %. Eine feste Stufe gilt für alles Audio dieser Sitzung, auch Üben und Zeigen, und liegt lokal in den Einstellungen. «Automatisch» hebt sie auf. Üben und Zeigen zeigen die Stufe als Text und haben keine zweite Schalterleiste. Die Tonhöhenkurve liest weiter die Datei mit 100 %, nicht eine gedehnte.
+Die einzige Wahl sitzt am Player des Satzes: Automatisch, 70 %, 85 %, 100 %. Eine feste Stufe gilt für alles Audio, auch Üben und Zeigen, und bleibt in den lokalen Einstellungen, bis wieder «Automatisch» gewählt wird. Üben und Zeigen zeigen die Stufe als Text und haben keine zweite Schalterleiste. Die Tonhöhenkurve liest weiter die Datei mit 100 %, nicht eine gedehnte.
 
-Ein Export aus 0.1.0 hat `slow` und kein `speed`. `slow: false` wird 100 %, weil die alte App normal abspielte. `slow: true` wird 85 %, die nähere Stufe zu `atempo=0.8`. Ein gesetztes `speed` gewinnt. Neue Installationen starten mit «Automatisch».
+Ein Export aus 0.1.0 hat `slow` und kein `speed`. `slow: true` wird fest 85 %, die nähere Stufe zu `atempo=0.8`. `slow: false` und ein fehlendes `slow` sind der alte Standard und werden «Automatisch», damit die Steigerung an bleibt und sich von einer bewusst gewählten 100 % unterscheidet. Ein gesetztes `speed` gewinnt. Neue Installationen starten mit «Automatisch».
 
 ## Browserstimme
 

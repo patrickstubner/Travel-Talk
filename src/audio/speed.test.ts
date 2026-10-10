@@ -11,8 +11,9 @@ describe('suggested speed', () => {
     expect(suggestedSpeed({ state: State.Learning, stability: 100 })).toBe(0.7)
     expect(suggestedSpeed({ state: State.Relearning, stability: 100 })).toBe(0.7)
     expect(suggestedSpeed({ state: State.Review, stability: 0 })).toBe(0.85)
-    expect(suggestedSpeed({ state: State.Review, stability: FULL_SPEED_STABILITY - 0.01 })).toBe(0.85)
-    expect(suggestedSpeed({ state: State.Review, stability: FULL_SPEED_STABILITY })).toBe(1)
+    expect(FULL_SPEED_STABILITY).toBe(21)
+    expect(suggestedSpeed({ state: State.Review, stability: 20.999 })).toBe(0.85)
+    expect(suggestedSpeed({ state: State.Review, stability: 21 })).toBe(1)
     expect(suggestedSpeed({ state: State.Review, stability: 400 })).toBe(1)
   })
 

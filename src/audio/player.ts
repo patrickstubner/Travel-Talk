@@ -48,8 +48,8 @@ export function speak(text: string, lang: Lang, rate: SpeedStep = 1): void {
 }
 
 /**
- * Plays a pre-generated file at its native rate. `playbackRate` is not set:
- * slowing the element can shift pitch, and that would bend Vietnamese tones.
+ * Plays a pre-generated file. `playbackRate` stays 1: slowing the element can
+ * shift pitch, and that would bend Vietnamese tones. The tempo is the file.
  * The browser voice is only the fallback, and then `utterance.rate` is the chosen step.
  */
 export async function playClip(file: string, speech: string, lang: Lang, rate: SpeedStep = 1): Promise<'file' | 'synth'> {
@@ -57,6 +57,7 @@ export async function playClip(file: string, speech: string, lang: Lang, rate: S
   if (AUDIO_FILE.test(file) && files.has(file)) {
     current?.pause()
     const audio = new Audio(publicUrl(`audio/${file}`))
+    audio.playbackRate = 1
     current = audio
     await audio.play()
     return 'file'

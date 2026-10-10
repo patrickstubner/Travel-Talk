@@ -4,9 +4,15 @@ import { IDBFactory } from 'fake-indexeddb'
 import { useEffect, type ReactNode } from 'react'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { playClip } from '../audio/player'
 import { AppProvider, useApp } from '../app/state'
 import { PhrasePage } from './Phrase'
+
+vi.mock('../audio/player', () => ({
+  playClip: vi.fn(async () => 'file'),
+  decodeContourFile: vi.fn(async () => null),
+}))
 
 function ReadyPhrase({ children }: { children: ReactNode }) {
   const { snapshot, saveSettings } = useApp()
@@ -45,9 +51,11 @@ describe('phrase speed', () => {
     expect(screen.getByRole('button', { name: 'Automatisch', pressed: true })).toBeTruthy()
     expect(screen.getByTestId('speed-now').textContent).toBe('Tempo 70 %')
     expect(screen.queryByRole('button', { name: 'Langsam anhören' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Anhören' }))
+    expect(vi.mocked(playClip).mock.calls[0]?.[0]).toMatch(/\.r70\.m4a$/)
     fireEvent.click(screen.getByRole('button', { name: '100 %' }))
     expect(await screen.findByRole('button', { name: '100 %', pressed: true })).toBeTruthy()
     expect(screen.getByTestId('speed-now').textContent).toBe('Tempo 100 %')
-    expect(screen.getByText(/Fest 100 %/)).toBeTruthy()
+    expect(screen.getByText('Fest 100 % für alles Audio, bis du wieder Automatisch wählst.')).toBeTruthy()
   })
 })

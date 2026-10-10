@@ -97,8 +97,11 @@ describe('import', () => {
         settings: { ...rest, slow },
         cards: [],
       })
-    expect(parseImport(legacy(false), concepts).snapshot.settings.speed).toBe(1)
+    expect(parseImport(legacy(false), concepts).snapshot.settings.speed).toBe('auto')
     expect(parseImport(legacy(true), concepts).snapshot.settings.speed).toBe(0.85)
+    const missing = JSON.parse(legacy(false)) as { settings: { slow?: boolean } }
+    delete missing.settings.slow
+    expect(parseImport(JSON.stringify(missing), concepts).snapshot.settings.speed).toBe('auto')
     const withSpeed = JSON.parse(legacy(true)) as { settings: { speed: number } }
     withSpeed.settings.speed = 0.7
     expect(parseImport(JSON.stringify(withSpeed), concepts).snapshot.settings.speed).toBe(0.7)
@@ -107,9 +110,21 @@ describe('import', () => {
       bad.settings.speed = 0.5
       parseImport(JSON.stringify(bad), concepts)
     }).toThrow('IMPORT_REJECTED')
-    expect(coerceSettings({ ...rest, slow: false }).speed).toBe(1)
+    expect(coerceSettings({ ...rest, slow: false }).speed).toBe('auto')
     expect(coerceSettings({ slow: true }).speed).toBe(0.85)
     expect(coerceSettings({}).speed).toBe('auto')
+  })
+
+  it('rejects a settings object that carries an unknown field', () => {
+    const raw = JSON.parse(bundle()) as { settings: Record<string, unknown> }
+    raw.settings.extra = 'nope'
+    expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow('IMPORT_REJECTED')
+    try {
+      parseImport(JSON.stringify(raw), concepts)
+    } catch (error) {
+      expect((error as Error).message).toBe('IMPORT_REJECTED')
+      expect((error as Error).message).not.toContain('extra')
+    }
   })
 
   it('starts from an empty snapshot', () => {

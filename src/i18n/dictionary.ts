@@ -150,8 +150,7 @@ export const de: Dictionary = {
   speed100: '100 %',
   speedAutoHint: (percent) =>
     `Automatisch, dieser Satz mit ${percent} %. Neue und unsichere Sätze starten bei 70 % und steigen nach sicheren Wiederholungen auf 85 % und dann auf 100 %. Eine feste Stufe hier gilt für alles Audio, bis du wieder Automatisch wählst.`,
-  speedFixedHint: (percent) =>
-    `Fest ${percent} % für alles Audio in dieser Sitzung. Die automatische Steigerung pausiert, bis du Automatisch wählst.`,
+  speedFixedHint: (percent) => `Fest ${percent} % für alles Audio, bis du wieder Automatisch wählst.`,
   speedShown: (percent) => `Tempo ${percent} %`,
   unchecked: 'Noch nicht geprüft',
   audioVi:
@@ -290,7 +289,7 @@ export const en: Dictionary = {
   speed100: '100 %',
   speedAutoHint: (percent) =>
     `Automatic, this line at ${percent} %. New and shaky lines start at 70 % and step up to 85 % and then 100 % after reliable reviews. A fixed step here applies to all audio until you choose Automatic again.`,
-  speedFixedHint: (percent) => `Fixed at ${percent} % for all audio in this session. Automatic stepping pauses until you choose Automatic.`,
+  speedFixedHint: (percent) => `Fixed at ${percent} % for all audio until you choose Automatic again.`,
   speedShown: (percent) => `Speed ${percent} %`,
   unchecked: 'Not checked yet',
   audioVi:
@@ -425,7 +424,7 @@ export const pt: Dictionary = {
   speed100: '100 %',
   speedAutoHint: (percent) =>
     `Automático, esta frase em ${percent} %. Frases novas ou pouco firmes começam em 70 % e sobem para 85 % e depois 100 % depois de revisões seguras. Um passo fixo aqui vale para todo o áudio, até você escolher Automático de novo.`,
-  speedFixedHint: (percent) => `Fixo em ${percent} % para todo o áudio. A subida automática fica pausada até você escolher Automático.`,
+  speedFixedHint: (percent) => `Fixo em ${percent} % para todo o áudio, até você escolher Automático de novo.`,
   speedShown: (percent) => `Velocidade ${percent} %`,
   unchecked: 'Ainda não revisado',
   audioVi:
@@ -562,7 +561,7 @@ export const vi: Dictionary = {
   speed100: '100 %',
   speedAutoHint: (percent) =>
     `Tự động, câu này ở ${percent} %. Câu mới hoặc chưa chắc bắt đầu ở 70 % và tăng lên 85 % rồi 100 % sau các lần nhớ chắc. Một mức cố định ở đây áp dụng cho mọi audio, cho đến khi bạn chọn Tự động.`,
-  speedFixedHint: (percent) => `Cố định ${percent} % cho mọi audio. Tốc độ tự động tạm dừng cho đến khi bạn chọn Tự động.`,
+  speedFixedHint: (percent) => `Cố định ${percent} % cho mọi audio, cho đến khi bạn chọn lại Tự động.`,
   speedShown: (percent) => `Tốc độ ${percent} %`,
   unchecked: 'Chưa được kiểm tra',
   audioVi:

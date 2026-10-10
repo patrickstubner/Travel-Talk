@@ -12,7 +12,7 @@ export type Settings = {
   viContact: 'phone' | 'zalo'
   retention: number
   personalNote: string
-  /** `auto` follows the card. A number is the one tempo for every clip in the session. */
+  /** `auto` follows the card. A number is kept until the learner chooses automatic again. */
   speed: SpeedChoice
 }
 
@@ -49,10 +49,15 @@ export const defaultSettings: Settings = {
   speed: 'auto',
 }
 
+/**
+ * A stored `speed` is a deliberate choice and wins.
+ * Version 0.1.0 had only `slow`. `true` becomes fixed 85 %.
+ * `false` or a missing flag is the old default and becomes automatic,
+ * so the progression stays on and can still be told apart from a chosen 100 %.
+ */
 export function normalizeSpeed(speed: unknown, slow: unknown): SpeedChoice {
   if (speed === 'auto' || speed === 0.7 || speed === 0.85 || speed === 1) return speed
   if (slow === true) return 0.85
-  if (slow === false) return 1
   return 'auto'
 }
 
