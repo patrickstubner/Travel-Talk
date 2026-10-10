@@ -120,6 +120,10 @@ export function previewImport(snapshot: ProgressSnapshot): ImportPreview {
   }
 }
 
+export function retainLocalNote(current: string, incoming: string): string {
+  return incoming.trim().length > 0 ? incoming : current
+}
+
 export function toExport(snapshot: ProgressSnapshot, now: Date, includeNote = false): string {
   const settings = includeNote ? snapshot.settings : { ...snapshot.settings, personalNote: '' }
   return JSON.stringify(

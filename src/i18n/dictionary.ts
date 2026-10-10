@@ -217,7 +217,7 @@ export const de: Dictionary = {
     const note = hasNote ? ' Eine Notiz ist enthalten.' : ' Keine Notiz.'
     return `${count}${range}${note}`
   },
-  importBackup: 'Die Sicherung des jetzigen Lernstands enthält die Notiz, wenn eine gespeichert ist.',
+  importBackup: 'Die Sicherung folgt dem Haken «Notiz mitexportieren». Ohne Haken bleibt die Notiz nur auf diesem Gerät.',
   exportNote: 'Notiz mitexportieren',
   exportNoteHint: 'Die Notiz kann Gesundheitsangaben enthalten, zum Beispiel eine Allergie. Ohne Haken bleibt sie nur auf diesem Gerät.',
   confirmImport: 'Importieren',
@@ -226,7 +226,7 @@ export const de: Dictionary = {
   resetAsk: 'Der Lernstand auf diesem Gerät wird gelöscht. Das lässt sich hier nicht zurückholen.',
   backupDownload: 'Sicherung herunterladen',
   voicesTitle: 'Stimmen und Lizenzen',
-  voicesVi: 'Vietnamesisch spricht vais1000 aus dem Datensatz VAIS-1000, eine nördliche Sprecherin.',
+  voicesVi: 'Vietnamesisch spricht vais1000 aus dem Datensatz VAIS-1000, eine nördliche Sprecherin. Laut Modellkarte ist die Stimme von lessac feinjustiert (Forschungslizenz).',
   voicesCc: 'CC BY 4.0',
   voicesSlow: 'Die langsamen Dateien sind verändert (ffmpeg atempo 0.8). Die Tonhöhe bleibt erhalten.',
   voicesNotice: 'NOTICE.txt',
@@ -345,7 +345,7 @@ export const en: Dictionary = {
     const note = hasNote ? ' A note is included.' : ' No note.'
     return `${count}${range}${note}`
   },
-  importBackup: 'The backup of the current progress includes the note when one is stored.',
+  importBackup: 'The backup follows the “Include the note” box. Without the box the note stays on this device.',
   exportNote: 'Include the note in the export',
   exportNoteHint: 'The note may contain health information, for example an allergy. Without the box it stays on this device.',
   confirmImport: 'Import',
@@ -354,7 +354,7 @@ export const en: Dictionary = {
   resetAsk: 'Progress on this device will be deleted. This screen cannot bring it back.',
   backupDownload: 'Download a backup',
   voicesTitle: 'Voices and licences',
-  voicesVi: 'Vietnamese uses vais1000 from the VAIS-1000 dataset, a northern speaker.',
+  voicesVi: 'Vietnamese uses vais1000 from the VAIS-1000 dataset, a northern speaker. The model card says this voice is fine-tuned from lessac (research licence).',
   voicesCc: 'CC BY 4.0',
   voicesSlow: 'The slow files are modified (ffmpeg atempo 0.8). The pitch stays the same.',
   voicesNotice: 'NOTICE.txt',
@@ -473,7 +473,7 @@ export const pt: Dictionary = {
     const note = hasNote ? ' Uma nota está incluída.' : ' Nenhuma nota.'
     return `${count}${range}${note}`
   },
-  importBackup: 'A cópia do progresso atual inclui a nota, se houver uma salva.',
+  importBackup: 'A cópia segue a caixa da nota. Sem a caixa, a nota fica só neste aparelho.',
   exportNote: 'Incluir a nota na exportação',
   exportNoteHint: 'A nota pode ter dados de saúde, por exemplo uma alergia. Sem a caixa ela fica só neste aparelho.',
   confirmImport: 'Importar',
@@ -482,7 +482,7 @@ export const pt: Dictionary = {
   resetAsk: 'O progresso neste aparelho será apagado. Esta tela não o traz de volta.',
   backupDownload: 'Baixar uma cópia',
   voicesTitle: 'Vozes e licenças',
-  voicesVi: 'O vietnamita usa vais1000 do conjunto VAIS-1000, uma falante do norte.',
+  voicesVi: 'O vietnamita usa vais1000 do conjunto VAIS-1000, uma falante do norte. O cartão do modelo diz que a voz é um ajuste fino de lessac (licença de pesquisa).',
   voicesCc: 'CC BY 4.0',
   voicesSlow: 'Os arquivos lentos são alterados (ffmpeg atempo 0.8). O tom fica igual.',
   voicesNotice: 'NOTICE.txt',
@@ -599,7 +599,7 @@ export const vi: Dictionary = {
     const note = hasNote ? ' Có ghi chú.' : ' Không có ghi chú.'
     return `${count}${range}${note}`
   },
-  importBackup: 'Bản sao tiến độ hiện tại có ghi chú nếu máy đang lưu một ghi chú.',
+  importBackup: 'Bản sao theo ô xuất ghi chú. Không đánh dấu thì ghi chú chỉ ở trên máy này.',
   exportNote: 'Xuất kèm ghi chú',
   exportNoteHint: 'Ghi chú có thể chứa thông tin sức khoẻ, ví dụ dị ứng. Không đánh dấu thì ghi chú chỉ ở trên máy này.',
   confirmImport: 'Nhập',
@@ -608,7 +608,7 @@ export const vi: Dictionary = {
   resetAsk: 'Tiến độ trên máy này sẽ bị xoá. Màn hình này không lấy lại được.',
   backupDownload: 'Tải bản sao',
   voicesTitle: 'Giọng và giấy phép',
-  voicesVi: 'Tiếng Việt dùng vais1000 từ bộ VAIS-1000, một giọng nữ miền Bắc.',
+  voicesVi: 'Tiếng Việt dùng vais1000 từ bộ VAIS-1000, một giọng nữ miền Bắc. Thẻ mô hình ghi giọng này được tinh chỉnh từ lessac (giấy phép nghiên cứu).',
   voicesCc: 'CC BY 4.0',
   voicesSlow: 'Tệp chậm đã được sửa (ffmpeg atempo 0.8). Độ cao giọng giữ nguyên.',
   voicesNotice: 'NOTICE.txt',

@@ -127,6 +127,7 @@ input, select, textarea {
 }
 textarea { min-height: 5rem; white-space: pre-wrap; }
 .file { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.button:has(input:disabled) { opacity: 0.55; }
 .slot { background: #f3e2c4; color: inherit; padding: 0 0.2rem; border-radius: 0.3rem; }
 .gloss { font-size: 1.05rem; }
 .prose { line-height: 1.55; white-space: pre-wrap; }

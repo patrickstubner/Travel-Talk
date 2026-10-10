@@ -19,7 +19,7 @@ Die Modelle liegen nicht im Repo. Erzeugt wurde nur das Audio, am 10. Oktober 20
 | Deutsch | `de_DE-thorsten-medium` | Thorsten-Voice | CC0 | Deutsch aus Deutschland, nicht Schweizerdeutsch. Qualität nicht geprüft. Die Modellkarte nennt ein Feintuning von lessac. |
 | Portugiesisch (Brasilien) | `pt_BR-faber-medium` | Faber über OHF-Voice | CC0 | Qualität nicht geprüft. Geschlecht steht nicht in der Modellkarte. Ebenfalls Feintuning von lessac. |
 | Englisch | `en_US-ljspeech-medium` | LJ Speech | gemeinfrei, von Grund auf trainiert | Englisch (USA), eine Sprecherin. Qualität nicht geprüft. |
-| Vietnamesisch | `vi_VN-vais1000-medium` | VAIS-1000 | CC BY 4.0 | **Nördlicher Akzent, eine Sprecherin.** Keine südliche Stimme. Töne und Qualität nicht geprüft. |
+| Vietnamesisch | `vi_VN-vais1000-medium` | VAIS-1000 | CC BY 4.0 | **Nördlicher Akzent, eine Sprecherin.** Keine südliche Stimme. Die Modellkarte sagt: Feintuning von lessac (medium). Töne und Qualität nicht geprüft. |
 
 Namensnennung für VAIS-1000 steht in `public/audio/NOTICE.txt` und hier. Quelle der Lizenz: Modellkarte bei Hugging Face (`rhasspy/piper-voices`, Tag `v1.0.0`) und die Beschreibung von VAIS-1000 (IEEE DataPort, nördlicher Akzent).
 

@@ -3,6 +3,9 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts', 'content/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'content/**/*.test.ts'],
+    environmentOptions: {
+      happyDOM: { url: 'about:blank' },
+    },
   },
 })

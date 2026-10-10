@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Rating, emptyCard, reviewCard, toStored } from '../srs/scheduler'
-import { IMPORT_LIMIT, emptySnapshot, parseImport, previewImport, toExport } from './import'
+import { IMPORT_LIMIT, emptySnapshot, parseImport, previewImport, retainLocalNote, toExport } from './import'
 import { defaultSettings } from './types'
 
 const settings = { ...defaultSettings, pairId: 'de-vi' as const, personalNote: 'Erdnüsse' }
@@ -67,6 +67,12 @@ describe('import', () => {
     expect(preview.hasNote).toBe(true)
     expect(preview.earliest).toBe('2026-10-10')
     expect(preview.latest).toBe('2026-10-11')
+  })
+
+  it('keeps the local note when the imported file has none', () => {
+    expect(retainLocalNote('Erdnüsse', '')).toBe('Erdnüsse')
+    expect(retainLocalNote('Erdnüsse', '   ')).toBe('Erdnüsse')
+    expect(retainLocalNote('Erdnüsse', 'Pollen')).toBe('Pollen')
   })
 
   it('starts from an empty snapshot', () => {

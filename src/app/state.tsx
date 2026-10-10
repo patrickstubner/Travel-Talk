@@ -14,7 +14,7 @@ type AppValue = {
   replaceAll: (snapshot: ProgressSnapshot) => Promise<void>
 }
 
-const AppContext = createContext<AppValue | null>(null)
+export const AppContext = createContext<AppValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const catalogResult = useMemo(() => tryLoadCatalog(), [])

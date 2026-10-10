@@ -8,7 +8,7 @@ Portugiesisch (Brasilien): pt_BR-faber-medium. Datensatz über OHF-Voice, CC0. E
 
 Englisch: en_US-ljspeech-medium. LJ Speech, gemeinfrei, von Grund auf trainiert. Englisch (USA), eine Sprecherin.
 
-Vietnamesisch: vi_VN-vais1000-medium. Datensatz VAIS-1000, CC BY 4.0. Nördlicher Akzent, eine Sprecherin. Keine südliche Stimme. Namensnennung: VAIS-1000, IEEE DataPort, Lizenz CC BY 4.0.
+Vietnamesisch: vi_VN-vais1000-medium. Datensatz VAIS-1000, CC BY 4.0. Nördlicher Akzent, eine Sprecherin. Keine südliche Stimme. Namensnennung: VAIS-1000, IEEE DataPort, Lizenz CC BY 4.0. Das Modell ist laut Modellkarte von lessac feinjustiert (U.S. English lessac, medium), mit derselben Upstream-Lizenz wie oben. Quelle der Modellkarte: https://huggingface.co/rhasspy/piper-voices/blob/main/vi/vi_VN/vais1000/medium/MODEL_CARD, gelesen am 10. Oktober 2026.
 
 Piper wird nicht mitgeliefert. Die Engine von OHF-Voice steht unter GPL-3.0. lessac selbst wird nicht als Stimme verwendet.
 

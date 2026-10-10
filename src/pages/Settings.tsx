@@ -5,7 +5,7 @@ import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { publicUrl } from '../public-url'
-import { IMPORT_LIMIT, emptySnapshot, parseImport, previewImport, toExport, type ImportPreview } from '../storage/import'
+import { IMPORT_LIMIT, emptySnapshot, parseImport, previewImport, retainLocalNote, toExport, type ImportPreview } from '../storage/import'
 import type { ProgressSnapshot, Settings } from '../storage/types'
 
 function cleanNote(value: string): string {
@@ -57,9 +57,9 @@ export function SettingsPage() {
       return
     }
     try {
+      if (!catalog) return
       const text = await file.text()
       const outcome = parseImport(text, conceptIds)
-      downloadSnapshot(true, 'travel-talk-sicherung.json')
       setPending({ snapshot: outcome.snapshot, skipped: outcome.skipped, preview: previewImport(outcome.snapshot) })
     } catch {
       setImportState('bad')
@@ -194,6 +194,7 @@ export function SettingsPage() {
             className="file"
             type="file"
             accept="application/json,.json"
+            disabled={!catalog}
             onChange={(event) => {
               const file = event.target.files?.[0]
               event.target.value = ''
@@ -209,7 +210,7 @@ export function SettingsPage() {
           <p className="hint">{copy.importBackup}</p>
           {pending.skipped > 0 ? <p>{copy.importSkipped(pending.skipped)}</p> : null}
           <div className="row">
-            <button type="button" onClick={() => downloadSnapshot(true, 'travel-talk-sicherung.json')}>
+            <button type="button" onClick={() => downloadSnapshot(includeNote, 'travel-talk-sicherung.json')}>
               {copy.backupDownload}
             </button>
             <button
@@ -218,8 +219,15 @@ export function SettingsPage() {
               onClick={() => {
                 const next = pending.snapshot
                 const leftOut = pending.skipped
+                const merged = {
+                  ...next,
+                  settings: {
+                    ...next.settings,
+                    personalNote: retainLocalNote(current.settings.personalNote, next.settings.personalNote),
+                  },
+                }
                 setPending(null)
-                void replaceAll(next).then(() => {
+                void replaceAll(merged).then(() => {
                   setSkipped(leftOut)
                   setImportState('ok')
                 })
@@ -245,7 +253,7 @@ export function SettingsPage() {
           <p>{copy.resetAsk}</p>
           <p className="hint">{copy.importBackup}</p>
           <div className="row">
-            <button type="button" onClick={() => downloadSnapshot(true, 'travel-talk-sicherung.json')}>
+            <button type="button" onClick={() => downloadSnapshot(includeNote, 'travel-talk-sicherung.json')}>
               {copy.backupDownload}
             </button>
             <button
