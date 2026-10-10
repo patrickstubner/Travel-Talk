@@ -5,7 +5,7 @@ import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { publicUrl } from '../public-url'
-import { IMPORT_LIMIT, emptySnapshot, parseImport, previewImport, retainLocalNote, toExport, type ImportPreview } from '../storage/import'
+import { IMPORT_LIMIT, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport, type ImportPreview } from '../storage/import'
 import type { ProgressSnapshot, Settings } from '../storage/types'
 
 function cleanNote(value: string): string {
@@ -170,10 +170,6 @@ export function SettingsPage() {
           <option value="0.95">0.95</option>
         </select>
       </label>
-      <label className="choice">
-        <input type="checkbox" checked={settings.slow} onChange={(event) => update({ slow: event.target.checked })} />
-        {copy.slowToggle}
-      </label>
       <label>
         {copy.personalNote}
         <textarea value={settings.personalNote} maxLength={500} onChange={(event) => update({ personalNote: cleanNote(event.target.value) })} />
@@ -207,6 +203,7 @@ export function SettingsPage() {
         <div className="card dialog" role="dialog" aria-modal="true" aria-labelledby="import-title">
           <h2 id="import-title">{copy.confirmImport}</h2>
           <p>{copy.importSummary(pending.preview.cards, pending.preview.earliest, pending.preview.latest, pending.preview.hasNote)}</p>
+          <p>{importKeepsLocalNote(pending.snapshot.settings.personalNote) ? copy.importNoteKept : copy.importNoteReplaced}</p>
           <p className="hint">{copy.importBackup}</p>
           {pending.skipped > 0 ? <p>{copy.importSkipped(pending.skipped)}</p> : null}
           <div className="row">

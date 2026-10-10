@@ -5,6 +5,7 @@ import type { Lang } from '../../content/phrase'
 import { pickRealization, resolvePlayback } from '../content/resolve'
 import { pairById } from '../domain/pairs'
 import { decodeContourFile, playClip } from '../audio/player'
+import { SPEED_STEPS, effectiveSpeed, speedPercent, tempoFile, type SpeedStep } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
@@ -12,6 +13,7 @@ import { useCopy, useSettings } from '../app/use-copy'
 import { PitchPanel } from '../components/PitchPanel'
 import { RichText } from '../components/RichText'
 import { contourFromSamples, type Contour } from '../pitch/contour'
+import { cardIdFor } from '../srs/session'
 import { prefsFromSettings, type Settings } from '../storage/types'
 
 const AUDIO_COPY = {
@@ -32,7 +34,7 @@ function applyVariant(settings: Settings, lang: Lang, id: string): Settings {
 
 export function PhrasePage() {
   const { conceptId = '' } = useParams()
-  const { catalog, saveSettings } = useApp()
+  const { catalog, snapshot, saveSettings } = useApp()
   const settings = useSettings()
   const copy = useCopy()
   const pair = pairById(settings.pairId)
@@ -95,8 +97,12 @@ export function PhrasePage() {
     (note) => note.sourceLang === pair.source && note.targetLang === pair.target && (!note.conceptId || note.conceptId === concept.id),
   )
 
-  async function onPlay(file: string): Promise<void> {
-    const result = await playClip(file, target?.speech ?? '', pair?.target ?? 'de')
+  const stored = snapshot?.cards.find((card) => card.cardId === cardIdFor(pair.id, concept.id))
+  const step = effectiveSpeed(settings.speed, stored)
+  const percent = speedPercent(step)
+
+  async function onPlay(file: string, rate: SpeedStep): Promise<void> {
+    const result = await playClip(file, target?.speech ?? '', pair?.target ?? 'de', rate)
     setHeard(result)
   }
 
@@ -147,12 +153,31 @@ export function PhrasePage() {
       <p>{copy.context}: {concept.context[ui]}</p>
       {pair.target === 'vi' ? <p className="warn">{copy.audioVi}</p> : <p className="hint">{copy[AUDIO_COPY[pair.target]]}</p>}
       {heard === 'synth' ? <p className="warn">{copy.audioSynth}</p> : null}
+      <p className="speed-now" data-testid="speed-now">
+        {copy.speedShown(percent)}
+      </p>
+      <fieldset className="speed" data-testid="speed-control">
+        <legend>{copy.speedTitle}</legend>
+        <div className="row" role="group" aria-label={copy.speedTitle}>
+          <button type="button" aria-pressed={settings.speed === 'auto'} onClick={() => void saveSettings({ ...settings, speed: 'auto' })}>
+            {copy.speedAuto}
+          </button>
+          {SPEED_STEPS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={settings.speed === option}
+              onClick={() => void saveSettings({ ...settings, speed: option })}
+            >
+              {option === 0.7 ? copy.speed70 : option === 0.85 ? copy.speed85 : copy.speed100}
+            </button>
+          ))}
+        </div>
+        <p className="hint">{settings.speed === 'auto' ? copy.speedAutoHint(percent) : copy.speedFixedHint(percent)}</p>
+      </fieldset>
       <div className="row">
-        <button type="button" className="button" onClick={() => void onPlay(settings.slow ? target.slowFile : target.file)}>
+        <button type="button" className="button" onClick={() => void onPlay(tempoFile(target.file, step), step)}>
           {copy.play}
-        </button>
-        <button type="button" onClick={() => void onPlay(target.slowFile)}>
-          {copy.playSlow}
         </button>
         <Link className="button" to={`/show/${concept.id}`}>
           {copy.showThis}

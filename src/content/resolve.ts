@@ -6,11 +6,10 @@ export type Playback = {
   text: string
   speech: string
   file: string
-  slowFile: string
   variantId: string
 }
 
-export const AUDIO_FILE = /^(de|en|pt-BR|vi)\/[a-z0-9.-]+__(south|north|any)__[a-z0-9-]+(\.slow)?\.m4a$/
+export const AUDIO_FILE = /^(de|en|pt-BR|vi)\/[a-z0-9.-]+__(south|north|any)__[a-z0-9-]+(\.r70|\.r85)?\.m4a$/
 
 export function regionKey(realization: Realization): 'south' | 'north' | 'any' {
   return realization.region ?? 'any'
@@ -51,7 +50,6 @@ export function resolvePlayback(
       text: applyAddress(templateText, chosen.insert),
       speech: applyAddress(templateSpeech, chosen.insert),
       file: `${fileStem}.m4a`,
-      slowFile: `${fileStem}.slow.m4a`,
       variantId: chosen.id,
     }
   }
@@ -64,7 +62,6 @@ export function resolvePlayback(
     text,
     speech,
     file: `${fileStem}.m4a`,
-    slowFile: `${fileStem}.slow.m4a`,
     variantId,
   }
 }

@@ -1,14 +1,61 @@
-# Audio in Travel Talk 0.1.0
+# Audio in Travel Talk 0.2.0
 
 Stand: 10. Oktober 2026.
 
 ## Entscheidung
 
-Version 0.1.0 speichert **vorerzeugte Audiodateien** im Repo und spielt sie offline ab. Das ist Option 1 aus der Technik-Empfehlung. Azure und jede andere Stimme mit Konto, Schlüssel oder Kreditkarte sind nicht dabei.
+Version 0.2.0 speichert **vorerzeugte Audiodateien** im Repo und spielt sie offline ab. Das ist Option 1 aus der Technik-Empfehlung. Azure und jede andere Stimme mit Konto, Schlüssel oder Kreditkarte sind nicht dabei.
 
-Wenn eine Datei fehlt, spricht der Browser über `speechSynthesis`. Die Rate bleibt 1. Eine tiefere Rate würde vietnamesische Töne verschieben. Diese Browserstimme ist nur der Ausweg, nicht die gewählte Qualität.
+Das Tempo hat drei feste Stufen, 70 %, 85 % und 100 %. Es gibt keinen Schieberegler. Jede Stufe ausser 100 % ist eine eigene Datei. `HTMLMediaElement.playbackRate` wird nicht gesetzt.
 
-Langsame Dateien heissen `*.slow.m4a`. Sie entstehen mit `ffmpeg` und `atempo=0.8`, also ohne die Tonhöhe zu ändern. `playbackRate` am Audio-Element wird nicht benutzt.
+Zhao 1997 (Applied Linguistics 18(1)) zeigt, dass Lernende beim Hörverstehen besser abschneiden, wenn sie das Sprechtempo selbst wählen, und dass sie es meist verlangsamen. Das Konzept der App verlangt zwei Tempi und eine langsame Fassung. Alltagssprache läuft aber in normalem Tempo, deshalb steigt die App von langsam nach normal, statt bei der langsamen Fassung zu bleiben.
+
+## Warum keine playbackRate
+
+`playbackRate` unter 1 verschiebt die wahrgenommene Tonhöhe, wenn der Browser sie nicht ausgleicht. `preservesPitch` steht seit Dezember 2023 in der Baseline (MDN, gelesen am 10. Oktober 2026). Unpräfigiert ist es in Safari ab 17.2, davor als `webkitPreservesPitch` (Can I use, derselbe Tag). Das reicht hier nicht:
+
+- Auf iOS war das Verhalten lange unzuverlässig. WebKit-Bug 240405 (gemeldet Mai 2022) beschreibt, dass `preservesPitch` und `playbackRate` falsch laufen, sobald das Element an einem `AudioContext` hängt. Der Fix landete erst am 27. März 2026. Telefone, die eine Familie mitnimmt, haben den Fix nicht zwingend.
+- Diese Umgebung hat kein iOS-Gerät. Die Tonhöhe lässt sich hier also nicht auf dem Zielgerät prüfen. Die Vorgabe ist: `playbackRate` nur dort, wo die Tonhöhe geprüft ist. Das ist sie nicht.
+- Gemessen am 10. Oktober 2026 mit pitchy (Klarheit mindestens 0.8, 70 bis 500 Hz), Datei `vi/emergency.help__any__base.m4a`: Median 278 Hz. Dieselbe Datei mit `ffmpeg atempo=0.7` liegt bei 273.5 Hz, also 0.28 Halbtöne tiefer. `atempo=0.85` liegt bei 278.4 Hz, 0.02 Halbtöne. Ein Resample, das `playbackRate` 0.7 ohne Tonhöhenausgleich entspricht (`asetrate` auf 70 % und zurück auf 22050 Hz), fällt auf 193 Hz, 6.32 Halbtöne. Ein reines 0.7 wäre 6.17 Halbtöne. Die längere Datei `vi/food.recommend__any__ba.m4a` (118 stimmhafte Frames, Median 266 Hz) bleibt mit `atempo=0.7` bei 263.1 Hz (0.19 Halbtöne) und fällt beim Resample auf 185.7 Hz (6.22 Halbtöne). Sechs Halbtöne verbiegen sắc und huyền. Drei Zehntel nicht.
+
+Die Stufen sind deshalb Dateien. Der Player setzt `playbackRate` nicht.
+
+## Dateigrösse und Precache
+
+Gemessen nach dem Erzeugen, AAC-LC, 48 kbit/s, mono, 22050 Hz, wie die bestehenden Dateien:
+
+| Stufe | Dateien | Bytes |
+| --- | --- | --- |
+| 100 %, `*.m4a` | 549 | 4'974'567 |
+| 85 %, `*.r85.m4a` | 549 | 5'736'970 |
+| 70 %, `*.r70.m4a` | 549 | 6'801'318 |
+| Summe 0.2.0 | 1'647 | 17'512'855 |
+
+Version 0.1.0 hatte 100 % plus eine langsame Datei `atempo=0.8` (`*.slow.m4a`, 549 Dateien, 5'991'211 Bytes). Zusammen 10'965'778 Bytes. Die 0.8-Dateien sind ersetzt, nicht zusätzlich im Cache. Der Zuwachs ist 6'547'077 Bytes.
+
+Opus bei 24 kbit/s war auf einer Stichprobe etwa halb so gross. Der Container bleibt m4a. Den spielt iOS heute ab, ohne ein neues Format im Precache.
+
+Der Service Worker nimmt jede `m4a` aus `dist/` in den Precache (`workbox-build`, `globPatterns`). 17.5 MB Audio liegen unter der Grenze, die drei Stufen noch trägt. Eine vierte Stufe oder ein freies Tempo würde neue Dateien brauchen. Dann wäre die mittlere Stufe der erste Kandidat zum Streichen, nicht ein Schieberegler.
+
+## Automatische Steigerung
+
+Die Regel steht in `suggestedSpeed` (`src/audio/speed.ts`) und hat Tests. Eine Kette von «Gut»-Bewertungen wird nicht gespeichert. Die Funktion liest deshalb nur Zustand und Stabilität von FSRS:
+
+- keine Karte, Neu, Lernen oder Wiederlernen: 70 %
+- Wiederholen und Stabilität unter 21: 85 %
+- Wiederholen und Stabilität ab 21: 100 %
+
+Mit dem Standard-Planer, Behaltensrate 0.9 und ohne Zufall erreicht eine neue Karte die 21 am vierten «Gut». Nach einem «Nochmal» ist der Zustand Wiederlernen, also wieder 70 %, auch wenn die Stabilität noch hoch ist.
+
+Die Hörübung benutzt dieselbe Funktion. Eine bekannte Karte wird bei «Automatisch» mit 100 % geprüft.
+
+Die einzige Wahl sitzt am Player des Satzes: Automatisch, 70 %, 85 %, 100 %. Eine feste Stufe gilt für alles Audio, auch Üben und Zeigen, und bleibt in den lokalen Einstellungen, bis wieder «Automatisch» gewählt wird. Üben und Zeigen zeigen die Stufe als Text und haben keine zweite Schalterleiste. Die Tonhöhenkurve liest weiter die Datei mit 100 %, nicht eine gedehnte.
+
+Ein Export aus 0.1.0 hat `slow` und kein `speed`. `slow: true` wird fest 85 %, die nähere Stufe zu `atempo=0.8`. `slow: false` und ein fehlendes `slow` sind der alte Standard und werden «Automatisch», damit die Steigerung an bleibt und sich von einer bewusst gewählten 100 % unterscheidet. Ein gesetztes `speed` gewinnt. Neue Installationen starten mit «Automatisch».
+
+## Browserstimme
+
+Wenn die gewünschte Datei fehlt, spricht `speechSynthesis`. `utterance.rate` ist dann die gewählte Stufe (0.7, 0.85 oder 1). Diese Stimme kann die Tonhöhe dabei verschieben. Sie ist der Ausweg, nicht die Qualität, und die Oberfläche sagt das.
 
 ## Stimmen und Lizenzen
 
@@ -42,7 +89,7 @@ Die Tonhöhenkurve vergleicht die eigene Aufnahme mit genau dieser nördlichen D
 
 `{sprache}/{konzept}__{south|north|any}__{variante}.m4a`
 
-Die langsamen Dateien hängen `.slow` vor `.m4a`. `public/audio/manifest.json` listet die Dateien. Die App baut die Adresse nur aus diesem Muster und nur, wenn der Name in der Liste steht.
+70 % hängt `.r70` vor `.m4a`, 85 % hängt `.r85` davor. `public/audio/manifest.json` listet die Dateien. Die App baut die Adresse nur aus diesem Muster und nur, wenn der Name in der Liste steht.
 
 Neu erzeugen, ohne die Modelle ins Repo zu legen:
 

@@ -82,6 +82,9 @@ h1, h2 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.02em; }
 h1 { font-size: 2rem; line-height: 1.15; margin: 0.2rem 0; }
 .stack { display: grid; gap: 0.8rem; }
 .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.speed { padding: 0.8rem 0.9rem; }
+.speed .row button { min-width: 4.5rem; }
+.speed-now { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
 .banner, .warn {
   background: #f6e4cf;
   border-left: 4px solid var(--gold);

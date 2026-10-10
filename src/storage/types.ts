@@ -1,3 +1,4 @@
+import type { SpeedChoice } from '../audio/speed'
 import type { PairId } from '../domain/pairs'
 
 export type Settings = {
@@ -11,7 +12,8 @@ export type Settings = {
   viContact: 'phone' | 'zalo'
   retention: number
   personalNote: string
-  slow: boolean
+  /** `auto` follows the card. A number is kept until the learner chooses automatic again. */
+  speed: SpeedChoice
 }
 
 export type StoredCard = {
@@ -44,7 +46,29 @@ export const defaultSettings: Settings = {
   viContact: 'phone',
   retention: 0.9,
   personalNote: '',
-  slow: false,
+  speed: 'auto',
+}
+
+/**
+ * A stored `speed` is a deliberate choice and wins.
+ * Version 0.1.0 had only `slow`. `true` becomes fixed 85 %.
+ * `false` or a missing flag is the old default and becomes automatic,
+ * so the progression stays on and can still be told apart from a chosen 100 %.
+ */
+export function normalizeSpeed(speed: unknown, slow: unknown): SpeedChoice {
+  if (speed === 'auto' || speed === 0.7 || speed === 0.85 || speed === 1) return speed
+  if (slow === true) return 0.85
+  return 'auto'
+}
+
+/** Reads a stored settings row. Version 0.1.0 had `slow` and no `speed`. */
+export function coerceSettings(raw: Partial<Settings> & { slow?: boolean }): Settings {
+  const { slow, speed, ...rest } = raw
+  return {
+    ...defaultSettings,
+    ...rest,
+    speed: normalizeSpeed(speed, slow),
+  }
 }
 
 export interface ProgressRepository {

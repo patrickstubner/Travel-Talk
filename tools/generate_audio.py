@@ -25,25 +25,29 @@ def main() -> None:
     rows = [row for row in LINES if row["lang"] == lang]
     for index, row in enumerate(rows, start=1):
         target = ROOT / "public" / "audio" / row["file"]
-        slow = target.with_name(target.name.replace(".m4a", ".slow.m4a"))
-        if target.exists() and slow.exists() and target.stat().st_size > 0 and slow.stat().st_size > 0:
+        tempos = [
+            (target, None),
+            (target.with_name(target.name.replace(".m4a", ".r70.m4a")), 0.7),
+            (target.with_name(target.name.replace(".m4a", ".r85.m4a")), 0.85),
+        ]
+        if all(path.exists() and path.stat().st_size > 0 for path, _tempo in tempos):
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         wav = target.with_suffix(".wav")
         with wave.open(str(wav), "wb") as handle:
             voice.synthesize_wav(row["text"], handle)
-        encode(wav, target, slow=False)
-        encode(wav, slow, slow=True)
+        for dest, tempo in tempos:
+            encode(wav, dest, tempo)
         wav.unlink(missing_ok=True)
         if index % 25 == 0:
             print(f"{lang} {index}/{len(rows)}", flush=True)
     print(f"{lang} done {len(rows)}", flush=True)
 
 
-def encode(wav: Path, dest: Path, slow: bool) -> None:
+def encode(wav: Path, dest: Path, tempo: float | None) -> None:
     command = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav)]
-    if slow:
-        command += ["-filter:a", "atempo=0.8"]
+    if tempo is not None:
+        command += ["-filter:a", f"atempo={tempo}"]
     command += ["-c:a", "aac", "-b:a", "48k", "-ac", "1", str(dest)]
     subprocess.run(command, check=True)
 

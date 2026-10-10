@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { hasAddressToken } from '../../content/address'
 import { requireCatalog } from './load'
+import { tempoFile } from '../audio/speed'
 import { AUDIO_FILE, allSpeechLines, conceptsForSituation, isStale, resolvePlayback } from './resolve'
 
 const catalog = requireCatalog()
@@ -79,7 +80,8 @@ describe('catalog', () => {
           expect(playback).toBeTruthy()
           expect(playback && files.has(playback.file)).toBe(true)
           expect(playback && AUDIO_FILE.test(playback.file)).toBe(true)
-          expect(playback && AUDIO_FILE.test(playback.slowFile)).toBe(true)
+          expect(playback && AUDIO_FILE.test(tempoFile(playback.file, 0.7))).toBe(true)
+          expect(playback && AUDIO_FILE.test(tempoFile(playback.file, 0.85))).toBe(true)
         }
       }
     }
@@ -93,7 +95,8 @@ describe('catalog', () => {
     const listed = new Set(manifest as string[])
     for (const line of allSpeechLines(catalog.concepts)) {
       expect(listed.has(line.file)).toBe(true)
-      expect(listed.has(line.file.replace('.m4a', '.slow.m4a'))).toBe(true)
+      expect(listed.has(tempoFile(line.file, 0.7))).toBe(true)
+      expect(listed.has(tempoFile(line.file, 0.85))).toBe(true)
     }
     for (const file of listed) expect(file).toMatch(AUDIO_FILE)
   })
