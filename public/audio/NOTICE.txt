@@ -1,4 +1,4 @@
-Travel Talk 0.1.0 — Audio-Hinweise
+Travel Talk 0.2.0 — Audio-Hinweise
 
 Die Audiodateien in diesem Ordner sind mit Piper erzeugt. Die Modelle selbst sind nicht Teil dieses Repos.
 
@@ -14,4 +14,4 @@ Piper wird nicht mitgeliefert. Die Engine von OHF-Voice steht unter GPL-3.0. les
 
 Qualität und Akzent sind nicht von einer muttersprachlichen Person geprüft. Für Vietnamesisch gilt das besonders: die Dateien sind nördlich, auch wenn der Text südlich ist.
 
-Langsame Dateien (Dateiname .slow.m4a) sind mit ffmpeg atempo=0.8 erzeugt. Die Tonhöhe bleibt dabei erhalten.
+Die Stufen 70 % (.r70.m4a) und 85 % (.r85.m4a) sind mit ffmpeg atempo erzeugt. Die Tonhöhe bleibt dabei erhalten. 100 % ist die unveränderte Datei. playbackRate wird nicht benutzt.

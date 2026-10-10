@@ -1,7 +1,7 @@
 import '../zod-setup'
 import { z } from 'zod'
 import { PAIRS } from '../domain/pairs'
-import { defaultSettings, type ProgressSnapshot, type Settings, type StoredCard } from './types'
+import { defaultSettings, normalizeSpeed, type ProgressSnapshot, type Settings, type StoredCard } from './types'
 
 export const IMPORT_LIMIT = 2_000_000
 
@@ -19,7 +19,8 @@ const settingsSchema = z.strictObject({
   viContact: z.enum(['phone', 'zalo']),
   retention: z.number().finite().min(0.8).max(0.97),
   personalNote: z.string().max(500).refine((value) => !/[^\P{C}\n\t]/u.test(value)),
-  slow: z.boolean(),
+  slow: z.boolean().optional(),
+  speed: z.union([z.literal('auto'), z.literal(0.7), z.literal(0.85), z.literal(1)]).optional(),
 })
 
 const stamp = z.iso.datetime().max(40)
@@ -94,9 +95,10 @@ export function parseImport(text: string, conceptIds: ReadonlySet<string>): Impo
     }
     cards.push(card)
   }
+  const { slow, speed, ...rest } = parsed.data.settings
   return {
     snapshot: {
-      settings: parsed.data.settings as Settings,
+      settings: { ...rest, speed: normalizeSpeed(speed, slow) } as Settings,
       cards,
     },
     skipped,
@@ -121,7 +123,12 @@ export function previewImport(snapshot: ProgressSnapshot): ImportPreview {
 }
 
 export function retainLocalNote(current: string, incoming: string): string {
-  return incoming.trim().length > 0 ? incoming : current
+  return importKeepsLocalNote(incoming) ? current : incoming
+}
+
+/** An empty or whitespace note keeps the local note. A missing `personalNote` field never reaches this function: the strict schema rejects the whole file. */
+export function importKeepsLocalNote(incoming: string): boolean {
+  return incoming.trim().length === 0
 }
 
 export function toExport(snapshot: ProgressSnapshot, now: Date, includeNote = false): string {

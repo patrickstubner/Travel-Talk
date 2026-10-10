@@ -3,14 +3,16 @@ import { Link, useParams } from 'react-router-dom'
 import { conceptsForSituation, resolvePlayback } from '../content/resolve'
 import { pairById } from '../domain/pairs'
 import { playClip } from '../audio/player'
+import { effectiveSpeed, speedPercent, tempoFile } from '../audio/speed'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { RichText } from '../components/RichText'
+import { cardIdFor } from '../srs/session'
 import { prefsFromSettings } from '../storage/types'
 
 export function ShowPage() {
   const { conceptId } = useParams()
-  const { catalog } = useApp()
+  const { catalog, snapshot } = useApp()
   const settings = useSettings()
   const copy = useCopy()
   const pair = pairById(settings.pairId)
@@ -31,6 +33,9 @@ export function ShowPage() {
   if (!concept) return <p>{copy.noResults}</p>
   const target = resolvePlayback(concept, pair.target, settings.viRegion, prefsFromSettings(pair.target, settings))
   const source = resolvePlayback(concept, pair.source, settings.viRegion, prefsFromSettings(pair.source, settings))
+  const stored = snapshot?.cards.find((card) => card.cardId === cardIdFor(pair.id, concept.id))
+  const step = effectiveSpeed(settings.speed, stored)
+  const percent = speedPercent(step)
 
   return (
     <section className="stack show" data-testid="show">
@@ -54,11 +59,12 @@ export function ShowPage() {
         <button
           type="button"
           onClick={() => {
-            if (target) void playClip(target.file, target.speech, pair.target)
+            if (target) void playClip(tempoFile(target.file, step), target.speech, pair.target, step)
           }}
         >
           {copy.play}
         </button>
+        <p className="speed-now">{copy.speedShown(percent)}</p>
         <button type="button" onClick={() => setGloss((value) => !value)}>
           {gloss ? copy.hideGloss : copy.showGloss}
         </button>

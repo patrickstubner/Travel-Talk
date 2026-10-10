@@ -4,6 +4,7 @@ import type { Concept } from '../../content/phrase'
 import { resolvePlayback } from '../content/resolve'
 import { pairById } from '../domain/pairs'
 import { playClip } from '../audio/player'
+import { effectiveSpeed, speedPercent, tempoFile } from '../audio/speed'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { RichText } from '../components/RichText'
@@ -72,6 +73,9 @@ export function PracticePage() {
 
   const source = resolvePlayback(concept, pair.source, settings.viRegion, prefsFromSettings(pair.source, settings))
   const target = resolvePlayback(concept, pair.target, settings.viRegion, prefsFromSettings(pair.target, settings))
+  const stored = snapshot.cards.find((card) => card.cardId === cardIdFor(pair.id, concept.id))
+  const step = effectiveSpeed(settings.speed, stored)
+  const percent = speedPercent(step)
 
   async function rate(grade: Grade): Promise<void> {
     if (!snapshot || !pair || !concept) return
@@ -102,7 +106,10 @@ export function PracticePage() {
       {mode === 'listen' && target ? (
         <div className="stack">
           <p>{copy.listenPrompt}</p>
-          <button type="button" className="button" onClick={() => void playClip(target.file, target.speech, pair.target)}>
+          <p className="speed-now" data-testid="speed-now">
+            {copy.speedShown(percent)}
+          </p>
+          <button type="button" className="button" onClick={() => void playClip(tempoFile(target.file, step), target.speech, pair.target, step)}>
             {copy.play}
           </button>
           <ul className="choices">
@@ -155,7 +162,8 @@ export function PracticePage() {
               <p className="prompt">
                 <RichText text={target.text} />
               </p>
-              <button type="button" onClick={() => void playClip(target.file, target.speech, pair.target)}>
+              <p className="speed-now">{copy.speedShown(percent)}</p>
+              <button type="button" onClick={() => void playClip(tempoFile(target.file, step), target.speech, pair.target, step)}>
                 {copy.play}
               </button>
               <div className="row">

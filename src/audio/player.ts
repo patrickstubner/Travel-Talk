@@ -2,6 +2,7 @@ import type { Lang } from '../../content/phrase'
 import { AUDIO_FILE } from '../content/resolve'
 import { mixToMono } from '../pitch/contour'
 import { publicUrl } from '../public-url'
+import type { SpeedStep } from './speed'
 
 const SPEECH_LANG: Record<Lang, string> = {
   de: 'de-DE',
@@ -37,16 +38,21 @@ export function loadManifest(): Promise<Set<string>> {
   return loading
 }
 
-export function speak(text: string, lang: Lang): void {
+export function speak(text: string, lang: Lang, rate: SpeedStep = 1): void {
   if (typeof speechSynthesis === 'undefined') return
   speechSynthesis.cancel()
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = SPEECH_LANG[lang]
-  utterance.rate = 1
+  utterance.rate = rate
   speechSynthesis.speak(utterance)
 }
 
-export async function playClip(file: string, speech: string, lang: Lang): Promise<'file' | 'synth'> {
+/**
+ * Plays a pre-generated file at its native rate. `playbackRate` is not set:
+ * slowing the element can shift pitch, and that would bend Vietnamese tones.
+ * The browser voice is only the fallback, and then `utterance.rate` is the chosen step.
+ */
+export async function playClip(file: string, speech: string, lang: Lang, rate: SpeedStep = 1): Promise<'file' | 'synth'> {
   const files = await loadManifest()
   if (AUDIO_FILE.test(file) && files.has(file)) {
     current?.pause()
@@ -55,7 +61,7 @@ export async function playClip(file: string, speech: string, lang: Lang): Promis
     await audio.play()
     return 'file'
   }
-  speak(speech, lang)
+  speak(speech, lang, rate)
   return 'synth'
 }
 

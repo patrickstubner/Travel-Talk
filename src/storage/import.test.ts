@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Rating, emptyCard, reviewCard, toStored } from '../srs/scheduler'
-import { IMPORT_LIMIT, emptySnapshot, parseImport, previewImport, retainLocalNote, toExport } from './import'
-import { defaultSettings } from './types'
+import { IMPORT_LIMIT, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport } from './import'
+import { coerceSettings, defaultSettings } from './types'
 
 const settings = { ...defaultSettings, pairId: 'de-vi' as const, personalNote: 'Erdnüsse' }
 const concepts = new Set(['emergency.help'])
@@ -32,7 +32,10 @@ describe('import', () => {
     const now = new Date('2026-10-10T12:00:00.000Z')
     const text = toExport({ settings, cards: [] }, now)
     expect(text).not.toContain('Erdnüsse')
+    expect(text).toContain('"speed"')
+    expect(text).not.toContain('"slow"')
     expect(parseImport(text, concepts).snapshot.settings.personalNote).toBe('')
+    expect(parseImport(text, concepts).snapshot.settings.speed).toBe('auto')
   })
 
   it('rejects hostile or broken files without echoing them', () => {
@@ -70,9 +73,43 @@ describe('import', () => {
   })
 
   it('keeps the local note when the imported file has none', () => {
+    expect(importKeepsLocalNote('')).toBe(true)
+    expect(importKeepsLocalNote('   ')).toBe(true)
+    expect(importKeepsLocalNote('Pollen')).toBe(false)
     expect(retainLocalNote('Erdnüsse', '')).toBe('Erdnüsse')
     expect(retainLocalNote('Erdnüsse', '   ')).toBe('Erdnüsse')
     expect(retainLocalNote('Erdnüsse', 'Pollen')).toBe('Pollen')
+  })
+
+  it('rejects a file that omits the note field', () => {
+    const raw = JSON.parse(bundle()) as { settings: { personalNote?: string } }
+    delete raw.settings.personalNote
+    expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow('IMPORT_REJECTED')
+  })
+
+  it('maps a 0.1.0 slow flag and keeps an explicit speed', () => {
+    const { speed: _speed, ...rest } = settings
+    const legacy = (slow: boolean) =>
+      JSON.stringify({
+        app: 'travel-talk',
+        format: 1,
+        exportedAt: '2026-10-10T00:00:00.000Z',
+        settings: { ...rest, slow },
+        cards: [],
+      })
+    expect(parseImport(legacy(false), concepts).snapshot.settings.speed).toBe(1)
+    expect(parseImport(legacy(true), concepts).snapshot.settings.speed).toBe(0.85)
+    const withSpeed = JSON.parse(legacy(true)) as { settings: { speed: number } }
+    withSpeed.settings.speed = 0.7
+    expect(parseImport(JSON.stringify(withSpeed), concepts).snapshot.settings.speed).toBe(0.7)
+    expect(() => {
+      const bad = JSON.parse(legacy(false)) as { settings: { speed: number } }
+      bad.settings.speed = 0.5
+      parseImport(JSON.stringify(bad), concepts)
+    }).toThrow('IMPORT_REJECTED')
+    expect(coerceSettings({ ...rest, slow: false }).speed).toBe(1)
+    expect(coerceSettings({ slow: true }).speed).toBe(0.85)
+    expect(coerceSettings({}).speed).toBe('auto')
   })
 
   it('starts from an empty snapshot', () => {

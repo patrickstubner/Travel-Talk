@@ -16,7 +16,14 @@ export type Dictionary = {
   back: string
   context: string
   play: string
-  playSlow: string
+  speedTitle: string
+  speedAuto: string
+  speed70: string
+  speed85: string
+  speed100: string
+  speedAutoHint: (percent: number) => string
+  speedFixedHint: (percent: number) => string
+  speedShown: (percent: number) => string
   unchecked: string
   audioVi: string
   audioPt: string
@@ -81,7 +88,6 @@ export type Dictionary = {
   retention: string
   personalNote: string
   personalNoteHelp: string
-  slowToggle: string
   exportLabel: string
   importLabel: string
   importOk: string
@@ -89,6 +95,8 @@ export type Dictionary = {
   importSkipped: (count: number) => string
   importSummary: (cards: number, from: string | null, to: string | null, hasNote: boolean) => string
   importBackup: string
+  importNoteKept: string
+  importNoteReplaced: string
   exportNote: string
   exportNoteHint: string
   confirmImport: string
@@ -135,7 +143,16 @@ export const de: Dictionary = {
   back: 'Zurück',
   context: 'Wozu der Satz',
   play: 'Anhören',
-  playSlow: 'Langsam anhören',
+  speedTitle: 'Tempo',
+  speedAuto: 'Automatisch',
+  speed70: '70 %',
+  speed85: '85 %',
+  speed100: '100 %',
+  speedAutoHint: (percent) =>
+    `Automatisch, dieser Satz mit ${percent} %. Neue und unsichere Sätze starten bei 70 % und steigen nach sicheren Wiederholungen auf 85 % und dann auf 100 %. Eine feste Stufe hier gilt für alles Audio, bis du wieder Automatisch wählst.`,
+  speedFixedHint: (percent) =>
+    `Fest ${percent} % für alles Audio in dieser Sitzung. Die automatische Steigerung pausiert, bis du Automatisch wählst.`,
+  speedShown: (percent) => `Tempo ${percent} %`,
   unchecked: 'Noch nicht geprüft',
   audioVi:
     'Stimme: Piper vais1000, nördlicher Akzent, eine Sprecherin. Süd liegt nicht vor. Töne und Qualität sind nicht geprüft.',
@@ -202,7 +219,6 @@ export const de: Dictionary = {
   retention: 'Behaltensrate',
   personalNote: 'Persönliche Notiz',
   personalNoteHelp: 'Nur auf diesem Gerät. Der Export enthält die Notiz nur mit dem Haken. Nützlich für eine Allergie im Zeigen-Modus.',
-  slowToggle: 'Langsame Audiodatei, wenn vorhanden',
   exportLabel: 'Fortschritt exportieren',
   importLabel: 'Fortschritt importieren',
   importOk: 'Import gespeichert.',
@@ -218,6 +234,8 @@ export const de: Dictionary = {
     return `${count}${range}${note}`
   },
   importBackup: 'Die Sicherung folgt dem Haken «Notiz mitexportieren». Ohne Haken bleibt die Notiz nur auf diesem Gerät.',
+  importNoteKept: 'Die Datei enthält keine Notiz. Die Notiz auf diesem Gerät bleibt.',
+  importNoteReplaced: 'Die Notiz in der Datei ersetzt die Notiz auf diesem Gerät.',
   exportNote: 'Notiz mitexportieren',
   exportNoteHint: 'Die Notiz kann Gesundheitsangaben enthalten, zum Beispiel eine Allergie. Ohne Haken bleibt sie nur auf diesem Gerät.',
   confirmImport: 'Importieren',
@@ -228,7 +246,7 @@ export const de: Dictionary = {
   voicesTitle: 'Stimmen und Lizenzen',
   voicesVi: 'Vietnamesisch spricht vais1000 aus dem Datensatz VAIS-1000, eine nördliche Sprecherin. Laut Modellkarte ist die Stimme von lessac feinjustiert (Forschungslizenz).',
   voicesCc: 'CC BY 4.0',
-  voicesSlow: 'Die langsamen Dateien sind verändert (ffmpeg atempo 0.8). Die Tonhöhe bleibt erhalten.',
+  voicesSlow: '70 % und 85 % sind eigene Dateien (ffmpeg atempo). Die Tonhöhe bleibt erhalten. 100 % ist die normale Datei.',
   voicesNotice: 'NOTICE.txt',
   reset: 'Lernstand auf diesem Gerät löschen',
   resetOk: 'Der lokale Lernstand ist gelöscht.',
@@ -239,7 +257,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.1.0',
+  version: 'Version 0.2.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
@@ -265,7 +283,15 @@ export const en: Dictionary = {
   back: 'Back',
   context: 'When to use it',
   play: 'Play',
-  playSlow: 'Play slowly',
+  speedTitle: 'Speed',
+  speedAuto: 'Automatic',
+  speed70: '70 %',
+  speed85: '85 %',
+  speed100: '100 %',
+  speedAutoHint: (percent) =>
+    `Automatic, this line at ${percent} %. New and shaky lines start at 70 % and step up to 85 % and then 100 % after reliable reviews. A fixed step here applies to all audio until you choose Automatic again.`,
+  speedFixedHint: (percent) => `Fixed at ${percent} % for all audio in this session. Automatic stepping pauses until you choose Automatic.`,
+  speedShown: (percent) => `Speed ${percent} %`,
   unchecked: 'Not checked yet',
   audioVi:
     'Voice: Piper vais1000, northern accent, one woman. No southern voice. Tones and quality are not checked.',
@@ -332,7 +358,6 @@ export const en: Dictionary = {
   retention: 'Retention',
   personalNote: 'Personal note',
   personalNoteHelp: 'Only on this device. The export includes the note only when the box is checked. Useful for an allergy in show mode.',
-  slowToggle: 'Slow audio file when one exists',
   exportLabel: 'Export progress',
   importLabel: 'Import progress',
   importOk: 'Import saved.',
@@ -346,6 +371,8 @@ export const en: Dictionary = {
     return `${count}${range}${note}`
   },
   importBackup: 'The backup follows the “Include the note” box. Without the box the note stays on this device.',
+  importNoteKept: 'The file has no note. The note on this device stays.',
+  importNoteReplaced: 'The note in the file replaces the note on this device.',
   exportNote: 'Include the note in the export',
   exportNoteHint: 'The note may contain health information, for example an allergy. Without the box it stays on this device.',
   confirmImport: 'Import',
@@ -356,7 +383,7 @@ export const en: Dictionary = {
   voicesTitle: 'Voices and licences',
   voicesVi: 'Vietnamese uses vais1000 from the VAIS-1000 dataset, a northern speaker. The model card says this voice is fine-tuned from lessac (research licence).',
   voicesCc: 'CC BY 4.0',
-  voicesSlow: 'The slow files are modified (ffmpeg atempo 0.8). The pitch stays the same.',
+  voicesSlow: '70 % and 85 % are their own files (ffmpeg atempo). The pitch stays the same. 100 % is the normal file.',
   voicesNotice: 'NOTICE.txt',
   reset: 'Delete progress on this device',
   resetOk: 'Local progress was deleted.',
@@ -391,7 +418,15 @@ export const pt: Dictionary = {
   back: 'Voltar',
   context: 'Quando usar',
   play: 'Ouvir',
-  playSlow: 'Ouvir devagar',
+  speedTitle: 'Velocidade',
+  speedAuto: 'Automático',
+  speed70: '70 %',
+  speed85: '85 %',
+  speed100: '100 %',
+  speedAutoHint: (percent) =>
+    `Automático, esta frase em ${percent} %. Frases novas ou pouco firmes começam em 70 % e sobem para 85 % e depois 100 % depois de revisões seguras. Um passo fixo aqui vale para todo o áudio, até você escolher Automático de novo.`,
+  speedFixedHint: (percent) => `Fixo em ${percent} % para todo o áudio. A subida automática fica pausada até você escolher Automático.`,
+  speedShown: (percent) => `Velocidade ${percent} %`,
   unchecked: 'Ainda não revisado',
   audioVi:
     'Voz: Piper vais1000, sotaque do norte, uma falante. Não há voz do sul. Tons e qualidade não foram revisados.',
@@ -458,7 +493,6 @@ export const pt: Dictionary = {
   retention: 'Retenção',
   personalNote: 'Nota pessoal',
   personalNoteHelp: 'Só neste aparelho. A exportação inclui a nota só com a caixa marcada. Útil para uma alergia no modo mostrar.',
-  slowToggle: 'Arquivo de áudio lento, quando existir',
   exportLabel: 'Exportar progresso',
   importLabel: 'Importar progresso',
   importOk: 'Importação salva.',
@@ -474,6 +508,8 @@ export const pt: Dictionary = {
     return `${count}${range}${note}`
   },
   importBackup: 'A cópia segue a caixa da nota. Sem a caixa, a nota fica só neste aparelho.',
+  importNoteKept: 'O arquivo não tem nota. A nota neste aparelho fica.',
+  importNoteReplaced: 'A nota do arquivo substitui a nota neste aparelho.',
   exportNote: 'Incluir a nota na exportação',
   exportNoteHint: 'A nota pode ter dados de saúde, por exemplo uma alergia. Sem a caixa ela fica só neste aparelho.',
   confirmImport: 'Importar',
@@ -484,7 +520,7 @@ export const pt: Dictionary = {
   voicesTitle: 'Vozes e licenças',
   voicesVi: 'O vietnamita usa vais1000 do conjunto VAIS-1000, uma falante do norte. O cartão do modelo diz que a voz é um ajuste fino de lessac (licença de pesquisa).',
   voicesCc: 'CC BY 4.0',
-  voicesSlow: 'Os arquivos lentos são alterados (ffmpeg atempo 0.8). O tom fica igual.',
+  voicesSlow: '70 % e 85 % são arquivos próprios (ffmpeg atempo). O tom fica igual. 100 % é o arquivo normal.',
   voicesNotice: 'NOTICE.txt',
   reset: 'Apagar o progresso neste aparelho',
   resetOk: 'O progresso local foi apagado.',
@@ -519,7 +555,15 @@ export const vi: Dictionary = {
   back: 'Quay lại',
   context: 'Khi nào dùng',
   play: 'Nghe',
-  playSlow: 'Nghe chậm',
+  speedTitle: 'Tốc độ',
+  speedAuto: 'Tự động',
+  speed70: '70 %',
+  speed85: '85 %',
+  speed100: '100 %',
+  speedAutoHint: (percent) =>
+    `Tự động, câu này ở ${percent} %. Câu mới hoặc chưa chắc bắt đầu ở 70 % và tăng lên 85 % rồi 100 % sau các lần nhớ chắc. Một mức cố định ở đây áp dụng cho mọi audio, cho đến khi bạn chọn Tự động.`,
+  speedFixedHint: (percent) => `Cố định ${percent} % cho mọi audio. Tốc độ tự động tạm dừng cho đến khi bạn chọn Tự động.`,
+  speedShown: (percent) => `Tốc độ ${percent} %`,
   unchecked: 'Chưa được kiểm tra',
   audioVi:
     'Giọng: Piper vais1000, giọng Bắc, một người nữ. Không có giọng Nam. Thanh điệu và chất lượng chưa được kiểm tra.',
@@ -586,7 +630,6 @@ export const vi: Dictionary = {
   retention: 'Mức nhớ',
   personalNote: 'Ghi chú cá nhân',
   personalNoteHelp: 'Chỉ trên máy này. Bản xuất chỉ có ghi chú khi đánh dấu. Hữu ích cho dị ứng ở chế độ đưa màn hình.',
-  slowToggle: 'Tệp âm thanh chậm, nếu có',
   exportLabel: 'Xuất tiến độ',
   importLabel: 'Nhập tiến độ',
   importOk: 'Đã lưu bản nhập.',
@@ -600,6 +643,8 @@ export const vi: Dictionary = {
     return `${count}${range}${note}`
   },
   importBackup: 'Bản sao theo ô xuất ghi chú. Không đánh dấu thì ghi chú chỉ ở trên máy này.',
+  importNoteKept: 'Tệp không có ghi chú. Ghi chú trên máy này được giữ.',
+  importNoteReplaced: 'Ghi chú trong tệp thay ghi chú trên máy này.',
   exportNote: 'Xuất kèm ghi chú',
   exportNoteHint: 'Ghi chú có thể chứa thông tin sức khoẻ, ví dụ dị ứng. Không đánh dấu thì ghi chú chỉ ở trên máy này.',
   confirmImport: 'Nhập',
@@ -610,7 +655,7 @@ export const vi: Dictionary = {
   voicesTitle: 'Giọng và giấy phép',
   voicesVi: 'Tiếng Việt dùng vais1000 từ bộ VAIS-1000, một giọng nữ miền Bắc. Thẻ mô hình ghi giọng này được tinh chỉnh từ lessac (giấy phép nghiên cứu).',
   voicesCc: 'CC BY 4.0',
-  voicesSlow: 'Tệp chậm đã được sửa (ffmpeg atempo 0.8). Độ cao giọng giữ nguyên.',
+  voicesSlow: '70 % và 85 % là tệp riêng (ffmpeg atempo). Độ cao giọng giữ nguyên. 100 % là tệp bình thường.',
   voicesNotice: 'NOTICE.txt',
   reset: 'Xóa tiến độ trên máy này',
   resetOk: 'Tiến độ trên máy đã được xoá.',

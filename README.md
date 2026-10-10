@@ -1,12 +1,12 @@
 # Travel Talk
 
-Reise-Sprachhilfe für eine Familie. Version 0.1.0. Offline, ohne Konto, ohne Tracking.
+Reise-Sprachhilfe für eine Familie. Version 0.2.0. Offline, ohne Konto, ohne Tracking.
 
 Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Oberfläche ist auf Deutsch (Schweizer Schreibung) und lässt sich auf die Ausgangssprache des gewählten Paars umstellen.
 
 Die Sätze auf Vietnamesisch und Portugiesisch (Brasilien) sind noch nicht von einer muttersprachlichen Person geprüft. Dasselbe gilt für Deutsch und Englisch. Im UI steht das an den Sätzen.
 
-## Sprachpaare in 0.1.0
+## Sprachpaare in 0.2.0
 
 Deutsch nach Vietnamesisch. Portugiesisch (Brasilien) in beide Richtungen mit Deutsch, Englisch und Vietnamesisch. Weitere Paare kommen später. Jedes Paar nutzt dieselben 103 Konzepte. Die Zahlen pro Situation stehen unten. Ein Konzept kann in zwei Situationen hängen, zum Beispiel die Allergie im Notfall und im Restaurant. Deshalb ist die Summe der Situationen grösser als 103.
 
@@ -22,7 +22,7 @@ Deutsch nach Vietnamesisch. Portugiesisch (Brasilien) in beide Richtungen mit De
 | Einkaufen | Anfang | 7 |
 | Sehenswürdigkeiten | Anfang | 6 |
 
-Vietnamesisch ist im Text südlich voreingestellt. Nord ist eine Variante, zum Beispiel `đậu phộng` und `lạc`. Die Audiodatei ist trotzdem eine nördliche Stimme. Details in [docs/audio.md](docs/audio.md).
+Vietnamesisch ist im Text südlich voreingestellt. Nord ist eine Variante, zum Beispiel `đậu phộng` und `lạc`. Die Audiodatei ist trotzdem eine nördliche Stimme. Das Tempo hat drei Stufen, 70 %, 85 % und 100 %, als eigene Dateien, damit die Tonhöhe gleich bleibt. Die Wahl sitzt nur am Player. Details in [docs/audio.md](docs/audio.md).
 
 ## Lokal entwickeln
 
@@ -56,7 +56,7 @@ Die Daten sind konzept-zentriert. Ein Konzept hat pro Sprache eine Realisierung.
 
 **Kulturhinweis.** Ein Eintrag in `content/culture.ts` mit Situationen, Regionen (`VN`, `BR`, `DE-CH`, `EN`), Text in vier Sprachen, mindestens einer `https`-Quelle und dem Lesedatum. Im Text «häufig» oder «vielerorts», keine Regel für alle Menschen. Die Quelle erscheint in der Oberfläche.
 
-**Sprache.** Eine weitere Sprache ist eine weitere Realisierung pro Konzept, kein neues Layout. In 0.1.0 ist die Liste der Sprachen in `content/phrase.ts` und im Schema geschlossen, weil nur diese vier vorkommen. Für eine fünfte Sprache kommt der Code dort dazu, plus ein Paar in `src/domain/pairs.ts` und, wenn Audio mitgeliefert wird, eine Stimme in `tools/generate_audio.py` und `docs/audio.md`. Die Seiten bleiben dieselben.
+**Sprache.** Eine weitere Sprache ist eine weitere Realisierung pro Konzept, kein neues Layout. In 0.2.0 ist die Liste der Sprachen in `content/phrase.ts` und im Schema geschlossen, weil nur diese vier vorkommen. Für eine fünfte Sprache kommt der Code dort dazu, plus ein Paar in `src/domain/pairs.ts` und, wenn Audio mitgeliefert wird, eine Stimme in `tools/generate_audio.py` und `docs/audio.md`. Die Seiten bleiben dieselben.
 
 Audio neu bauen steht in [docs/audio.md](docs/audio.md). Die Prüfung der Abhängigkeiten und der Eingaben steht in [docs/SECURITY.md](docs/SECURITY.md).
 

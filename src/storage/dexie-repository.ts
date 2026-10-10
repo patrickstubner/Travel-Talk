@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import { defaultSettings, type ProgressRepository, type ProgressSnapshot, type Settings, type StoredCard } from './types'
+import { coerceSettings, defaultSettings, type ProgressRepository, type ProgressSnapshot, type Settings, type StoredCard } from './types'
 
 type SettingsRow = Settings & { id: string }
 
@@ -28,7 +28,7 @@ export class DexieProgressRepository implements ProgressRepository {
     const cards = await this.db.cards.toArray()
     if (!row) return { settings: { ...defaultSettings }, cards }
     const { id: _id, ...settings } = row
-    return { settings, cards }
+    return { settings: coerceSettings(settings), cards }
   }
 
   async saveSettings(settings: Settings): Promise<void> {

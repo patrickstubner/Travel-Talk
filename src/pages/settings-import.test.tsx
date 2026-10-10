@@ -96,9 +96,32 @@ describe('settings import', () => {
     fireEvent.change(note, { target: { value: 'Erdnüsse' } })
     fireEvent.change(screen.getByLabelText('Fortschritt importieren'), { target: { files: [importFile()] } })
     await screen.findByRole('dialog')
+    expect(screen.getByText('Die Datei enthält keine Notiz. Die Notiz auf diesem Gerät bleibt.')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Importieren' }))
     await screen.findByText('Import gespeichert.')
     expect((screen.getByLabelText('Persönliche Notiz') as HTMLTextAreaElement).value).toBe('Erdnüsse')
+  })
+
+  it('says when the file note replaces the local note', async () => {
+    const file = importFile()
+    const text = JSON.stringify({
+      ...JSON.parse(await file.text()),
+      settings: { ...defaultSettings, pairId: 'de-vi', personalNote: 'Pollen' },
+    })
+    const withNote = new File([text], 'in.json', { type: 'application/json' })
+    render(
+      <AppProvider>
+        <SettingsPage />
+      </AppProvider>,
+    )
+    const note = await screen.findByLabelText('Persönliche Notiz')
+    fireEvent.change(note, { target: { value: 'Erdnüsse' } })
+    fireEvent.change(screen.getByLabelText('Fortschritt importieren'), { target: { files: [withNote] } })
+    await screen.findByRole('dialog')
+    expect(screen.getByText('Die Notiz in der Datei ersetzt die Notiz auf diesem Gerät.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Importieren' }))
+    await screen.findByText('Import gespeichert.')
+    expect((screen.getByLabelText('Persönliche Notiz') as HTMLTextAreaElement).value).toBe('Pollen')
   })
 
   it('keeps import disabled until a catalog is loaded', () => {
