@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Rating, emptyCard, reviewCard, toStored } from '../srs/scheduler'
+import { DUE_LIMIT_DAYS, Rating, emptyCard, reviewCard, toStored } from '../srs/scheduler'
 import { EXPORT_FORMAT, IMPORT_FUTURE, IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport } from './import'
 import { cleanPersonalNote, coerceSettings, defaultSettings } from './types'
 
@@ -271,6 +271,25 @@ describe('import', () => {
     expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow(IMPORT_FUTURE)
     raw.exportedAt = new Date(Date.now() + 86_400_000).toISOString()
     expect(parseImport(JSON.stringify(raw), concepts).snapshot.cards).toEqual([])
+  })
+
+  it('rejects an exportedAt that is not an ISO datetime', () => {
+    const raw = JSON.parse(bundle()) as { exportedAt: string }
+    raw.exportedAt = '2026-10-10'
+    expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow('IMPORT_REJECTED')
+  })
+
+  it('caps a due date more than 36500 days after the last review', () => {
+    const raw = JSON.parse(bundle([card()])) as { cards: { due: string; last_review: string }[] }
+    raw.cards[0]!.last_review = '2020-01-01T00:00:00.000Z'
+    raw.cards[0]!.due = '2300-01-01T00:00:00.000Z'
+    const due = Date.parse(parseImport(JSON.stringify(raw), concepts).snapshot.cards[0]?.due ?? '')
+    expect(due).toBe(Date.parse('2020-01-01T00:00:00.000Z') + DUE_LIMIT_DAYS * 86_400_000)
+  })
+
+  it('keeps the voice hint out of the export', () => {
+    const text = toExport({ settings: { ...current, voiceHintSeen: true }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
+    expect(text).not.toContain('voiceHintSeen')
   })
 
   it('maps every old pair, including pt-vi, onto the two languages', () => {

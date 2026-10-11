@@ -42,8 +42,8 @@ export default defineConfig({
           // An Rspack plugin would only see compilation assets, not those files.
           const result = await generateSW({
             globDirectory: dist,
-            globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,json,m4a,txt}'],
-            globIgnores: ['**/sw.js', '**/workbox-*.js'],
+            globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,json,txt}'],
+            globIgnores: ['**/sw.js', '**/workbox-*.js', '**/*.align.json'],
             swDest: join(dist, 'sw.js'),
             modifyURLPrefix: { '': BASE },
             maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
@@ -57,6 +57,18 @@ export default defineConfig({
             disableDevLogs: true,
             sourcemap: false,
             mode: 'production',
+            // Audio is not precached. The selected voice is fetched into this cache.
+            runtimeCaching: [
+              {
+                urlPattern: /\/Travel-Talk\/audio\/.+\.m4a$/,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'travel-talk-audio',
+                  cacheableResponse: { statuses: [0, 200] },
+                  expiration: { maxEntries: 2000, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                },
+              },
+            ],
           })
           if (result.warnings.length > 0) throw new Error(result.warnings.join('\n'))
         })

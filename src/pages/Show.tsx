@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { conceptsForSituation, resolvePlayback } from '../content/resolve'
 import { directionId } from '../domain/direction'
 import { playClip } from '../audio/player'
+import { spokenFile } from '../audio/voices'
 import { effectiveSpeed, speedPercent, tempoFile } from '../audio/speed'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
@@ -66,7 +67,7 @@ export function ShowPage() {
           onClick={() => {
             if (!target) return
             setPlaying(true)
-            void playClip(tempoFile(target.file, step), target.speech, targetLang, step, () => setPlaying(false))
+            void playClip(tempoFile(spokenFile(settings, targetLang, target.file), step), target.speech, targetLang, step, () => setPlaying(false))
           }}
         >
           <span className="play-mark" aria-hidden="true" />

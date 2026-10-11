@@ -2,7 +2,7 @@
 
 **Live:** [patrickstubner.github.io/Travel-Talk](https://patrickstubner.github.io/Travel-Talk/)
 
-Reise-Sprachhilfe für eine Familie. Version 0.3.1. Offline, ohne Konto, ohne Tracking.
+Reise-Sprachhilfe für eine Familie. Version 0.4.0. Offline, ohne Konto, ohne Tracking.
 
 Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Sprache der App und die Lernsprache sind zwei getrennte Wahlen. Hören, Verstehen und Sprechen kommen zuerst. Lesen stützt das Hören. Schreiben ist nicht der Weg durch die Sitzung. Höchstens 15 neue Sätze am Tag, über alle Richtungen zusammen.
 
@@ -24,7 +24,7 @@ Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Jede Richtung au
 | Einkaufen | Anfang | 7 |
 | Sehenswürdigkeiten | Anfang | 6 |
 
-Vietnamesisch ist im Text südlich voreingestellt. Nord ist eine Variante, zum Beispiel `đậu phộng` und `lạc`. Die Audiodatei ist trotzdem eine nördliche Stimme. Das Tempo hat drei Stufen, 70 %, 85 % und 100 %, als eigene Dateien, damit die Tonhöhe gleich bleibt. Die Wahl sitzt nur am Player. Details in [docs/audio.md](docs/audio.md).
+Vietnamesisch ist im Text südlich voreingestellt. Nord ist eine Variante, zum Beispiel `đậu phộng` und `lạc`. Eine neue Installation spricht mit einer Männerstimme. Die nördliche Frauenstimme bleibt wählbar. Der Akzent der Männerstimmen ist nicht dokumentiert. Das Tempo hat drei Stufen, 70 %, 85 % und 100 %, als eigene Dateien, damit die Tonhöhe gleich bleibt. Die Wahl sitzt nur am Player. Details in [docs/audio.md](docs/audio.md).
 
 ## Lokal entwickeln
 

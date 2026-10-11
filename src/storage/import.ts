@@ -2,6 +2,7 @@ import '../zod-setup'
 import { z } from 'zod'
 import { PAIRS } from '../domain/pairs'
 import { directionLangs, legacyDirection } from '../domain/direction'
+import { capDueIso } from '../srs/scheduler'
 import { VOICE_ID, cleanVoices, defaultSettings, normalizeSpeed, type ProgressSnapshot, type Settings, type StoredCard } from './types'
 
 export const IMPORT_LIMIT = 2_000_000
@@ -86,7 +87,7 @@ export const storedCardSchema = z.strictObject({
 
 const bundleEnvelope = {
   app: z.literal('travel-talk'),
-  exportedAt: z.string().max(40),
+  exportedAt: z.iso.datetime().max(40),
   cards: z.array(storedCardSchema).max(2000),
 }
 
@@ -175,10 +176,14 @@ export function parseImport(text: string, conceptIds: ReadonlySet<string>): Impo
   if (!Number.isFinite(exportedAt)) throw new Error('IMPORT_REJECTED')
   const now = Date.now()
   if (exportedAt > now + DAY_MS) throw new Error(IMPORT_FUTURE)
-  const capped = parsed.data.cards.map((card) => ({
-    ...card,
-    last_review: capLastReview(card.last_review, exportedAt, now),
-  }))
+  const capped = parsed.data.cards.map((card) => {
+    const lastReview = capLastReview(card.last_review, exportedAt, now)
+    return {
+      ...card,
+      last_review: lastReview,
+      due: capDueIso(card.due, lastReview, now),
+    }
+  })
   const ids = capped.map((card) => card.cardId)
   if (new Set(ids).size !== ids.length) throw new Error('IMPORT_REJECTED')
   const cards: StoredCard[] = []

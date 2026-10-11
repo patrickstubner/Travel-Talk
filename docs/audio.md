@@ -59,31 +59,37 @@ Wenn die gewünschte Datei fehlt, spricht `speechSynthesis`. `utterance.rate` is
 
 ## Stimmen und Lizenzen
 
-Die Modelle liegen nicht im Repo. Erzeugt wurde nur das Audio, am 10. Oktober 2026, mit Piper aus dem Paket `piper-tts` (OHF-Voice, Engine GPL-3.0). Die Engine wird nicht mitgeliefert.
+Die Modelle liegen nicht im Repo. Erzeugt wurde nur das Audio, mit Piper aus dem Paket `piper-tts` (OHF-Voice, Engine GPL-3.0). Die Engine wird nicht mitgeliefert. Die Dateien von 0.2.0 stammen vom 10. Oktober 2026. Die zusätzlichen Stimmen von 0.4.0 stammen vom 11. Oktober 2026.
 
-| Sprache | Stimme | Datensatz | Lizenz der Daten | Was ungeprüft bleibt |
-| --- | --- | --- | --- | --- |
-| Deutsch | `de_DE-thorsten-medium` | Thorsten-Voice | CC0 | Deutsch aus Deutschland, nicht Schweizerdeutsch. Qualität nicht geprüft. Die Modellkarte nennt ein Feintuning von lessac. |
-| Portugiesisch (Brasilien) | `pt_BR-faber-medium` | Faber über OHF-Voice | CC0 | Qualität nicht geprüft. Geschlecht steht nicht in der Modellkarte. Ebenfalls Feintuning von lessac. |
-| Englisch | `en_US-ljspeech-medium` | LJ Speech | gemeinfrei, von Grund auf trainiert | Englisch (USA), eine Sprecherin. Qualität nicht geprüft. |
-| Vietnamesisch | `vi_VN-vais1000-medium` | VAIS-1000 | CC BY 4.0 | **Nördlicher Akzent, eine Sprecherin.** Keine südliche Stimme. Die Modellkarte sagt: Feintuning von lessac (medium). Töne und Qualität nicht geprüft. |
+Die App ist für den nicht kommerziellen Gebrauch in der Familie. CC BY-NC und CC BY-NC-SA sind dafür in Ordnung. ShareAlike gilt auch für das erzeugte Audio: vivos-Dateien stehen unter CC BY-NC-SA 4.0.
 
-Namensnennung für VAIS-1000 steht in `public/audio/NOTICE.txt` und hier. Quelle der Lizenz: Modellkarte bei Hugging Face (`rhasspy/piper-voices`, Tag `v1.0.0`) und die Beschreibung von VAIS-1000 (IEEE DataPort, nördlicher Akzent).
+Eine spätere bezahlte Stimme ist ein weiterer Eintrag in `src/audio/voices.ts` (`provider: 'azure'`, `bundled: false`). Sie erscheint erst in der Wahl, wenn `bundled` wahr ist. Es gibt kein Konto und keinen Schlüssel in dieser Version.
 
-lessac (Blizzard 2013, Lessac Technologies) ist laut der Upstream-Lizenz nur für Research Purposes da: https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html. Kommerzielle Sprachsynthese ist dort ausgeschlossen. Deutsch, Portugiesisch und Vietnamesisch sind davon feinjustiert. Englisch ist von Grund auf trainiert. lessac selbst wird nicht als Stimme verwendet. Im Repo liegt nur das erzeugte Audio, nicht die Gewichte. Das ist ein offener rechtlicher Vorbehalt, kein Freibrief.
+| Sprache | Id | Modell | Datensatz | Lizenz | Was die Karte sagt |
+| --- | --- | --- | --- | --- | --- |
+| Deutsch | `thorsten-high` | `de_DE-thorsten-high` | Thorsten-Voice | CC0 | Eine Stimme, hohe Qualität. Die Karte nennt das Geschlecht nicht. Der Datensatz ist die Stimme von Thorsten Müller, die Synthese liegt bei etwa 127 Hz. Standard für neue Nutzer. |
+| Deutsch | `thorsten` | `de_DE-thorsten-medium` | Thorsten-Voice | CC0 | Dieselbe Stimme, mittlere Qualität. Das sind die Dateien von vor 0.4.0. |
+| Portugiesisch (Brasilien) | `cadu` | `pt_BR-cadu-medium` | OHF-Voice, CC0 | CC0 | Die Karte nennt das Geschlecht nicht. Die veröffentlichte Hörprobe liegt bei etwa 143 Hz, die Synthese bei etwa 119 Hz. Standard für neue Nutzer. |
+| Portugiesisch (Brasilien) | `faber` | `pt_BR-faber-medium` | OHF-Voice, CC0 | CC0 | Die Karte nennt das Geschlecht nicht. Die veröffentlichte Hörprobe liegt bei etwa 202 Hz. |
+| Englisch | `joe` | `en_US-joe-medium` | OHF-Voice, CC0 | CC0 | Die Karte nennt das Geschlecht nicht. Die Hörprobe liegt bei etwa 110 Hz, die Synthese bei etwa 99 Hz. Standard für neue Nutzer. |
+| Englisch | `ljspeech` | `en_US-ljspeech-medium` | LJ Speech | gemeinfrei | Eine Sprecherin, von Grund auf trainiert. |
+| Vietnamesisch | `vivos-22` | `vi_VN-vivos-x_low`, Sprecher 9 (`VIVOSSPK22`) | VIVOS, InfoRe / AILAB HCMUS | CC BY-NC-SA 4.0 | 65 Sprecher, 16 kHz, `x_low`. Die Karte nennt weder Geschlecht noch Akzent. Median der Grundfrequenz dieser Synthese etwa 148 Hz. Standard für neue Nutzer. |
+| Vietnamesisch | `vivos-32` | derselbe, Sprecher 37 (`VIVOSSPK32`) | VIVOS | CC BY-NC-SA 4.0 | Median etwa 145 Hz. Zweite Männerstimme. |
+| Vietnamesisch | `vais1000` | `vi_VN-vais1000-medium` | VAIS-1000 | CC BY 4.0 | Nördlicher Akzent, eine Sprecherin. |
 
-Nicht verwendet:
+`en_US-ryan` ist CC BY-NC-SA und wurde nicht genommen, weil `joe` CC0 ist. `en_GB-alan` verweist die Lizenz nur auf eine URL, ohne eine freie Lizenz auf der Karte. `pt_BR-jeff` ist ebenfalls CC0 und nach der Tonhöhe männlich (Hörprobe etwa 151 Hz) und wurde nicht mitgeliefert, damit nicht eine dritte portugiesische Stimme im Repo liegt. lessac bleibt draussen: die Upstream-Lizenz ist nur Research Purposes, https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html. Die Gewichte liegen nicht im Repo. thorsten, cadu, joe, faber und vais1000 sind laut Karte von lessac feinjustiert. vivos ist von Grund auf trainiert. LJSpeech auch.
 
-- `vi_VN-25hours_single`: Lizenz unbekannt.
-- `vi_VN-vivos`: CC BY-NC-SA, Qualität `x_low`. Ein Labor in Ho-Chi-Minh-Stadt trainiert die Stimme, der Akzent ist aber nicht als südlich dokumentiert. Non-Commercial passt nicht in ein öffentliches Repo.
-- Ryan: CC BY-NC-SA.
-- LibriTTS high: CC BY, mehrere Sprecher, zu gross für diese Version.
+Piper gibt für diese Modelle keine Phonemzeiten zurück (`include_alignments` liefert eine leere Liste). Es liegen keine Wort-Zeitstempel neben den Dateien. Eine spätere Hervorhebung kann sie nicht aus diesem Stand lesen.
+
+Kurze Hörproben derselben Sätze liegen unter `docs/samples/`: `vi-mann-1-erdnuss.mp3`, `vi-mann-2-erdnuss.mp3`, `de-mann-erdnuss.mp3`, `pt-mann-erdnuss.mp3`.
 
 ## Süd und Nord
 
-Eine frei weitergebbare Piper-Stimme mit südlichem Akzent gibt es in dieser Auswahl nicht. Die App spricht vietnamesische Sätze deshalb mit der nördlichen Stimme, auch wenn der Text die südliche Variante ist (`đậu phộng`, `Dạ`, `ba`, `chén`). Die Oberfläche sagt das an der Stelle, nicht nur in dieser Datei.
+Die Modellkarte von vivos dokumentiert den Akzent nicht. Die Phonemkette von espeak ist für alle 65 Sprecher dieselbe, und zwei Zeichen daraus (`̪` und `6`) fehlen in der Karte des Modells, sie fallen weg. An den Proben ist nicht zu hören, ob ein Sprecher südlich oder nördlich ist. Der Korpus VIVOS wird an anderer Stelle als südliches Vietnamesisch beschrieben (Montreal Forced Aligner, Labor in Ho-Chi-Minh-Stadt). Das steht nicht auf der Piper-Karte, und die Qualität `x_low` trägt ein solches Urteil nicht. Die Oberfläche sagt deshalb nicht «Süden». Die Frau bleibt «Frau (Norden)», weil VAIS-1000 den nördlichen Akzent nennt.
 
-Die Tonhöhenkurve vergleicht die eigene Aufnahme mit genau dieser nördlichen Datei. Eine Abweichung kann an der Stimme liegen. Sie erscheint nur nach einer Aufnahme. Die fünf festen Tonbögen sind nicht mehr in der Oberfläche.
+Die Qualität der Männerstimmen ist niedrig: 16 kHz, fehlende Phoneme, brummig. Sie sind eine Wahl, keine geprüfte Aussprache. Die Tonhöhenkurve vergleicht die eigene Aufnahme mit der gerade gewählten Datei.
+
+Wird der Tab versteckt oder die Seite geschlossen, stoppt die Aufnahme und das Mikrofon wird freigegeben, auf der Satzseite und im Schritt Nachsprechen. «Weiter» ist gesperrt, solange das Mikrofon in der Sitzung noch startet. Ein Start, der erst danach fertig wird, gibt die Tracks sofort frei.
 
 Wird der Tab versteckt oder die Seite geschlossen, stoppt die Aufnahme und das Mikrofon wird freigegeben, auf der Satzseite und im Schritt Nachsprechen. «Weiter» ist gesperrt, solange das Mikrofon in der Sitzung noch startet. Ein Start, der erst danach fertig wird, gibt die Tracks sofort frei.
 
@@ -91,7 +97,9 @@ Wird der Tab versteckt oder die Seite geschlossen, stoppt die Aufnahme und das M
 
 `{sprache}/{konzept}__{south|north|any}__{variante}.m4a`
 
-70 % hängt `.r70` vor `.m4a`, 85 % hängt `.r85` davor. `public/audio/manifest.json` listet die Dateien. Die App baut die Adresse nur aus diesem Muster und nur, wenn der Name in der Liste steht.
+Eine Stimme aus 0.4.0 legt ihren Ordner dazwischen: `{sprache}/{stimme}/{konzept}__{south|north|any}__{variante}.m4a`. Die Stimme von vor 0.4.0 bleibt ohne diesen Ordner. 70 % hängt `.r70` vor `.m4a`, 85 % hängt `.r85` davor. `public/audio/manifest.json` listet die Dateien. Die App baut die Adresse nur aus diesem Muster und nur, wenn der Name in der Liste steht.
+
+Der Service Worker legt die Audiodateien nicht in den Precache. Er speichert eine Datei, wenn sie abgerufen wird. Nach der Sprachwahl holt die App die gewählte Lernstimme in diesen Cache. Die anderen Stimmen werden nicht im Voraus geladen.
 
 Neu erzeugen, ohne die Modelle ins Repo zu legen:
 
@@ -101,6 +109,7 @@ python3 tools/generate_audio.py de /pfad/zu/den/modellen
 python3 tools/generate_audio.py en /pfad/zu/den/modellen
 python3 tools/generate_audio.py pt-BR /pfad/zu/den/modellen
 python3 tools/generate_audio.py vi /pfad/zu/den/modellen
+python3 tools/generate_audio.py extra /pfad/zu/den/modellen
 ```
 
-Die Modelle heissen `de_DE-thorsten-medium.onnx`, `en_US-ljspeech-medium.onnx`, `pt_BR-faber-medium.onnx` und `vi_VN-vais1000-medium.onnx`, jeweils mit der passenden `.onnx.json`.
+`extra` schreibt thorsten-high, joe, cadu und die beiden vivos-Sprecher. Die Modelle heissen `de_DE-thorsten-high.onnx`, `en_US-joe-medium.onnx`, `pt_BR-cadu-medium.onnx` und `vi_VN-vivos-x_low.onnx`, jeweils mit der passenden `.onnx.json`. Die älteren vier Modelle bleiben für die Dateien ohne Stimmordner.

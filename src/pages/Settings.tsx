@@ -211,6 +211,7 @@ export function SettingsPage() {
                   settings: {
                     ...next.settings,
                     personalNote: retainLocalNote(current.settings.personalNote, next.settings.personalNote),
+                    ...(current.settings.voiceHintSeen ? { voiceHintSeen: true } : {}),
                   },
                 }
                 const relabeled = pending.uiNotRelabeled

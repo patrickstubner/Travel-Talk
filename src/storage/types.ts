@@ -8,8 +8,14 @@ export type Settings = {
   appLang: Lang | null
   targetLang: Lang | null
   viRegion: 'south' | 'north'
-  /** Optional voice id per language. Missing means the one bundled voice. */
+  /**
+   * Optional voice id per language.
+   * Missing means the voice shipped before 0.4.0.
+   * A new user stores the male id. A later paid voice is just another id.
+   */
   voices?: VoiceMap
+  /** Local only. Not exported, so format 3 stays strict. */
+  voiceHintSeen?: boolean
   addressVi: string
   addressPt: string
   addressDe: string
@@ -38,6 +44,8 @@ export type StoredCard = {
 export type ProgressSnapshot = {
   settings: Settings
   cards: StoredCard[]
+  /** Cards replaced while reading IndexedDB. Not stored and not exported. */
+  repaired?: number
 }
 
 export const defaultSettings: Settings = {
@@ -103,6 +111,7 @@ export function coerceSettings(raw: Partial<Settings> & { slow?: boolean; pairId
     targetLang,
     viRegion: raw.viRegion === 'north' ? 'north' : 'south',
     ...(cleanVoices(raw.voices) ? { voices: cleanVoices(raw.voices) } : {}),
+    ...(raw.voiceHintSeen === true ? { voiceHintSeen: true } : {}),
     addressVi: typeof raw.addressVi === 'string' && ADDRESS_VI.has(raw.addressVi) ? raw.addressVi : defaultSettings.addressVi,
     addressPt: typeof raw.addressPt === 'string' && ADDRESS_PT.has(raw.addressPt) ? raw.addressPt : defaultSettings.addressPt,
     addressDe: typeof raw.addressDe === 'string' && ADDRESS_DE.has(raw.addressDe) ? raw.addressDe : defaultSettings.addressDe,

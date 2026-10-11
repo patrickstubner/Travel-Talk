@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { Concept } from '../../content/phrase'
+import { spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { playClip } from '../audio/player'
 import { tempoFile } from '../audio/speed'
@@ -115,7 +116,7 @@ export function PracticePage() {
     let live = true
     const rate = step === 'slow' ? 0.7 : 1
     setPlaying(true)
-    void playClip(tempoFile(line.file, rate), line.speech, settings.targetLang, rate, () => {
+    void playClip(tempoFile(spokenFile(settings, settings.targetLang, line.file), rate), line.speech, settings.targetLang, rate, () => {
       if (live && aliveRef.current) setPlaying(false)
     })
     return () => {
@@ -166,8 +167,9 @@ export function PracticePage() {
   }
 
   async function hear(file: string, speech: string, rate: 0.7 | 1): Promise<void> {
+    if (!targetLang) return
     setPlaying(true)
-    await playClip(tempoFile(file, rate), speech, targetLang, rate, () => {
+    await playClip(tempoFile(spokenFile(settings, targetLang, file), rate), speech, targetLang, rate, () => {
       if (aliveRef.current) setPlaying(false)
     })
   }

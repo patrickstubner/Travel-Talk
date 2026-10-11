@@ -9,7 +9,20 @@ export type Playback = {
   variantId: string
 }
 
-export const AUDIO_FILE = /^(de|en|pt-BR|vi)\/[a-z0-9.-]+__(south|north|any)__[a-z0-9-]+(\.r70|\.r85)?\.m4a$/
+/** Optional voice folder, then the concept file. The voice id matches `^[a-z0-9_-]{1,40}$`. */
+export const AUDIO_FILE = /^(de|en|pt-BR|vi)\/(?:[a-z0-9_-]{1,40}\/)?[a-z0-9.-]+__(south|north|any)__[a-z0-9-]+(\.r70|\.r85)?\.m4a$/
+
+const VOICE_FOLDER = /^[a-z0-9_-]{1,40}$/
+
+/** Legacy files stay at `{lang}/{concept}…`. Another voice inserts its id after the language. */
+export function voiceFile(file: string, voiceId: string, legacy: boolean): string {
+  if (legacy || !VOICE_FOLDER.test(voiceId)) return file
+  const slash = file.indexOf('/')
+  if (slash < 1) return file
+  const rest = file.slice(slash + 1)
+  if (rest.startsWith(`${voiceId}/`)) return file
+  return `${file.slice(0, slash)}/${voiceId}/${rest}`
+}
 
 export function regionKey(realization: Realization): 'south' | 'north' | 'any' {
   return realization.region ?? 'any'

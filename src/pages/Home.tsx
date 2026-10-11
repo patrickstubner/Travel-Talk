@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { withDefaultVoices } from '../audio/voices'
 import { LanguageChoice } from '../components/LanguageChoice'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
@@ -25,7 +26,7 @@ export function HomePage() {
         onChange={(patch) => setDraft({ ...pending, ...patch })}
         onContinue={() => {
           if (!pending.appLang || !pending.targetLang) return
-          void saveSettings(pending)
+          void saveSettings(withDefaultVoices(pending))
         }}
       />
     )
@@ -40,6 +41,15 @@ export function HomePage() {
   return (
     <div className="stack" data-testid="start">
       <h1>{copy.learnToday}</h1>
+      {snapshot.repaired ? <p role="status">{copy.cardsReset(snapshot.repaired)}</p> : null}
+      {!settings.voiceHintSeen ? (
+        <p className="voice-note" role="status">
+          {copy.voiceHint}{' '}
+          <button type="button" onClick={() => void saveSettings({ ...settings, voiceHintSeen: true })}>
+            {copy.voiceHintClose}
+          </button>
+        </p>
+      ) : null}
       <p>{copy.startLead(fresh, due)}</p>
       <Link className="button primary" to="/practice">
         {copy.learnToday}

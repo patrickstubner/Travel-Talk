@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 — 2026-10-11
+
+- Jede Lernsprache hat eine Stimmenwahl, an derselben Stelle wie die Sprachen. Eine neue Installation startet mit einer Männerstimme. Wer die App schon benutzt, behält die bisherige Stimme und sieht einmal den Hinweis, dass Männerstimmen da sind.
+- Deutsch: thorsten, hohe Qualität, CC0, zusätzlich zur bisherigen mittleren Qualität. Englisch: joe, CC0, Mann, zusätzlich zu LJSpeech. Portugiesisch (Brasilien): cadu, CC0, Mann, zusätzlich zu faber. Vietnamesisch: zwei Sprecher aus vivos (`x_low`, CC BY-NC-SA 4.0), zusätzlich zu vais1000. Das erzeugte vivos-Audio steht unter derselben Lizenz. Der Akzent dieser Männerstimmen ist nicht dokumentiert, die Qualität ist niedrig.
+- Langsam und normal bleiben eigene Dateien (`ffmpeg atempo`), mit derselben Lautstärke-Normalisierung. Piper liefert für diese Modelle keine Wortzeiten. Es gibt keine Zeitstempel-Dateien.
+- Der Service Worker speichert Audio erst, wenn es gebraucht wird, und holt die gewählte Lernstimme vor. Die anderen Stimmen bleiben auf dem Server, bis sie gewählt sind.
+- Ein `due` später als `last_review` (oder jetzt) plus 36'500 Tage wird gekürzt, beim Import, beim Lesen aus IndexedDB und bei der Bewertung. `exportedAt` muss ein ISO-Zeitstempel sein. Eine Karte, die beim Lesen ersetzt wird, kann auf der Startseite als «n Karten zurückgesetzt» erscheinen.
+
 ## 0.3.1 — 2026-10-11
 
 - Ein `last_review` kurz nach dem Export bleibt in der Datei. Er wird auf den früheren Zeitpunkt von Lernzeit, Export und jetzt gekürzt. Liegt `exportedAt` mehr als einen Tag in der Zukunft, gibt es einen eigenen Satz, die Datei wird nicht importiert.

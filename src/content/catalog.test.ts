@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { hasAddressToken } from '../../content/address'
 import { requireCatalog } from './load'
 import { tempoFile } from '../audio/speed'
-import { AUDIO_FILE, allSpeechLines, conceptsForSituation, isStale, resolvePlayback } from './resolve'
+import { VOICES } from '../audio/voices'
+import { AUDIO_FILE, allSpeechLines, conceptsForSituation, isStale, resolvePlayback, voiceFile } from './resolve'
 
 const catalog = requireCatalog()
 const banned = new RegExp(
@@ -97,6 +98,15 @@ describe('catalog', () => {
       expect(listed.has(line.file)).toBe(true)
       expect(listed.has(tempoFile(line.file, 0.7))).toBe(true)
       expect(listed.has(tempoFile(line.file, 0.85))).toBe(true)
+    }
+    for (const line of allSpeechLines(catalog.concepts)) {
+      for (const voice of VOICES.filter((item) => item.bundled && item.lang === line.lang)) {
+        const file = voiceFile(line.file, voice.id, voice.legacy)
+        expect(listed.has(file), file).toBe(true)
+        expect(file).toMatch(AUDIO_FILE)
+        expect(listed.has(tempoFile(file, 0.7))).toBe(true)
+        expect(listed.has(tempoFile(file, 0.85))).toBe(true)
+      }
     }
     for (const file of listed) expect(file).toMatch(AUDIO_FILE)
   })
