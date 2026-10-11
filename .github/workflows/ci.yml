@@ -46,6 +46,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: ffmpeg for the shipped-clip regression
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: npm test
 
   build:
