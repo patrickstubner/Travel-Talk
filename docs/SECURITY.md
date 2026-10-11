@@ -250,6 +250,18 @@ Geprüft am 11. Oktober 2026 am Branch `cursor/people-v060-d07c`. Kein neues Pak
 
 Eine gelöschte Stimme verlässt den Cache, wenn keine verbleibende Person sie benutzt. Im Zeigen-Modus ist der Name verborgen. «Alle Personen exportieren» nennt den Grund, solange der Knopf aus ist. `require_onnx` endet mit einem Satz, wenn das Paket fehlt.
 
+## 0.8.0
+
+Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit und keine neue npm-Abhängigkeit. `npm audit` bleibt bei 0 Schwachstellen. Kein Netz für die Rückmeldung, keine Spracherkennung, kein Phonemmodell.
+
+**Aufnahme.** `startMicrophone` fragt das Mikrofon erst beim Tippen. Die Samples bleiben im Speicher der Seite. Sie gehen nicht in IndexedDB, nicht in den Export und nicht an einen Server. Ein Wechsel der Seite, «Weiter» und ein versteckter Tab geben die Tracks frei, wie bisher. «Nochmal» ersetzt die Aufnahme auf der Seite. Sterne und Farben werden nicht gespeichert und ändern FSRS nicht. Die vier Bewertungen bleiben der einzige Weg in den Planer.
+
+**Vergleich.** Die Modellkurve kommt aus der Datei, die gerade gehört wurde, einschliesslich 70 % und 85 %. Die Zeiten sind die der normalen Datei, gestreckt mit dem Tempofaktor. Fehlt die Zeitdatei, passt sie nicht zur Zeile oder scheitert `alignmentFitsDuration`, bleiben die Kurven ohne Farben und ohne Sterne. Die Zuordnung ist eine lineare Abbildung der stimmhaften Strecken, plus eine kleine Verschiebung pro Wort. Eine andere Dehnung gilt nur, wenn sie den mittleren Abstand unter 1,5 Halbtöne bringt. So verschluckt das Tempo keinen falschen Ton. Die Bänder stehen in `src/pitch/feedback.ts`. Sie sind vom Autor gesetzt, nicht aus einer Lernstudie. Unter 1,5 Halbtönen ist die Melodie grün, von 1,5 bis 3 gelb, darüber rot. Rhythmus grün ist 0,7 bis 1,4 der gehörten Dauer, gelb von 0,5 bis unter 0,7 und über 1,4 bis 1,8. Ein gleichmässig langsames Nachsprechen bleibt bei den Wörtern grün. Der Rhythmusbalken nimmt das schlechtere aus dem Tempo der ganzen Aufnahme und den Wörtern.
+
+**Töne.** Nur Vietnamesisch bekommt einen Satz, aus der Schrift und aus der gehörten Form, etwa «Du bist gestiegen. Der Ton sollte fallen.» Die Farbe bleibt der Abstand der Kurven, nicht die Schrift. Im Süden bekommen hỏi und ngã keinen Satz. ngã im Norden gilt als Senke oder steigend. nặng zählt nur als fallend. Knarrlaut sieht die Kurve nicht. Der Hinweis sagt, dass die Modellkurve aus der nördlichen TTS-Stimme kommt und keine Note ist.
+
+**Grenzen dieser Fassung.** Ein Hinweis auf die Pausenlänge und ein Satz zu einem nur bei sich selbst leiseren Wort fehlen. Die Schwelle «unklar» bei 6 Halbtönen und «zu kurz» bei 0,3 Sekunden sind eine Wahl. Die Zeit eines Frames ist der Anfang des Analysefensters. Die Abbildung kennt keine Phoneme. Eine Pause länger als etwa 40 ms kann die Melodie des nächsten Wortes verschieben. Die Klarheit 0,8 kann Frames vom Telefonmikrofon verwerfen. Tests: `src/pitch/feedback.test.ts`, `src/components/repeat-feedback.test.tsx`, `src/pages/phrase-feedback.test.tsx`, `src/pages/practice-feedback.test.tsx`.
+
 ## 0.7.0
 
 Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit, kein neues Paket, kein neues Netz aus der App. `npm audit` bleibt bei 0 Schwachstellen. Die Sätze, der Gloss und die Kulturhinweise sind statische Daten im Katalog. `phrase()` setzt `geprueft` auf `false`. Die Oberfläche sagt weiter, dass die Zeilen und die Wortzuordnung nicht geprüft sind.

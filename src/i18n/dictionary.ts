@@ -50,6 +50,29 @@ export type Dictionary = {
   pitchCaveat: string
   pitchEmpty: string
   pitchNoModel: string
+  repeatFeedback: {
+    melody: string
+    rhythm: string
+    pass: string
+    part: string
+    off: string
+    unclear: string
+    tooShort: string
+    again: string
+    stars: (count: number) => string
+    sequential: string
+    backSentence: string
+    back: string
+    northern: string
+    toneTap: string
+    creak: string
+    target: string
+    you: { rising: string; falling: string; level: string; dipping: string }
+    should: { rising: string; falling: string; level: string; dipping: string }
+    expect: { rising: string; falling: string; level: string; dipping: string }
+    tone: { ngang: string; huyen: string; sac: string; hoi: string; nga: string; nang: string }
+    toneShape: { ngang: string; huyen: string; sac: string; hoi: string; nga: string; nang: string }
+  }
   shape: {
     level: string
     rising: string
@@ -315,6 +338,44 @@ export const de: Dictionary = {
     'Die Modellkurve stammt aus der nördlichen TTS-Stimme, nicht aus einer geprüften südlichen Aufnahme. Eine Abweichung kann an der Stimme liegen.',
   pitchEmpty: 'In der Aufnahme war zu wenig stimmhafte Tonhöhe.',
   pitchNoModel: 'Ohne Audiodatei gibt es keine Modellkurve.',
+  repeatFeedback: {
+    melody: 'Melodie',
+    rhythm: 'Rhythmus',
+    pass: 'passt',
+    part: 'teilweise',
+    off: 'daneben',
+    unclear: 'unklar',
+    tooShort: 'Die Aufnahme ist zu kurz.',
+    again: 'Nochmal',
+    stars: (count) => (count === 1 ? 'Ein von drei' : count === 2 ? 'Zwei von drei' : 'Drei von drei'),
+    sequential: 'Nacheinander. Beide laufen nicht zugleich.',
+    backSentence: 'Zurück zum Satz',
+    back: 'Zurück',
+    northern: 'Nördliche Stimme. Ein Hinweis, keine Note.',
+    toneTap: 'Tippe den Tonhinweis, wenn du die sechs Formen sehen willst.',
+    creak: 'Knarrlaut bei ngã und nặng sieht die Kurve nicht. Im Süden sind hỏi und ngã ein Ton.',
+    target: 'Soll',
+    you: {
+      rising: 'Du bist gestiegen.',
+      falling: 'Du bist gefallen.',
+      level: 'Du bist eben geblieben.',
+      dipping: 'Du bist in eine Senke gegangen.',
+    },
+    should: {
+      rising: 'Der Ton sollte steigen.',
+      falling: 'Der Ton sollte fallen.',
+      level: 'Der Ton sollte eben bleiben.',
+      dipping: 'Der Ton sollte eine Senke machen.',
+    },
+    expect: {
+      rising: 'sollte steigen',
+      falling: 'sollte fallen',
+      level: 'sollte eben bleiben',
+      dipping: 'sollte eine Senke machen',
+    },
+    tone: { ngang: 'ngang', huyen: 'huyền', sac: 'sắc', hoi: 'hỏi', nga: 'ngã', nang: 'nặng' },
+    toneShape: { ngang: 'eben', huyen: 'fallend', sac: 'steigend', hoi: 'Senke', nga: 'Knarr', nang: 'schwer' },
+  },
   shape: {
     level: 'eher eben',
     rising: 'eher steigend',
@@ -411,7 +472,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.7.1',
+  version: 'Version 0.8.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
@@ -589,6 +650,44 @@ export const en: Dictionary = {
     'The model curve comes from the northern TTS voice, not from a checked southern recording. A gap can be the voice, not only you.',
   pitchEmpty: 'The recording had too little voiced pitch.',
   pitchNoModel: 'Without an audio file there is no model curve.',
+  repeatFeedback: {
+    melody: 'Melody',
+    rhythm: 'Rhythm',
+    pass: 'fits',
+    part: 'partly',
+    off: 'off',
+    unclear: 'unclear',
+    tooShort: 'The recording is too short.',
+    again: 'Once more',
+    stars: (count) => (count === 1 ? 'One of three' : count === 2 ? 'Two of three' : 'Three of three'),
+    sequential: 'One after the other. The two do not play together.',
+    backSentence: 'Back to the sentence',
+    back: 'Back',
+    northern: 'Northern voice. A hint, not a grade.',
+    toneTap: 'Tap the tone hint if you want to see the six forms.',
+    creak: 'The curve does not see the creak in ngã and nặng. In the south, hỏi and ngã are one tone.',
+    target: 'Target',
+    you: {
+      rising: 'You rose.',
+      falling: 'You fell.',
+      level: 'You stayed level.',
+      dipping: 'You went into a dip.',
+    },
+    should: {
+      rising: 'The tone should rise.',
+      falling: 'The tone should fall.',
+      level: 'The tone should stay level.',
+      dipping: 'The tone should dip.',
+    },
+    expect: {
+      rising: 'should rise',
+      falling: 'should fall',
+      level: 'should stay level',
+      dipping: 'should dip',
+    },
+    tone: { ngang: 'ngang', huyen: 'huyền', sac: 'sắc', hoi: 'hỏi', nga: 'ngã', nang: 'nặng' },
+    toneShape: { ngang: 'level', huyen: 'falling', sac: 'rising', hoi: 'dip', nga: 'creak', nang: 'heavy' },
+  },
   shape: {
     level: 'mostly level',
     rising: 'mostly rising',
@@ -859,6 +958,44 @@ export const pt: Dictionary = {
     'A curva do modelo vem da voz TTS do norte, não de uma gravação do sul revisada. A diferença pode ser a voz.',
   pitchEmpty: 'A gravação tinha pouca voz com tom.',
   pitchNoModel: 'Sem arquivo de áudio não há curva do modelo.',
+  repeatFeedback: {
+    melody: 'Melodia',
+    rhythm: 'Ritmo',
+    pass: 'encaixa',
+    part: 'em parte',
+    off: 'fora',
+    unclear: 'incerto',
+    tooShort: 'A gravação é curta demais.',
+    again: 'De novo',
+    stars: (count) => (count === 1 ? 'Uma de três' : count === 2 ? 'Duas de três' : 'Três de três'),
+    sequential: 'Um depois do outro. Os dois não tocam juntos.',
+    backSentence: 'Voltar à frase',
+    back: 'Voltar',
+    northern: 'Voz do norte. Um aviso, não uma nota.',
+    toneTap: 'Toque no aviso de tom para ver as seis formas.',
+    creak: 'A curva não vê o rangido de ngã e nặng. No sul, hỏi e ngã são um tom.',
+    target: 'Alvo',
+    you: {
+      rising: 'Você subiu.',
+      falling: 'Você desceu.',
+      level: 'Você ficou plano.',
+      dipping: 'Você fez uma descida.',
+    },
+    should: {
+      rising: 'O tom deveria subir.',
+      falling: 'O tom deveria cair.',
+      level: 'O tom deveria ficar plano.',
+      dipping: 'O tom deveria fazer uma descida.',
+    },
+    expect: {
+      rising: 'deveria subir',
+      falling: 'deveria cair',
+      level: 'deveria ficar plano',
+      dipping: 'deveria fazer uma descida',
+    },
+    tone: { ngang: 'ngang', huyen: 'huyền', sac: 'sắc', hoi: 'hỏi', nga: 'ngã', nang: 'nặng' },
+    toneShape: { ngang: 'plano', huyen: 'caindo', sac: 'subindo', hoi: 'descida', nga: 'rangido', nang: 'pesado' },
+  },
   shape: {
     level: 'mais plano',
     rising: 'mais subindo',
@@ -1131,6 +1268,44 @@ export const vi: Dictionary = {
     'Đường của mẫu lấy từ giọng TTS miền Bắc, không phải bản thu miền Nam đã kiểm tra. Lệch có thể do giọng mẫu.',
   pitchEmpty: 'Bản ghi ít đoạn có thanh.',
   pitchNoModel: 'Không có tệp âm thanh thì không có đường mẫu.',
+  repeatFeedback: {
+    melody: 'Giai điệu',
+    rhythm: 'Nhịp',
+    pass: 'ổn',
+    part: 'một phần',
+    off: 'lệch',
+    unclear: 'chưa rõ',
+    tooShort: 'Bản ghi quá ngắn.',
+    again: 'Lại',
+    stars: (count) => (count === 1 ? 'Một trên ba' : count === 2 ? 'Hai trên ba' : 'Ba trên ba'),
+    sequential: 'Lần lượt. Không phát cùng lúc.',
+    backSentence: 'Về câu',
+    back: 'Quay lại',
+    northern: 'Giọng miền Bắc. Một gợi ý, không phải điểm.',
+    toneTap: 'Chạm gợi ý thanh nếu bạn muốn xem sáu dạng.',
+    creak: 'Đường cong không thấy tiếng ngắt của ngã và nặng. Ở miền Nam, hỏi và ngã là một thanh.',
+    target: 'Đích',
+    you: {
+      rising: 'Bạn đã lên.',
+      falling: 'Bạn đã xuống.',
+      level: 'Bạn đã đi ngang.',
+      dipping: 'Bạn đã xuống rồi lên.',
+    },
+    should: {
+      rising: 'Thanh nên lên.',
+      falling: 'Thanh nên xuống.',
+      level: 'Thanh nên bằng.',
+      dipping: 'Thanh nên lõm.',
+    },
+    expect: {
+      rising: 'nên lên',
+      falling: 'nên xuống',
+      level: 'nên bằng',
+      dipping: 'nên lõm',
+    },
+    tone: { ngang: 'ngang', huyen: 'huyền', sac: 'sắc', hoi: 'hỏi', nga: 'ngã', nang: 'nặng' },
+    toneShape: { ngang: 'bằng', huyen: 'xuống', sac: 'lên', hoi: 'lõm', nga: 'ngắt', nang: 'nặng' },
+  },
   shape: {
     level: 'khá bằng',
     rising: 'khá lên',

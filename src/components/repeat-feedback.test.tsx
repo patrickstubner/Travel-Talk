@@ -1,0 +1,109 @@
+// @vitest-environment happy-dom
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { de } from '../i18n/dictionary'
+import { playSequence } from '../audio/slice'
+import { RepeatFeedback } from './RepeatFeedback'
+
+vi.mock('../audio/slice', () => ({
+  playSequence: vi.fn(async () => undefined),
+  stopSlices: vi.fn(),
+}))
+
+function tone(hz: number, seconds: number): Float32Array {
+  const sampleRate = 16000
+  const length = Math.floor(sampleRate * seconds)
+  const samples = new Float32Array(length)
+  let phase = 0
+  for (let index = 0; index < length; index += 1) {
+    phase += (2 * Math.PI * hz) / sampleRate
+    samples[index] = Math.sin(phase) * 0.8
+  }
+  return samples
+}
+
+const words = [
+  { start: 0.15, end: 0.45 },
+  { start: 0.5, end: 0.8 },
+  { start: 0.85, end: 1.15 },
+]
+
+function renderFeedback(lang: 'de' | 'en' | 'vi' = 'vi', samples = tone(220, 1.2), timed: typeof words | null = words): void {
+  render(
+    <RepeatFeedback
+      copy={de}
+      lang={lang}
+      region="south"
+      speech="qua xin nha"
+      words={timed}
+      modelSamples={samples}
+      modelRate={16000}
+      userSamples={samples}
+      userRate={16000}
+      modelMissing={false}
+    />,
+  )
+}
+
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+})
+
+describe('repeat feedback view', () => {
+  it('shows the curves, the word colours and the stars without an extra step', () => {
+    renderFeedback()
+    const view = screen.getByTestId('repeat-feedback')
+    expect(view.hidden).toBe(false)
+    expect(view.closest('details')).toBeNull()
+    expect(screen.getByTestId('repeat-stars').textContent).toContain('Drei von drei')
+    expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
+    expect(screen.getByTestId('rhythm-bar').getAttribute('data-state')).toBe('passt')
+    expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('green')
+    expect(screen.getByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeTruthy()
+    expect(view.textContent ?? '').not.toMatch(/\d+\s*%/)
+  })
+
+  it('plays the model word and then your word, and stays quiet for other languages', () => {
+    renderFeedback('en')
+    expect(screen.queryByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'qua' }))
+    expect(vi.mocked(playSequence)).toHaveBeenCalledTimes(1)
+    const parts = vi.mocked(playSequence).mock.calls[0]?.[0] ?? []
+    expect(parts).toHaveLength(2)
+    expect(parts[0]?.start).toBe(0.15)
+    expect(parts[1]?.start).toBeGreaterThanOrEqual(0)
+    expect(screen.getByText('Nacheinander. Beide laufen nicht zugleich.')).toBeTruthy()
+    expect(screen.queryByText(/sechs Formen/)).toBeNull()
+  })
+
+  it('keeps the curves and drops the colour buttons when the timing file is missing', () => {
+    renderFeedback('de', tone(220, 1.2), null)
+    expect(screen.getByTestId('repeat-feedback').querySelector('canvas')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'qua' })).toBeNull()
+    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+  })
+
+  it('names a short take and a quiet take without stars', () => {
+    renderFeedback('de', tone(220, 0.2), [{ start: 0, end: 0.2 }])
+    expect(screen.getByText('Die Aufnahme ist zu kurz.')).toBeTruthy()
+    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+    cleanup()
+    render(
+      <RepeatFeedback
+        copy={de}
+        lang="de"
+        region="south"
+        speech="qua"
+        words={[{ start: 0, end: 1 }]}
+        modelSamples={tone(220, 1)}
+        modelRate={16000}
+        userSamples={new Float32Array(16000)}
+        userRate={16000}
+        modelMissing={false}
+      />,
+    )
+    expect(screen.getByText('In der Aufnahme war zu wenig stimmhafte Tonhöhe.')).toBeTruthy()
+    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+  })
+})

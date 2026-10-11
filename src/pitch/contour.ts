@@ -4,6 +4,11 @@ export type Contour = Array<number | null>
 
 const FRAME = 2048
 
+export function hopSeconds(sampleRate: number): number {
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0) return 0.01
+  return Math.max(1, Math.round(sampleRate * 0.01)) / sampleRate
+}
+
 export function contourFromSamples(samples: Float32Array, sampleRate: number): Contour {
   if (samples.length < FRAME) return []
   const detector = PitchDetector.forFloat32Array(FRAME)

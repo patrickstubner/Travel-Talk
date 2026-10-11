@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0 — 2026-10-11
+
+- Nach jeder Aufnahme, beim Nachsprechen in der Übung und auf der Satzseite, liegt die eigene Tonhöhe über der Kurve der gehörten Datei. Die Wörter stehen darunter. Grün, gelb oder rot ist das schlechtere von Melodie und Rhythmus. Zu wenig stimmhafte Frames bleiben ungefärbt und zählen nicht.
+- Ein Tippen auf ein Wort spielt zuerst das Modell, dann die eigene Stelle. Beide laufen nicht zugleich. Im Detail hat Modell und Du je einen Knopf «Hören». «Nochmal» nimmt neu auf und ersetzt die Aufnahme. «Weiter» bleibt «Weiter» und gibt das Mikrofon frei.
+- Zwei Balken, Melodie und Rhythmus, und ein bis drei Sterne. Keine Prozentzahl. Die Sterne ändern den Lernstand nicht. Die vier Bewertungen bleiben der Weg durch den Planer.
+- Ein gleichmässig langsameres Nachsprechen färbt die Wörter nicht rot. Der Rhythmusbalken folgt dem Tempo der ganzen Aufnahme gegen die Datei, die gerade gehört wurde, auch bei 70 % und 85 %.
+- Vietnamesisch kann einen Satz pro Silbe zeigen, etwa «Du bist gestiegen. Der Ton sollte fallen.» Im Süden bleiben hỏi und ngã ohne solchen Satz. Der Hinweis sagt, dass die Kurve aus der nördlichen Stimme kommt und keine Note ist. Portugiesisch, Englisch und Deutsch haben keinen Tonhinweis.
+- Zu wenig Stimme, eine Aufnahme unter 0,3 Sekunden oder eine unklare Zuordnung zeigen die Kurven ohne Farben und ohne Sterne. Fehlt die Zeitdatei oder passt sie nicht, bleiben die Farben weg.
+- Ohne Mikrofon oder bei verweigerter Erlaubnis bleibt der bisherige Hinweis, und die Sitzung geht weiter. Die Aufnahme verlässt das Gerät nicht, steht nicht in IndexedDB und nicht im Export.
+
 ## 0.7.1 — 2026-10-12
 
 - Tippt man den Namen, bevor der gespeicherte Stand ankommt, bleibt der getippte Text. «Weiter» speichert diesen Namen. Wechselt die aktive Person, übernimmt das Feld den Namen dieser Person.

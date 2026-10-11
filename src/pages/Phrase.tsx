@@ -11,10 +11,9 @@ import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
-import { PitchPanel } from '../components/PitchPanel'
+import { RepeatFeedback } from '../components/RepeatFeedback'
 import { KaraokeLine } from '../components/KaraokeLine'
 import { RichText } from '../components/RichText'
-import { contourFromSamples, type Contour } from '../pitch/contour'
 import { cardIdFor } from '../srs/session'
 import type { Dictionary } from '../i18n/dictionary'
 import { prefsFromSettings, type Settings } from '../storage/types'
@@ -62,9 +61,10 @@ export function PhrasePage() {
 
   releaseRef.current = releaseCaptureNow
   const [micError, setMicError] = useState(false)
-  const [userContour, setUserContour] = useState<Contour>([])
-  const [modelContour, setModelContour] = useState<Contour>([])
+  const [userAudio, setUserAudio] = useState<{ samples: Float32Array; sampleRate: number } | null>(null)
+  const [modelAudio, setModelAudio] = useState<{ samples: Float32Array; sampleRate: number } | null>(null)
   const [modelMissing, setModelMissing] = useState(false)
+  const [feedbackTimes, setFeedbackTimes] = useState<WordTime[] | null>(null)
 
   const target = concept && targetLang ? resolvePlayback(concept, targetLang, settings.viRegion, prefsFromSettings(targetLang, settings)) : undefined
   const source = concept && app ? resolvePlayback(concept, app, settings.viRegion, prefsFromSettings(app, settings)) : undefined
@@ -98,6 +98,7 @@ export function PhrasePage() {
       window.removeEventListener('pagehide', onPageHide)
       releaseRef.current()
       setMineUrl(null)
+      setUserAudio(null)
     }
   }, [conceptId])
 
@@ -118,21 +119,26 @@ export function PhrasePage() {
 
   useEffect(() => {
     let active = true
-    if (!targetFile || targetLang !== 'vi' || userContour.length === 0) return
-    void decodeContourFile(targetFile).then((decoded) => {
-      if (!active) return
-      if (!decoded) {
-        setModelContour([])
-        setModelMissing(true)
-        return
-      }
+    if (!userAudio || !alignFile || !targetSpeech) {
+      setModelAudio(null)
       setModelMissing(false)
-      setModelContour(contourFromSamples(decoded.samples, decoded.sampleRate))
+      setFeedbackTimes(null)
+      return
+    }
+    void decodeContourFile(alignFile).then(async (decoded) => {
+      if (!active) return
+      setModelAudio(decoded)
+      setModelMissing(!decoded)
+      const aligned = await loadAlignment(alignFile, targetSpeech)
+      if (!active) return
+      const duration = decoded ? decoded.samples.length / decoded.sampleRate : 0
+      if (decoded && aligned && alignmentFitsDuration(aligned, duration, alignmentScale(alignFile))) setFeedbackTimes(aligned)
+      else setFeedbackTimes(null)
     })
     return () => {
       active = false
     }
-  }, [targetFile, targetLang, userContour.length])
+  }, [alignFile, targetSpeech, userAudio])
 
   if (!catalog || !concept || !direction || !app || !targetLang || !target || !source) {
     return <p>{direction ? copy.noResults : copy.needPair}</p>
@@ -192,7 +198,7 @@ export function PhrasePage() {
           return
         }
         rememberUrl(taken.url)
-        setUserContour(taken.samples && taken.sampleRate ? contourFromSamples(taken.samples, taken.sampleRate) : [])
+        setUserAudio(taken.samples && taken.sampleRate ? { samples: taken.samples, sampleRate: taken.sampleRate } : null)
         setRecording(false)
       })
       if (!next || !aliveRef.current || token !== micToken.current) {
@@ -293,7 +299,7 @@ export function PhrasePage() {
             </button>
           ) : (
             <button type="button" onClick={() => void onRecord()}>
-              {copy.record}
+              {userAudio ? copy.repeatFeedback.again : copy.record}
             </button>
           )}
           {mineUrl ? (
@@ -309,9 +315,21 @@ export function PhrasePage() {
           ) : null}
         </div>
       </section>
-      {targetLang === 'vi' && userContour.length > 0 ? (
-        <PitchPanel model={modelContour} user={userContour} copy={copy} modelMissing={modelMissing} />
+      {userAudio ? (
+        <RepeatFeedback
+          copy={copy}
+          lang={targetLang}
+          region={settings.viRegion}
+          speech={target.speech}
+          words={feedbackTimes}
+          modelSamples={modelAudio?.samples ?? null}
+          modelRate={modelAudio?.sampleRate ?? 0}
+          userSamples={userAudio.samples}
+          userRate={userAudio.sampleRate}
+          modelMissing={modelMissing}
+        />
       ) : null}
+      {!userAudio && mineUrl ? <p role="status">{copy.pitchEmpty}</p> : null}
       <p className="hint">{copy.uncheckedCalm}</p>
     </article>
   )
