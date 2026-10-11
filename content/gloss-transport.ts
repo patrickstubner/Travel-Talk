@@ -15,7 +15,7 @@ export const transportGloss: Record<string, readonly GlossSide[]> = {
   'transport.11.stop': [{ de: ['Haltestelle?'], en: ['stop?'], pt: ['ponto?'], vi: ['Trạm'] }],
   'transport.12.off': [{ de: ['aus?'], en: ['off?'], pt: ['desço?'], vi: ['xuống'] }],
   'transport.13.line': [{ de: ['Linie?'], en: ['line?'], pt: ['linha?'], vi: ['Tuyến'] }],
-  'transport.14.platform': [{ de: ['Gleis?'], en: ['platform?'], pt: ['plataforma?'], vi: ['ga'] }],
+  'transport.14.platform': [{ de: ['Gleis?'], en: ['platform?'], pt: ['plataforma?'], vi: ['Sân', 'ga'] }],
   'transport.15.long': [{ de: ['lange'], en: ['long'], pt: ['tempo'], vi: ['lâu?'] }],
   'transport.16.gate': [{ de: ['Gate?'], en: ['gate?'], pt: ['portão?'], vi: ['Cửa'] }],
   'transport.17.delay': [{ de: ['Verspätung.'], en: ['delayed.'], pt: ['atrasado.'], vi: ['trễ.'] }],
@@ -24,5 +24,5 @@ export const transportGloss: Record<string, readonly GlossSide[]> = {
     { de: ['Fähre'], en: ['ferry'], pt: ['balsa'], vi: ['phà'] },
     { de: ['Insel?'], en: ['island?'], pt: ['ilha?'], vi: ['đảo'] },
   ],
-  'transport.20.seasick': [{ de: ['übel.'], en: ['seasick.'], pt: ['enjoo.'], vi: ['say', 'sóng.'] }],
+  'transport.20.seasick': [{ de: ['seekrank.'], en: ['seasick.'], pt: ['enjoo.'], vi: ['say', 'sóng.'] }],
 }

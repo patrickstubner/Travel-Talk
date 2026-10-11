@@ -4,7 +4,7 @@ import type { Lang } from '../../content/phrase'
 import type { WordTime } from '../audio/align'
 import { playSequence, stopSlices } from '../audio/slice'
 import type { Dictionary } from '../i18n/dictionary'
-import { contourFromSamples, hopSeconds, voicedValues, type Contour } from '../pitch/contour'
+import { analysisHop, contourFromSamples, voicedValues, type Contour } from '../pitch/contour'
 import {
   MIN_VOICED,
   SHORT_SECONDS,
@@ -93,6 +93,7 @@ export function RepeatFeedback({
   userSamples,
   userRate,
   modelMissing,
+  voiceId,
 }: {
   copy: Dictionary
   lang: Lang
@@ -104,24 +105,30 @@ export function RepeatFeedback({
   userSamples: Float32Array
   userRate: number
   modelMissing: boolean
+  voiceId: string
 }) {
   const [view, setView] = useState<'result' | 'word' | 'tones'>('result')
   const [selected, setSelected] = useState(0)
+  const modelContour = useMemo(
+    () => (modelSamples && modelRate > 0 ? contourFromSamples(modelSamples, modelRate) : null),
+    [modelRate, modelSamples],
+  )
+  const userContour = useMemo(() => (userRate > 0 ? contourFromSamples(userSamples, userRate) : []), [userRate, userSamples])
   const score = useMemo<RepeatScore | null>(() => {
-    if (!modelSamples || modelRate <= 0 || userRate <= 0) return null
+    if (!modelContour || modelRate <= 0 || userRate <= 0) return null
     const labels = splitWords(speech)
     const timed = words && words.length === labels.length ? words.map((word, index) => ({ ...word, text: labels[index] ?? '' })) : null
     return scoreRepeat({
-      model: contourFromSamples(modelSamples, modelRate),
-      user: contourFromSamples(userSamples, userRate),
-      modelHop: hopSeconds(modelRate),
-      userHop: hopSeconds(userRate),
+      model: modelContour,
+      user: userContour,
+      modelHop: analysisHop(modelRate),
+      userHop: analysisHop(userRate),
       words: timed,
       lang,
       region,
       userDuration: userSamples.length / userRate,
     })
-  }, [lang, modelRate, modelSamples, region, speech, userRate, userSamples, words])
+  }, [lang, modelContour, modelRate, region, speech, userContour, userRate, userSamples, words])
 
   useEffect(() => {
     setView('result')
@@ -133,7 +140,7 @@ export function RepeatFeedback({
   const word = score?.words?.[selected] ?? null
   const feedback = copy.repeatFeedback
   const userDuration = userRate > 0 ? userSamples.length / userRate : 0
-  const userQuiet = voicedValues(contourFromSamples(userSamples, Math.max(userRate, 1))).length < MIN_VOICED
+  const userQuiet = voicedValues(userContour).length < MIN_VOICED
 
   function playWord(item: FeedbackWord, which: 'both' | 'model' | 'user'): void {
     const parts = []
@@ -152,6 +159,7 @@ export function RepeatFeedback({
         <Result
           copy={copy}
           lang={lang}
+          voiceId={voiceId}
           score={score}
           modelMissing={modelMissing}
           tooShort={userDuration < SHORT_SECONDS || score?.tooShort === true}
@@ -225,6 +233,7 @@ export function RepeatFeedback({
 function Result({
   copy,
   lang,
+  voiceId,
   score,
   modelMissing,
   tooShort,
@@ -233,6 +242,7 @@ function Result({
 }: {
   copy: Dictionary
   lang: Lang
+  voiceId: string
   score: RepeatScore | null
   modelMissing: boolean
   tooShort: boolean
@@ -295,7 +305,7 @@ function Result({
           <span aria-hidden="true">{`${'★'.repeat(score.stars)}${'☆'.repeat(3 - score.stars)}`}</span> {feedback.stars(score.stars)}
         </p>
       ) : null}
-      {lang === 'vi' ? <p className="hint">{feedback.northern}</p> : null}
+      {lang === 'vi' && voiceId === 'vais1000' ? <p className="hint">{feedback.northern}</p> : null}
       {score?.words?.map((word) =>
         word.sentence ? (
           <p key={`${word.text}-${word.start}-tone`} data-testid="tone-sentence">

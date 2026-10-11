@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { contourFromSamples, dtwDistance, voicedValues, type Contour } from './contour'
-import { alignContours, barFromColours, melodyBand, rhythmBand, scoreRepeat, starsFromBars, toneSentence } from './feedback'
+import { barFromColours, flatContour, melodyBand, rhythmBand, scoreRepeat, starsFromBars, thin, toneSentence } from './feedback'
 
 function flat(count: number, value: number | null): Contour {
   return Array.from({ length: count }, () => value)
@@ -77,7 +77,7 @@ describe('scoring bands', () => {
 
 describe('repeat alignment', () => {
   it('keeps the path and paints the same curve green with three stars', () => {
-    const model = [...flat(40, 0), ...ramp(40, 0.2, -0.2), ...flat(40, 0.1)]
+    const model = [...flat(40, -2), ...flat(40, 1.6), ...flat(40, 0)]
     const score = scoreRepeat({
       model,
       user: model,
@@ -101,28 +101,41 @@ describe('repeat alignment', () => {
     expect(score.words?.every((word) => word.sentence == null)).toBe(true)
   })
 
-  it('stays green when the whole voice is shifted in hertz', () => {
-    const low = contourFromSamples(tone(160, 160), 16000)
-    const high = contourFromSamples(tone(280, 280), 16000)
+  it('calls a steady tone unclear, and stays green when the same rising shape sits higher', () => {
     const hop = 160 / 16000
-    const score = scoreRepeat({
-      model: low,
-      user: high,
+    const words = [
+      { text: 'qua', start: 0.2, end: 0.45 },
+      { text: 'xin', start: 0.45, end: 0.7 },
+      { text: 'nha', start: 0.7, end: 0.95 },
+    ]
+    const steady = scoreRepeat({
+      model: contourFromSamples(tone(160, 160), 16000),
+      user: contourFromSamples(tone(280, 280), 16000),
       modelHop: hop,
       userHop: hop,
-      words: [
-        { text: 'qua', start: 0.2, end: 0.5 },
-        { text: 'xin', start: 0.5, end: 0.8 },
-        { text: 'nha', start: 0.8, end: 1.1 },
-      ],
+      words,
       lang: 'vi',
       region: 'south',
       userDuration: 1.2,
     })
-    expect(score.tooLittleVoice).toBe(false)
-    expect(score.meanDistance ?? 9).toBeLessThan(1.5)
-    expect(score.words?.every((word) => word.melody === 'green')).toBe(true)
-    expect(score.stars).toBe(3)
+    expect(steady.tooLittleVoice).toBe(false)
+    expect(steady.unclear).toBe(true)
+    expect(steady.stars).toBe(0)
+    expect(steady.words).toBeNull()
+    const moving = scoreRepeat({
+      model: contourFromSamples(tone(140, 240), 16000),
+      user: contourFromSamples(tone(200, 343), 16000),
+      modelHop: hop,
+      userHop: hop,
+      words,
+      lang: 'vi',
+      region: 'south',
+      userDuration: 1.2,
+    })
+    expect(moving.unclear).toBe(false)
+    expect(moving.meanDistance ?? 9).toBeLessThan(1.5)
+    expect(moving.words?.every((word) => word.melody === 'green')).toBe(true)
+    expect(moving.stars).toBe(3)
   })
 
   it('marks a uniform 0.7 stretch against the normal file, and not against the slow file', () => {
@@ -170,8 +183,8 @@ describe('repeat alignment', () => {
   })
 
   it('finds the voice after a leading silence and still lines the words up', () => {
-    const model = flat(60, 0)
-    const user = [...flat(25, null), ...flat(60, 0)]
+    const model = [...ramp(30, -2, 2), ...ramp(30, 2, -1)]
+    const user = [...flat(25, null), ...model]
     const score = scoreRepeat({
       model,
       user,
@@ -331,21 +344,170 @@ describe('repeat alignment', () => {
     expect(apart.meanDistance ?? 0).toBeGreaterThan(6)
   })
 
-  it('keeps a monotonic path when the take is slower', () => {
-    const model = [...ramp(20, -2, 2), ...ramp(20, 2, -1), ...flat(20, 0)]
+  it('keeps a monotonic linear path when the take is slower', () => {
+    const model = [...ramp(20, -2, 2), ...ramp(20, 2, -1), ...flat(20, 0.5)]
     const user = stretch(model, 1.5)
-    const aligned = alignContours(model, user)
-    expect(aligned).not.toBeNull()
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.6 }],
+      lang: 'en',
+      region: 'south',
+      userDuration: user.length * 0.01,
+    })
     let lastModel = -1
     let lastUser = -1
-    for (const point of aligned?.path ?? []) {
+    for (const point of score.path) {
       expect(point.model).toBeGreaterThanOrEqual(lastModel)
       expect(point.user).toBeGreaterThanOrEqual(lastUser)
       lastModel = point.model
       lastUser = point.user
     }
-    expect(aligned?.path[0]).toEqual({ model: 0, user: 0 })
-    expect(aligned?.path[aligned.path.length - 1]).toEqual({ model: model.length - 1, user: user.length - 1 })
-    expect(aligned?.mean ?? 1).toBeLessThan(0.05)
+    expect(score.path[0]).toEqual({ model: 0, user: 0 })
+    expect(score.path[score.path.length - 1]).toEqual({ model: model.length - 1, user: user.length - 1 })
+    expect(score.meanDistance ?? 1).toBeLessThan(0.2)
+  })
+
+  it('withholds stars for a steady tone, a hum, a reversed take and a thin colouring', () => {
+    const hop = 0.01
+    const words = [
+      { text: 'qua', start: 0.15, end: 0.4 },
+      { text: 'xin', start: 0.4, end: 0.65 },
+      { text: 'nha', start: 0.65, end: 0.9 },
+    ]
+    const steadySamples = tone(220, 220)
+    const steady = scoreRepeat({
+      model: contourFromSamples(steadySamples, 16000),
+      user: contourFromSamples(steadySamples, 16000),
+      modelHop: hop,
+      userHop: hop,
+      words,
+      lang: 'de',
+      region: 'south',
+      userDuration: 1.2,
+    })
+    expect(flatContour(steady.user)).toBe(true)
+    expect(steady.unclear).toBe(true)
+    expect(steady.stars).toBe(0)
+    expect(steady.words).toBeNull()
+    const humSamples = new Float32Array(16000 * 1.2)
+    for (let index = 0; index < humSamples.length; index += 1) {
+      const time = index / 16000
+      humSamples[index] = (Math.sin(2 * Math.PI * 50 * time) + Math.sin(2 * Math.PI * 100 * time) + Math.sin(2 * Math.PI * 150 * time)) * 0.25
+    }
+    const hum = scoreRepeat({
+      model: contourFromSamples(tone(140, 280), 16000),
+      user: contourFromSamples(humSamples, 16000),
+      modelHop: hop,
+      userHop: hop,
+      words,
+      lang: 'en',
+      region: 'south',
+      userDuration: 1.2,
+    })
+    expect(hum.stars).toBe(0)
+    expect(hum.words == null || hum.words.every((word) => word.color !== 'green' || hum.unclear)).toBe(true)
+    const rising = tone(140, 280)
+    const reversed = Float32Array.from(rising).reverse()
+    const backwards = scoreRepeat({
+      model: contourFromSamples(rising, 16000),
+      user: contourFromSamples(reversed, 16000),
+      modelHop: hop,
+      userHop: hop,
+      words,
+      lang: 'pt-BR',
+      region: 'south',
+      userDuration: 1.2,
+    })
+    expect(backwards.stars).not.toBe(3)
+    expect(backwards.words?.every((word) => word.color === 'green') ?? false).toBe(false)
+    const piece = ramp(20, -2, 2)
+    const gap = flat(20, null)
+    const partial = [...piece, ...piece, ...gap, ...gap, ...gap]
+    const sparse = scoreRepeat({
+      model: partial,
+      user: partial,
+      modelHop: hop,
+      userHop: hop,
+      words: [0, 1, 2, 3, 4].map((index) => ({ text: 'qua', start: index * 0.2, end: (index + 1) * 0.2 })),
+      lang: 'de',
+      region: 'south',
+      userDuration: 1,
+    })
+    expect(sparse.words?.filter((word) => word.color != null)).toHaveLength(2)
+    expect(sparse.melodyBar).toBe('passt')
+    expect(sparse.stars).toBe(0)
+    const enough = [...piece, ...piece, ...piece, ...gap, ...gap]
+    const covered = scoreRepeat({
+      model: enough,
+      user: enough,
+      modelHop: hop,
+      userHop: hop,
+      words: [0, 1, 2, 3, 4].map((index) => ({ text: 'qua', start: index * 0.2, end: (index + 1) * 0.2 })),
+      lang: 'de',
+      region: 'south',
+      userDuration: 1,
+    })
+    expect(covered.words?.filter((word) => word.color != null)).toHaveLength(3)
+    expect(covered.stars).toBe(3)
+  })
+
+  it('keeps a uniform 0.7 recording green on the words and off a perfect rhythm bar', () => {
+    const samples = tone(150, 260, 1.2)
+    const factor = 1 / 0.7
+    const slow = new Float32Array(Math.floor(samples.length * factor))
+    for (let index = 0; index < slow.length; index += 1) {
+      const source = index / factor
+      const left = Math.floor(source)
+      const frac = source - left
+      const a = samples[Math.min(left, samples.length - 1)] ?? 0
+      const b = samples[Math.min(left + 1, samples.length - 1)] ?? a
+      slow[index] = a + (b - a) * frac
+    }
+    const model = contourFromSamples(samples, 16000)
+    const user = contourFromSamples(slow, 16000)
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [
+        { text: 'qua', start: 0.15, end: 0.4 },
+        { text: 'qua', start: 0.4, end: 0.65 },
+        { text: 'qua', start: 0.65, end: 0.9 },
+      ],
+      lang: 'de',
+      region: 'south',
+      userDuration: slow.length / 16000,
+    })
+    expect(score.unclear).toBe(false)
+    expect(score.words?.every((word) => word.melody === 'green')).toBe(true)
+    expect(score.words?.some((word) => word.color === 'red')).toBe(false)
+    expect(score.rhythmBar).not.toBe('passt')
+    expect(score.stars).not.toBe(1)
+    expect(score.stars).toBe(2)
+  })
+
+  it('thins a long contour before the score uses it', () => {
+    const long = ramp(1600, -3, 3)
+    const thinned = thin(long, 0.01)
+    expect(thinned.contour.length).toBeLessThanOrEqual(800)
+    expect(thinned.contour.length).toBeGreaterThan(100)
+    expect(thinned.hop).toBeGreaterThan(0.01)
+    const score = scoreRepeat({
+      model: long,
+      user: long,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 1 }],
+      lang: 'de',
+      region: 'south',
+      userDuration: 16,
+    })
+    expect(score.model.length).toBeLessThanOrEqual(800)
+    expect(score.user.length).toBeLessThanOrEqual(800)
+    expect(score.modelHop).toBeGreaterThan(0.01)
   })
 })

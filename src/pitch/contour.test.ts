@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contourFromSamples, describeShape, dtwDistance, voicedValues } from './contour'
+import { ANALYSIS_RATE, contourFromSamples, describeShape, dtwDistance, samplesForAnalysis, voicedValues } from './contour'
 
 function tone(startHz: number, endHz: number, seconds = 1.6): Float32Array {
   const sampleRate = 16000
@@ -31,5 +31,20 @@ describe('pitch contour', () => {
     const distance = dtwDistance(values, values)
     expect(distance).not.toBeNull()
     expect(distance ?? 1).toBeLessThan(0.05)
+  })
+
+  it('downsamples to 16 kHz before a short 48 kHz buffer can grow a frame', () => {
+    const samples = new Float32Array(4000)
+    for (let index = 0; index < samples.length; index += 1) samples[index] = Math.sin((2 * Math.PI * 220 * index) / 48000)
+    const prepared = samplesForAnalysis(samples, 48000)
+    expect(prepared.sampleRate).toBe(ANALYSIS_RATE)
+    expect(prepared.samples.length).toBeLessThan(2048)
+    expect(contourFromSamples(samples, 48000)).toEqual([])
+    const second = new Float32Array(48000)
+    for (let index = 0; index < second.length; index += 1) {
+      const hz = 140 + (160 * index) / second.length
+      second[index] = Math.sin((2 * Math.PI * hz * index) / 48000)
+    }
+    expect(voicedValues(contourFromSamples(second, 48000)).length).toBeGreaterThan(20)
   })
 })

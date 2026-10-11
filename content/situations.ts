@@ -230,7 +230,7 @@ export const situations: Situation[] = [
     summary: {
       de: 'Taxi, App, Bus, Tram, Metro, Flug und Fähre. Kurze Sätze, vom kurzen zum längeren.',
       en: 'Taxi, app, bus, tram, metro, flight and ferry. Short lines, from short to longer.',
-      'pt-BR': 'Táxi, aplicativo, ônibus, bonde, metrô, voo e balsa. Frases curtas, da curta à mais longa.',
+      'pt-BR': 'Táxi, aplicativo, ônibus, VLT, metrô, voo e balsa. Frases curtas, da curta à mais longa. Em São Paulo, VLT; em outras cidades o nome muda.',
       vi: 'Taxi, ứng dụng, xe buýt, tàu điện, metro, máy bay và phà. Câu ngắn, từ ngắn đến dài.',
     },
     canDo: {

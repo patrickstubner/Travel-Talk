@@ -179,12 +179,22 @@ describe('offline voice loading', () => {
     const text = readFileSync(fileURLToPath(new URL('../../rsbuild.config.ts', import.meta.url)), 'utf8')
     expect(text).toContain('statuses: [200]')
     expect(text).not.toContain('[0, 200]')
-    expect(text).toMatch(/maxEntries:\s*6500/)
+    expect(text).toMatch(/maxEntries:\s*8000/)
     expect(text).toContain('**/*.align.json')
     expect(text).toContain('align\\.json')
     expect(text).toContain('cleanupOutdatedCaches: false')
     expect(text).not.toContain('sw-migrate')
     expect(text).not.toContain('importScripts')
+  })
+
+  it('keeps more than one situation of room above the manifest', () => {
+    const text = readFileSync(fileURLToPath(new URL('../../rsbuild.config.ts', import.meta.url)), 'utf8')
+    const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../../public/audio/manifest.json', import.meta.url)), 'utf8')) as unknown[]
+    const match = text.match(/maxEntries:\s*(\d+)/)
+    const limit = Number(match?.[1])
+    expect(limit).toBe(8000)
+    expect(manifest.length).toBeGreaterThan(0)
+    expect(limit).toBeGreaterThanOrEqual(manifest.length + 1200)
   })
 
   it('skips a missing file and still finishes the voice', async () => {

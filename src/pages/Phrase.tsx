@@ -327,6 +327,7 @@ export function PhrasePage() {
           userSamples={userAudio.samples}
           userRate={userAudio.sampleRate}
           modelMissing={modelMissing}
+          voiceId={selectedVoice(settings, targetLang).id}
         />
       ) : null}
       {!userAudio && mineUrl ? <p role="status">{copy.pitchEmpty}</p> : null}

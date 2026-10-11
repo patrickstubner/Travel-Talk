@@ -28,6 +28,8 @@ export function releaseCapture(
   if (blobUrl) revoke(blobUrl)
 }
 
+export const RECORD_LIMIT_MS = 15_000
+
 export type CaptureSession = {
   recorder: MediaRecorder
   release: (blobUrl: string | null) => void
@@ -42,7 +44,14 @@ export async function startMicrophone(onStop: (recording: Recording) => void): P
   recorder.addEventListener('dataavailable', (event) => {
     if (event.data.size > 0) chunks.push(event.data)
   })
+  let limitTimer: ReturnType<typeof setTimeout> | null = null
+  function clearLimit(): void {
+    if (limitTimer == null) return
+    clearTimeout(limitTimer)
+    limitTimer = null
+  }
   recorder.addEventListener('stop', () => {
+    clearLimit()
     for (const track of stream.getTracks()) track.stop()
     if (released) return
     const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })
@@ -64,9 +73,13 @@ export async function startMicrophone(onStop: (recording: Recording) => void): P
     })
   })
   recorder.start()
+  limitTimer = setTimeout(() => {
+    if (recorder.state === 'recording') recorder.stop()
+  }, RECORD_LIMIT_MS)
   return {
     recorder,
     release(blobUrl) {
+      clearLimit()
       released = true
       releaseCapture(recorder, blobUrl)
     },

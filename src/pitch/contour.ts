@@ -3,13 +3,43 @@ import { PitchDetector } from 'pitchy'
 export type Contour = Array<number | null>
 
 const FRAME = 2048
+export const ANALYSIS_RATE = 16000
 
 export function hopSeconds(sampleRate: number): number {
   if (!Number.isFinite(sampleRate) || sampleRate <= 0) return 0.01
   return Math.max(1, Math.round(sampleRate * 0.01)) / sampleRate
 }
 
-export function contourFromSamples(samples: Float32Array, sampleRate: number): Contour {
+/** Average bins down to 16 kHz. A rate already at or under that stays as it is. */
+export function samplesForAnalysis(samples: Float32Array, sampleRate: number): { samples: Float32Array; sampleRate: number } {
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0) return { samples, sampleRate: ANALYSIS_RATE }
+  if (sampleRate <= ANALYSIS_RATE * 1.01) return { samples, sampleRate }
+  const ratio = sampleRate / ANALYSIS_RATE
+  const length = Math.max(0, Math.floor(samples.length / ratio))
+  const out = new Float32Array(length)
+  for (let index = 0; index < length; index += 1) {
+    const start = Math.floor(index * ratio)
+    const end = Math.min(samples.length, Math.max(start + 1, Math.floor((index + 1) * ratio)))
+    let sum = 0
+    let count = 0
+    for (let cursor = start; cursor < end; cursor += 1) {
+      sum += samples[cursor] ?? 0
+      count += 1
+    }
+    out[index] = count > 0 ? sum / count : 0
+  }
+  return { samples: out, sampleRate: ANALYSIS_RATE }
+}
+
+/** Hop of the contour `contourFromSamples` actually writes. */
+export function analysisHop(sampleRate: number): number {
+  return hopSeconds(samplesForAnalysis(new Float32Array(0), sampleRate).sampleRate)
+}
+
+export function contourFromSamples(input: Float32Array, rate: number): Contour {
+  const prepared = samplesForAnalysis(input, rate)
+  const samples = prepared.samples
+  const sampleRate = prepared.sampleRate
   if (samples.length < FRAME) return []
   const detector = PitchDetector.forFloat32Array(FRAME)
   detector.clarityThreshold = 0.8

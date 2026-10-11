@@ -47,7 +47,6 @@ export type Dictionary = {
   pitchTitle: string
   pitchModel: string
   pitchYou: string
-  pitchCaveat: string
   pitchEmpty: string
   pitchNoModel: string
   repeatFeedback: {
@@ -334,8 +333,6 @@ export const de: Dictionary = {
   pitchTitle: 'Tonhöhe',
   pitchModel: 'Modell',
   pitchYou: 'Du',
-  pitchCaveat:
-    'Die Modellkurve stammt aus der nördlichen TTS-Stimme, nicht aus einer geprüften südlichen Aufnahme. Eine Abweichung kann an der Stimme liegen.',
   pitchEmpty: 'In der Aufnahme war zu wenig stimmhafte Tonhöhe.',
   pitchNoModel: 'Ohne Audiodatei gibt es keine Modellkurve.',
   repeatFeedback: {
@@ -646,8 +643,6 @@ export const en: Dictionary = {
   pitchTitle: 'Pitch',
   pitchModel: 'Model',
   pitchYou: 'You',
-  pitchCaveat:
-    'The model curve comes from the northern TTS voice, not from a checked southern recording. A gap can be the voice, not only you.',
   pitchEmpty: 'The recording had too little voiced pitch.',
   pitchNoModel: 'Without an audio file there is no model curve.',
   repeatFeedback: {
@@ -954,8 +949,6 @@ export const pt: Dictionary = {
   pitchTitle: 'Tom',
   pitchModel: 'Modelo',
   pitchYou: 'Você',
-  pitchCaveat:
-    'A curva do modelo vem da voz TTS do norte, não de uma gravação do sul revisada. A diferença pode ser a voz.',
   pitchEmpty: 'A gravação tinha pouca voz com tom.',
   pitchNoModel: 'Sem arquivo de áudio não há curva do modelo.',
   repeatFeedback: {
@@ -1264,8 +1257,6 @@ export const vi: Dictionary = {
   pitchTitle: 'Đường thanh',
   pitchModel: 'Mẫu',
   pitchYou: 'Bạn',
-  pitchCaveat:
-    'Đường của mẫu lấy từ giọng TTS miền Bắc, không phải bản thu miền Nam đã kiểm tra. Lệch có thể do giọng mẫu.',
   pitchEmpty: 'Bản ghi ít đoạn có thanh.',
   pitchNoModel: 'Không có tệp âm thanh thì không có đường mẫu.',
   repeatFeedback: {

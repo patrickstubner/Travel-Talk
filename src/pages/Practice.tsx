@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { Concept } from '../../content/phrase'
-import { spokenFile } from '../audio/voices'
+import { selectedVoice, spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
 import { decodeContourFile, playClip } from '../audio/player'
@@ -471,6 +471,7 @@ export function PracticePage() {
               userSamples={take.samples}
               userRate={take.sampleRate}
               modelMissing={modelMissing}
+              voiceId={selectedVoice(settings, targetLang).id}
             />
           ) : null}
           {take && !take.samples && !recording ? <p role="status">{copy.pitchEmpty}</p> : null}

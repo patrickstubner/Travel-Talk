@@ -3,7 +3,7 @@ import 'fake-indexeddb/auto'
 import { freshIndexedDb } from '../test-idb'
 import { useEffect, type ReactNode } from 'react'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppProvider, useApp } from '../app/state'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
@@ -93,6 +93,54 @@ describe('phrase repeat feedback', () => {
     expect((await screen.findByTestId('repeat-feedback')).hidden).toBe(false)
     expect(screen.queryByText('Northern voice. A hint, not a grade.')).toBeNull()
     expect(screen.queryByText('Tap the tone hint if you want to see the six forms.')).toBeNull()
+  })
+
+  it('drops the previous recording when the phrase changes', async () => {
+    function Jump(): ReactNode {
+      const navigate = useNavigate()
+      return (
+        <button type="button" onClick={() => navigate('/phrase/emergency.help')}>
+          Andere Phrase
+        </button>
+      )
+    }
+    const samples = sine()
+    vi.mocked(startMicrophone).mockImplementation(async (onStop) => {
+      const session = {
+        recorder: {
+          stop: () => onStop({ url: 'blob:phrase-take', samples, sampleRate: 16000 }),
+          state: 'recording',
+          stream: { getTracks: () => [] },
+        },
+        release: vi.fn(),
+      }
+      return session as unknown as CaptureSession
+    })
+    render(
+      <AppProvider>
+        <ReadyPhrase lang="en">
+          <MemoryRouter initialEntries={['/phrase/emergency.doctor']}>
+            <Routes>
+              <Route
+                path="/phrase/:conceptId"
+                element={
+                  <>
+                    <PhrasePage />
+                    <Jump />
+                  </>
+                }
+              />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPhrase>
+      </AppProvider>,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Aufnehmen' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+    expect(await screen.findByTestId('repeat-feedback')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Andere Phrase' }))
+    expect(await screen.findByRole('heading', { level: 1 })).toBeTruthy()
+    expect(screen.queryByTestId('repeat-feedback')).toBeNull()
   })
 
   it('shows a note when the microphone is refused and leaves the sentence up', async () => {

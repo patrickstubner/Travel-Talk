@@ -7,10 +7,16 @@ import { describeShape, dtwDistance, voicedValues, type Contour, type ShapeName 
  * to survive. A mean path distance above UNCLEAR_SEMITONES is «unklar»:
  * the curves stay, the words stay uncoloured. That cutoff is a choice.
  *
- * Rhythm colour of a word uses the word's duration ratio divided by the
- * ratio of the whole voiced spans, so a uniform slow take is not red on
- * every word. The rhythm bar is the worse of that word bar and the band
- * of the whole-span ratio. Comparison is against the file that was heard.
+ * Rhythm colour of a word uses the local scale after the linear map, so a
+ * uniform slow take is not red on every word. The rhythm bar is the worse
+ * of that word bar and the band of the whole-span ratio. Comparison is
+ * against the file that was heard.
+ *
+ * A contour whose voiced range stays under FLAT_RANGE is «unklar»: a steady
+ * tone and a hum have no melody to score. Stars need at least
+ * COLOURED_SHARE of the words to be coloured. Local stretch stays inside
+ * about 0.75–1.33, so a reversed take or a uniform tempo is not hidden by
+ * an extreme scale.
  */
 export const MELODY_GREEN = 1.5
 export const MELODY_YELLOW = 3
@@ -22,6 +28,8 @@ export const UNCLEAR_SEMITONES = 6
 export const SHORT_SECONDS = 0.3
 export const MIN_VOICED = 5
 export const MIN_WORD_VOICED = 3
+export const FLAT_RANGE = 1.2
+export const COLOURED_SHARE = 0.6
 const MAX_FRAMES = 800
 
 export type Band = 'green' | 'yellow' | 'red'
@@ -156,7 +164,7 @@ export function toneSentence(text: string, shape: ShapeName, lang: Lang, region:
   return { you: shape, should: shouldShape(tone), tone }
 }
 
-function thin(contour: Contour, hop: number): { contour: Contour; hop: number } {
+export function thin(contour: Contour, hop: number): { contour: Contour; hop: number } {
   if (contour.length <= MAX_FRAMES) return { contour, hop }
   const step = Math.ceil(contour.length / MAX_FRAMES)
   const next: Contour = []
@@ -181,73 +189,6 @@ function sustained(contour: Contour): { start: number; end: number } | null {
     }
   }
   return { start, end }
-}
-
-function frameCost(left: number | null, right: number | null): number {
-  if (left == null && right == null) return 0.2
-  if (left == null || right == null) return 4
-  return Math.abs(left - right)
-}
-
-export function alignContours(model: Contour, user: Contour): { path: PathPoint[]; mean: number } | null {
-  const rows = model.length
-  const cols = user.length
-  if (rows < 2 || cols < 2) return null
-  const width = cols + 1
-  const inf = 1e12
-  const cost = new Float64Array((rows + 1) * width)
-  cost.fill(inf)
-  cost[0] = 0
-  const step = new Uint8Array((rows + 1) * width)
-  for (let i = 1; i <= rows; i += 1) {
-    const left = model[i - 1] ?? null
-    for (let j = 1; j <= cols; j += 1) {
-      const local = frameCost(left, user[j - 1] ?? null)
-      const diag = cost[(i - 1) * width + (j - 1)] ?? inf
-      const up = cost[(i - 1) * width + j] ?? inf
-      const stay = cost[i * width + (j - 1)] ?? inf
-      let best = diag
-      let which = 1
-      if (up < best) {
-        best = up
-        which = 2
-      }
-      if (stay < best) {
-        best = stay
-        which = 3
-      }
-      cost[i * width + j] = local + best
-      step[i * width + j] = which
-    }
-  }
-  if ((cost[rows * width + cols] ?? inf) >= inf / 2) return null
-  const path: PathPoint[] = []
-  let i = rows
-  let j = cols
-  let guard = rows + cols + 2
-  while (i > 0 && j > 0 && guard > 0) {
-    path.push({ model: i - 1, user: j - 1 })
-    const which = step[i * width + j] ?? 1
-    if (which === 2) i -= 1
-    else if (which === 3) j -= 1
-    else {
-      i -= 1
-      j -= 1
-    }
-    guard -= 1
-  }
-  path.reverse()
-  let sum = 0
-  let count = 0
-  for (const point of path) {
-    const left = model[point.model]
-    const right = user[point.user]
-    if (left == null || right == null) continue
-    sum += Math.abs(left - right)
-    count += 1
-  }
-  if (count === 0) return null
-  return { path, mean: sum / count }
 }
 
 function warp(model: Contour, user: Contour, path: PathPoint[]): Contour {
@@ -288,7 +229,7 @@ function pathMean(model: Contour, user: Contour, path: PathPoint[]): number | nu
   return count === 0 ? null : sum / count
 }
 
-const LOCAL_SCALES = [0.45, 0.6, 0.75, 0.9, 1, 1.15, 1.3, 1.5, 1.75, 2.05]
+const LOCAL_SCALES = [0.75, 0.9, 1, 1.15, 1.33]
 
 function mappedFrame(
   modelFrame: number,
@@ -302,9 +243,11 @@ function mappedFrame(
 
 /**
  * The global map already took out a uniform tempo. A small shift and a
- * local scale then catch one word that moved against the rest. The scale
- * is only trusted when it actually lowers the distance: a mirrored
- * syllable stays on scale 1, so the melody stays red.
+ * local scale of about 0.75–1.33 then catch one word that moved against
+ * the rest. The scale is only trusted when it actually lowers the distance
+ * under the green band: a mirrored syllable stays on scale 1, so the
+ * melody stays red. A wider scale would hide a reversal or paint a uniform
+ * 0.7 take red.
  */
 function distanceAt(
   model: Contour,
@@ -364,6 +307,24 @@ function matchLocal(
     }
   }
   return best
+}
+
+function voicedRange(contour: Contour): number | null {
+  let low = Number.POSITIVE_INFINITY
+  let high = Number.NEGATIVE_INFINITY
+  for (const value of contour) {
+    if (value == null) continue
+    if (value < low) low = value
+    if (value > high) high = value
+  }
+  if (!Number.isFinite(low) || !Number.isFinite(high)) return null
+  return high - low
+}
+
+/** A median-normalised contour with almost no movement has no melody. */
+export function flatContour(contour: Contour): boolean {
+  const range = voicedRange(contour)
+  return range != null && range < FLAT_RANGE
 }
 
 function worseBand(left: Band, right: Band): Band {
@@ -430,7 +391,7 @@ export function scoreRepeat(input: {
   if (meanDistance == null) return { ...empty, tooLittleVoice: true }
   const userOnModel = warp(model, user, path)
   const globalRatio = ((userSpan.end - userSpan.start) * userHop) / ((modelSpan.end - modelSpan.start) * modelHop)
-  if (meanDistance > UNCLEAR_SEMITONES) {
+  if (meanDistance > UNCLEAR_SEMITONES || flatContour(user)) {
     return {
       ...empty,
       userOnModel,
@@ -500,6 +461,8 @@ export function scoreRepeat(input: {
   const melodyBar = barFromColours(words.map((word) => word.melody))
   const rhythmWords = barFromColours(words.map((word) => word.rhythm))
   const rhythmBar = rhythmWords ? worseBar(globalBar(globalRatio), rhythmWords) : null
+  const coloured = words.filter((word) => word.color != null).length
+  const stars = words.length > 0 && coloured / words.length >= COLOURED_SHARE ? starsFromBars(melodyBar, rhythmBar) : 0
   return {
     model,
     user,
@@ -512,7 +475,7 @@ export function scoreRepeat(input: {
     words,
     melodyBar,
     rhythmBar,
-    stars: starsFromBars(melodyBar, rhythmBar),
+    stars,
     unclear: false,
     tooLittleVoice: false,
     tooShort: false,
