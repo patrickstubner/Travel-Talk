@@ -1,11 +1,18 @@
 import type { Lang } from '../../content/phrase'
 import { publicUrl } from '../public-url'
-import type { Settings } from '../storage/types'
 import { loadManifest } from './player'
-import { filesForVoice, selectedVoice, type CatalogVoice } from './voices'
+import { filesForVoice, type CatalogVoice } from './voices'
 
-/** Runtime cache filled by the service worker and by «Für offline laden». */
+/** Runtime cache filled by «Für offline laden». Install does not write it. */
 export const AUDIO_CACHE = 'travel-talk-audio'
+
+/** Voice buttons re-read their progress after a delete. */
+export const AUDIO_CHANGED = 'travel-talk-audio-changed'
+
+export function notifyAudioChanged(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(AUDIO_CHANGED))
+}
 
 export type LoadResult = {
   status: 'ready' | 'error' | 'full'
@@ -130,62 +137,31 @@ export async function loadVoiceOffline(
 
 /** Drops only the files added by a failed attempt, so a complete older voice stays. */
 export async function discardAdded(urls: readonly string[]): Promise<void> {
-  if (!('caches' in globalThis) || urls.length === 0) return
+  if (!('caches' in globalThis) || urls.length === 0) {
+    notifyAudioChanged()
+    return
+  }
   const cache = await caches.open(AUDIO_CACHE)
   for (const url of urls) await cache.delete(url)
+  notifyAudioChanged()
 }
 
-/** Removes every other voice of this language, including copies in an older cache. */
+/** Removes every other voice of this language after the chosen voice is complete. */
 export async function dropOtherVoices(lang: Lang, keep: CatalogVoice): Promise<void> {
-  if (!('caches' in globalThis)) return
-  const names = await caches.keys()
-  for (const name of names) {
-    const cache = await caches.open(name)
-    for (const request of await cache.keys()) {
-      if (isOtherVoice(requestUrl(request), lang, keep)) await cache.delete(request)
+  if ('caches' in globalThis) {
+    const names = await caches.keys()
+    for (const name of names) {
+      const cache = await caches.open(name)
+      for (const request of await cache.keys()) {
+        if (isOtherVoice(requestUrl(request), lang, keep)) await cache.delete(request)
+      }
     }
   }
+  notifyAudioChanged()
 }
 
 /** After a switch to a voice that is already complete, the others of that language can go. */
 export async function dropOtherVoicesIfCached(lang: Lang, voice: CatalogVoice): Promise<void> {
   const progress = await voiceProgress(lang, voice)
   if (progress.total > 0 && progress.have === progress.total) await dropOtherVoices(lang, voice)
-}
-
-/**
- * Copies the selected voice of each language in use into the runtime cache.
- * Nothing is deleted here, so an update cannot drop the voice the user already has.
- */
-export async function preserveInUseVoices(settings: Settings): Promise<void> {
-  if (!('caches' in globalThis)) return
-  const langs = [settings.appLang, settings.targetLang].filter((lang, index, all): lang is Lang => lang != null && all.indexOf(lang) === index)
-  if (langs.length === 0) return
-  let listed: Awaited<ReturnType<typeof loadManifest>>
-  try {
-    listed = await loadManifest()
-  } catch {
-    return
-  }
-  const dest = await caches.open(AUDIO_CACHE)
-  const names = await caches.keys()
-  for (const lang of langs) {
-    const voice = selectedVoice(settings, lang)
-    for (const file of filesForVoice(listed, lang, voice)) {
-      const url = audioRequest(file)
-      if (await dest.match(url)) continue
-      for (const name of names) {
-        if (name === AUDIO_CACHE) continue
-        const source = await caches.open(name)
-        const hit = await source.match(url)
-        if (!hit) continue
-        try {
-          await dest.put(url, hit.clone())
-        } catch {
-          return
-        }
-        break
-      }
-    }
-  }
 }

@@ -1,9 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { defaultSettings } from '../storage/types'
 import { voicesFor } from './voices'
-import { AUDIO_CACHE, dropOtherVoices, loadVoiceOffline, preserveInUseVoices } from './offline'
+import { AUDIO_CACHE, discardAdded, dropOtherVoices, loadVoiceOffline } from './offline'
 
 const FILES = [
   'vi/vivos-22/emergency.help__any__base.m4a',
@@ -82,6 +81,8 @@ describe('offline voice loading', () => {
     }, { dropOthers: () => true })
     expect(outcome.status).toBe('ready')
     expect(outcome.missing).toBe(0)
+    expect(outcome.added).toHaveLength(2)
+    expect(outcome.added.every((url) => url.includes('/vivos-22/'))).toBe(true)
     expect(seen).toContain('1/2')
     expect(seen.at(-1)).toBe('2/2')
     const runtime = [...(stores.get(AUDIO_CACHE)?.keys() ?? [])]
@@ -96,6 +97,7 @@ describe('offline voice loading', () => {
     stores.set(AUDIO_CACHE, new Map([['/audio/vi/emergency.help__any__base.m4a', 'old']]))
     const outcome = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, { dropOthers: () => true })
     expect(outcome.status).toBe('error')
+    expect(outcome.added).toEqual([])
     expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/emergency.help__any__base.m4a')).toBe(true)
 
     vi.unstubAllGlobals()
@@ -103,28 +105,38 @@ describe('offline voice loading', () => {
     full.set(AUDIO_CACHE, new Map([['/audio/vi/emergency.help__any__base.m4a', 'old']]))
     const blocked = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, { dropOthers: () => true })
     expect(blocked.status).toBe('full')
+    expect(blocked.added).toEqual([])
     expect(full.get(AUDIO_CACHE)?.has('/audio/vi/emergency.help__any__base.m4a')).toBe(true)
     expect([...(full.get(AUDIO_CACHE)?.keys() ?? [])].some((url) => url.includes('vivos-22'))).toBe(false)
   })
 
-  it('copies a voice that is already offline and leaves the old copy in place', async () => {
+  it('discards only the files added by the failed attempt', async () => {
     const stores = installCaches()
-    const legacy = '/audio/vi/emergency.help__any__base.m4a'
-    stores.set('travel-talk-precache-v2-old', new Map([[legacy, 'old'], ['/audio/vi/emergency.help__any__base.r70.m4a', 'slow']]))
-    await preserveInUseVoices({ ...defaultSettings, appLang: 'de', targetLang: 'vi' })
-    expect(stores.get(AUDIO_CACHE)?.get(legacy)).toBe('old')
-    expect(stores.get('travel-talk-precache-v2-old')?.get(legacy)).toBe('old')
-    await dropOtherVoices('vi', voice('vais1000'))
-    expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(true)
+    const kept = '/audio/vi/emergency.help__any__base.m4a'
+    const added = '/audio/vi/vivos-22/emergency.help__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([[kept, 'old'], [added, 'new']]))
+    await discardAdded([added])
+    expect(stores.get(AUDIO_CACHE)?.has(kept)).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has(added)).toBe(false)
   })
 
-  it('caches only status 200 and fits every audio file', () => {
+  it('leaves the selected legacy voice when another voice is dropped', async () => {
+    const stores = installCaches()
+    const legacy = '/audio/vi/emergency.help__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([[legacy, 'old'], ['/audio/vi/vivos-22/emergency.help__any__base.m4a', 'new']]))
+    await dropOtherVoices('vi', voice('vais1000'))
+    expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/vivos-22/emergency.help__any__base.m4a')).toBe(false)
+  })
+
+  it('caches only status 200 and does not migrate audio during install', () => {
     const text = readFileSync(fileURLToPath(new URL('../../rsbuild.config.ts', import.meta.url)), 'utf8')
     expect(text).toContain('statuses: [200]')
     expect(text).not.toContain('[0, 200]')
     expect(text).toMatch(/maxEntries:\s*4000/)
     expect(text).toContain('cleanupOutdatedCaches: false')
-    expect(text).toContain('importScripts: [`${BASE}sw-migrate.js`]')
+    expect(text).not.toContain('sw-migrate')
+    expect(text).not.toContain('importScripts')
   })
 
   it('skips a missing file and still finishes the voice', async () => {
@@ -133,6 +145,9 @@ describe('offline voice loading', () => {
     const outcome = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, { dropOthers: () => true })
     expect(outcome.status).toBe('ready')
     expect(outcome.missing).toBe(1)
+    expect(outcome.added).toHaveLength(1)
+    expect(outcome.added[0]).toContain('/vivos-22/')
+    expect(outcome.added[0]).not.toContain('.r70.')
     expect([...(stores.get(AUDIO_CACHE)?.keys() ?? [])].some((url) => url.includes('vivos-22') && !url.includes('.r70.'))).toBe(true)
     expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/emergency.help__any__base.m4a')).toBe(true)
   })

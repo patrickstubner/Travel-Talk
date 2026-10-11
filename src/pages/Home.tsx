@@ -88,7 +88,7 @@ function OfflineOffer({ settings, copy }: { settings: Settings; copy: Dictionary
   return (
     <section className="stack" aria-label={copy.offlineLoad}>
       <p className="hint">{LANG_LABEL[lang][ui]}</p>
-      <VoiceOfflineButton lang={lang} voice={selectedVoice(settings, lang)} copy={copy} dropOnSuccess />
+      <VoiceOfflineButton lang={lang} voice={selectedVoice(settings, lang)} copy={copy} dropOnSuccess pendingNote={copy.offlineReload} />
     </section>
   )
 }

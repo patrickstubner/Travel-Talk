@@ -116,6 +116,7 @@ export type Dictionary = {
   voicesNc: string
   voicesChanged: string
   offlineLoad: string
+  offlineReload: string
   offlineReady: string
   offlineRetry: string
   offlineFull: string
@@ -353,6 +354,7 @@ export const de: Dictionary = {
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'Das Material wurde verändert.',
   offlineLoad: 'Für offline laden',
+  offlineReload: 'Offline-Audio nach dem Update neu laden',
   offlineReady: 'offline bereit',
   offlineRetry: 'Erneut versuchen',
   offlineFull: 'Der Speicher ist voll. Die Stimme ist nicht vollständig geladen.',
@@ -588,6 +590,7 @@ export const en: Dictionary = {
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'The material was changed.',
   offlineLoad: 'Load for offline',
+  offlineReload: 'Reload offline audio after the update',
   offlineReady: 'ready offline',
   offlineRetry: 'Try again',
   offlineFull: 'Storage is full. The voice is not fully loaded.',
@@ -823,6 +826,7 @@ export const pt: Dictionary = {
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'O material foi alterado.',
   offlineLoad: 'Carregar para offline',
+  offlineReload: 'Recarregar o áudio offline depois da atualização',
   offlineReady: 'pronto offline',
   offlineRetry: 'Tentar de novo',
   offlineFull: 'O armazenamento está cheio. A voz não foi carregada por completo.',
@@ -1056,6 +1060,7 @@ export const vi: Dictionary = {
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'Tài liệu đã được thay đổi.',
   offlineLoad: 'Tải để dùng offline',
+  offlineReload: 'Tải lại âm thanh offline sau bản cập nhật',
   offlineReady: 'sẵn sàng offline',
   offlineRetry: 'Thử lại',
   offlineFull: 'Bộ nhớ đã đầy. Giọng chưa được tải đủ.',

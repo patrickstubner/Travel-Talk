@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Lang } from '../../content/phrase'
-import { discardAdded, loadVoiceOffline, voiceProgress } from '../audio/offline'
+import { AUDIO_CHANGED, discardAdded, loadVoiceOffline, notifyAudioChanged, voiceProgress } from '../audio/offline'
 import type { CatalogVoice } from '../audio/voices'
 import type { Dictionary } from '../i18n/dictionary'
 
@@ -24,39 +24,44 @@ export function VoiceOfflineButton({
   copy,
   dropOnSuccess,
   onKeepPrevious,
+  pendingNote,
 }: {
   lang: Lang
   voice: CatalogVoice
   copy: Dictionary
   dropOnSuccess: boolean
   onKeepPrevious?: () => void
+  /** Shown on the start page until this voice is fully cached. */
+  pendingNote?: string
 }) {
   const [phase, setPhase] = useState<Phase>({ kind: 'check' })
   const dropRef = useRef(dropOnSuccess)
   dropRef.current = dropOnSuccess
   const run = useRef(0)
+  const busy = useRef(false)
 
   useEffect(() => {
     let live = true
     function apply(progress: { have: number; total: number }): void {
-      if (!live) return
+      if (!live || busy.current) return
       if (progress.total > 0 && progress.have === progress.total) setPhase({ kind: 'ready', total: progress.total })
       else setPhase({ kind: 'idle', have: progress.have, total: progress.total })
     }
     void voiceProgress(lang, voice).then(apply)
-    function onPreserved(): void {
+    function onChanged(): void {
       void voiceProgress(lang, voice).then(apply)
     }
-    window.addEventListener('travel-talk-audio-preserved', onPreserved)
+    window.addEventListener(AUDIO_CHANGED, onChanged)
     return () => {
       live = false
-      window.removeEventListener('travel-talk-audio-preserved', onPreserved)
+      window.removeEventListener(AUDIO_CHANGED, onChanged)
     }
   }, [lang, voice])
 
   async function start(): Promise<void> {
     const token = run.current + 1
     run.current = token
+    busy.current = true
     setPhase((prev) => ({
       kind: 'loading',
       have: 'have' in prev ? prev.have : 0,
@@ -70,6 +75,7 @@ export function VoiceOfflineButton({
       },
       { dropOthers: () => dropRef.current },
     )
+    busy.current = false
     if (run.current !== token) return
     setPhase((prev) => {
       const have = 'have' in prev ? prev.have : 0
@@ -83,11 +89,15 @@ export function VoiceOfflineButton({
 
   async function keepPrevious(): Promise<void> {
     if (phase.kind !== 'full') return
-    await discardAdded(phase.added)
-    onKeepPrevious?.()
-    const progress = await voiceProgress(lang, voice)
-    if (progress.total > 0 && progress.have === progress.total) setPhase({ kind: 'ready', total: progress.total })
-    else setPhase({ kind: 'idle', have: progress.have, total: progress.total })
+    const urls = phase.added
+    busy.current = true
+    try {
+      await discardAdded(urls)
+      onKeepPrevious?.()
+    } finally {
+      busy.current = false
+    }
+    notifyAudioChanged()
   }
 
   if (phase.kind === 'check') return null
@@ -102,6 +112,7 @@ export function VoiceOfflineButton({
   }
   return (
     <div className="voice-offline">
+      {pendingNote ? <p className="hint">{pendingNote}</p> : null}
       {showCount ? <p role="status">{copy.offlineProgress(progress.have, progress.total)}</p> : null}
       {phase.kind === 'missing' ? <p role="status">{copy.offlineMissing(phase.missing)}</p> : null}
       {phase.kind === 'full' ? (

@@ -35,7 +35,7 @@ npm ci
 npm run dev
 ```
 
-Die App liegt unter `http://127.0.0.1:5173/Travel-Talk/`. Der Build ist Rsbuild. Der Service Worker entsteht nach dem Build mit `workbox-build`. Er speichert die Oberfläche, nicht die Audiodateien im Voraus. Beim Installieren kopiert er vorhandene `.m4a`-Einträge in den Audio-Cache, bevor die Aktivierung alte Precache-Einträge entfernt. Eine Stimme wird mit «Für offline laden» geholt. Ein Rspack-Plugin sähe nur die kompilierten Assets. Die Tests laufen mit Vitest, getrennt vom Build. Weitere Befehle:
+Die App liegt unter `http://127.0.0.1:5173/Travel-Talk/`. Der Build ist Rsbuild. Der Service Worker entsteht nach dem Build mit `workbox-build`. Er speichert die Oberfläche. Audiodateien gehören nicht zum Installieren, und ein Update übernimmt sie nicht aus dem alten Cache. Die Startseite sagt «Offline-Audio nach dem Update neu laden», solange die Lernsprache nicht vollständig geladen ist. Eine Stimme wird mit «Für offline laden» geholt. Ein Rspack-Plugin sähe nur die kompilierten Assets. Die Tests laufen mit Vitest, getrennt vom Build. Weitere Befehle:
 
 ```bash
 npm test

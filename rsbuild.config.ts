@@ -53,11 +53,10 @@ export default defineConfig({
             cacheId: 'travel-talk',
             skipWaiting: true,
             clientsClaim: true,
-            // Activate deletes precache URLs that left the manifest, including old audio.
-            // sw-migrate.js copies those .m4a entries during install, before that runs.
-            // It does not delete the runtime cache.
+            // Audio is not part of install. A full disk must not block the update.
+            // Activate still drops precache URLs that left the manifest, including old audio.
+            // The start page asks for one reload of the voice after that.
             cleanupOutdatedCaches: false,
-            importScripts: [`${BASE}sw-migrate.js`],
             disableDevLogs: true,
             sourcemap: false,
             mode: 'production',

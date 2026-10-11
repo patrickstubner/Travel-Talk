@@ -1,15 +1,19 @@
 // @vitest-environment happy-dom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { discardAdded, voiceProgress, loadVoiceOffline } from '../audio/offline'
+import { discardAdded, notifyAudioChanged, voiceProgress, loadVoiceOffline } from '../audio/offline'
 import { dictionaries } from '../i18n/dictionary'
 import { voicesFor } from '../audio/voices'
 import { VoiceOfflineButton } from './VoiceOffline'
 
 vi.mock('../audio/offline', () => ({
+  AUDIO_CHANGED: 'travel-talk-audio-changed',
   voiceProgress: vi.fn(async () => ({ have: 0, total: 597 })),
   loadVoiceOffline: vi.fn(),
   discardAdded: vi.fn(async () => undefined),
+  notifyAudioChanged: vi.fn(() => {
+    window.dispatchEvent(new Event('travel-talk-audio-changed'))
+  }),
 }))
 
 afterEach(() => {
@@ -63,7 +67,52 @@ describe('offline load control', () => {
     missing.unmount()
 
     vi.mocked(voiceProgress).mockResolvedValue({ have: 597, total: 597 })
-    render(<VoiceOfflineButton lang="vi" voice={voice} copy={copy} dropOnSuccess />)
+    render(
+      <VoiceOfflineButton lang="vi" voice={voice} copy={copy} dropOnSuccess pendingNote="Offline-Audio nach dem Update neu laden" />,
+    )
     expect(await screen.findByText('offline bereit')).toBeTruthy()
+    expect(screen.queryByText('Offline-Audio nach dem Update neu laden')).toBeNull()
+  })
+
+  it('returns to the previous voice and refreshes the neighbour after a delete', async () => {
+    const neighbour = voicesFor('vi').find((item) => item.id === 'vais1000')!
+    let neighbourHave = 597
+    vi.mocked(voiceProgress).mockImplementation(async (_lang, item) => {
+      if (item.id === neighbour.id) return { have: neighbourHave, total: 597 }
+      return { have: 0, total: 597 }
+    })
+    let finish: (outcome: { status: 'full'; missing: number; added: string[] }) => void = () => undefined
+    vi.mocked(loadVoiceOffline).mockImplementation(
+      (_lang, _voice, onProgress) =>
+        new Promise((resolve) => {
+          onProgress(4, 597)
+          finish = resolve
+        }),
+    )
+    const keep = vi.fn()
+    render(
+      <div>
+        <VoiceOfflineButton lang="vi" voice={neighbour} copy={copy} dropOnSuccess={false} />
+        <VoiceOfflineButton
+          lang="vi"
+          voice={voice}
+          copy={copy}
+          dropOnSuccess
+          pendingNote="Offline-Audio nach dem Update neu laden"
+          onKeepPrevious={keep}
+        />
+      </div>,
+    )
+    expect(await screen.findByText('offline bereit')).toBeTruthy()
+    expect(screen.getByText('Offline-Audio nach dem Update neu laden')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Für offline laden' }))
+    finish({ status: 'full', missing: 0, added: ['/audio/vi/vivos-22/emergency.help__any__base.m4a'] })
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    neighbourHave = 12
+    fireEvent.click(screen.getByRole('button', { name: 'Bisherige Stimme behalten' }))
+    expect(discardAdded).toHaveBeenCalledWith(['/audio/vi/vivos-22/emergency.help__any__base.m4a'])
+    expect(await screen.findByText('12/597')).toBeTruthy()
+    expect(keep).toHaveBeenCalledTimes(1)
+    expect(notifyAudioChanged).toHaveBeenCalled()
   })
 })
