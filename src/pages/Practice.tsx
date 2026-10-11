@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { Concept } from '../../content/phrase'
+import { spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { playClip } from '../audio/player'
 import { tempoFile } from '../audio/speed'
@@ -46,6 +47,7 @@ export function PracticePage() {
   const [picked, setPicked] = useState<string | null>(null)
   const [choices, setChoices] = useState<Concept[]>([])
   const [playing, setPlaying] = useState(false)
+  const [offlineAudio, setOfflineAudio] = useState(false)
   const [recording, setRecording] = useState(false)
   const [micNote, setMicNote] = useState(false)
   const [finished, setFinished] = useState(false)
@@ -115,8 +117,15 @@ export function PracticePage() {
     let live = true
     const rate = step === 'slow' ? 0.7 : 1
     setPlaying(true)
-    void playClip(tempoFile(line.file, rate), line.speech, settings.targetLang, rate, () => {
+    setOfflineAudio(false)
+    void playClip(tempoFile(spokenFile(settings, settings.targetLang, line.file), rate), line.speech, settings.targetLang, rate, () => {
       if (live && aliveRef.current) setPlaying(false)
+    }).then((result) => {
+      if (!live || !aliveRef.current) return
+      if (result === 'offline') {
+        setPlaying(false)
+        setOfflineAudio(true)
+      }
     })
     return () => {
       live = false
@@ -153,6 +162,7 @@ export function PracticePage() {
     setPicked(null)
     setMicNote(false)
     setPlaying(false)
+    setOfflineAudio(false)
     if (stepIndex + 1 < steps.length) {
       setStepIndex((value) => value + 1)
       return
@@ -166,10 +176,16 @@ export function PracticePage() {
   }
 
   async function hear(file: string, speech: string, rate: 0.7 | 1): Promise<void> {
+    if (!targetLang) return
     setPlaying(true)
-    await playClip(tempoFile(file, rate), speech, targetLang, rate, () => {
+    setOfflineAudio(false)
+    const result = await playClip(tempoFile(spokenFile(settings, targetLang, file), rate), speech, targetLang, rate, () => {
       if (aliveRef.current) setPlaying(false)
     })
+    if (aliveRef.current && result === 'offline') {
+      setPlaying(false)
+      setOfflineAudio(true)
+    }
   }
 
   async function rate(grade: Grade): Promise<void> {
@@ -254,6 +270,11 @@ export function PracticePage() {
   return (
     <section className="stack" data-testid="practice">
       <p className="eyebrow">{heading[step]}</p>
+      {offlineAudio ? (
+        <p className="warn" role="status">
+          {copy.audioOffline}
+        </p>
+      ) : null}
       {step === 'slow' || step === 'normal' ? (
         <>
           <h1>

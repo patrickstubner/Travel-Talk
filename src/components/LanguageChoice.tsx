@@ -1,14 +1,31 @@
+import { useRef } from 'react'
 import type { Lang } from '../../content/phrase'
+import { dropOtherVoicesIfCached } from '../audio/offline'
+import { playClip } from '../audio/player'
+import { previewFile, selectedVoice, voicesFor } from '../audio/voices'
 import { LANG_LABEL } from '../app/labels'
+import { VoiceOfflineButton } from './VoiceOffline'
 import { APP_LANGS } from '../domain/direction'
 import type { Dictionary } from '../i18n/dictionary'
 import type { Settings } from '../storage/types'
 
-function voiceCopy(target: Lang | null, copy: Dictionary): { label: string; note: string; title: string } {
-  if (target === 'vi') return { label: copy.voiceVi, note: copy.voiceViNote, title: copy.voiceTitle }
-  if (target === 'en') return { label: copy.voiceEn, note: copy.voiceEnNote, title: copy.voiceTitle }
-  if (target === 'pt-BR') return { label: copy.voicePt, note: copy.voicePlainNote, title: copy.voiceTitle }
-  return { label: copy.voiceDe, note: copy.voicePlainNote, title: copy.voiceTitle }
+export type LanguagePatch = Pick<Settings, 'appLang' | 'targetLang' | 'viRegion' | 'voices'>
+
+function voiceLabel(id: string, copy: Dictionary): string {
+  if (id === 'vivos-22') return copy.voiceMann1
+  if (id === 'vivos-32') return copy.voiceMann2
+  if (id === 'vais1000') return copy.voiceFrauNorth
+  if (id === 'thorsten-high') return copy.voiceMannHigh
+  if (id === 'thorsten') return copy.voiceMannMid
+  if (id === 'ljspeech' || id === 'faber') return copy.voiceFrau
+  return copy.voiceMann
+}
+
+function voiceNote(target: Lang, copy: Dictionary): string {
+  if (target === 'vi') return copy.voiceViNote
+  if (target === 'en') return copy.voiceEnNote
+  if (target === 'pt-BR') return copy.voicePtNote
+  return copy.voiceDeNote
 }
 
 export function LanguageChoice({
@@ -23,21 +40,57 @@ export function LanguageChoice({
   copy: Dictionary
   ui: Lang
   mode: 'onboarding' | 'settings'
-  onChange: (patch: Pick<Settings, 'appLang' | 'targetLang' | 'viRegion'>) => void
+  onChange: (patch: LanguagePatch) => void
   onContinue?: () => void
 }) {
   const ready = settings.appLang != null && settings.targetLang != null && settings.appLang !== settings.targetLang
   const showRegion = settings.appLang === 'vi' || settings.targetLang === 'vi'
-  const voice = voiceCopy(settings.targetLang, copy)
+  const target = settings.targetLang
+  const options = target ? voicesFor(target) : []
+  const current = target ? selectedVoice(settings, target).id : ''
+  const shown = target && mode === 'onboarding' && !settings.voices?.[target] ? options.find((voice) => voice.defaultNew)?.id ?? current : current
+  const previousVoice = useRef(shown)
+  const seenLang = useRef(target)
+  if (seenLang.current !== target) {
+    seenLang.current = target
+    previousVoice.current = shown
+  }
+
+  function emit(patch: Partial<LanguagePatch>): void {
+    onChange({
+      appLang: settings.appLang,
+      targetLang: settings.targetLang,
+      viRegion: settings.viRegion,
+      voices: settings.voices,
+      ...patch,
+    })
+  }
 
   function pickApp(lang: Lang): void {
-    if (lang === settings.targetLang && settings.appLang) onChange({ appLang: lang, targetLang: settings.appLang, viRegion: settings.viRegion })
-    else onChange({ appLang: lang, targetLang: settings.targetLang, viRegion: settings.viRegion })
+    if (lang === settings.targetLang && settings.appLang) emit({ appLang: lang, targetLang: settings.appLang })
+    else emit({ appLang: lang })
   }
 
   function pickTarget(lang: Lang): void {
-    if (lang === settings.appLang && settings.targetLang) onChange({ appLang: settings.targetLang, targetLang: lang, viRegion: settings.viRegion })
-    else onChange({ appLang: settings.appLang, targetLang: lang, viRegion: settings.viRegion })
+    if (lang === settings.appLang && settings.targetLang) emit({ appLang: settings.targetLang, targetLang: lang })
+    else emit({ targetLang: lang })
+  }
+
+  function pickVoice(id: string): void {
+    if (!target) return
+    if (id !== shown) previousVoice.current = shown
+    emit({ voices: { ...settings.voices, [target]: id } })
+    const voice = options.find((item) => item.id === id)
+    if (voice) void dropOtherVoicesIfCached(target, voice)
+  }
+
+  function keepPreviousVoice(failedId: string): void {
+    if (!target) return
+    const id = previousVoice.current
+    if (!id || id === failedId) return
+    emit({ voices: { ...settings.voices, [target]: id } })
+    const voice = options.find((item) => item.id === id)
+    if (voice) void dropOtherVoicesIfCached(target, voice)
   }
 
   return (
@@ -72,21 +125,46 @@ export function LanguageChoice({
             <h2>{copy.scriptTitle}</h2>
             <p className="hint">{copy.scriptHint}</p>
             <div className="choice-grid" role="group" aria-label={copy.scriptTitle}>
-              <button type="button" aria-pressed={settings.viRegion === 'south'} onClick={() => onChange({ appLang: settings.appLang, targetLang: settings.targetLang, viRegion: 'south' })}>
+              <button type="button" aria-pressed={settings.viRegion === 'south'} onClick={() => emit({ viRegion: 'south' })}>
                 {copy.regionSouth}
               </button>
-              <button type="button" aria-pressed={settings.viRegion === 'north'} onClick={() => onChange({ appLang: settings.appLang, targetLang: settings.targetLang, viRegion: 'north' })}>
+              <button type="button" aria-pressed={settings.viRegion === 'north'} onClick={() => emit({ viRegion: 'north' })}>
                 {copy.regionNorth}
               </button>
             </div>
           </div>
         ) : null}
       </section>
-      {settings.targetLang ? (
+      {target ? (
         <section className="card pad">
-          <h2>{voice.title}</h2>
-          <p className="voice-pill">{voice.label}</p>
-          <p className="voice-note">{voice.note}</p>
+          <h2>{copy.voiceTitle}</h2>
+          <div className="voice-list" role="group" aria-label={copy.voiceTitle}>
+            {options.map((voice) => {
+              const label = voiceLabel(voice.id, copy)
+              return (
+                <div key={voice.id} className="voice-option">
+                  <button type="button" aria-pressed={shown === voice.id} onClick={() => pickVoice(voice.id)}>
+                    {label}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`${copy.voicePreview}: ${label}`}
+                    onClick={() => void playClip(previewFile(target, voice), label, target, 1)}
+                  >
+                    {copy.voicePreview}
+                  </button>
+                  <VoiceOfflineButton
+                    lang={target}
+                    voice={voice}
+                    copy={copy}
+                    dropOnSuccess={shown === voice.id}
+                    onKeepPrevious={() => keepPreviousVoice(voice.id)}
+                  />
+                </div>
+              )
+            })}
+          </div>
+          <p className="voice-note">{voiceNote(target, copy)}</p>
         </section>
       ) : null}
       {mode === 'onboarding' ? (

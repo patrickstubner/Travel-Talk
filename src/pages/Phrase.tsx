@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { selectedVoice, spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { directionId } from '../domain/direction'
 import { decodeContourFile, playClip } from '../audio/player'
@@ -12,14 +13,17 @@ import { PitchPanel } from '../components/PitchPanel'
 import { RichText } from '../components/RichText'
 import { contourFromSamples, type Contour } from '../pitch/contour'
 import { cardIdFor } from '../srs/session'
-import { prefsFromSettings } from '../storage/types'
+import type { Dictionary } from '../i18n/dictionary'
+import { prefsFromSettings, type Settings } from '../storage/types'
+import type { Lang } from '../../content/phrase'
 
-const AUDIO_COPY = {
-  vi: 'audioVi',
-  'pt-BR': 'audioPt',
-  de: 'audioDe',
-  en: 'audioEn',
-} as const
+function audioCaption(copy: Dictionary, lang: Lang, settings: Settings): string {
+  const id = selectedVoice(settings, lang).id
+  if (lang === 'vi') return id === 'vais1000' ? copy.audioVi : copy.audioViMale
+  if (lang === 'de') return id === 'thorsten-high' ? copy.audioDeHigh : copy.audioDe
+  if (lang === 'en') return id === 'joe' ? copy.audioEnMale : copy.audioEn
+  return id === 'cadu' ? copy.audioPtMale : copy.audioPt
+}
 
 export function PhrasePage() {
   const { conceptId = '' } = useParams()
@@ -31,7 +35,7 @@ export function PhrasePage() {
   const direction = app && targetLang ? directionId(app, targetLang) : null
   const concept = catalog?.concepts.find((item) => item.id === conceptId)
   const ui = interfaceLang(settings)
-  const [heard, setHeard] = useState<'file' | 'synth' | null>(null)
+  const [heard, setHeard] = useState<'file' | 'offline' | null>(null)
   const [playing, setPlaying] = useState(false)
   const [recording, setRecording] = useState(false)
   const [mineUrl, setMineUrl] = useState<string | null>(null)
@@ -58,7 +62,7 @@ export function PhrasePage() {
 
   const target = concept && targetLang ? resolvePlayback(concept, targetLang, settings.viRegion, prefsFromSettings(targetLang, settings)) : undefined
   const source = concept && app ? resolvePlayback(concept, app, settings.viRegion, prefsFromSettings(app, settings)) : undefined
-  const targetFile = target?.file ?? ''
+  const targetFile = target && targetLang ? spokenFile(settings, targetLang, target.file) : ''
 
   useEffect(() => {
     aliveRef.current = true
@@ -113,6 +117,8 @@ export function PhrasePage() {
     const result = await playClip(file, target?.speech ?? '', targetLang ?? 'de', rate, () => {
       if (aliveRef.current) setPlaying(false)
     })
+    if (!aliveRef.current) return
+    if (result === 'offline') setPlaying(false)
     setHeard(result)
   }
 
@@ -164,8 +170,8 @@ export function PhrasePage() {
       <p>
         {copy.context}: {concept.context[ui]}
       </p>
-      {targetLang === 'vi' ? <p className="warn">{copy.audioVi}</p> : <p className="hint">{copy[AUDIO_COPY[targetLang]]}</p>}
-      {heard === 'synth' ? <p className="warn">{copy.audioSynth}</p> : null}
+      {targetLang === 'vi' ? <p className="warn">{audioCaption(copy, targetLang, settings)}</p> : <p className="hint">{audioCaption(copy, targetLang, settings)}</p>}
+      {heard === 'offline' ? <p className="warn" role="status">{copy.audioOffline}</p> : null}
       <p className="speed-now" data-testid="speed-now">
         {copy.speedShown(percent)}
       </p>
@@ -193,7 +199,7 @@ export function PhrasePage() {
           type="button"
           className="play-row"
           aria-pressed={playing}
-          onClick={() => void onPlay(tempoFile(target.file, step), step)}
+          onClick={() => void onPlay(tempoFile(spokenFile(settings, targetLang, target.file), step), step)}
         >
           <span className="play-mark" aria-hidden="true" />
           {playing ? copy.playing : copy.play}

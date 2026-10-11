@@ -1,4 +1,4 @@
-# Sicherheitsprüfung Travel Talk 0.3.0
+# Sicherheitsprüfung Travel Talk 0.4.0
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
@@ -20,13 +20,13 @@ Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, ke
 
 **XSS.** React schreibt Texte als Text. `dangerouslySetInnerHTML`, `innerHTML`, `outerHTML` und `eval` sind per ESLint verboten. Die Markierung von Platzhaltern wie `[Name]` zerlegt den String und setzt die Teile als Textknoten. Externe Links kommen nur aus dem Katalog und müssen mit `https://` beginnen. Sie tragen `rel="noreferrer noopener"`.
 
-**Audio-Pfade.** Eine Datei wird nur abgespielt, wenn der Name dem festen Muster `{sprache}/{id}__{region}__{variante}(.r70|.r85)?.m4a` entspricht und in `manifest.json` steht. Die Adresse wird daraus gebaut, nicht aus einem freien String. Die Stufe hängt `.r70` oder `.r85` an den schon geprüften Stamm. `playbackRate` wird nicht gesetzt. Das Tempo liegt nur in IndexedDB, es geht kein Audio und keine Stufe ins Netz.
+**Audio-Pfade.** Eine Datei wird nur abgespielt, wenn der Name dem festen Muster `{sprache}/{stimme}/?{id}__{region}__{variante}(.r70|.r85)?.m4a` entspricht und in `manifest.json` steht. Der Stimmordner ist optional und muss `^[a-z0-9_-]{1,40}$` sein. Die Adresse wird daraus gebaut, nicht aus einem freien String. Die Stufe hängt `.r70` oder `.r85` an den schon geprüften Stamm. `playbackRate` wird nicht gesetzt. Das Tempo liegt nur in IndexedDB, es geht kein Audio und keine Stufe ins Netz. Es gibt keinen Abruf einer Stimme von Azure, Google oder einem anderen Dienst.
 
 **Geheimnisse.** Keine Tokens, keine `.env`, keine `VITE_`-Schlüssel. Die CI-Deploy-Rechte sind `contents: read` plus, nur im Deploy-Job, `pages: write` und `id-token: write`.
 
 **Berechtigungen.** Das Mikrofon wird erst beim Tippen auf Aufnehmen angefragt, auf der Satzseite und im Schritt Nachsprechen. Nach dem Stopp, beim nächsten Schritt und beim Verlassen der Seite werden Rekorder, Tracks und die Blob-Adresse aufgeräumt. Fehlt das Mikrofon oder lehnt der Browser ab, steht ein Hinweis da und die Sitzung geht weiter. Es gibt keinen zweiten Weg, der eine Aufnahme erzwingt. Die Aufnahme bleibt ein Blob im Speicher der Seite und wird nicht hochgeladen und nicht in IndexedDB geschrieben. Der Service Worker hat den Scope `/Travel-Talk/`. Audio-Pfade sind vom Navigate-Fallback ausgenommen. In der CI checkt `actions/checkout` mit `persist-credentials: false` aus, und `npm ci` läuft mit `--ignore-scripts`.
 
-**Abhängigkeiten.** Versionen sind fest. Dependabot prüft npm und GitHub Actions wöchentlich und wartet mit `cooldown.default-days: 7`, bevor eine frisch veröffentlichte Version einen Pull Request öffnet. Das ändert die App nicht, es verzögert nur Updates. Major-Updates von `typescript` und `@types/node` sind ignoriert, über `update-types`, nicht über eine festgeschriebene Version. Sicherheitsupdates und Minor- und Patch-Updates bleiben möglich. Laufzeit: React 19.3.0, Dexie 4.4.6, ts-fsrs 5.4.2, pitchy 4.1.0, Zod 4.6.5, React Router 7.18.4. Typen: `@types/react` 19.3.0, `@types/react-dom` 19.3.0, `@types/node` 22.20.5. Build: Rsbuild 2.2.12, `@rsbuild/plugin-react` 2.1.1, Rspack über Rsbuild. Der Service Worker kommt von `workbox-build` 7.4.1 nach dem Build, weil die Audiodateien kopierte Dateien sind und nicht Teil der Kompilation. Scope `/Travel-Talk/`. Das Manifest liegt in `public/manifest.webmanifest`. Kein CDN, keine Tracker, Schriften nur vom System. Der Build setzt eine CSP ohne `unsafe-inline` und ohne `unsafe-eval`, und er setzt keine Inline-Skripte. Im Dev-Server fehlt das Meta-Tag, weil das HMR sonst blockiert. Tests laufen mit Vitest 5.0.3. Komponententests nutzen happy-dom 20.14.6 und Testing Library 16.3.3, nur in der Entwicklung. Vitest bringt Vite nur als Testläufer mit, nicht für die veröffentlichte App. TypeScript 5.9.3, ESLint 10.12.0, `@eslint/js` 10.0.1, typescript-eslint 8.71.1. `@eslint/js` 10 verlangt Node `^22.13.0`. Die CI setzt Node 22. `@types/node` bleibt auf der Linie 22, passend zu dieser CI. Die App-Version ist 0.3.1.
+**Abhängigkeiten.** Versionen sind fest. Dependabot prüft npm und GitHub Actions wöchentlich und wartet mit `cooldown.default-days: 7`, bevor eine frisch veröffentlichte Version einen Pull Request öffnet. Das ändert die App nicht, es verzögert nur Updates. Major-Updates von `typescript` und `@types/node` sind ignoriert, über `update-types`, nicht über eine festgeschriebene Version. Sicherheitsupdates und Minor- und Patch-Updates bleiben möglich. Laufzeit: React 19.3.0, Dexie 4.4.6, ts-fsrs 5.4.2, pitchy 4.1.0, Zod 4.6.5, React Router 7.18.4. Typen: `@types/react` 19.3.0, `@types/react-dom` 19.3.0, `@types/node` 22.20.5. Build: Rsbuild 2.2.12, `@rsbuild/plugin-react` 2.1.1, Rspack über Rsbuild. Der Service Worker kommt von `workbox-build` 7.4.1 nach dem Build, weil die Audiodateien kopierte Dateien sind und nicht Teil der Kompilation. Scope `/Travel-Talk/`. Das Manifest liegt in `public/manifest.webmanifest`. Kein CDN, keine Tracker, Schriften nur vom System. Der Build setzt eine CSP ohne `unsafe-inline` und ohne `unsafe-eval`, und er setzt keine Inline-Skripte. Im Dev-Server fehlt das Meta-Tag, weil das HMR sonst blockiert. Tests laufen mit Vitest 5.0.3. Komponententests nutzen happy-dom 20.14.6 und Testing Library 16.3.3, nur in der Entwicklung. Vitest bringt Vite nur als Testläufer mit, nicht für die veröffentlichte App. TypeScript 5.9.3, ESLint 10.12.0, `@eslint/js` 10.0.1, typescript-eslint 8.71.1. `@eslint/js` 10 verlangt Node `^22.13.0`. Die CI setzt Node 22. `@types/node` bleibt auf der Linie 22, passend zu dieser CI. Die App-Version ist 0.4.0.
 
 **Fehler.** Ungültiger Katalog und fehlgeschlagener Import nennen keine Parser-Details.
 
@@ -41,8 +41,8 @@ Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, ke
 | Niedrig | Die persönliche Notiz kann eine Allergie enthalten. Sie liegt in IndexedDB, unverschlüsselt. Der Export enthält sie nur mit dem Haken «Notiz mitexportieren». | Nur auf diesem Gerät, Hinweis im UI. Löschen fragt nach. Vor einem späteren Sync eigene Zustimmung. |
 | Info | Die Seite ist öffentlich. Die Sätze sind Lernmaterial, der Lernstand nicht. | Export nicht weitergeben, wenn die Notiz privat ist. |
 | Info | Der Service Worker füllt den Cache nach dem ersten Besuch über HTTPS. | Scope bleibt `/Travel-Talk/`. |
-| Info | Vietnamesisches Audio ist eine nördliche Stimme. Das ist eine Inhaltsfrage, keine Lücke. | Siehe `docs/audio.md`. Die Sätze sind mit `geprueft: false` markiert. Die Einstellungen nennen VAIS-1000, CC BY 4.0, die Tempo-Dateien und `NOTICE.txt`. |
-| Info | Der Precache enthält neu 1'647 Audiodateien, 17'512'855 Bytes. | Dieselben Origins, kein neues Netz. Die Grenze pro Datei bleibt 3 MB. |
+| Info | Vietnamesisch hat eine nördliche Frauenstimme und zwei Männerstimmen aus vivos. Der Akzent der Männerstimmen ist nicht dokumentiert. Das ist eine Inhaltsfrage, keine Lücke. | Siehe `docs/audio.md` und `public/audio/NOTICE.txt`. Die Sätze sind mit `geprueft: false` markiert. |
+| Info | Audiodateien stehen nicht mehr im Precache. Die gewählte Lernstimme wird in einen Laufzeit-Cache gelegt. | Dieselben Origins, kein neues Netz. Die Grenze pro Datei bleibt 3 MB. |
 
 ## Nach der unabhängigen Prüfung
 
@@ -131,4 +131,62 @@ Geprüft am 11. Oktober 2026. Kein neues Paket, kein neues Netz. Die Ablehnung v
 | N12-02 | Niedrig | Geschlossen | Vor der Bewertung wird `last_review` auf jetzt gekürzt und so gespeichert. Die Karte wird nicht von einem zukünftigen Zeitpunkt aus geplant. Test: `src/srs/scheduler.test.ts`. |
 | N12-03 | Niedrig | Geschlossen | `load` prüft jede Karte mit `storedCardSchema`, demselben Schema wie der Import. Schlägt das fehl, entsteht in der Fehlerbehandlung eine neue Karte und wird sofort geschrieben. Der Planer setzt eine unleserliche Karte auf neu, nicht einen Tag weiter. Tests: `src/storage/dexie-repository.test.ts`, `src/srs/scheduler.test.ts`. |
 
-Die Satzseite gibt ein Mikrofon frei, dessen Start erst nach dem Verlassen der Seite ankommt. Test: `src/pages/phrase-mic.test.tsx`.
+Die Satzseite gibt ein Mikrofon frei, dessen Start erst nach dem Wechsel zum nächsten Satz ankommt. Test: `src/pages/phrase-mic.test.tsx`.
+
+## 0.4.0
+
+Geprüft am 11. Oktober 2026. Kein neues npm-Paket, kein Konto, kein API-Schlüssel, kein Netz ausser den eigenen Dateien unter `/Travel-Talk/`.
+
+**Lizenzen.** Die neuen Dateien sind offline mit Piper erzeugt. Die Modelle liegen nicht im Repo. CC0 gilt nur für die Datensätze von Thorsten-Voice und OHF-Voice. `thorsten-high`, `thorsten`, `joe`, `cadu` und `faber` sind davon feinjustiert und sind nicht CC0. Die Basis ist lessac, und lessac gilt nur für Forschung. Englisch `ljspeech` bleibt gemeinfrei und ist von Grund auf trainiert. Vietnamesisch `vais1000`: Datensatz CC BY 4.0, https://creativecommons.org/licenses/by/4.0/, das Modell ist von lessac feinjustiert, das Material wurde verändert. Die beiden vivos-Sprecher (`vivos-22`, `vivos-32`) bleiben. Sie sind von Grund auf trainiert. Das erzeugte Audio in `vi/vivos-22/` und `vi/vivos-32/` steht unter CC BY-NC-SA 4.0, https://creativecommons.org/licenses/by-nc-sa/4.0/, das Material wurde verändert. In beiden Ordnern liegt eine LICENSE. Die Hörproben unter `docs/samples/` haben dieselbe Unterscheidung. Nicht verwendet: `en_US-ryan` (CC BY-NC-SA), `en_GB-alan` (Lizenz auf der Karte nur «See URL»), `pt_BR-jeff` (Datensatz CC0, Modell von lessac, nicht zusätzlich gepackt), lessac-Gewichte (nur Research). Piper selbst ist GPL-3.0 und wird nicht mitgeliefert. Namensnennung: `public/audio/NOTICE.txt` und `docs/audio.md`.
+
+**Pipeline.** Piper läuft ausserhalb des Repos (`tools/generate_audio.py`). `piper-tts` ist auf 1.8.0 festgeschrieben. Die vier Modelle von 0.4.0 haben eine SHA-256 im Skript, geprüft vor der Synthese. `normalize_audio` ist die Spitzen-Normalisierung, danach `ffmpeg` AAC 48 kbit/s, mono, und `atempo` 0.7 und 0.85 ohne Tonhöhenänderung. Die App spielt nur Namen, die `AUDIO_FILE` und `manifest.json` erlauben. `include_alignments` lieferte für diese Modelle keine Zeiten. Es wurden keine Zeitstempel-Dateien geschrieben und keine erfunden. Der Service Worker precacht `m4a` nicht mehr. Eine CacheFirst-Regel speichert `/Travel-Talk/audio/*.m4a` nur bei HTTP 200, höchstens 4000 Einträge. Das Installieren kopiert kein Audio. Die Aktivierung löscht Precache-URLs, die nicht mehr im Manifest stehen, darunter die alten Audiodateien. Danach lädt man die Stimme mit «Für offline laden» neu. Andere Stimmen derselben Sprache fallen erst nach dem vollständigen Laden der neuen weg. `speechSynthesis` wird nicht aufgerufen. `*.align.json` ist vom Precache ausgenommen, falls so eine Datei später dazukommt.
+
+**Abhängigkeiten.** Keine neue Laufzeit- und keine neue Entwicklungsabhängigkeit. `npm audit` am 11. Oktober 2026: 0 Schwachstellen. Versionen bleiben fest. Neu sind 2'244 Audiodateien, 30'013'700 Bytes. Zusammen mit den bisherigen 1'647 Dateien (17'512'855 Bytes) sind es 3'891 Dateien und 47'526'555 Bytes. Sie liegen nicht im Precache.
+
+| ID | Schwere | Status | Auflösung |
+| --- | --- | --- | --- |
+| N13-01 | Niedrig | Geschlossen | `due` später als `last_review` oder, wenn der fehlt, jetzt, plus 36'500 Tage, wird gekürzt. Der Import bleibt. Dieselbe Kürzung gilt beim Lesen aus IndexedDB, die gekürzte Karte wird gespeichert, und bei `reviewCard` und `previewDue`. Tests: `src/storage/import.test.ts`, `src/storage/dexie-repository.test.ts`, `src/srs/scheduler.test.ts`, `src/pages/practice-rate.test.tsx`. |
+| N13-02 | Niedrig | Geschlossen | Der Satzseiten-Test wechselt zum nächsten Satz, die Seite bleibt `PhrasePage`. Ein Start, der erst danach fertig wird, gibt die Tracks frei. Vorher werden sie nicht gestoppt. Test: `src/pages/phrase-mic.test.tsx`. |
+
+`exportedAt` ist `z.iso.datetime()` mit höchstens 40 Zeichen. Ein Datum ohne Uhrzeit ist `IMPORT_REJECTED`, ein ISO-Zeitstempel mehr als 24 Stunden in der Zukunft bleibt `IMPORT_FUTURE`. Eine Karte, die beim Lesen aus IndexedDB ersetzt wird, zählt mit. Die Startseite kann «n Karten zurückgesetzt» sagen. Der Hinweis auf Männerstimmen liegt nur lokal (`voiceHintSeen`) und geht nicht in den Export, damit Format 3 strikt bleibt.
+
+## Nachprüfung von Pull Request 14
+
+Geprüft am 11. Oktober 2026 am Stand der Überprüfung von `e3d8b36`, geschlossen im selben Pull Request. Kein neues Paket, kein neues Netz. `npm audit` bleibt bei 0 Schwachstellen.
+
+| ID | Schwere | Status | Auflösung |
+| --- | --- | --- | --- |
+| P14-01 | Mittel | Geschlossen | thorsten-high, thorsten, joe, cadu und faber werden nicht mehr CC0 genannt. CC0 gilt für den Datensatz. Die Stimme ist von lessac feinjustiert, lessac nur für Forschung. vivos bleibt, CC BY-NC-SA 4.0, mit LICENSE in `vi/vivos-22/` und `vi/vivos-32/`. NOTICE, die App und `docs/samples/LICENSE.txt` verlinken CC BY 4.0 und CC BY-NC-SA 4.0 und sagen, dass das Material verändert wurde. |
+| P14-02 | Mittel | Geschlossen | Jede Stimme hat «Für offline laden», mit Fortschritt, «offline bereit», «Erneut versuchen» und einem Satz, wenn der Speicher voll ist. Die Startseite bietet das für die Lernsprache. Andere Stimmen derselben Sprache fallen erst weg, wenn die neue vollständig geladen ist. Offline zeigt ein fehlender Satz «Stimme offline nicht geladen». Keine Browserstimme. Die alte Audiodatei überlebt ein Update nicht von selbst. Das steht bei N14b-01. |
+| P14-03 | Mittel | Geschlossen | Der Import übernimmt `voices: next.settings.voices ?? current.settings.voices`. Eine Datei ohne das Feld lässt die Stimme auf dem Gerät stehen. Test: `src/pages/settings-import.test.tsx`. |
+| P14-04 | Niedrig | Geschlossen | Tests für die Kürzung ohne «jetzt», `previewDue` bei einem vergangenen `last_review`, den Satz-Token in `onStop`, den Stimmhinweis, «n Karten zurückgesetzt», unbekannte Stimmen-IDs und das Offline-Laden. |
+| P14-05 | Niedrig | Geschlossen | Nach dem vollständigen Laden einer gewählten Stimme löscht die App die anderen Stimmen dieser Sprache aus jedem Cache. Die Cache-Regel nimmt nur Status 200. `maxEntries` ist 4000 und deckt die 3891 Dateien. |
+
+Eine unbekannte Stimmen-ID, die dem Muster `^[a-z0-9_-]{1,40}$` entspricht, wird beim Lesen verworfen und nicht gespeichert. Eine ID ausserhalb des Musters lehnt die Datei weiter ab. `tools/generate_audio.py` verlangt `piper-tts` 1.8.0 und die SHA-256 der vier Modelle.
+
+## Nachprüfung von Pull Request 14, zweiter Durchgang
+
+Geprüft am 11. Oktober 2026 am Stand `19535e2`. N14b-03 und N14b-04 sind geschlossen. N14b-01 ist danach bewusst akzeptiert, siehe den dritten Durchgang. N14b-02 und N14b-05 bleiben offen. Kein neues Paket. `npm audit` bleibt bei 0 Schwachstellen.
+
+| ID | Schwere | Status | Auflösung |
+| --- | --- | --- | --- |
+| N14b-01 | Mittel | bewusst akzeptiert | Die Aktivierung löscht Precache-Einträge, die nicht mehr im Manifest stehen, darunter die alten Audiodateien. Eine Kopie beim Installieren hält sie nicht: die gespeicherte Adresse behält `?__WB_REVISION__` und trifft nie, wenig Speicher lässt das Installieren dauerhaft scheitern, der Speicher verdoppelt sich, und jeder Cache der gemeinsamen Origin wird gelesen. Die Migration ist entfernt. Nach dem Update, das online läuft, sagt die Startseite «Offline-Audio nach dem Update neu laden», solange die Lernsprache nicht vollständig im Cache liegt. Ein Tippen auf «Für offline laden» holt sie. |
+| N14b-02 | Niedrig | Offen | Testlücken aus dieser Nachprüfung. Bleibt für den nächsten Pull Request. |
+| N14b-03 | Niedrig | Geschlossen | Eine 404 wird übersprungen. Der Rest der Stimme wird geladen. Die Oberfläche sagt «n Dateien fehlen». Die anderen Stimmen dieser Sprache bleiben, solange Dateien fehlen. Test: `src/audio/offline.test.ts`. |
+| N14b-04 | Niedrig | Geschlossen | «Speicher voll» zeigt den Fortschritt, «Erneut versuchen» und «Bisherige Stimme behalten». Der zweite Knopf entfernt nur die Dateien dieses Versuchs. Nach einem Neuladen bleibt `n/597` sichtbar, wenn Dateien im Cache liegen. Test: `src/components/voice-offline.test.tsx`. |
+| N14b-05 | Niedrig | Offen | Prüfsummen für die `.onnx.json`-Dateien und für die älteren Modelle. Bleibt für den nächsten Pull Request. |
+
+Die Startseite bietet das Laden nur für die Lernsprache an, nicht für die Sprache der App. Die README nennt die App nicht pauschal offline.
+
+## Nachprüfung von Pull Request 14, dritter Durchgang
+
+Geprüft am 11. Oktober 2026 am Stand `d191c25`. Die Installations-Migration ist entfernt. Kein neues Paket. `npm audit` bleibt bei 0 Schwachstellen.
+
+| ID | Schwere | Status | Auflösung |
+| --- | --- | --- | --- |
+| N14c-01 | Mittel | Geschlossen | Kopien behielten `?__WB_REVISION__` und wurden nie getroffen. Nach dem Update blieb die App offline stumm. Behoben durch Entfernen der Migration. Die Startseite bittet um ein neues Laden. |
+| N14c-02 | Mittel | Geschlossen | Bei wenig Speicher schlug das Installieren dauerhaft fehl. Die App blieb auf 0.3.1. Behoben durch Entfernen der Migration. Das Installieren fasst Audio nicht an. |
+| N14c-03 | Niedrig | Geschlossen | Die Kopie verdoppelte den Speicher. Behoben durch Entfernen der Migration. Es gibt keine zweite Kopie. |
+| N14c-04 | Niedrig | Geschlossen | Das Installieren las jeden Cache der gemeinsamen Origin. Behoben durch Entfernen der Migration. |
+
+`discardAdded` löscht nur die Adressen dieses Versuchs. `added` listet sie. «Bisherige Stimme behalten» ruft `onKeepPrevious`. Danach lesen die Nachbarstimmen ihren Stand neu. Tests: `src/audio/offline.test.ts`, `src/components/voice-offline.test.tsx`.

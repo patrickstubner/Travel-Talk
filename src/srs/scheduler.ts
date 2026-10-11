@@ -5,6 +5,27 @@ export function emptyCard(now: Date): Card {
   return createEmptyCard(now)
 }
 
+/** A due date further than this past the last review (or now) is capped. About 100 years. */
+export const DUE_LIMIT_DAYS = 36_500
+
+const DAY_MS = 86_400_000
+
+/** Keeps `due` when it is already inside the horizon. The anchor is `lastReview`, or `nowMs` when there is none. */
+export function capDueIso(due: string, lastReview: string | null, nowMs: number): string {
+  const dueMs = Date.parse(due)
+  if (!Number.isFinite(dueMs)) return due
+  const reviewed = lastReview ? Date.parse(lastReview) : Number.NaN
+  const anchor = Number.isFinite(reviewed) ? reviewed : nowMs
+  const limit = anchor + DUE_LIMIT_DAYS * DAY_MS
+  if (dueMs <= limit) return due
+  return new Date(limit).toISOString()
+}
+
+function capDueDate(due: Date, lastReview: Date | undefined, now: Date): Date {
+  const capped = capDueIso(due.toISOString(), lastReview ? lastReview.toISOString() : null, now.getTime())
+  return capped === due.toISOString() ? due : new Date(capped)
+}
+
 /** A last review dated after this clock would schedule the card years ahead. Pin it to now. */
 export function capReviewedCard(card: Card, now: Date): Card {
   const reviewed = card.last_review
@@ -27,7 +48,8 @@ export function reviewCard(card: Card, grade: Grade, now: Date, retention: numbe
   const ready = capReviewedCard(card, now)
   try {
     const scheduler = fsrs(generatorParameters({ request_retention: retention, enable_fuzz: fuzz }))
-    return scheduler.next(ready, now, grade).card
+    const next = scheduler.next(ready, now, grade).card
+    return { ...next, due: capDueDate(next.due, next.last_review, now) }
   } catch {
     return emptyCard(now)
   }
@@ -37,7 +59,13 @@ export function reviewCard(card: Card, grade: Grade, now: Date, retention: numbe
 export function previewDue(card: Card, now: Date, retention: number): Record<Grade, Date> {
   const ready = capReviewedCard(card, now)
   try {
-    return duesOf(ready, now, retention)
+    const dues = duesOf(ready, now, retention)
+    return {
+      [Rating.Again]: capDueDate(dues[Rating.Again], ready.last_review, now),
+      [Rating.Hard]: capDueDate(dues[Rating.Hard], ready.last_review, now),
+      [Rating.Good]: capDueDate(dues[Rating.Good], ready.last_review, now),
+      [Rating.Easy]: capDueDate(dues[Rating.Easy], ready.last_review, now),
+    }
   } catch {
     try {
       return duesOf(emptyCard(now), now, retention)

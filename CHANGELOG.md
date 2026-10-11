@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 — 2026-10-11
+
+- Jede Lernsprache hat eine Stimmenwahl, an derselben Stelle wie die Sprachen. Eine neue Installation startet mit einer Männerstimme. Wer die App schon benutzt, behält die bisherige Stimme und sieht einmal den Hinweis, dass Männerstimmen da sind.
+- Deutsch thorsten (hoch und mittel), Englisch joe, Portugiesisch cadu und faber: der Datensatz ist CC0, die Stimme nicht. Die Modelle sind von lessac feinjustiert, und lessac gilt nur für Forschung. LJSpeech bleibt gemeinfrei. Vietnamesisch: zwei Sprecher aus vivos (`x_low`, CC BY-NC-SA 4.0, das Material ist verändert), zusätzlich zu vais1000 (Datensatz CC BY 4.0, ebenfalls verändert). Der Akzent der Männerstimmen ist nicht dokumentiert, die Qualität ist niedrig. Links auf die beiden Creative-Commons-Lizenzen stehen in der App und in NOTICE.txt. In beiden vivos-Ordnern liegt eine LICENSE. Die Hörproben haben eine Lizenznotiz.
+- Langsam und normal bleiben eigene Dateien (`ffmpeg atempo`), mit derselben Lautstärke-Normalisierung. Piper liefert für diese Modelle keine Wortzeiten. Es gibt keine Zeitstempel-Dateien. `piper-tts` 1.8.0 und die Prüfsummen der vier Modelle stehen im Erzeugungsskript.
+- Jede Stimme hat «Für offline laden», mit Fortschritt, «offline bereit», einem erneuten Versuch und einem Hinweis, wenn der Speicher voll ist. Ein Update löscht alte Audiodateien aus dem Precache. Die App kopiert sie nicht, damit wenig Speicher das Update nicht blockiert. Danach ist man online. Die Startseite sagt «Offline-Audio nach dem Update neu laden» für die Lernsprache, solange deren Audio nicht vollständig im Cache liegt. Ein Tippen holt die Stimme neu. Eine 404 lässt die übrige Stimme durch und sagt, wie viele Dateien fehlen. «Speicher voll» bietet «Erneut versuchen» und «Bisherige Stimme behalten». Der Fortschritt bleibt nach einem Neuladen sichtbar. Ein fehlender Satz sagt «Stimme offline nicht geladen». Es gibt keine Browserstimme.
+- Ein Import ohne Stimmenfeld behält die Stimme auf dem Gerät. Eine unbekannte Stimmen-ID wird weggelassen. Nach dem vollständigen Laden löscht der Cache die anderen Stimmen dieser Sprache. Gespeichert wird nur Status 200. Der Cache fasst alle Audiodateien.
+- Ein `due` später als `last_review` (oder jetzt) plus 36'500 Tage wird gekürzt, beim Import, beim Lesen aus IndexedDB und bei der Bewertung. `exportedAt` muss ein ISO-Zeitstempel sein. Eine Karte, die beim Lesen ersetzt wird, kann auf der Startseite als «n Karten zurückgesetzt» erscheinen.
+
 ## 0.3.1 — 2026-10-11
 
 - Ein `last_review` kurz nach dem Export bleibt in der Datei. Er wird auf den früheren Zeitpunkt von Lernzeit, Export und jetzt gekürzt. Liegt `exportedAt` mehr als einen Tag in der Zukunft, gibt es einen eigenen Satz, die Datei wird nicht importiert.

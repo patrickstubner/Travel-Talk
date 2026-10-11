@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import { emptyCard, toStored } from '../srs/scheduler'
+import { capDueIso, emptyCard, toStored } from '../srs/scheduler'
 import { storedCardSchema } from './import'
 import { coerceSettings, defaultSettings, type ProgressRepository, type ProgressSnapshot, type Settings, type StoredCard } from './types'
 
@@ -29,19 +29,30 @@ export class DexieProgressRepository implements ProgressRepository {
     const row = await this.db.settings.get('app')
     const rows = (await this.db.cards.toArray()) as unknown[]
     const cards: StoredCard[] = []
+    let repaired = 0
+    const now = Date.now()
     for (const raw of rows) {
       try {
-        cards.push(storedCardSchema.parse(raw))
+        const parsed = storedCardSchema.parse(raw)
+        const due = capDueIso(parsed.due, parsed.last_review, now)
+        if (due === parsed.due) {
+          cards.push(parsed)
+          continue
+        }
+        const fixed = { ...parsed, due }
+        await this.db.cards.put(fixed)
+        cards.push(fixed)
       } catch {
         const fresh = repairedCard(raw)
         if (!fresh) continue
         await this.db.cards.put(fresh)
         cards.push(fresh)
+        repaired += 1
       }
     }
-    if (!row) return { settings: { ...defaultSettings }, cards }
+    if (!row) return { settings: { ...defaultSettings }, cards, repaired }
     const { id: _id, ...settings } = row
-    return { settings: coerceSettings(settings), cards }
+    return { settings: coerceSettings(settings), cards, repaired }
   }
 
   async saveSettings(settings: Settings): Promise<void> {

@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { selectedVoice, withDefaultVoices } from '../audio/voices'
+import { LANG_LABEL } from '../app/labels'
 import { LanguageChoice } from '../components/LanguageChoice'
+import { VoiceOfflineButton } from '../components/VoiceOffline'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { buildSession, currentDirection, dueConcepts, orderedConcepts, usableConcepts } from '../srs/session'
+import type { Dictionary } from '../i18n/dictionary'
 import type { Settings } from '../storage/types'
 
 export function HomePage() {
@@ -25,7 +29,7 @@ export function HomePage() {
         onChange={(patch) => setDraft({ ...pending, ...patch })}
         onContinue={() => {
           if (!pending.appLang || !pending.targetLang) return
-          void saveSettings(pending)
+          void saveSettings(withDefaultVoices(pending))
         }}
       />
     )
@@ -40,6 +44,16 @@ export function HomePage() {
   return (
     <div className="stack" data-testid="start">
       <h1>{copy.learnToday}</h1>
+      {snapshot.repaired ? <p role="status">{copy.cardsReset(snapshot.repaired)}</p> : null}
+      {!settings.voiceHintSeen ? (
+        <p className="voice-note" role="status">
+          {copy.voiceHint}{' '}
+          <button type="button" onClick={() => void saveSettings({ ...settings, voiceHintSeen: true })}>
+            {copy.voiceHintClose}
+          </button>
+        </p>
+      ) : null}
+      <OfflineOffer settings={settings} copy={copy} />
       <p>{copy.startLead(fresh, due)}</p>
       <Link className="button primary" to="/practice">
         {copy.learnToday}
@@ -64,5 +78,17 @@ export function HomePage() {
       {skipped > 0 ? <p className="hint">{copy.missingLine}</p> : null}
       <p className="hint">{copy.uncheckedCalm}</p>
     </div>
+  )
+}
+
+function OfflineOffer({ settings, copy }: { settings: Settings; copy: Dictionary }) {
+  const lang = settings.targetLang
+  if (!lang) return null
+  const ui = settings.appLang ?? 'de'
+  return (
+    <section className="stack" aria-label={copy.offlineLoad}>
+      <p className="hint">{LANG_LABEL[lang][ui]}</p>
+      <VoiceOfflineButton lang={lang} voice={selectedVoice(settings, lang)} copy={copy} dropOnSuccess pendingNote={copy.offlineReload} />
+    </section>
   )
 }

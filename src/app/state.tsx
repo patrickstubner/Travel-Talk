@@ -39,7 +39,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const saveSettings = useCallback(
     async (settings: Settings) => {
-      setSnapshot((prev) => (prev ? { ...prev, settings } : prev))
+      setSnapshot((prev) => (prev ? { ...prev, settings, repaired: prev.repaired } : prev))
       await repository.saveSettings(settings)
     },
     [repository],
@@ -50,7 +50,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSnapshot((prev) => {
         if (!prev) return prev
         const cards = prev.cards.filter((item) => item.cardId !== card.cardId)
-        return { ...prev, cards: [...cards, card] }
+        return { ...prev, cards: [...cards, card], repaired: prev.repaired }
       })
       await repository.saveCard(card)
     },

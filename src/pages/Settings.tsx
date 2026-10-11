@@ -211,6 +211,8 @@ export function SettingsPage() {
                   settings: {
                     ...next.settings,
                     personalNote: retainLocalNote(current.settings.personalNote, next.settings.personalNote),
+                    voices: next.settings.voices ?? current.settings.voices,
+                    ...(current.settings.voiceHintSeen ? { voiceHintSeen: true } : {}),
                   },
                 }
                 const relabeled = pending.uiNotRelabeled
@@ -273,9 +275,14 @@ export function SettingsPage() {
       <section className="card stack" aria-labelledby="voices-title">
         <h2 id="voices-title">{copy.voicesTitle}</h2>
         <p>{copy.voicesVi}</p>
+        <p>{copy.voicesChanged}</p>
         <p>
           <a href="https://creativecommons.org/licenses/by/4.0/" rel="noreferrer noopener">
             {copy.voicesCc}
+          </a>
+          {' · '}
+          <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noreferrer noopener">
+            {copy.voicesNc}
           </a>
         </p>
         <p>{copy.voicesSlow}</p>

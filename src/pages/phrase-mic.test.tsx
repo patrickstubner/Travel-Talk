@@ -3,7 +3,7 @@ import 'fake-indexeddb/auto'
 import { IDBFactory } from 'fake-indexeddb'
 import { useEffect, type ReactNode } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppProvider, useApp } from '../app/state'
 import { PhrasePage } from './Phrase'
@@ -106,7 +106,7 @@ describe('phrase microphone', () => {
     await waitFor(() => expect(track.stop).toHaveBeenCalled())
   })
 
-  it('releases a microphone that starts after navigation', async () => {
+  it('releases a microphone that starts after the next phrase', async () => {
     const track = { stop: vi.fn() }
     const stream = { getTracks: () => [track] }
     let resolveStream: (value: typeof stream) => void = () => undefined
@@ -122,18 +122,81 @@ describe('phrase microphone', () => {
       <AppProvider>
         <ReadyPhrase>
           <MemoryRouter initialEntries={['/phrase/emergency.help']}>
+            <NextPhrase />
             <Routes>
               <Route path="/phrase/:conceptId" element={<PhrasePage />} />
-              <Route path="/situation/:situationId" element={<h1>Situation</h1>} />
             </Routes>
           </MemoryRouter>
         </ReadyPhrase>
       </AppProvider>,
     )
     fireEvent.click(await screen.findByRole('button', { name: 'Aufnehmen' }))
-    fireEvent.click(screen.getByRole('link', { name: 'Zurück' }))
-    expect(await screen.findByRole('heading', { name: 'Situation' })).toBeTruthy()
+    expect(track.stop).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Nächster Satz' }))
+    expect(await screen.findByRole('heading', { name: 'Chào anh.' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Situation' })).toBeNull()
+    expect(track.stop).not.toHaveBeenCalled()
     resolveStream(stream)
     await waitFor(() => expect(track.stop).toHaveBeenCalled())
   })
+
+  it('drops a recording whose stop arrives after the phrase changed', async () => {
+    const track = { stop: vi.fn() }
+    const stream = { getTracks: () => [track] }
+    const revoked: string[] = []
+    let rejectDecode: (error: Error) => void = () => undefined
+    let decoding = false
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mine')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation((url) => {
+      revoked.push(String(url))
+    })
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        decodeAudioData(): Promise<AudioBuffer> {
+          decoding = true
+          return new Promise((_resolve, reject) => {
+            rejectDecode = reject
+          })
+        }
+        close(): Promise<void> {
+          return Promise.resolve()
+        }
+      },
+    )
+    vi.stubGlobal('MediaRecorder', FakeRecorder)
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: vi.fn(async () => stream) },
+    })
+    render(
+      <AppProvider>
+        <ReadyPhrase>
+          <MemoryRouter initialEntries={['/phrase/emergency.help']}>
+            <NextPhrase />
+            <Routes>
+              <Route path="/phrase/:conceptId" element={<PhrasePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPhrase>
+      </AppProvider>,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Aufnehmen' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+    await waitFor(() => expect(decoding).toBe(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Nächster Satz' }))
+    expect(await screen.findByRole('heading', { name: 'Chào anh.' })).toBeTruthy()
+    rejectDecode(new Error('stale'))
+    await waitFor(() => expect(revoked).toContain('blob:mine'))
+    expect(screen.queryByRole('button', { name: 'Meine Aufnahme' })).toBeNull()
+  })
 })
+
+function NextPhrase() {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => navigate('/phrase/meet.hello')}>
+      Nächster Satz
+    </button>
+  )
+}

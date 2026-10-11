@@ -165,15 +165,10 @@ a.menu-card {
   color: inherit;
 }
 a.menu-card span { color: var(--muted); }
-.voice-pill {
-  display: inline-block;
-  width: fit-content;
-  margin: 0;
-  background: var(--teal);
-  color: #f7f3ea;
-  border-radius: 999px;
-  padding: 0.5rem 0.95rem;
-}
+.voice-list { display: grid; gap: 0.45rem; }
+.voice-option { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: stretch; }
+.voice-option > button:first-child { flex: 1; text-align: left; }
+.voice-offline { flex-basis: 100%; display: flex; gap: 0.45rem; align-items: center; margin: 0; }
 .voice-note {
   background: #f6e4cf;
   border-left: 4px solid var(--gold);

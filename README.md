@@ -2,7 +2,7 @@
 
 **Live:** [patrickstubner.github.io/Travel-Talk](https://patrickstubner.github.io/Travel-Talk/)
 
-Reise-Sprachhilfe für eine Familie. Version 0.3.1. Offline, ohne Konto, ohne Tracking.
+Reise-Sprachhilfe für eine Familie. Version 0.4.0. Ohne Konto, ohne Tracking. Lernstand und Sätze bleiben auf dem Gerät. Eine Stimme ist lokal, nachdem sie geladen wurde.
 
 Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Sprache der App und die Lernsprache sind zwei getrennte Wahlen. Hören, Verstehen und Sprechen kommen zuerst. Lesen stützt das Hören. Schreiben ist nicht der Weg durch die Sitzung. Höchstens 15 neue Sätze am Tag, über alle Richtungen zusammen.
 
@@ -24,7 +24,7 @@ Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Jede Richtung au
 | Einkaufen | Anfang | 7 |
 | Sehenswürdigkeiten | Anfang | 6 |
 
-Vietnamesisch ist im Text südlich voreingestellt. Nord ist eine Variante, zum Beispiel `đậu phộng` und `lạc`. Die Audiodatei ist trotzdem eine nördliche Stimme. Das Tempo hat drei Stufen, 70 %, 85 % und 100 %, als eigene Dateien, damit die Tonhöhe gleich bleibt. Die Wahl sitzt nur am Player. Details in [docs/audio.md](docs/audio.md).
+Vietnamesisch ist im Text südlich voreingestellt. Nord ist eine Variante, zum Beispiel `đậu phộng` und `lạc`. Eine neue Installation spricht mit einer Männerstimme. Die nördliche Frauenstimme bleibt wählbar. Der Akzent der Männerstimmen ist nicht dokumentiert. Das Tempo hat drei Stufen, 70 %, 85 % und 100 %, als eigene Dateien, damit die Tonhöhe gleich bleibt. Die Wahl sitzt nur am Player. Details in [docs/audio.md](docs/audio.md).
 
 ## Lokal entwickeln
 
@@ -35,7 +35,7 @@ npm ci
 npm run dev
 ```
 
-Die App liegt unter `http://127.0.0.1:5173/Travel-Talk/`. Der Build ist Rsbuild. Der Service Worker entsteht nach dem Build mit `workbox-build`: er liest das fertige `dist/` und nimmt damit auch die kopierten Audiodateien in den Cache. Ein Rspack-Plugin sähe nur die kompilierten Assets. Die Tests laufen mit Vitest, getrennt vom Build. Weitere Befehle:
+Die App liegt unter `http://127.0.0.1:5173/Travel-Talk/`. Der Build ist Rsbuild. Der Service Worker entsteht nach dem Build mit `workbox-build`. Er speichert die Oberfläche. Audiodateien gehören nicht zum Installieren, und ein Update übernimmt sie nicht aus dem alten Cache. Die Startseite sagt «Offline-Audio nach dem Update neu laden», solange die Lernsprache nicht vollständig geladen ist. Eine Stimme wird mit «Für offline laden» geholt. Ein Rspack-Plugin sähe nur die kompilierten Assets. Die Tests laufen mit Vitest, getrennt vom Build. Weitere Befehle:
 
 ```bash
 npm test

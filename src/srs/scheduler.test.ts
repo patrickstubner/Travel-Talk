@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { requireCatalog } from '../content/load'
-import { Rating, emptyCard, previewDue, reviewCard, toStored, fromStored } from './scheduler'
+import { DUE_LIMIT_DAYS, Rating, capDueIso, emptyCard, previewDue, reviewCard, toStored, fromStored } from './scheduler'
 import { buildSession, dueConcepts } from './session'
 
 describe('fsrs', () => {
@@ -44,6 +44,37 @@ describe('fsrs', () => {
     const dues = previewDue(broken, now, 0.9)
     expect(dues[Rating.Good].getTime()).toBeGreaterThan(now.getTime())
     expect(dues[Rating.Good].getTime()).toBeLessThan(now.getTime() + 30 * 86_400_000)
+  })
+
+  it('caps previewDue from an old last review without moving that review to now', () => {
+    const now = new Date('2026-10-11T00:00:00.000Z')
+    const reviewed = new Date('2020-01-01T00:00:00.000Z')
+    const card = fromStored({
+      cardId: 'de-vi:old',
+      due: now.toISOString(),
+      stability: 100000,
+      difficulty: 5,
+      elapsed_days: 2000,
+      scheduled_days: 36500,
+      learning_steps: 0,
+      reps: 20,
+      lapses: 0,
+      state: 2,
+      last_review: reviewed.toISOString(),
+    })
+    const dues = previewDue(card, now, 0.9)
+    const limit = reviewed.getTime() + DUE_LIMIT_DAYS * 86_400_000
+    expect(dues[Rating.Easy].getTime()).toBe(limit)
+    expect(dues[Rating.Easy].getTime()).toBeLessThan(now.getTime() + DUE_LIMIT_DAYS * 86_400_000)
+  })
+
+  it('caps a due date 36500 days after the last review, or after now', () => {
+    const anchor = '2020-01-01T00:00:00.000Z'
+    const now = Date.parse('2026-10-11T00:00:00.000Z')
+    const capped = capDueIso('2300-01-01T00:00:00.000Z', anchor, now)
+    expect(Date.parse(capped)).toBe(Date.parse(anchor) + DUE_LIMIT_DAYS * 86_400_000)
+    expect(capDueIso('2020-06-01T00:00:00.000Z', anchor, now)).toBe('2020-06-01T00:00:00.000Z')
+    expect(Date.parse(capDueIso('2300-01-01T00:00:00.000Z', null, now))).toBe(now + DUE_LIMIT_DAYS * 86_400_000)
   })
 
   it('keeps a short session of reviews and new cards', () => {

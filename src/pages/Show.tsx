@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { conceptsForSituation, resolvePlayback } from '../content/resolve'
 import { directionId } from '../domain/direction'
 import { playClip } from '../audio/player'
+import { spokenFile } from '../audio/voices'
 import { effectiveSpeed, speedPercent, tempoFile } from '../audio/speed'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
@@ -21,6 +22,7 @@ export function ShowPage() {
   const [gloss, setGloss] = useState(false)
   const [note, setNote] = useState(false)
   const [playing, setPlaying] = useState(false)
+  const [offlineAudio, setOfflineAudio] = useState(false)
   const list = useMemo(() => {
     if (!catalog) return []
     if (!conceptId) return conceptsForSituation(catalog, 'emergency')
@@ -43,6 +45,11 @@ export function ShowPage() {
   return (
     <section className="stack show" data-testid="show">
       <p className="for-other">{copy.forOther}</p>
+      {offlineAudio ? (
+        <p className="warn" role="status">
+          {copy.audioOffline}
+        </p>
+      ) : null}
       <h1>
         <RichText text={target?.text ?? ''} />
       </h1>
@@ -66,7 +73,13 @@ export function ShowPage() {
           onClick={() => {
             if (!target) return
             setPlaying(true)
-            void playClip(tempoFile(target.file, step), target.speech, targetLang, step, () => setPlaying(false))
+            setOfflineAudio(false)
+            void playClip(tempoFile(spokenFile(settings, targetLang, target.file), step), target.speech, targetLang, step, () => setPlaying(false)).then((result) => {
+              if (result === 'offline') {
+                setPlaying(false)
+                setOfflineAudio(true)
+              }
+            })
           }}
         >
           <span className="play-mark" aria-hidden="true" />
