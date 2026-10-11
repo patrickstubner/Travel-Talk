@@ -14,10 +14,14 @@ import { describeShape, voicedValues, type Contour, type ShapeName } from './con
  *
  * A take is «unklar» when its voiced range stays under FLAT_RANGE and the
  * reference moves by at least that much more. A short flat phrase matched
- * to itself is not unklar. Stars need at least COLOURED_SHARE of the words
- * that have enough voice in the model. Local stretch stays inside about
- * 0.75–1.33, so a reversed take or a uniform tempo is not hidden by an
- * extreme scale.
+ * to itself is not unklar. A take is also «unklar» when every measured
+ * word runs the other way (Pearson under DIRECTION_OPPOSED), or when the
+ * loudness envelope does not follow the file. One mirrored syllable stays
+ * a partial score. A take that matches the file better backwards than
+ * forwards is «unklar». A steady tone against a spoken file is «unklar»
+ * when the file's loudness moves and the tone's does not. Stars need at least
+ * COLOURED_SHARE of the words that have enough voice in the model. Local
+ * stretch stays inside about 0.75–1.33.
  */
 export const MELODY_GREEN = 1.5
 export const MELODY_YELLOW = 3
@@ -32,6 +36,15 @@ export const MIN_WORD_VOICED = 3
 export const FLAT_RANGE = 1.2
 export const COLOURED_SHARE = 0.6
 export const VOICE_COVERAGE = 0.5
+/** A word below this correlation does not stay green. */
+export const DIRECTION_MIN = 0.3
+/** Below this, a word runs the other way. Every such word makes the take «unklar». */
+export const DIRECTION_OPPOSED = -0.15
+/** Loudness of a drone barely moves. Speech does. */
+export const DRONE_ENERGY = 0.12
+export const SPEECH_ENERGY = 0.15
+/** A negative loudness correlation means the envelope runs the other way. */
+export const ENERGY_ALIGN_MIN = 0
 const MAX_FRAMES = 800
 
 export type Band = 'green' | 'yellow' | 'red'
@@ -312,6 +325,234 @@ function matchLocal(
   return best
 }
 
+function pairedValues(model: Contour, user: Contour, path: PathPoint[]): { left: number[]; right: number[] } {
+  const left: number[] = []
+  const right: number[] = []
+  for (const point of path) {
+    const modelValue = model[point.model]
+    const userValue = user[point.user]
+    if (modelValue == null || userValue == null) continue
+    left.push(modelValue)
+    right.push(userValue)
+  }
+  return { left, right }
+}
+
+/** Pearson correlation. Null when either side barely moves, so a level phrase is not punished. */
+export function correlation(left: readonly number[], right: readonly number[]): number | null {
+  const count = Math.min(left.length, right.length)
+  if (count < 8) return null
+  let sumLeft = 0
+  let sumRight = 0
+  for (let index = 0; index < count; index += 1) {
+    sumLeft += left[index] ?? 0
+    sumRight += right[index] ?? 0
+  }
+  const meanLeft = sumLeft / count
+  const meanRight = sumRight / count
+  let varLeft = 0
+  let varRight = 0
+  let product = 0
+  for (let index = 0; index < count; index += 1) {
+    const deltaLeft = (left[index] ?? 0) - meanLeft
+    const deltaRight = (right[index] ?? 0) - meanRight
+    varLeft += deltaLeft * deltaLeft
+    varRight += deltaRight * deltaRight
+    product += deltaLeft * deltaRight
+  }
+  if (varLeft < 0.16 * count || varRight < 0.16 * count) return null
+  return product / Math.sqrt(varLeft * varRight)
+}
+
+export function contourCorrelation(model: Contour, user: Contour, path: PathPoint[]): number | null {
+  const paired = pairedValues(model, user, path)
+  return correlation(paired.left, paired.right)
+}
+
+/** Pearson without the semitone floor. Loudness values are much smaller than a semitone. */
+export function seriesCorrelation(left: readonly number[], right: readonly number[]): number | null {
+  const count = Math.min(left.length, right.length)
+  if (count < 8) return null
+  let sumLeft = 0
+  let sumRight = 0
+  for (let index = 0; index < count; index += 1) {
+    sumLeft += left[index] ?? 0
+    sumRight += right[index] ?? 0
+  }
+  const meanLeft = sumLeft / count
+  const meanRight = sumRight / count
+  let varLeft = 0
+  let varRight = 0
+  let product = 0
+  for (let index = 0; index < count; index += 1) {
+    const deltaLeft = (left[index] ?? 0) - meanLeft
+    const deltaRight = (right[index] ?? 0) - meanRight
+    varLeft += deltaLeft * deltaLeft
+    varRight += deltaRight * deltaRight
+    product += deltaLeft * deltaRight
+  }
+  if (varLeft <= 1e-12 || varRight <= 1e-12) return null
+  return product / Math.sqrt(varLeft * varRight)
+}
+
+export function energyCorrelation(
+  path: readonly PathPoint[],
+  modelEnergy: readonly number[],
+  userEnergy: readonly number[],
+): number | null {
+  const left: number[] = []
+  const right: number[] = []
+  for (const point of path) {
+    const modelValue = modelEnergy[point.model]
+    const userValue = userEnergy[point.user]
+    if (modelValue == null || userValue == null) continue
+    left.push(modelValue)
+    right.push(userValue)
+  }
+  return seriesCorrelation(left, right)
+}
+
+function wordCorrelation(model: Contour, user: Contour, path: readonly PathPoint[], frame: number, frameEnd: number): number | null {
+  const left: number[] = []
+  const right: number[] = []
+  for (const point of path) {
+    if (point.model < frame || point.model >= frameEnd) continue
+    const modelValue = model[point.model]
+    const userValue = user[point.user]
+    if (modelValue == null || userValue == null) continue
+    left.push(modelValue)
+    right.push(userValue)
+  }
+  return correlation(left, right)
+}
+
+/** Coefficient of variation of a loudness curve. A pure tone sits near 0. */
+export function energyVariation(energy: readonly number[] | null | undefined): number | null {
+  if (!energy || energy.length < 8) return null
+  let peak = 0
+  for (const value of energy) if (value > peak) peak = value
+  if (peak <= 0) return null
+  const used = energy.filter((value) => value >= peak * 0.08)
+  if (used.length < 8) return null
+  let sum = 0
+  for (const value of used) sum += value
+  const mean = sum / used.length
+  if (mean <= 0) return null
+  let variance = 0
+  for (const value of used) {
+    const delta = value - mean
+    variance += delta * delta
+  }
+  return Math.sqrt(variance / used.length) / mean
+}
+
+/**
+ * A drone against a spoken file. The pitch can match a short level phrase;
+ * the loudness of speech still moves, and a tone's does not.
+ */
+export function droneAgainstSpeech(
+  userEnergy: readonly number[] | null | undefined,
+  modelEnergy: readonly number[] | null | undefined,
+): boolean {
+  const user = energyVariation(userEnergy)
+  const model = energyVariation(modelEnergy)
+  if (user == null || model == null) return false
+  return user < DRONE_ENERGY && model >= SPEECH_ENERGY
+}
+
+/**
+ * The loudness of the take does not follow the file. A drone against
+ * speech, or two speech-like envelopes that run apart. Missing curves,
+ * and the synthetic fixtures that pass none, are left alone.
+ */
+export function envelopeMismatch(
+  path: readonly PathPoint[],
+  userEnergy: readonly number[] | null | undefined,
+  modelEnergy: readonly number[] | null | undefined,
+): boolean {
+  if (droneAgainstSpeech(userEnergy, modelEnergy)) return true
+  if (!userEnergy || !modelEnergy) return false
+  const user = energyVariation(userEnergy)
+  const model = energyVariation(modelEnergy)
+  if (user == null || model == null) return false
+  if (user < SPEECH_ENERGY || model < SPEECH_ENERGY) return false
+  const aligned = energyCorrelation(path, modelEnergy, userEnergy)
+  if (aligned == null) return false
+  return aligned < ENERGY_ALIGN_MIN
+}
+
+function thinEnergy(energy: readonly number[] | null | undefined, contourLength: number): number[] | null {
+  if (!energy || energy.length !== contourLength) return null
+  if (contourLength <= MAX_FRAMES) return [...energy]
+  const step = Math.ceil(contourLength / MAX_FRAMES)
+  const next: number[] = []
+  for (let index = 0; index < contourLength; index += step) next.push(energy[index] ?? 0)
+  return next
+}
+
+type WordDirection = 'same' | 'opposed' | 'unknown'
+
+function wordDirection(pitchCorr: number | null, modelShape: ShapeName, userShape: ShapeName): WordDirection {
+  if (pitchCorr != null) {
+    if (pitchCorr < DIRECTION_OPPOSED) return 'opposed'
+    if (pitchCorr >= DIRECTION_MIN) return 'same'
+    return 'unknown'
+  }
+  if ((modelShape === 'rising' && userShape === 'falling') || (modelShape === 'falling' && userShape === 'rising')) return 'opposed'
+  return 'unknown'
+}
+
+/**
+ * The take matches the file better when the contour is flipped in time.
+ * A straight imitation matches forwards. The caller skips this when any
+ * word still runs the same way, so one mirrored syllable stays a partial.
+ */
+/** Correlation of the model with the take flipped in time. Null when either side is level. */
+export function backwardCorrelation(model: Contour, user: Contour): number | null {
+  const flipped = [...user].reverse()
+  const modelSpan = sustained(model)
+  const userSpan = sustained(flipped)
+  if (!modelSpan || !userSpan) return null
+  return contourCorrelation(model, flipped, linearPath(modelSpan, userSpan))
+}
+
+export function matchesBetterBackwards(model: Contour, user: Contour, forward: number | null): boolean {
+  const backward = backwardCorrelation(model, user)
+  // A single mirrored syllable reaches about 0.8. A reversed recording sits near 1.
+  if (backward == null || backward < 0.9) return false
+  if (forward == null) return true
+  return backward > forward + 0.05
+}
+
+/**
+ * A reversed recording. Pitch near 1 when flipped is enough. A looser pitch
+ * match still counts when the loudness is not the file played forwards.
+ * The synthetic mirrored syllable passes no loudness, so it stays partial.
+ */
+export function reversedTake(
+  model: Contour,
+  user: Contour,
+  forward: number | null,
+  path: readonly PathPoint[],
+  modelEnergy: readonly number[] | null,
+  userEnergy: readonly number[] | null,
+): boolean {
+  if (matchesBetterBackwards(model, user, forward)) return true
+  if (!modelEnergy || !userEnergy) return false
+  const backward = backwardCorrelation(model, user)
+  if (backward == null || backward < 0.65) return false
+  if (forward != null && backward <= forward + 0.05) return false
+  const aligned = energyCorrelation(path, modelEnergy, userEnergy)
+  return aligned != null && aligned < 0.75
+}
+
+/** Every word we can judge runs the other way. One mirrored syllable does not. */
+export function takeRunsBackwards(directions: readonly WordDirection[]): boolean {
+  const known = directions.filter((direction) => direction !== 'unknown')
+  if (known.length === 0) return false
+  return known.every((direction) => direction === 'opposed')
+}
+
 function voicedRange(contour: Contour): number | null {
   let low = Number.POSITIVE_INFINITY
   let high = Number.NEGATIVE_INFINITY
@@ -361,6 +602,9 @@ export function scoreRepeat(input: {
   lang: Lang
   region: 'south' | 'north'
   userDuration: number
+  /** Loudness per contour frame. Absent in the synthetic fixtures. */
+  modelEnergy?: readonly number[] | null
+  userEnergy?: readonly number[] | null
 }): RepeatScore {
   const modelThin = thin(input.model, input.modelHop > 0 ? input.modelHop : 0.01)
   const userThin = thin(input.user, input.userHop > 0 ? input.userHop : 0.01)
@@ -398,7 +642,12 @@ export function scoreRepeat(input: {
   if (meanDistance == null) return { ...empty, tooLittleVoice: true }
   const userOnModel = warp(model, user, path)
   const globalRatio = ((userSpan.end - userSpan.start) * userHop) / ((modelSpan.end - modelSpan.start) * modelHop)
-  if (meanDistance > UNCLEAR_SEMITONES || flatContour(user, model)) {
+  const modelEnergy = thinEnergy(input.modelEnergy, input.model.length)
+  const userEnergy = thinEnergy(input.userEnergy, input.user.length)
+  const forward = contourCorrelation(model, user, path)
+  const envelope = envelopeMismatch(path, userEnergy, modelEnergy)
+  const reversed = reversedTake(model, user, forward, path, modelEnergy, userEnergy)
+  if (meanDistance > UNCLEAR_SEMITONES || flatContour(user, model) || envelope || reversed) {
     return {
       ...empty,
       userOnModel,
@@ -419,6 +668,7 @@ export function scoreRepeat(input: {
       tooLittleVoice: false,
     }
   }
+  const directions: WordDirection[] = []
   const words = input.words.map((word) => {
     const frame = Math.max(0, Math.min(model.length - 1, Math.floor(word.start / modelHop)))
     const frameEnd = Math.max(frame + 1, Math.min(model.length, Math.ceil(word.end / modelHop)))
@@ -450,12 +700,20 @@ export function scoreRepeat(input: {
       sentence: null,
       scorable,
     }
-    if (!matched || word.end <= word.start) return base
-    const melody = melodyBand(matched.mean)
+    if (!matched || word.end <= word.start) {
+      directions.push('unknown')
+      return base
+    }
+    const pitchCorr = wordCorrelation(model, user, path, frame, frameEnd)
+    const modelShape = describeShape(model.slice(frame, frameEnd))
+    const userShape = describeShape(user.slice(Math.min(userFrame, user.length), Math.min(user.length, userFrameEnd)))
+    directions.push(wordDirection(pitchCorr, modelShape, userShape))
+    let melody = melodyBand(matched.mean)
+    if (pitchCorr != null && pitchCorr < DIRECTION_OPPOSED) melody = 'red'
+    else if (pitchCorr != null && pitchCorr < DIRECTION_MIN && melody === 'green') melody = 'yellow'
     const rawRatio = (globalRatio * matched.scale * (frameEnd - frame) * modelHop) / (word.end - word.start)
     const relative = matched.scale
     const rhythm = rhythmBand(relative)
-    const userShape = describeShape(user.slice(Math.min(userFrame, user.length), Math.min(user.length, userFrameEnd)))
     return {
       ...base,
       color: worseBand(melody, rhythm),
@@ -467,6 +725,17 @@ export function scoreRepeat(input: {
       sentence: toneSentence(word.text, userShape, input.lang, input.region),
     }
   })
+  if (takeRunsBackwards(directions)) {
+    return {
+      ...empty,
+      userOnModel,
+      path,
+      meanDistance,
+      globalRatio,
+      unclear: true,
+      tooLittleVoice: false,
+    }
+  }
   const melodyBar = barFromColours(words.map((word) => word.melody))
   const rhythmWords = barFromColours(words.map((word) => word.rhythm))
   const rhythmBar = rhythmWords ? worseBar(globalBar(globalRatio), rhythmWords) : null

@@ -40,10 +40,13 @@ Die App liegt unter `http://127.0.0.1:5173/Travel-Talk/`. Der Build ist Rsbuild.
 
 ```bash
 npm test
+npm run test:clips
 npm run typecheck
 npm run lint
 npm run build
 ```
+
+`npm test` braucht kein ffmpeg. `npm run test:clips` dekodiert die mitgelieferten Aufnahmen und prüft die Sterne. Dafür wird ffmpeg benötigt. Ohne ffmpeg bricht der Lauf lokal mit einem Hinweis ab und wird übersprungen. In CI wird ffmpeg verlangt.
 
 Der Build schreibt die App nach `dist/` und kopiert `index.html` nach `404.html`, weil GitHub Pages kein SPA-Fallback hat. Die Navigation läuft über den Hash. Die Basis ist `/Travel-Talk/`.
 

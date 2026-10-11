@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { contourFromSamples, dtwDistance, voicedValues, type Contour } from './contour'
-import { barFromColours, flatContour, melodyBand, rhythmBand, scoreRepeat, starsFromBars, thin, toneSentence } from './feedback'
+import { barFromColours, flatContour, matchesBetterBackwards, melodyBand, rhythmBand, scoreRepeat, starsFromBars, thin, toneSentence } from './feedback'
 
 function flat(count: number, value: number | null): Contour {
   return Array.from({ length: count }, () => value)
@@ -591,5 +591,65 @@ describe('repeat alignment', () => {
       userDuration: 0.4,
     })
     expect(score.words?.[0]?.color).not.toBeNull()
+  })
+
+  it('withholds stars when a steady tone meets a spoken envelope, and keeps a flat phrase against itself', () => {
+    const level = flat(80, 0.2)
+    const speech: number[] = []
+    for (let index = 0; index < 80; index += 1) speech.push(index < 18 ? 0.05 : index < 42 ? 0.5 : 0.08)
+    const toneEnergy = speech.map(() => 0.2)
+    const shared = {
+      model: level,
+      user: level,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [
+        { text: 'Bitte.', start: 0, end: 0.4 },
+        { text: 'Danke.', start: 0.4, end: 0.8 },
+      ],
+      lang: 'de' as const,
+      region: 'south' as const,
+      userDuration: 0.8,
+    }
+    const drone = scoreRepeat({ ...shared, modelEnergy: speech, userEnergy: toneEnergy })
+    expect(drone.unclear).toBe(true)
+    expect(drone.stars).toBe(0)
+    const reversed = scoreRepeat({ ...shared, modelEnergy: speech, userEnergy: [...speech].reverse() })
+    expect(reversed.unclear).toBe(true)
+    expect(reversed.stars).toBe(0)
+    const itself = scoreRepeat({ ...shared, modelEnergy: speech, userEnergy: speech })
+    expect(itself.unclear).toBe(false)
+    expect(itself.stars).toBe(3)
+  })
+
+  it('calls a reversed contour unclear and keeps the same contour', () => {
+    const rising = ramp(60, -3, 3)
+    const falling = ramp(60, 3, -3)
+    const words = [{ text: 'qua', start: 0, end: 0.6 }]
+    const reversed = scoreRepeat({
+      model: rising,
+      user: falling,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'vi',
+      region: 'south',
+      userDuration: 0.6,
+    })
+    expect(matchesBetterBackwards(rising, falling, null)).toBe(true)
+    expect(reversed.unclear).toBe(true)
+    expect(reversed.stars).toBe(0)
+    const same = scoreRepeat({
+      model: rising,
+      user: rising,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'vi',
+      region: 'south',
+      userDuration: 0.6,
+    })
+    expect(same.unclear).toBe(false)
+    expect(same.stars).toBe(3)
   })
 })

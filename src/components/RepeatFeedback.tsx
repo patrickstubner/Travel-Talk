@@ -4,7 +4,7 @@ import type { Lang } from '../../content/phrase'
 import type { WordTime } from '../audio/align'
 import { playSequence, stopSlices } from '../audio/slice'
 import type { Dictionary } from '../i18n/dictionary'
-import { analysisHop, contourFromSamples, voicedValues, type Contour } from '../pitch/contour'
+import { analysisHop, contourFromSamples, frameEnergy, voicedValues, type Contour } from '../pitch/contour'
 import {
   MIN_VOICED,
   SHORT_SECONDS,
@@ -114,6 +114,11 @@ export function RepeatFeedback({
     [modelRate, modelSamples],
   )
   const userContour = useMemo(() => (userRate > 0 ? contourFromSamples(userSamples, userRate) : []), [userRate, userSamples])
+  const modelEnergy = useMemo(
+    () => (modelSamples && modelRate > 0 ? frameEnergy(modelSamples, modelRate) : null),
+    [modelRate, modelSamples],
+  )
+  const userEnergy = useMemo(() => (userRate > 0 ? frameEnergy(userSamples, userRate) : null), [userRate, userSamples])
   const score = useMemo<RepeatScore | null>(() => {
     if (!modelContour || modelRate <= 0 || userRate <= 0) return null
     const labels = splitWords(speech)
@@ -127,8 +132,10 @@ export function RepeatFeedback({
       lang,
       region,
       userDuration: userSamples.length / userRate,
+      modelEnergy,
+      userEnergy,
     })
-  }, [lang, modelContour, modelRate, region, speech, userContour, userRate, userSamples, words])
+  }, [lang, modelContour, modelEnergy, modelRate, region, speech, userContour, userEnergy, userRate, userSamples, words])
 
   useEffect(() => {
     setView('result')
@@ -163,6 +170,7 @@ export function RepeatFeedback({
           score={score}
           modelMissing={modelMissing}
           tooShort={userDuration < SHORT_SECONDS || score?.tooShort === true}
+          timingMissing={words == null && !modelMissing && modelSamples != null}
           tooQuiet={! (userDuration < SHORT_SECONDS) && (score?.tooLittleVoice === true || (modelMissing && userQuiet))}
           onWord={(index) => {
             setSelected(index)
@@ -236,6 +244,7 @@ function Result({
   voiceId,
   score,
   modelMissing,
+  timingMissing,
   tooShort,
   tooQuiet,
   onWord,
@@ -245,6 +254,7 @@ function Result({
   voiceId: string
   score: RepeatScore | null
   modelMissing: boolean
+  timingMissing: boolean
   tooShort: boolean
   tooQuiet: boolean
   onWord: (index: number) => void
@@ -261,6 +271,7 @@ function Result({
       {tooQuiet ? <p role="status">{copy.pitchEmpty}</p> : null}
       {score?.unclear ? <p role="status">{feedback.unclear}</p> : null}
       {score?.fewWords ? <p role="status">{feedback.fewWords}</p> : null}
+      {timingMissing ? <p role="status">{feedback.noWordTimes}</p> : null}
       {modelMissing ? <p>{copy.pitchNoModel}</p> : null}
       {score && !score.tooShort && !score.tooLittleVoice ? (
         score.words && score.words.length > 0 ? (

@@ -4,6 +4,14 @@ export type Contour = Array<number | null>
 
 const FRAME = 2048
 export const ANALYSIS_RATE = 16000
+/**
+ * Pitchy frames below this are left unvoiced. 0.8 dropped most of the
+ * low English voice (joe): the pitch was around 110 Hz, not under 70.
+ * 0.6 keeps those frames. Noise and a 50/100/150 Hz hum still stay empty.
+ */
+export const CLARITY_MIN = 0.6
+export const PITCH_HZ_MIN = 70
+export const PITCH_HZ_MAX = 450
 
 export function hopSeconds(sampleRate: number): number {
   if (!Number.isFinite(sampleRate) || sampleRate <= 0) return 0.01
@@ -42,7 +50,7 @@ export function contourFromSamples(input: Float32Array, rate: number): Contour {
   const sampleRate = prepared.sampleRate
   if (samples.length < FRAME) return []
   const detector = PitchDetector.forFloat32Array(FRAME)
-  detector.clarityThreshold = 0.8
+  detector.clarityThreshold = CLARITY_MIN
   detector.minVolumeDecibels = -45
   const hop = Math.max(1, Math.round(sampleRate * 0.01))
   const frame = new Float32Array(FRAME)
@@ -50,7 +58,7 @@ export function contourFromSamples(input: Float32Array, rate: number): Contour {
   for (let index = 0; index + FRAME < samples.length; index += hop) {
     frame.set(samples.subarray(index, index + FRAME))
     const [hz, clarity] = detector.findPitch(frame, sampleRate)
-    if (clarity >= 0.8 && hz >= 70 && hz <= 450) pitches.push(hz)
+    if (clarity >= CLARITY_MIN && hz >= PITCH_HZ_MIN && hz <= PITCH_HZ_MAX) pitches.push(hz)
     else pitches.push(null)
   }
   const voiced = pitches.filter((value): value is number => value != null).sort((a, b) => a - b)
@@ -73,6 +81,26 @@ function medianFilter(values: Contour, width: number): Contour {
     window.sort((a, b) => a - b)
     return window[Math.floor(window.length / 2)] ?? null
   })
+}
+
+/** Root-mean-square of each analysis frame, on the same grid as `contourFromSamples`. */
+export function frameEnergy(input: Float32Array, rate: number): number[] {
+  const prepared = samplesForAnalysis(input, rate)
+  const samples = prepared.samples
+  const sampleRate = prepared.sampleRate
+  if (samples.length < FRAME) return []
+  const hop = Math.max(1, Math.round(sampleRate * 0.01))
+  const energy: number[] = []
+  for (let index = 0; index + FRAME < samples.length; index += hop) {
+    let sum = 0
+    const end = index + FRAME
+    for (let cursor = index; cursor < end; cursor += 1) {
+      const sample = samples[cursor] ?? 0
+      sum += sample * sample
+    }
+    energy.push(Math.sqrt(sum / FRAME))
+  }
+  return energy
 }
 
 export function voicedValues(contour: Contour): number[] {

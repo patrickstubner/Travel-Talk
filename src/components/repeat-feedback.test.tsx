@@ -115,6 +115,7 @@ describe('repeat feedback view', () => {
     expect(screen.getByTestId('repeat-feedback').querySelector('canvas')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'qua' })).toBeNull()
     expect(screen.queryByTestId('repeat-stars')).toBeNull()
+    expect(screen.getByText('Keine Wortzeiten für diese Stimme.')).toBeTruthy()
   })
 
   it('names a short take and a quiet take without stars', () => {
