@@ -166,8 +166,9 @@ a.menu-card {
 }
 a.menu-card span { color: var(--muted); }
 .voice-list { display: grid; gap: 0.45rem; }
-.voice-option { display: flex; gap: 0.45rem; align-items: stretch; }
+.voice-option { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: stretch; }
 .voice-option > button:first-child { flex: 1; text-align: left; }
+.voice-offline { flex-basis: 100%; display: flex; gap: 0.45rem; align-items: center; margin: 0; }
 .voice-note {
   background: #f6e4cf;
   border-left: 4px solid var(--gold);

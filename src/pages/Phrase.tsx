@@ -35,7 +35,7 @@ export function PhrasePage() {
   const direction = app && targetLang ? directionId(app, targetLang) : null
   const concept = catalog?.concepts.find((item) => item.id === conceptId)
   const ui = interfaceLang(settings)
-  const [heard, setHeard] = useState<'file' | 'synth' | null>(null)
+  const [heard, setHeard] = useState<'file' | 'offline' | null>(null)
   const [playing, setPlaying] = useState(false)
   const [recording, setRecording] = useState(false)
   const [mineUrl, setMineUrl] = useState<string | null>(null)
@@ -117,6 +117,8 @@ export function PhrasePage() {
     const result = await playClip(file, target?.speech ?? '', targetLang ?? 'de', rate, () => {
       if (aliveRef.current) setPlaying(false)
     })
+    if (!aliveRef.current) return
+    if (result === 'offline') setPlaying(false)
     setHeard(result)
   }
 
@@ -169,7 +171,7 @@ export function PhrasePage() {
         {copy.context}: {concept.context[ui]}
       </p>
       {targetLang === 'vi' ? <p className="warn">{audioCaption(copy, targetLang, settings)}</p> : <p className="hint">{audioCaption(copy, targetLang, settings)}</p>}
-      {heard === 'synth' ? <p className="warn">{copy.audioSynth}</p> : null}
+      {heard === 'offline' ? <p className="warn" role="status">{copy.audioOffline}</p> : null}
       <p className="speed-now" data-testid="speed-now">
         {copy.speedShown(percent)}
       </p>

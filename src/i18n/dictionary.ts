@@ -34,7 +34,7 @@ export type Dictionary = {
   audioDeHigh: string
   audioEn: string
   audioEnMale: string
-  audioSynth: string
+  audioOffline: string
   regionSouth: string
   regionNorth: string
   addressTitle: string
@@ -113,6 +113,13 @@ export type Dictionary = {
   voicesTitle: string
   voicesVi: string
   voicesCc: string
+  voicesNc: string
+  voicesChanged: string
+  offlineLoad: string
+  offlineReady: string
+  offlineRetry: string
+  offlineFull: string
+  offlineProgress: (have: number, total: number) => string
   voicesSlow: string
   voicesNotice: string
   reset: string
@@ -252,7 +259,7 @@ export const de: Dictionary = {
   audioDeHigh: 'Stimme: Piper thorsten, hohe Qualität, Mann. Deutsch aus Deutschland, nicht Schweizerdeutsch. Qualität nicht geprüft.',
   audioEn: 'Stimme: Piper LJSpeech, Frau, Englisch (USA). Qualität nicht geprüft.',
   audioEnMale: 'Stimme: Piper joe, Mann, Englisch (USA). Qualität nicht geprüft.',
-  audioSynth: 'Keine Datei. Browserstimme. Akzent und Qualität hängen vom Gerät ab und sind nicht geprüft.',
+  audioOffline: 'Stimme offline nicht geladen',
   regionSouth: 'Süd, Standard',
   regionNorth: 'Nord, Variante',
   addressTitle: 'Anrede',
@@ -268,7 +275,7 @@ export const de: Dictionary = {
   pitchCaveat:
     'Die Modellkurve stammt aus der nördlichen TTS-Stimme, nicht aus einer geprüften südlichen Aufnahme. Eine Abweichung kann an der Stimme liegen.',
   pitchEmpty: 'In der Aufnahme war zu wenig stimmhafte Tonhöhe.',
-  pitchNoModel: 'Ohne Audiodatei gibt es keine Modellkurve. Die Browserstimme liefert kein Signal.',
+  pitchNoModel: 'Ohne Audiodatei gibt es keine Modellkurve.',
   shape: {
     level: 'eher eben',
     rising: 'eher steigend',
@@ -339,8 +346,15 @@ export const de: Dictionary = {
   backupDownload: 'Sicherung herunterladen',
   voicesTitle: 'Stimmen und Lizenzen',
   voicesVi:
-    'Neue Nutzer starten mit einer Männerstimme. Die bisherige Stimme bleibt, bis du wechselst. Vietnamesisch: vais1000 (CC BY 4.0, Frau, Norden) und vivos (CC BY-NC-SA 4.0, Männer, Qualität niedrig). Das erzeugte vivos-Audio steht unter derselben Lizenz. Deutsch thorsten und Portugiesisch cadu und faber sind CC0, Englisch joe ist CC0, LJSpeech ist gemeinfrei. Namensnennung steht in NOTICE.txt.',
+    'Neue Nutzer starten mit einer Männerstimme. Die bisherige Stimme bleibt, bis du wechselst. Vietnamesisch: vais1000 (Datensatz CC BY 4.0, Frau, Norden; das Modell ist von lessac feinjustiert) und vivos (CC BY-NC-SA 4.0, Männer, Qualität niedrig, von Grund auf trainiert). Das erzeugte vivos-Audio steht unter derselben Lizenz. Deutsch thorsten, Portugiesisch cadu und faber, Englisch joe: der Datensatz ist CC0, die Stimme nicht. Sie ist von lessac feinjustiert, und lessac gilt nur für Forschung. LJSpeech ist gemeinfrei und von Grund auf trainiert. Namensnennung steht in NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
+  voicesNc: 'CC BY-NC-SA 4.0',
+  voicesChanged: 'Das Material wurde verändert.',
+  offlineLoad: 'Für offline laden',
+  offlineReady: 'offline bereit',
+  offlineRetry: 'Erneut versuchen',
+  offlineFull: 'Der Speicher ist voll. Die Stimme ist nicht vollständig geladen.',
+  offlineProgress: (have, total) => `${have}/${total}`,
   voicesSlow: '70 % und 85 % sind eigene Dateien (ffmpeg atempo). Die Tonhöhe bleibt erhalten. 100 % ist die normale Datei.',
   voicesNotice: 'NOTICE.txt',
   reset: 'Lernstand auf diesem Gerät löschen',
@@ -480,7 +494,7 @@ export const en: Dictionary = {
   audioDeHigh: 'Voice: Piper thorsten, high quality, a man. German from Germany, not Swiss German. Quality not checked.',
   audioEn: 'Voice: Piper LJSpeech, a woman, English (US). Quality not checked.',
   audioEnMale: 'Voice: Piper joe, a man, English (US). Quality not checked.',
-  audioSynth: 'No file. Browser voice. Accent and quality depend on the device and are not checked.',
+  audioOffline: 'Voice not loaded for offline',
   regionSouth: 'South, default',
   regionNorth: 'North, variant',
   addressTitle: 'Address form',
@@ -496,7 +510,7 @@ export const en: Dictionary = {
   pitchCaveat:
     'The model curve comes from the northern TTS voice, not from a checked southern recording. A gap can be the voice, not only you.',
   pitchEmpty: 'The recording had too little voiced pitch.',
-  pitchNoModel: 'Without an audio file there is no model curve. The browser voice gives no signal.',
+  pitchNoModel: 'Without an audio file there is no model curve.',
   shape: {
     level: 'mostly level',
     rising: 'mostly rising',
@@ -565,8 +579,15 @@ export const en: Dictionary = {
   backupDownload: 'Download a backup',
   voicesTitle: 'Voices and licences',
   voicesVi:
-    'New users start with a male voice. The previous voice stays until you change it. Vietnamese: vais1000 (CC BY 4.0, woman, north) and vivos (CC BY-NC-SA 4.0, men, low quality). The generated vivos audio is under the same licence. German thorsten, Brazilian cadu and faber are CC0, English joe is CC0, LJSpeech is public domain. Attribution is in NOTICE.txt.',
+    'New users start with a male voice. The previous voice stays until you change it. Vietnamese: vais1000 (dataset CC BY 4.0, woman, north; the model is fine-tuned from lessac) and vivos (CC BY-NC-SA 4.0, men, low quality, trained from scratch). The generated vivos audio is under the same licence. German thorsten, Brazilian cadu and faber, and English joe: the dataset is CC0, the voice is not. It is fine-tuned from lessac, and lessac is research-only. LJSpeech is public domain and trained from scratch. Attribution is in NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
+  voicesNc: 'CC BY-NC-SA 4.0',
+  voicesChanged: 'The material was changed.',
+  offlineLoad: 'Load for offline',
+  offlineReady: 'ready offline',
+  offlineRetry: 'Try again',
+  offlineFull: 'Storage is full. The voice is not fully loaded.',
+  offlineProgress: (have, total) => `${have}/${total}`,
   voicesSlow: '70 % and 85 % are their own files (ffmpeg atempo). The pitch stays the same. 100 % is the normal file.',
   voicesNotice: 'NOTICE.txt',
   reset: 'Delete progress on this device',
@@ -704,7 +725,7 @@ export const pt: Dictionary = {
   audioDeHigh: 'Voz: Piper thorsten, qualidade alta, homem. Alemão da Alemanha, não suíço-alemão. Qualidade não revisada.',
   audioEn: 'Voz: Piper LJSpeech, mulher, inglês (EUA). Qualidade não revisada.',
   audioEnMale: 'Voz: Piper joe, homem, inglês (EUA). Qualidade não revisada.',
-  audioSynth: 'Sem arquivo. Voz do navegador. Sotaque e qualidade dependem do aparelho e não foram revisados.',
+  audioOffline: 'Voz não carregada para offline',
   regionSouth: 'Sul, padrão',
   regionNorth: 'Norte, variante',
   addressTitle: 'Tratamento',
@@ -720,7 +741,7 @@ export const pt: Dictionary = {
   pitchCaveat:
     'A curva do modelo vem da voz TTS do norte, não de uma gravação do sul revisada. A diferença pode ser a voz.',
   pitchEmpty: 'A gravação tinha pouca voz com tom.',
-  pitchNoModel: 'Sem arquivo de áudio não há curva do modelo. A voz do navegador não entrega sinal.',
+  pitchNoModel: 'Sem arquivo de áudio não há curva do modelo.',
   shape: {
     level: 'mais plano',
     rising: 'mais subindo',
@@ -791,8 +812,15 @@ export const pt: Dictionary = {
   backupDownload: 'Baixar uma cópia',
   voicesTitle: 'Vozes e licenças',
   voicesVi:
-    'Quem começa agora usa uma voz de homem. A voz anterior fica até você trocar. Vietnamita: vais1000 (CC BY 4.0, mulher, norte) e vivos (CC BY-NC-SA 4.0, homens, qualidade baixa). O áudio gerado de vivos fica na mesma licença. Alemão thorsten, cadu e faber são CC0, joe é CC0, LJSpeech é domínio público. A atribuição está em NOTICE.txt.',
+    'Quem começa agora usa uma voz de homem. A voz anterior fica até você trocar. Vietnamita: vais1000 (conjunto CC BY 4.0, mulher, norte; o modelo vem de lessac) e vivos (CC BY-NC-SA 4.0, homens, qualidade baixa, treinado do zero). O áudio gerado de vivos fica na mesma licença. Alemão thorsten, cadu e faber, e joe: o conjunto é CC0, a voz não. Ela vem de lessac, e lessac vale só para pesquisa. LJSpeech é domínio público e treinado do zero. A atribuição está em NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
+  voicesNc: 'CC BY-NC-SA 4.0',
+  voicesChanged: 'O material foi alterado.',
+  offlineLoad: 'Carregar para offline',
+  offlineReady: 'pronto offline',
+  offlineRetry: 'Tentar de novo',
+  offlineFull: 'O armazenamento está cheio. A voz não foi carregada por completo.',
+  offlineProgress: (have, total) => `${have}/${total}`,
   voicesSlow: '70 % e 85 % são arquivos próprios (ffmpeg atempo). O tom fica igual. 100 % é o arquivo normal.',
   voicesNotice: 'NOTICE.txt',
   reset: 'Apagar o progresso neste aparelho',
@@ -930,7 +958,7 @@ export const vi: Dictionary = {
   audioDeHigh: 'Giọng: Piper thorsten, chất lượng cao, nam. Tiếng Đức của Đức, không phải tiếng Đức Thụy Sĩ. Chất lượng chưa được kiểm tra.',
   audioEn: 'Giọng: Piper LJSpeech, nữ, tiếng Anh (Mỹ). Chất lượng chưa được kiểm tra.',
   audioEnMale: 'Giọng: Piper joe, nam, tiếng Anh (Mỹ). Chất lượng chưa được kiểm tra.',
-  audioSynth: 'Không có tệp. Giọng trình duyệt. Giọng và chất lượng tuỳ máy, chưa được kiểm tra.',
+  audioOffline: 'Giọng chưa được tải để dùng offline',
   regionSouth: 'Nam, mặc định',
   regionNorth: 'Bắc, biến thể',
   addressTitle: 'Xưng hô',
@@ -946,7 +974,7 @@ export const vi: Dictionary = {
   pitchCaveat:
     'Đường của mẫu lấy từ giọng TTS miền Bắc, không phải bản thu miền Nam đã kiểm tra. Lệch có thể do giọng mẫu.',
   pitchEmpty: 'Bản ghi ít đoạn có thanh.',
-  pitchNoModel: 'Không có tệp âm thanh thì không có đường mẫu. Giọng trình duyệt không cho tín hiệu.',
+  pitchNoModel: 'Không có tệp âm thanh thì không có đường mẫu.',
   shape: {
     level: 'khá bằng',
     rising: 'khá lên',
@@ -1015,8 +1043,15 @@ export const vi: Dictionary = {
   backupDownload: 'Tải bản sao',
   voicesTitle: 'Giọng và giấy phép',
   voicesVi:
-    'Người mới bắt đầu với giọng nam. Giọng cũ giữ nguyên cho đến khi đổi. Tiếng Việt: vais1000 (CC BY 4.0, nữ, miền Bắc) và vivos (CC BY-NC-SA 4.0, nam, chất lượng thấp). Audio tạo từ vivos cùng giấy phép đó. Tiếng Đức thorsten, cadu và faber là CC0, joe là CC0, LJSpeech là phạm vi công cộng. Ghi nguồn nằm trong NOTICE.txt.',
+    'Người mới bắt đầu với giọng nam. Giọng cũ giữ nguyên cho đến khi đổi. Tiếng Việt: vais1000 (dữ liệu CC BY 4.0, nữ, miền Bắc; mô hình tinh chỉnh từ lessac) và vivos (CC BY-NC-SA 4.0, nam, chất lượng thấp, huấn luyện từ đầu). Audio tạo từ vivos cùng giấy phép đó. Tiếng Đức thorsten, cadu, faber và joe: bộ dữ liệu là CC0, bản thân giọng thì không. Giọng được tinh chỉnh từ lessac, và lessac chỉ dùng cho nghiên cứu. LJSpeech là phạm vi công cộng và huấn luyện từ đầu. Ghi nguồn nằm trong NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
+  voicesNc: 'CC BY-NC-SA 4.0',
+  voicesChanged: 'Tài liệu đã được thay đổi.',
+  offlineLoad: 'Tải để dùng offline',
+  offlineReady: 'sẵn sàng offline',
+  offlineRetry: 'Thử lại',
+  offlineFull: 'Bộ nhớ đã đầy. Giọng chưa được tải đủ.',
+  offlineProgress: (have, total) => `${have}/${total}`,
   voicesSlow: '70 % và 85 % là tệp riêng (ffmpeg atempo). Độ cao giọng giữ nguyên. 100 % là tệp bình thường.',
   voicesNotice: 'NOTICE.txt',
   reset: 'Xóa tiến độ trên máy này',

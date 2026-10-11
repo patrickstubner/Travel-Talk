@@ -1,5 +1,9 @@
-"""Synthesize committed speech files with Piper. Models stay outside the repo."""
+"""Synthesize committed speech files with Piper. Models stay outside the repo.
 
+piper-tts is pinned. Each shipped model is checked by SHA-256 before synthesis.
+"""
+
+import hashlib
 import json
 import logging
 import subprocess
@@ -9,6 +13,14 @@ from pathlib import Path
 
 from piper import PiperVoice
 from piper.config import SynthesisConfig
+
+PIPER_VERSION = "1.8.0"
+MODEL_SHA256 = {
+    "de_DE-thorsten-high": "9df1c43c61149ef9b39e618e2b861fbe41e1fcea9390b2dac62e8761573ea4f1",
+    "en_US-joe-medium": "58afce0321b8d9c46d7cdf9c16500cc55a793b4220212dba6b70fb788b3baf06",
+    "pt_BR-cadu-medium": "765f0809a6ea9035d4a6d0d008dbf8876e68b2dd32029312672fa8f405bdb535",
+    "vi_VN-vivos-x_low": "6ab13374eb0862021a545befe7727aef59e16117f1c075aa9e0362237ecc98ae",
+}
 
 ROOT = Path(__file__).resolve().parents[1]
 LINES = json.loads((ROOT / "tools" / "lines.json").read_text(encoding="utf-8"))
@@ -28,8 +40,26 @@ EXTRA = [
 ]
 
 
+def require_piper() -> None:
+    import importlib.metadata
+
+    found = importlib.metadata.version("piper-tts")
+    if found != PIPER_VERSION:
+        raise SystemExit(f"piper-tts {found} is not the pinned {PIPER_VERSION}")
+
+
+def require_model(model_dir: Path, model: str) -> None:
+    expected = MODEL_SHA256.get(model)
+    if expected is None:
+        raise SystemExit(f"no pinned checksum for {model}")
+    digest = hashlib.sha256((model_dir / f"{model}.onnx").read_bytes()).hexdigest()
+    if digest != expected:
+        raise SystemExit(f"checksum mismatch for {model}")
+
+
 def main() -> None:
     logging.getLogger("piper").setLevel(logging.ERROR)
+    require_piper()
     if len(sys.argv) >= 2 and sys.argv[1] == "extra":
         model_dir = Path(sys.argv[2])
         for job in EXTRA:
@@ -44,6 +74,7 @@ def main() -> None:
 
 
 def synthesize(lang: str, model_dir: Path, model: str, voice: str | None, speaker: int | None) -> None:
+    require_model(model_dir, model)
     loaded = PiperVoice.load(model_dir / f"{model}.onnx")
     rows = [row for row in LINES if row["lang"] == lang]
     syn = SynthesisConfig(speaker_id=speaker, normalize_audio=True)

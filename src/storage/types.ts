@@ -1,5 +1,6 @@
 import type { Lang } from '../../content/phrase'
 import type { SpeedChoice } from '../audio/speed'
+import { isBundledVoiceId } from '../audio/voices'
 import { isLang, legacyDirection } from '../domain/direction'
 
 export type VoiceMap = Partial<Record<Lang, string>>
@@ -84,7 +85,7 @@ export function cleanVoices(value: unknown): VoiceMap | undefined {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) return undefined
   const voices: VoiceMap = {}
   for (const [key, entry] of Object.entries(value)) {
-    if (!isLang(key) || typeof entry !== 'string' || !VOICE_ID.test(entry)) continue
+    if (!isLang(key) || typeof entry !== 'string' || !VOICE_ID.test(entry) || !isBundledVoiceId(key, entry)) continue
     voices[key] = entry
   }
   return Object.keys(voices).length > 0 ? voices : undefined

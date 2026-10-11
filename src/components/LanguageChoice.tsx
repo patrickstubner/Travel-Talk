@@ -1,7 +1,9 @@
 import type { Lang } from '../../content/phrase'
+import { dropOtherVoicesIfCached } from '../audio/offline'
 import { playClip } from '../audio/player'
 import { previewFile, selectedVoice, voicesFor } from '../audio/voices'
 import { LANG_LABEL } from '../app/labels'
+import { VoiceOfflineButton } from './VoiceOffline'
 import { APP_LANGS } from '../domain/direction'
 import type { Dictionary } from '../i18n/dictionary'
 import type { Settings } from '../storage/types'
@@ -70,6 +72,8 @@ export function LanguageChoice({
   function pickVoice(id: string): void {
     if (!target) return
     emit({ voices: { ...settings.voices, [target]: id } })
+    const voice = options.find((item) => item.id === id)
+    if (voice) void dropOtherVoicesIfCached(target, voice)
   }
 
   return (
@@ -132,6 +136,7 @@ export function LanguageChoice({
                   >
                     {copy.voicePreview}
                   </button>
+                  <VoiceOfflineButton lang={target} voice={voice} copy={copy} dropOnSuccess={shown === voice.id} />
                 </div>
               )
             })}

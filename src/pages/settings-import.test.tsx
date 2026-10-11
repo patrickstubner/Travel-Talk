@@ -209,6 +209,25 @@ describe('settings import', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
+  it('keeps the current voice when the imported file has none', async () => {
+    render(
+      <AppProvider>
+        <SettingsPage />
+      </AppProvider>,
+    )
+    await screen.findByRole('button', { name: 'Fortschritt exportieren' })
+    await chooseLanguages()
+    fireEvent.click(await screen.findByRole('button', { name: 'Mann 1' }))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Mann 1' }).getAttribute('aria-pressed')).toBe('true')
+    })
+    fireEvent.change(screen.getByLabelText('Fortschritt importieren'), { target: { files: [importFile()] } })
+    fireEvent.click(await screen.findByRole('button', { name: 'Importieren' }))
+    await screen.findByText('Import gespeichert.')
+    expect(screen.getByRole('button', { name: 'Mann 1' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Frau (Norden)' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
   it('keeps import disabled until a catalog is loaded', () => {
     render(
       <AppContext.Provider

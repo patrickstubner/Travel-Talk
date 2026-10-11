@@ -46,6 +46,28 @@ describe('fsrs', () => {
     expect(dues[Rating.Good].getTime()).toBeLessThan(now.getTime() + 30 * 86_400_000)
   })
 
+  it('caps previewDue from an old last review without moving that review to now', () => {
+    const now = new Date('2026-10-11T00:00:00.000Z')
+    const reviewed = new Date('2020-01-01T00:00:00.000Z')
+    const card = fromStored({
+      cardId: 'de-vi:old',
+      due: now.toISOString(),
+      stability: 100000,
+      difficulty: 5,
+      elapsed_days: 2000,
+      scheduled_days: 36500,
+      learning_steps: 0,
+      reps: 20,
+      lapses: 0,
+      state: 2,
+      last_review: reviewed.toISOString(),
+    })
+    const dues = previewDue(card, now, 0.9)
+    const limit = reviewed.getTime() + DUE_LIMIT_DAYS * 86_400_000
+    expect(dues[Rating.Easy].getTime()).toBe(limit)
+    expect(dues[Rating.Easy].getTime()).toBeLessThan(now.getTime() + DUE_LIMIT_DAYS * 86_400_000)
+  })
+
   it('caps a due date 36500 days after the last review, or after now', () => {
     const anchor = '2020-01-01T00:00:00.000Z'
     const now = Date.parse('2026-10-11T00:00:00.000Z')

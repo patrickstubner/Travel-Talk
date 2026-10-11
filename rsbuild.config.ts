@@ -53,7 +53,8 @@ export default defineConfig({
             cacheId: 'travel-talk',
             skipWaiting: true,
             clientsClaim: true,
-            cleanupOutdatedCaches: true,
+            // Leave the previous precache until the app has copied the voice still in use.
+            cleanupOutdatedCaches: false,
             disableDevLogs: true,
             sourcemap: false,
             mode: 'production',
@@ -64,8 +65,8 @@ export default defineConfig({
                 handler: 'CacheFirst',
                 options: {
                   cacheName: 'travel-talk-audio',
-                  cacheableResponse: { statuses: [0, 200] },
-                  expiration: { maxEntries: 2000, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                  cacheableResponse: { statuses: [200] },
+                  expiration: { maxEntries: 4000, maxAgeSeconds: 60 * 60 * 24 * 365 },
                 },
               },
             ],

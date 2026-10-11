@@ -139,6 +139,57 @@ describe('phrase microphone', () => {
     resolveStream(stream)
     await waitFor(() => expect(track.stop).toHaveBeenCalled())
   })
+
+  it('drops a recording whose stop arrives after the phrase changed', async () => {
+    const track = { stop: vi.fn() }
+    const stream = { getTracks: () => [track] }
+    const revoked: string[] = []
+    let rejectDecode: (error: Error) => void = () => undefined
+    let decoding = false
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mine')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation((url) => {
+      revoked.push(String(url))
+    })
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        decodeAudioData(): Promise<AudioBuffer> {
+          decoding = true
+          return new Promise((_resolve, reject) => {
+            rejectDecode = reject
+          })
+        }
+        close(): Promise<void> {
+          return Promise.resolve()
+        }
+      },
+    )
+    vi.stubGlobal('MediaRecorder', FakeRecorder)
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: vi.fn(async () => stream) },
+    })
+    render(
+      <AppProvider>
+        <ReadyPhrase>
+          <MemoryRouter initialEntries={['/phrase/emergency.help']}>
+            <NextPhrase />
+            <Routes>
+              <Route path="/phrase/:conceptId" element={<PhrasePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPhrase>
+      </AppProvider>,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Aufnehmen' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+    await waitFor(() => expect(decoding).toBe(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Nächster Satz' }))
+    expect(await screen.findByRole('heading', { name: 'Chào anh.' })).toBeTruthy()
+    rejectDecode(new Error('stale'))
+    await waitFor(() => expect(revoked).toContain('blob:mine'))
+    expect(screen.queryByRole('button', { name: 'Meine Aufnahme' })).toBeNull()
+  })
 })
 
 function NextPhrase() {

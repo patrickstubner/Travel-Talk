@@ -1,15 +1,7 @@
-import type { Lang } from '../../content/phrase'
 import { AUDIO_FILE } from '../content/resolve'
 import { mixToMono } from '../pitch/contour'
 import { publicUrl } from '../public-url'
 import type { SpeedStep } from './speed'
-
-const SPEECH_LANG: Record<Lang, string> = {
-  de: 'de-DE',
-  en: 'en-US',
-  'pt-BR': 'pt-BR',
-  vi: 'vi-VN',
-}
 
 let known: Set<string> | null = null
 let loading: Promise<Set<string>> | null = null
@@ -30,64 +22,71 @@ export function loadManifest(): Promise<Set<string>> {
         known = files
         return files
       })
-      .catch(() => {
-        known = new Set()
-        return known
+      .catch((error: unknown) => {
+        loading = null
+        throw error
       })
   }
   return loading
 }
 
-export function speak(text: string, lang: Lang, rate: SpeedStep = 1): void {
-  if (typeof speechSynthesis === 'undefined') return
-  speechSynthesis.cancel()
-  const utterance = new SpeechSynthesisUtterance(text)
-  utterance.lang = SPEECH_LANG[lang]
-  utterance.rate = rate
-  speechSynthesis.speak(utterance)
+async function clipIsCached(file: string): Promise<boolean> {
+  if (!('caches' in globalThis)) return false
+  const url = publicUrl(`audio/${file}`)
+  try {
+    const names = await caches.keys()
+    for (const name of names) {
+      const cache = await caches.open(name)
+      if (await cache.match(url)) return true
+    }
+  } catch {
+    return false
+  }
+  return false
 }
 
 /**
  * Plays a pre-generated file. `playbackRate` stays 1: slowing the element can
  * shift pitch, and that would bend Vietnamese tones. The tempo is the file.
- * The browser voice is only the fallback, and then `utterance.rate` is the chosen step.
+ * There is no browser voice. Offline, a missing file is `offline`.
  */
 export async function playClip(
   file: string,
-  speech: string,
-  lang: Lang,
-  rate: SpeedStep = 1,
+  _speech: string,
+  _lang: string,
+  _rate: SpeedStep = 1,
   onEnd?: () => void,
-): Promise<'file' | 'synth'> {
-  const files = await loadManifest()
-  if (AUDIO_FILE.test(file) && files.has(file)) {
-    current?.pause()
-    const audio = new Audio(publicUrl(`audio/${file}`))
-    audio.playbackRate = 1
-    audio.onended = () => onEnd?.()
-    current = audio
-    try {
-      await audio.play()
-    } catch {
-      onEnd?.()
-    }
-    return 'file'
+): Promise<'file' | 'offline'> {
+  let files: Set<string>
+  try {
+    files = await loadManifest()
+  } catch {
+    return 'offline'
   }
-  if (typeof speechSynthesis === 'undefined') {
+  if (!AUDIO_FILE.test(file) || !files.has(file)) return 'offline'
+  const cached = await clipIsCached(file)
+  if (!cached && typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline'
+  current?.pause()
+  const audio = new Audio(publicUrl(`audio/${file}`))
+  audio.playbackRate = 1
+  audio.onended = () => onEnd?.()
+  current = audio
+  try {
+    await audio.play()
+  } catch {
+    if (!cached) return 'offline'
     onEnd?.()
-    return 'synth'
   }
-  speechSynthesis.cancel()
-  const utterance = new SpeechSynthesisUtterance(speech)
-  utterance.lang = SPEECH_LANG[lang]
-  utterance.rate = rate
-  utterance.onend = () => onEnd?.()
-  speechSynthesis.speak(utterance)
-  return 'synth'
+  return 'file'
 }
 
 export async function decodeContourFile(file: string): Promise<{ samples: Float32Array; sampleRate: number } | null> {
-  const files = await loadManifest()
+  let files: Set<string>
+  try {
+    files = await loadManifest()
+  } catch {
+    return null
+  }
   if (!AUDIO_FILE.test(file) || !files.has(file)) return null
   const response = await fetch(publicUrl(`audio/${file}`))
   if (!response.ok) return null

@@ -44,6 +44,11 @@ export function voicesFor(lang: Lang): CatalogVoice[] {
   return VOICES.filter((voice) => voice.lang === lang && voice.bundled).sort((a, b) => a.order - b.order)
 }
 
+/** A stored id is kept only when this build ships that voice. */
+export function isBundledVoiceId(lang: Lang, id: string): boolean {
+  return VOICES.some((voice) => voice.bundled && voice.lang === lang && voice.id === id)
+}
+
 export function legacyVoice(lang: Lang): CatalogVoice {
   const voice = voicesFor(lang).find((item) => item.legacy)
   if (!voice) throw new Error('VOICE_LEGACY')

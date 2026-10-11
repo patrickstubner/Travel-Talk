@@ -1,26 +1,26 @@
 Travel Talk 0.4.0 — Audio-Hinweise
 
-Die Audiodateien in diesem Ordner sind mit Piper erzeugt. Die Modelle selbst sind nicht Teil dieses Repos. Die App ist für den nicht kommerziellen Gebrauch in der Familie. CC BY-NC-SA ist dafür verwendet, und das erzeugte Audio steht unter derselben Lizenz wie das Modell, wenn das Modell ShareAlike verlangt.
+Die Audiodateien in diesem Ordner sind mit Piper erzeugt. Die Modelle selbst sind nicht Teil dieses Repos. Die App ist für den nicht kommerziellen Gebrauch in der Familie. Das Material wurde verändert: die Dateien sind Synthese, nicht die Originalaufnahmen.
 
-Deutsch, hohe Qualität, Ordner de/thorsten-high: de_DE-thorsten-high. Datensatz Thorsten-Voice, CC0. https://github.com/thorstenMueller/Thorsten-Voice. Deutsch aus Deutschland, nicht Schweizerdeutsch. Die Modellkarte nennt das Geschlecht nicht. Der Datensatz ist die eigene Stimme von Thorsten Müller. Die Synthese dieser Version liegt bei einem Median von etwa 127 Hz. Das Modell ist laut Modellkarte von lessac (high) feinjustiert.
+CC0 gilt nur für einzelne Datensätze, nicht für die Stimmen, die von lessac feinjustiert sind. lessac (Blizzard 2013, Lessac Technologies) steht laut der Upstream-Lizenz nur für Research Purposes zur Verfügung: https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html. Kommerzielle Sprachsynthese ist dort ausgeschlossen. Die lessac-Gewichte liegen nicht in diesem Repo. lessac wird nicht als Stimme verwendet. Piper wird nicht mitgeliefert. Die Engine von OHF-Voice steht unter GPL-3.0.
 
-Deutsch, mittlere Qualität, ohne Stimmordner: de_DE-thorsten-medium. Derselbe Datensatz, CC0, dieselbe Person, mittlere Qualität. Das sind die Dateien von vor 0.4.0.
+Deutsch, hohe Qualität, Ordner de/thorsten-high: de_DE-thorsten-high. Datensatz Thorsten-Voice, CC0. https://github.com/thorstenMueller/Thorsten-Voice. Die Stimme ist kein CC0. Das Modell ist laut Modellkarte von lessac (high) feinjustiert. Deutsch aus Deutschland, nicht Schweizerdeutsch. Die Modellkarte nennt das Geschlecht nicht. Der Datensatz ist die eigene Stimme von Thorsten Müller. Die Synthese dieser Version liegt bei einem Median von etwa 127 Hz.
 
-Portugiesisch (Brasilien), Ordner pt-BR/cadu: pt_BR-cadu-medium. Datensatz über OHF-Voice, CC0. https://github.com/OHF-Voice/voice-datasets. Die Modellkarte nennt das Geschlecht nicht. Die veröffentlichte Hörprobe des Datensatzes liegt bei etwa 143 Hz, die Synthese dieser Version bei etwa 119 Hz. Feintuning von lessac (medium).
+Deutsch, mittlere Qualität, ohne Stimmordner: de_DE-thorsten-medium. Derselbe Datensatz, CC0. Dieselbe Einschränkung: die Stimme ist von lessac feinjustiert und nicht CC0. Das sind die Dateien von vor 0.4.0.
 
-Portugiesisch (Brasilien), ohne Stimmordner: pt_BR-faber-medium. Datensatz über OHF-Voice, CC0. Die Modellkarte nennt das Geschlecht nicht. Die veröffentlichte Hörprobe liegt bei etwa 202 Hz. Feintuning von lessac (medium).
+Portugiesisch (Brasilien), Ordner pt-BR/cadu: pt_BR-cadu-medium. Datensatz über OHF-Voice, CC0. https://github.com/OHF-Voice/voice-datasets. Die Stimme ist kein CC0. Feintuning von lessac (medium). Die Modellkarte nennt das Geschlecht nicht. Die veröffentlichte Hörprobe des Datensatzes liegt bei etwa 143 Hz, die Synthese dieser Version bei etwa 119 Hz.
 
-Englisch, Ordner en/joe: en_US-joe-medium. Datensatz über OHF-Voice, CC0. Die Modellkarte nennt das Geschlecht nicht. Die Hörprobe liegt bei etwa 110 Hz, die Synthese bei etwa 99 Hz. Feintuning von lessac (medium).
+Portugiesisch (Brasilien), ohne Stimmordner: pt_BR-faber-medium. Datensatz über OHF-Voice, CC0. Die Stimme ist kein CC0. Feintuning von lessac (medium). Die Modellkarte nennt das Geschlecht nicht. Die veröffentlichte Hörprobe liegt bei etwa 202 Hz.
+
+Englisch, Ordner en/joe: en_US-joe-medium. Datensatz über OHF-Voice, CC0. Die Stimme ist kein CC0. Feintuning von lessac (medium). Die Modellkarte nennt das Geschlecht nicht. Die Hörprobe liegt bei etwa 110 Hz, die Synthese bei etwa 99 Hz.
 
 Englisch, ohne Stimmordner: en_US-ljspeech-medium. LJ Speech, gemeinfrei, von Grund auf trainiert. Englisch (USA), eine Sprecherin.
 
-Vietnamesisch, Ordner vi/vivos-22 und vi/vivos-32: vi_VN-vivos-x_low, Sprecher VIVOSSPK22 (Piper-Id 9) und VIVOSSPK32 (Piper-Id 37). Datensatz VIVOS, InfoRe Technology 1, https://ailab.hcmus.edu.vn/vivos/, Lizenz CC BY-NC-SA 4.0. Das erzeugte Audio in diesen beiden Ordnern steht unter CC BY-NC-SA 4.0. 65 Sprecher, 16 kHz, Qualität x_low, von Grund auf trainiert. Die Modellkarte nennt weder Geschlecht noch Akzent. Die beiden Sprecher wurden nach der Grundfrequenz und der Klarheit der Harmonischen aus den männlichen Stimmen gewählt (Median etwa 148 Hz und 145 Hz). Der Akzent ist daraus nicht als südlich oder nördlich zu belegen. Namensnennung: VIVOS, AILAB HCMUS / InfoRe, CC BY-NC-SA 4.0.
+Vietnamesisch, Ordner vi/vivos-22 und vi/vivos-32: vi_VN-vivos-x_low, Sprecher VIVOSSPK22 (Piper-Id 9) und VIVOSSPK32 (Piper-Id 37). Datensatz VIVOS, InfoRe Technology 1, https://ailab.hcmus.edu.vn/vivos/. Lizenz CC BY-NC-SA 4.0, https://creativecommons.org/licenses/by-nc-sa/4.0/. Das erzeugte Audio in diesen beiden Ordnern steht unter CC BY-NC-SA 4.0. Das Material wurde verändert. 65 Sprecher, 16 kHz, Qualität x_low, von Grund auf trainiert. Die Modellkarte nennt weder Geschlecht noch Akzent. Die beiden Sprecher wurden nach der Grundfrequenz und der Klarheit der Harmonischen aus den männlichen Stimmen gewählt (Median etwa 148 Hz und 145 Hz). Der Akzent ist daraus nicht als südlich oder nördlich zu belegen. Namensnennung: VIVOS, AILAB HCMUS / InfoRe, CC BY-NC-SA 4.0. In jedem der beiden Ordner liegt eine LICENSE.
 
-Vietnamesisch, ohne Stimmordner: vi_VN-vais1000-medium. Datensatz VAIS-1000, CC BY 4.0. Nördlicher Akzent, eine Sprecherin. Namensnennung: VAIS-1000, IEEE DataPort, Lizenz CC BY 4.0. Feintuning von lessac (medium). Quelle der Modellkarte: https://huggingface.co/rhasspy/piper-voices/blob/main/vi/vi_VN/vais1000/medium/MODEL_CARD.
+Vietnamesisch, ohne Stimmordner: vi_VN-vais1000-medium. Datensatz VAIS-1000, CC BY 4.0, https://creativecommons.org/licenses/by/4.0/. Das Material wurde verändert. Nördlicher Akzent, eine Sprecherin. Namensnennung: VAIS-1000, IEEE DataPort, Lizenz CC BY 4.0. Feintuning von lessac (medium). Die Stimme übernimmt die Datensatzlizenz nicht allein. Quelle der Modellkarte: https://huggingface.co/rhasspy/piper-voices/blob/main/vi/vi_VN/vais1000/medium/MODEL_CARD.
 
-lessac (Blizzard 2013, Lessac Technologies) steht laut der Upstream-Lizenz nur für Research Purposes zur Verfügung: https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html. Kommerzielle Sprachsynthese ist dort ausgeschlossen. Die lessac-Gewichte liegen nicht in diesem Repo. lessac wird nicht als Stimme verwendet. Piper wird nicht mitgeliefert. Die Engine von OHF-Voice steht unter GPL-3.0.
-
-Nicht verwendet: en_US-ryan (CC BY-NC-SA, joe ist CC0), en_GB-alan (die Karte sagt nur «See URL»), pt_BR-jeff (CC0, ebenfalls männlich nach der Tonhöhe, nicht zusätzlich gepackt), en_US-lessac (nur Research).
+Nicht verwendet: en_US-ryan (CC BY-NC-SA 4.0), en_GB-alan (die Karte sagt nur «See URL»), pt_BR-jeff (Datensatz CC0, Modell von lessac, nicht zusätzlich gepackt), en_US-lessac (nur Research).
 
 Qualität und Akzent sind nicht von einer muttersprachlichen Person geprüft. Die vivos-Stimmen sind hörbar schlechter als vais1000: niedrige Abtastrate, und espeak erzeugt Phoneme, die das Modell nicht kennt.
 

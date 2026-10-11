@@ -1,0 +1,8 @@
+Hörproben zu Travel Talk 0.4.0. Dieselbe Synthese wie in der App, Satz «Ich bin allergisch gegen Erdnüsse.» Das Material wurde verändert: es ist Synthese, nicht die Originalaufnahme.
+
+vi-mann-1-erdnuss.mp3 und vi-mann-2-erdnuss.mp3 stehen unter CC BY-NC-SA 4.0.
+https://creativecommons.org/licenses/by-nc-sa/4.0/
+Namensnennung: VIVOS, AILAB HCMUS / InfoRe. Dieselben Dateien liegen als m4a unter public/audio/vi/vivos-22/ und public/audio/vi/vivos-32/, jeweils mit einer LICENSE.
+
+de-mann-erdnuss.mp3 und pt-mann-erdnuss.mp3: der Datensatz (Thorsten-Voice bzw. OHF-Voice) ist CC0. Die Stimme selbst ist kein CC0. Die Modelle sind von lessac feinjustiert, und lessac gilt nur für Forschung.
+https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html

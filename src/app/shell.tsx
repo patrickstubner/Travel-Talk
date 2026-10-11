@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { prefetchSelectedVoice } from '../audio/prefetch'
-import { selectedVoice } from '../audio/voices'
+import { preserveInUseVoices } from '../audio/offline'
 import { htmlLang, interfaceLang } from './labels'
 import { useApp } from './state'
 import { useCopy, useSettings } from './use-copy'
@@ -13,18 +12,24 @@ export function Shell() {
   const location = useLocation()
   const showMode = location.pathname.startsWith('/show')
 
-  const targetVoice = settings.targetLang ? selectedVoice(settings, settings.targetLang).id : ''
   const settingsRef = useRef(settings)
   settingsRef.current = settings
+  const preserveKey = `${settings.appLang ?? ''}|${settings.targetLang ?? ''}|${settings.voices?.de ?? ''}|${settings.voices?.en ?? ''}|${settings.voices?.['pt-BR'] ?? ''}|${settings.voices?.vi ?? ''}`
 
   useEffect(() => {
     document.documentElement.lang = htmlLang(interfaceLang(settings))
   }, [settings])
 
   useEffect(() => {
-    if (!import.meta.env.PROD || !targetVoice) return
-    void prefetchSelectedVoice(settingsRef.current)
-  }, [targetVoice])
+    if (!snapshot) return
+    let live = true
+    void preserveInUseVoices(settingsRef.current).then(() => {
+      if (live) window.dispatchEvent(new Event('travel-talk-audio-preserved'))
+    })
+    return () => {
+      live = false
+    }
+  }, [snapshot, preserveKey])
 
   if (!catalogOk) {
     return (

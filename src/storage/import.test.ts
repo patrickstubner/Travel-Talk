@@ -134,6 +134,7 @@ describe('import', () => {
     expect(cleanPersonalNote('Erd\u0000nüsse')).toBe('Erdnüsse')
     expect(coerceSettings({ personalNote: 'Erd\u0007nüsse\nZeile' }).personalNote).toBe('Erdnüsse\nZeile')
     expect(coerceSettings({ voices: { vi: 'not a voice', de: 'thorsten' } }).voices).toEqual({ de: 'thorsten' })
+    expect(coerceSettings({ voices: { vi: 'not-a-bundled-voice', de: 'thorsten' } }).voices).toEqual({ de: 'thorsten' })
   })
 
   it('rejects a settings object that carries an unknown field', () => {
@@ -279,12 +280,25 @@ describe('import', () => {
     expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow('IMPORT_REJECTED')
   })
 
-  it('caps a due date more than 36500 days after the last review', () => {
+  it('caps a due date more than 36500 days after the last review and does not pull it to now', () => {
     const raw = JSON.parse(bundle([card()])) as { cards: { due: string; last_review: string }[] }
     raw.cards[0]!.last_review = '2020-01-01T00:00:00.000Z'
     raw.cards[0]!.due = '2300-01-01T00:00:00.000Z'
     const due = Date.parse(parseImport(JSON.stringify(raw), concepts).snapshot.cards[0]?.due ?? '')
     expect(due).toBe(Date.parse('2020-01-01T00:00:00.000Z') + DUE_LIMIT_DAYS * 86_400_000)
+    expect(due).toBeGreaterThan(Date.now())
+  })
+
+  it('drops an unknown voice id and keeps a known one', () => {
+    const file = JSON.parse(toExport({ settings: current, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))) as {
+      settings: { voices?: Record<string, string> }
+    }
+    file.settings.voices = { vi: 'not-a-bundled-voice', de: 'thorsten-high' }
+    expect(parseImport(JSON.stringify(file), concepts).snapshot.settings.voices).toEqual({ de: 'thorsten-high' })
+    file.settings.voices = { vi: 'not-a-bundled-voice' }
+    expect(parseImport(JSON.stringify(file), concepts).snapshot.settings.voices).toBeUndefined()
+    file.settings.voices = { vi: 'not a voice' }
+    expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
   })
 
   it('keeps the voice hint out of the export', () => {
