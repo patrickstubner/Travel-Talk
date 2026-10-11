@@ -95,6 +95,58 @@ describe('phrase repeat feedback', () => {
     expect(screen.queryByText('Tap the tone hint if you want to see the six forms.')).toBeNull()
   })
 
+  it('passes the selected Vietnamese voice to the result', async () => {
+    async function take(voice: string): Promise<void> {
+      const samples = sine()
+      vi.mocked(startMicrophone).mockImplementation(async (onStop) => {
+        const session = {
+          recorder: {
+            stop: () => onStop({ url: 'blob:phrase-take', samples, sampleRate: 16000 }),
+            state: 'recording',
+            stream: { getTracks: () => [] },
+          },
+          release: vi.fn(),
+        }
+        return session as unknown as CaptureSession
+      })
+      function ReadyVoice({ children }: { children: ReactNode }) {
+        const { snapshot, saveSettings } = useApp()
+        useEffect(() => {
+          if (!snapshot) return
+          if (snapshot.settings.appLang === 'de' && snapshot.settings.targetLang === 'vi' && snapshot.settings.voices?.vi === voice) return
+          void saveSettings({
+            ...snapshot.settings,
+            appLang: 'de',
+            targetLang: 'vi',
+            speed: 'auto',
+            voices: { ...snapshot.settings.voices, vi: voice },
+          })
+        }, [snapshot, saveSettings])
+        if (snapshot?.settings.appLang !== 'de' || snapshot.settings.targetLang !== 'vi' || snapshot.settings.voices?.vi !== voice) return null
+        return children
+      }
+      render(
+        <AppProvider>
+          <ReadyVoice>
+            <MemoryRouter initialEntries={['/phrase/emergency.doctor']}>
+              <Routes>
+                <Route path="/phrase/:conceptId" element={<PhrasePage />} />
+              </Routes>
+            </MemoryRouter>
+          </ReadyVoice>
+        </AppProvider>,
+      )
+      fireEvent.click(await screen.findByRole('button', { name: 'Aufnehmen' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+      await screen.findByTestId('repeat-feedback')
+    }
+    await take('vivos-22')
+    expect(screen.queryByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeNull()
+    cleanup()
+    await take('vais1000')
+    expect(screen.getByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeTruthy()
+  })
+
   it('drops the previous recording when the phrase changes', async () => {
     function Jump(): ReactNode {
       const navigate = useNavigate()

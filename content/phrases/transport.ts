@@ -154,7 +154,7 @@ export const transportPhrases = [
     context: {
       de: 'Am Schalter oder Automaten, für Bus, Tram, Metro, Flug oder Fähre. Noch ohne Ziel.',
       en: 'At a counter or a machine, for bus, tram, metro, flight or ferry. No destination yet.',
-      'pt-BR': 'No balcão ou na máquina, para ônibus, VLT, metrô, voo ou balsa. Ainda sem destino. Em São Paulo, VLT; em outras cidades o nome muda.',
+      'pt-BR': 'No balcão ou na máquina, para ônibus, VLT, metrô, voo ou balsa. Ainda sem destino. No Rio e na Baixada Santista, VLT; em outras cidades o nome muda.',
       vi: 'Ở quầy hoặc máy, cho xe buýt, tàu điện, metro, máy bay hoặc phà. Chưa có nơi đến.',
     },
     de: 'Ein Ticket.',
@@ -170,7 +170,7 @@ export const transportPhrases = [
     context: {
       de: 'Bus, Tram oder Metro. Die Haltestelle suchen, bevor das Fahrzeug kommt.',
       en: 'Bus, tram or metro. Find the stop before the vehicle comes.',
-      'pt-BR': 'Ônibus ou VLT: achar o ponto antes de o veículo chegar. No metrô, a estação. Em São Paulo, VLT; em outras cidades o nome muda.',
+      'pt-BR': 'Ônibus ou VLT: achar o ponto antes de o veículo chegar. No metrô, a estação. No Rio e na Baixada Santista, VLT; em outras cidades o nome muda.',
       vi: 'Xe buýt, tàu điện hoặc metro. Tìm trạm trước khi xe tới.',
     },
     de: 'Wo ist die Haltestelle?',
@@ -218,7 +218,7 @@ export const transportPhrases = [
     context: {
       de: 'Am Bahnhof oder in der Metro. Gleis und Bahnsteig sind hier dasselbe kurze Wort.',
       en: 'At a station or in the metro. Track and platform share this short question.',
-      'pt-BR': 'Na estação ou no metrô. Linha e plataforma cabem nesta pergunta curta.',
+      'pt-BR': 'Na estação ou no metrô. A pergunta curta é a plataforma.',
       vi: 'Ở ga hoặc trong metro. Sân ga nằm trong câu hỏi ngắn này.',
     },
     de: 'Welches Gleis?',

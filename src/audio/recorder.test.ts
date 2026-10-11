@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { RECORD_LIMIT_MS, releaseCapture, startMicrophone } from './recorder'
+import { releaseCapture, startMicrophone } from './recorder'
 
 class FakeRecorder {
   static last: FakeRecorder | null = null
@@ -88,7 +88,7 @@ describe('releaseCapture', () => {
     installMicrophone(close)
     const session = await startMicrophone(() => undefined)
     expect(session).not.toBeNull()
-    await vi.advanceTimersByTimeAsync(RECORD_LIMIT_MS - 1)
+    await vi.advanceTimersByTimeAsync(14_999)
     expect(FakeRecorder.last?.stop).not.toHaveBeenCalled()
     await vi.advanceTimersByTimeAsync(1)
     expect(FakeRecorder.last?.stop).toHaveBeenCalledOnce()

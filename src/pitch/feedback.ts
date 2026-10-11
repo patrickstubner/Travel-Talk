@@ -1,5 +1,5 @@
 import type { Lang } from '../../content/phrase'
-import { describeShape, dtwDistance, voicedValues, type Contour, type ShapeName } from './contour'
+import { describeShape, voicedValues, type Contour, type ShapeName } from './contour'
 
 /**
  * Bands for the first version. They are a starting point set by the author,
@@ -12,11 +12,12 @@ import { describeShape, dtwDistance, voicedValues, type Contour, type ShapeName 
  * of that word bar and the band of the whole-span ratio. Comparison is
  * against the file that was heard.
  *
- * A contour whose voiced range stays under FLAT_RANGE is «unklar»: a steady
- * tone and a hum have no melody to score. Stars need at least
- * COLOURED_SHARE of the words to be coloured. Local stretch stays inside
- * about 0.75–1.33, so a reversed take or a uniform tempo is not hidden by
- * an extreme scale.
+ * A take is «unklar» when its voiced range stays under FLAT_RANGE and the
+ * reference moves by at least that much more. A short flat phrase matched
+ * to itself is not unklar. Stars need at least COLOURED_SHARE of the words
+ * that have enough voice in the model. Local stretch stays inside about
+ * 0.75–1.33, so a reversed take or a uniform tempo is not hidden by an
+ * extreme scale.
  */
 export const MELODY_GREEN = 1.5
 export const MELODY_YELLOW = 3
@@ -30,6 +31,7 @@ export const MIN_VOICED = 5
 export const MIN_WORD_VOICED = 3
 export const FLAT_RANGE = 1.2
 export const COLOURED_SHARE = 0.6
+export const VOICE_COVERAGE = 0.5
 const MAX_FRAMES = 800
 
 export type Band = 'green' | 'yellow' | 'red'
@@ -61,6 +63,7 @@ export type FeedbackWord = {
   tone: ToneId | null
   userShape: ShapeName
   sentence: ToneSentence | null
+  scorable: boolean
 }
 
 export type PathPoint = { model: number; user: number }
@@ -73,7 +76,6 @@ export type RepeatScore = {
   userHop: number
   path: PathPoint[]
   meanDistance: number | null
-  legacyDistance: number | null
   words: FeedbackWord[] | null
   melodyBar: BarState | null
   rhythmBar: BarState | null
@@ -81,6 +83,7 @@ export type RepeatScore = {
   unclear: boolean
   tooLittleVoice: boolean
   tooShort: boolean
+  fewWords: boolean
   globalRatio: number | null
 }
 
@@ -278,7 +281,7 @@ function distanceAt(
     sum += Math.abs(left - right)
     count += 1
   }
-  if (voicedModel < MIN_WORD_VOICED || count < voicedModel * 0.8) return null
+  if (voicedModel < MIN_WORD_VOICED || count < voicedModel * VOICE_COVERAGE) return null
   return { mean: sum / count, count }
 }
 
@@ -321,10 +324,15 @@ function voicedRange(contour: Contour): number | null {
   return high - low
 }
 
-/** A median-normalised contour with almost no movement has no melody. */
-export function flatContour(contour: Contour): boolean {
-  const range = voicedRange(contour)
-  return range != null && range < FLAT_RANGE
+/**
+ * A drone against a moving reference is «unklar». The same flat shape on
+ * both sides, as in a short level phrase, is not.
+ */
+export function flatContour(user: Contour, model: Contour): boolean {
+  const userRange = voicedRange(user)
+  const modelRange = voicedRange(model)
+  if (userRange == null || modelRange == null) return false
+  return userRange < FLAT_RANGE && modelRange >= userRange + FLAT_RANGE
 }
 
 function worseBand(left: Band, right: Band): Band {
@@ -363,7 +371,6 @@ export function scoreRepeat(input: {
   const voiced = voicedValues(user).length
   const tooShort = input.userDuration < SHORT_SECONDS
   const tooLittleVoice = voiced < MIN_VOICED
-  const legacyDistance = dtwDistance(voicedValues(model), voicedValues(user))
   const empty: RepeatScore = {
     model,
     user,
@@ -372,7 +379,6 @@ export function scoreRepeat(input: {
     userHop,
     path: [],
     meanDistance: null,
-    legacyDistance,
     words: null,
     melodyBar: null,
     rhythmBar: null,
@@ -380,6 +386,7 @@ export function scoreRepeat(input: {
     unclear: false,
     tooLittleVoice,
     tooShort,
+    fewWords: false,
     globalRatio: null,
   }
   if (tooShort || tooLittleVoice) return empty
@@ -391,13 +398,12 @@ export function scoreRepeat(input: {
   if (meanDistance == null) return { ...empty, tooLittleVoice: true }
   const userOnModel = warp(model, user, path)
   const globalRatio = ((userSpan.end - userSpan.start) * userHop) / ((modelSpan.end - modelSpan.start) * modelHop)
-  if (meanDistance > UNCLEAR_SEMITONES || flatContour(user)) {
+  if (meanDistance > UNCLEAR_SEMITONES || flatContour(user, model)) {
     return {
       ...empty,
       userOnModel,
       path,
       meanDistance,
-      legacyDistance,
       globalRatio,
       unclear: true,
       tooLittleVoice: false,
@@ -409,7 +415,6 @@ export function scoreRepeat(input: {
       userOnModel,
       path,
       meanDistance,
-      legacyDistance,
       globalRatio,
       tooLittleVoice: false,
     }
@@ -417,7 +422,10 @@ export function scoreRepeat(input: {
   const words = input.words.map((word) => {
     const frame = Math.max(0, Math.min(model.length - 1, Math.floor(word.start / modelHop)))
     const frameEnd = Math.max(frame + 1, Math.min(model.length, Math.ceil(word.end / modelHop)))
-    const matched = word.end > word.start ? matchLocal(model, user, frame, frameEnd, modelSpan, userSpan) : null
+    let modelVoiced = 0
+    for (let index = frame; index < frameEnd; index += 1) if (model[index] != null) modelVoiced += 1
+    const scorable = modelVoiced >= MIN_WORD_VOICED
+    const matched = scorable && word.end > word.start ? matchLocal(model, user, frame, frameEnd, modelSpan, userSpan) : null
     const plainStart = mappedFrame(frame, modelSpan, userSpan)
     const plainEnd = mappedFrame(Math.max(frame, frameEnd - 1), modelSpan, userSpan)
     const userFrame = Math.max(0, Math.round(Math.min(plainStart, plainEnd)))
@@ -440,6 +448,7 @@ export function scoreRepeat(input: {
       tone: input.lang === 'vi' ? toneOf(word.text) : null,
       userShape: 'unknown',
       sentence: null,
+      scorable,
     }
     if (!matched || word.end <= word.start) return base
     const melody = melodyBand(matched.mean)
@@ -461,8 +470,11 @@ export function scoreRepeat(input: {
   const melodyBar = barFromColours(words.map((word) => word.melody))
   const rhythmWords = barFromColours(words.map((word) => word.rhythm))
   const rhythmBar = rhythmWords ? worseBar(globalBar(globalRatio), rhythmWords) : null
-  const coloured = words.filter((word) => word.color != null).length
-  const stars = words.length > 0 && coloured / words.length >= COLOURED_SHARE ? starsFromBars(melodyBar, rhythmBar) : 0
+  const scorable = words.filter((word) => word.scorable)
+  const coloured = scorable.filter((word) => word.color != null).length
+  const allowed = scorable.length > 0 && coloured / scorable.length >= COLOURED_SHARE
+  const stars = allowed ? starsFromBars(melodyBar, rhythmBar) : 0
+  const fewWords = !allowed
   return {
     model,
     user,
@@ -471,11 +483,11 @@ export function scoreRepeat(input: {
     userHop,
     path,
     meanDistance,
-    legacyDistance,
     words,
-    melodyBar,
-    rhythmBar,
+    melodyBar: fewWords ? null : melodyBar,
+    rhythmBar: fewWords ? null : rhythmBar,
     stars,
+    fewWords,
     unclear: false,
     tooLittleVoice: false,
     tooShort: false,

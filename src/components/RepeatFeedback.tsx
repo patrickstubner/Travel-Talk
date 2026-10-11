@@ -260,6 +260,7 @@ function Result({
       {tooShort ? <p role="status">{feedback.tooShort}</p> : null}
       {tooQuiet ? <p role="status">{copy.pitchEmpty}</p> : null}
       {score?.unclear ? <p role="status">{feedback.unclear}</p> : null}
+      {score?.fewWords ? <p role="status">{feedback.fewWords}</p> : null}
       {modelMissing ? <p>{copy.pitchNoModel}</p> : null}
       {score && !score.tooShort && !score.tooLittleVoice ? (
         score.words && score.words.length > 0 ? (

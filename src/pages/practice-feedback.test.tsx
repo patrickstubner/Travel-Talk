@@ -24,14 +24,26 @@ vi.mock('../srs/scheduler', async () => {
   return { ...actual, reviewCard: vi.fn(actual.reviewCard) }
 })
 
-function ReadyPractice({ children }: { children: ReactNode }) {
+function ReadyPractice({ voice, children }: { voice?: string; children: ReactNode }) {
   const { snapshot, saveSettings } = useApp()
   useEffect(() => {
-    if (snapshot && (snapshot.settings.appLang !== 'de' || snapshot.settings.targetLang !== 'vi')) {
-      void saveSettings({ ...snapshot.settings, appLang: 'de', targetLang: 'vi', speed: 'auto' })
+    if (!snapshot) return
+    const ready =
+      snapshot.settings.appLang === 'de' &&
+      snapshot.settings.targetLang === 'vi' &&
+      (voice == null || snapshot.settings.voices?.vi === voice)
+    if (!ready) {
+      void saveSettings({
+        ...snapshot.settings,
+        appLang: 'de',
+        targetLang: 'vi',
+        speed: 'auto',
+        ...(voice ? { voices: { ...snapshot.settings.voices, vi: voice } } : {}),
+      })
     }
-  }, [snapshot, saveSettings])
-  if (snapshot?.settings.appLang !== 'de' || snapshot?.settings.targetLang !== 'vi') return null
+  }, [snapshot, saveSettings, voice])
+  if (snapshot?.settings.appLang !== 'de' || snapshot.settings.targetLang !== 'vi') return null
+  if (voice != null && snapshot.settings.voices?.vi !== voice) return null
   return children
 }
 
@@ -56,10 +68,10 @@ afterEach(() => {
   cleanup()
 })
 
-async function openRepeat(): Promise<void> {
+async function openRepeat(voice?: string): Promise<void> {
   render(
     <AppProvider>
-      <ReadyPractice>
+      <ReadyPractice voice={voice}>
         <MemoryRouter initialEntries={['/practice']}>
           <Routes>
             <Route path="/practice" element={<PracticePage />} />
@@ -97,6 +109,7 @@ describe('practice repeat feedback', () => {
     expect(screen.getByRole('button', { name: 'Nochmal' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Schwer' })).toBeNull()
     expect(vi.mocked(reviewCard)).not.toHaveBeenCalled()
+    expect(screen.queryByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
     expect(release).toHaveBeenCalled()
     expect(revoke).toHaveBeenCalledWith('blob:repeat-take')
@@ -113,5 +126,45 @@ describe('practice repeat feedback', () => {
     expect((screen.getByRole('button', { name: 'Weiter' }) as HTMLButtonElement).disabled).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
     expect(screen.getByRole('heading', { name: 'Der Satz bleibt sichtbar' })).toBeTruthy()
+  })
+
+  it('shows the northern hint only for the selected voice vais1000', async () => {
+    const samples = sine(1)
+    vi.mocked(startMicrophone).mockImplementation(async (onStop) => {
+      const session = {
+        recorder: {
+          stop: () => onStop({ url: 'blob:repeat-north', samples, sampleRate: 16000 }),
+          state: 'recording',
+          stream: { getTracks: () => [] },
+        },
+        release: vi.fn(),
+      }
+      return session as unknown as CaptureSession
+    })
+    await openRepeat('vais1000')
+    fireEvent.click(screen.getByRole('button', { name: 'Aufnehmen' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+    await screen.findByTestId('repeat-feedback')
+    expect(screen.getByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeTruthy()
+  })
+
+  it('hides the northern hint when the selected voice is vivos-22', async () => {
+    const samples = sine(1)
+    vi.mocked(startMicrophone).mockImplementation(async (onStop) => {
+      const session = {
+        recorder: {
+          stop: () => onStop({ url: 'blob:repeat-south', samples, sampleRate: 16000 }),
+          state: 'recording',
+          stream: { getTracks: () => [] },
+        },
+        release: vi.fn(),
+      }
+      return session as unknown as CaptureSession
+    })
+    await openRepeat('vivos-22')
+    fireEvent.click(screen.getByRole('button', { name: 'Aufnehmen' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+    await screen.findByTestId('repeat-feedback')
+    expect(screen.queryByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeNull()
   })
 })

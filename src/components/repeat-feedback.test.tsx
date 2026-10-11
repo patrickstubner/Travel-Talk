@@ -140,4 +140,41 @@ describe('repeat feedback view', () => {
     expect(screen.getByText('In der Aufnahme war zu wenig stimmhafte Tonhöhe.')).toBeTruthy()
     expect(screen.queryByTestId('repeat-stars')).toBeNull()
   })
+
+  it('names too few recognised words instead of a passing bar', () => {
+    const model = tone(140, 280, 1.6)
+    const user = new Float32Array(model.length)
+    let phase = 0
+    for (let index = 0; index < user.length; index += 1) {
+      const time = index / 16000
+      if (time > 0.28 && time < 1.32) continue
+      const hz = 140 + 140 * (index / user.length)
+      phase += (2 * Math.PI * hz) / 16000
+      user[index] = Math.sin(phase) * 0.8
+    }
+    render(
+      <RepeatFeedback
+        copy={de}
+        lang="de"
+        region="south"
+        speech="eins zwei drei vier fünf"
+        words={[
+          { start: 0.05, end: 0.3 },
+          { start: 0.35, end: 0.6 },
+          { start: 0.65, end: 0.9 },
+          { start: 0.95, end: 1.2 },
+          { start: 1.25, end: 1.45 },
+        ]}
+        modelSamples={model}
+        modelRate={16000}
+        userSamples={user}
+        userRate={16000}
+        modelMissing={false}
+        voiceId="thorsten-high"
+      />,
+    )
+    expect(screen.getByText('Zu wenige Wörter erkannt.')).toBeTruthy()
+    expect(screen.queryByText('passt')).toBeNull()
+    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+  })
 })

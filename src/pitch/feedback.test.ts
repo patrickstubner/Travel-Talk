@@ -109,8 +109,8 @@ describe('repeat alignment', () => {
       { text: 'nha', start: 0.7, end: 0.95 },
     ]
     const steady = scoreRepeat({
-      model: contourFromSamples(tone(160, 160), 16000),
-      user: contourFromSamples(tone(280, 280), 16000),
+      model: contourFromSamples(tone(140, 280), 16000),
+      user: contourFromSamples(tone(220, 220), 16000),
       modelHop: hop,
       userHop: hop,
       words,
@@ -377,10 +377,9 @@ describe('repeat alignment', () => {
       { text: 'xin', start: 0.4, end: 0.65 },
       { text: 'nha', start: 0.65, end: 0.9 },
     ]
-    const steadySamples = tone(220, 220)
     const steady = scoreRepeat({
-      model: contourFromSamples(steadySamples, 16000),
-      user: contourFromSamples(steadySamples, 16000),
+      model: contourFromSamples(tone(140, 280), 16000),
+      user: contourFromSamples(tone(220, 220), 16000),
       modelHop: hop,
       userHop: hop,
       words,
@@ -388,10 +387,24 @@ describe('repeat alignment', () => {
       region: 'south',
       userDuration: 1.2,
     })
-    expect(flatContour(steady.user)).toBe(true)
+    expect(flatContour(steady.user, steady.model)).toBe(true)
     expect(steady.unclear).toBe(true)
     expect(steady.stars).toBe(0)
     expect(steady.words).toBeNull()
+    const level = flat(40, 0.2)
+    const shortPhrase = scoreRepeat({
+      model: level,
+      user: level,
+      modelHop: hop,
+      userHop: hop,
+      words: [{ text: 'Bitte.', start: 0, end: 0.4 }],
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.4,
+    })
+    expect(flatContour(level, level)).toBe(false)
+    expect(shortPhrase.unclear).toBe(false)
+    expect(shortPhrase.stars).toBe(3)
     const humSamples = new Float32Array(16000 * 1.2)
     for (let index = 0; index < humSamples.length; index += 1) {
       const time = index / 16000
@@ -436,9 +449,29 @@ describe('repeat alignment', () => {
       region: 'south',
       userDuration: 1,
     })
+    expect(sparse.words?.filter((word) => word.scorable)).toHaveLength(2)
     expect(sparse.words?.filter((word) => word.color != null)).toHaveLength(2)
+    expect(sparse.fewWords).toBe(false)
     expect(sparse.melodyBar).toBe('passt')
-    expect(sparse.stars).toBe(0)
+    expect(sparse.stars).toBe(3)
+    const full = [...piece, ...piece, ...piece, ...piece, ...piece]
+    const thinUser = full.map((value, index) => (index < 40 || index % 5 === 0 ? value : null))
+    const held = scoreRepeat({
+      model: full,
+      user: thinUser,
+      modelHop: hop,
+      userHop: hop,
+      words: [0, 1, 2, 3, 4].map((index) => ({ text: 'qua', start: index * 0.2, end: (index + 1) * 0.2 })),
+      lang: 'de',
+      region: 'south',
+      userDuration: 1,
+    })
+    expect(held.words?.filter((word) => word.scorable)).toHaveLength(5)
+    expect(held.words?.filter((word) => word.color != null).length ?? 5).toBeLessThan(3)
+    expect(held.stars).toBe(0)
+    expect(held.fewWords).toBe(true)
+    expect(held.melodyBar).toBeNull()
+    expect(held.rhythmBar).toBeNull()
     const enough = [...piece, ...piece, ...piece, ...gap, ...gap]
     const covered = scoreRepeat({
       model: enough,
@@ -509,5 +542,54 @@ describe('repeat alignment', () => {
     expect(score.model.length).toBeLessThanOrEqual(800)
     expect(score.user.length).toBeLessThanOrEqual(800)
     expect(score.modelHop).toBeGreaterThan(0.01)
+  })
+
+  it('refuses a local stretch of 0.6 or 1.6', () => {
+    const scoreAt = (scale: number) => {
+      const count = 80
+      const user: Contour = Array.from({ length: count }, (_, index) => ((index % 7) - 3) * 2.5)
+      const model = user.map((_, index) => user[Math.min(count - 1, Math.max(0, Math.round(index * scale)))] ?? null)
+      return scoreRepeat({
+        model,
+        user,
+        modelHop: 0.01,
+        userHop: 0.01,
+        words: [{ text: 'qua', start: 0, end: 0.8 }],
+        lang: 'de',
+        region: 'south',
+        userDuration: 0.8,
+      })
+    }
+    const compressed = scoreAt(0.6)
+    const expanded = scoreAt(1.6)
+    expect(compressed.unclear).toBe(false)
+    expect(expanded.unclear).toBe(false)
+    expect(compressed.words?.[0]?.melody).toBe('red')
+    expect(expanded.words?.[0]?.melody).toBe('red')
+  })
+
+  it('calls a take flat only when the reference moves by about another semitone', () => {
+    const oneSemi = ramp(40, -0.5, 0.5)
+    const moving = ramp(40, -2, 2)
+    const atEdge = ramp(40, -0.6, 0.6)
+    expect(flatContour(oneSemi, moving)).toBe(true)
+    expect(flatContour(oneSemi, oneSemi)).toBe(false)
+    expect(flatContour(atEdge, moving)).toBe(false)
+  })
+
+  it('colours a word when a bit more than half of the model frames are voiced in the take', () => {
+    const model = flat(20, 0.4)
+    const user = model.map((value, index) => (index % 5 < 3 ? value : null))
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'Bitte.', start: 0, end: 0.2 }],
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.4,
+    })
+    expect(score.words?.[0]?.color).not.toBeNull()
   })
 })

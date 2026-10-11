@@ -8,7 +8,7 @@ export const transportGloss: Record<string, readonly GlossSide[]> = {
   'transport.04.airport': [{ de: ['Flughafen.'], en: ['airport.'], pt: ['aeroporto.'], vi: ['sân', 'bay.'] }],
   'transport.05.price': [{ de: ['Wie', 'viel?'], en: ['How', 'much?'], pt: ['Quanto?'], vi: ['Bao', 'nhiêu?'] }],
   'transport.06.meter': [{ de: ['Taxameter.'], en: ['meter.'], pt: ['taxímetro.'], vi: ['đồng', 'hồ.'] }],
-  'transport.07.here': [{ de: ['hier', 'halten.'], en: ['stop', 'here.'], pt: ['pare', 'aqui.'], vi: ['dừng'] }],
+  'transport.07.here': [{ de: ['hier', 'halten.'], en: ['stop', 'here.'], pt: ['pare', 'aqui.'], vi: ['dừng', 'ở', 'đây.'] }],
   'transport.08.plate': [{ de: ['Kennzeichen?'], en: ['plate?'], pt: ['placa?'], vi: ['Biển', 'số'] }],
   'transport.09.app': [{ de: ['App'], en: ['app.'], pt: ['aplicativo.'], vi: ['ứng', 'dụng.'] }],
   'transport.10.ticket': [{ de: ['Ticket.'], en: ['ticket.'], pt: ['passagem.'], vi: ['vé.'] }],
