@@ -41,7 +41,7 @@ function isOtherVoice(url: string, lang: Lang, keep: CatalogVoice): boolean {
   const index = url.indexOf(marker)
   if (index < 0) return false
   const rest = url.slice(index + marker.length)
-  if (!rest.includes('.m4a')) return false
+  if (!rest.includes('.m4a') && !rest.includes('.align.json')) return false
   if (keep.legacy) return rest.includes('/')
   return !rest.startsWith(`${keep.id}/`)
 }

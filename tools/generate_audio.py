@@ -133,7 +133,13 @@ def encode(wav: Path, dest: Path, tempo: float | None) -> None:
 
 def write_manifest() -> None:
     audio = ROOT / "public" / "audio"
-    files = sorted(path.relative_to(audio).as_posix() for path in audio.rglob("*.m4a"))
+    names = []
+    for path in audio.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix == ".m4a" or path.name.endswith(".align.json"):
+            names.append(path.relative_to(audio).as_posix())
+    files = sorted(names)
     (audio / "manifest.json").write_text(json.dumps(files, indent=2) + "\n", encoding="utf-8")
     print(f"manifest {len(files)}", flush=True)
 

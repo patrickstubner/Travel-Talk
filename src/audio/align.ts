@@ -1,7 +1,8 @@
 import '../zod-setup'
 import { z } from 'zod'
-import { publicUrl } from '../public-url'
 import { splitWords } from '../../content/gloss'
+import { ALIGN_FILE } from '../content/resolve'
+import { publicUrl } from '../public-url'
 
 const wordSchema = z.strictObject({
   start: z.number().finite().min(0).max(60),
@@ -13,8 +14,7 @@ const fileSchema = z.strictObject({
 })
 
 /** `name.r70.m4a` and `name.r85.m4a` share the base clip's timings. */
-export const ALIGN_FILE =
-  /^(de|en|pt-BR|vi)\/(?:[a-z0-9_-]{1,40}\/)?[a-z0-9.-]+__(south|north|any)__[a-z0-9-]+\.align\.json$/
+export { ALIGN_FILE }
 
 export type WordTime = { start: number; end: number }
 
@@ -71,9 +71,26 @@ export async function loadAlignment(file: string, speech: string): Promise<WordT
   return scaleTimes(raw, alignmentScale(file))
 }
 
+/** The offline voice download stores timings in the same cache as the clips. */
+async function readCachedAudio(url: string): Promise<Response | null> {
+  if (!('caches' in globalThis)) return null
+  try {
+    const names = await caches.keys()
+    for (const name of names) {
+      const cache = await caches.open(name)
+      const hit = await cache.match(url)
+      if (hit?.ok) return hit
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
 async function fetchAlignment(name: string, wordCount: number): Promise<WordTime[] | null> {
   try {
-    const response = await fetch(publicUrl(`audio/${name}`))
+    const url = publicUrl(`audio/${name}`)
+    const response = (await readCachedAudio(url)) ?? (await fetch(url))
     if (!response.ok) return null
     return parseAlignment(await response.json(), wordCount)
   } catch {

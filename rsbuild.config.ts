@@ -60,15 +60,15 @@ export default defineConfig({
             disableDevLogs: true,
             sourcemap: false,
             mode: 'production',
-            // Audio is not precached. The selected voice is fetched into this cache.
+            // Audio and its timing files are not precached. The selected voice is fetched into this cache.
             runtimeCaching: [
               {
-                urlPattern: /\/Travel-Talk\/audio\/.+\.m4a$/,
+                urlPattern: /\/Travel-Talk\/audio\/.+\.(?:m4a|align\.json)$/,
                 handler: 'CacheFirst',
                 options: {
                   cacheName: 'travel-talk-audio',
                   cacheableResponse: { statuses: [200] },
-                  expiration: { maxEntries: 4000, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                  expiration: { maxEntries: 5500, maxAgeSeconds: 60 * 60 * 24 * 365 },
                 },
               },
             ],

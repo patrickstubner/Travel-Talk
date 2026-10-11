@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest'
-import { alignmentName, alignmentScale, currentWordIndex, parseAlignment, scaleTimes } from './align'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { alignmentName, alignmentScale, currentWordIndex, loadAlignment, parseAlignment, scaleTimes } from './align'
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('alignment files', () => {
   it('accepts one span per word and rejects a mismatch', () => {
@@ -18,5 +22,29 @@ describe('alignment files', () => {
     expect(scaled?.[0]?.start).toBeCloseTo(0.286, 2)
     expect(currentWordIndex(scaled, 0.3)).toBe(0)
     expect(currentWordIndex(null, 0.3)).toBeNull()
+  })
+
+  it('uses a cached timing file when the network is down', async () => {
+    const body = JSON.stringify({ words: [{ start: 0.1, end: 0.5 }] })
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new TypeError('offline')
+    }))
+    vi.stubGlobal('caches', {
+      async keys() {
+        return ['travel-talk-audio']
+      },
+      async open() {
+        return {
+          async match(url: string) {
+            if (String(url).includes('emergency.help__any__base.align.json')) return new Response(body)
+            if (String(url).includes('emergency.look__any__base.align.json')) return new Response('{"extra":true}')
+            return undefined
+          },
+        }
+      },
+    })
+    await expect(loadAlignment('vi/vivos-22/emergency.help__any__base.m4a', 'Giúp')).resolves.toEqual([{ start: 0.1, end: 0.5 }])
+    await expect(loadAlignment('vi/vivos-22/emergency.look__any__base.m4a', 'Nhìn')).resolves.toBeNull()
+    expect(fetch).not.toHaveBeenCalled()
   })
 })

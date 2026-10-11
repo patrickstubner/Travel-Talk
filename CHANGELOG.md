@@ -5,6 +5,7 @@
 - Während eine Stimme spielt, wird das gesprochene Wort markiert. Vietnamesisch läuft Silbe für Silbe, weil die Schrift die Silben mit Leerzeichen trennt. Unter der Zeile steht die andere Sprache Wort für Wort. Ein Tippen markiert die verbundenen Wörter auf beiden Seiten, auch wenn mehrere Wörter auf beiden Seiten zusammengehören. Die Zuordnung ist nicht geprüft. Das steht unter der Zeile.
 - Die Markierung lässt sich in den Einstellungen abstellen, an derselben Stelle wie die Sprachen. Sie geht nicht in den Export. Fehlt eine Zeitdatei oder passt sie nicht zur Zeile, bleibt die Markierung aus.
 - Die Zeiten kommen aus den Phonemlängen von Piper, mit `noise_scale` 0, und werden mit dynamischer Zeitverzerrung auf die vorhandene Datei gelegt. Montreal Forced Aligner ist hier nicht installiert. Eine Datei, deren Wörter nicht zur Aufnahme passen, bekommt keine Zeitdatei. 70 % und 85 % strecken dieselben Zeiten gleichmässig.
+- «Für offline laden» holt die Zeitdateien der Stimme mit. Der Fortschritt zählt sie mit, bei der vietnamesischen Standardstimme 796 Dateien, 597 Audio und 199 Zeiten. Eine 404 zählt wie bei einer Audiodatei. Wird eine andere Stimme gelöscht, gehen ihre Zeitdateien mit. Sie bleiben aus dem Precache.
 - Die Startseite sagt «Für offline noch nicht vollständig geladen», solange die Lernsprache nicht vollständig im Cache liegt. Der Satz nennt kein Update, weil er auch bei einer neuen Installation stimmt.
 - Die Prüfsummen gelten auch für die `.onnx.json`-Dateien und für die vier älteren Modelle.
 

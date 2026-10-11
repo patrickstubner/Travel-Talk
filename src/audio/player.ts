@@ -1,4 +1,4 @@
-import { AUDIO_FILE } from '../content/resolve'
+import { ALIGN_FILE, AUDIO_FILE } from '../content/resolve'
 import { mixToMono } from '../pitch/contour'
 import { publicUrl } from '../public-url'
 import type { SpeedStep } from './speed'
@@ -16,7 +16,7 @@ export function loadManifest(): Promise<Set<string>> {
         const files = new Set<string>()
         if (Array.isArray(data)) {
           for (const item of data) {
-            if (typeof item === 'string' && AUDIO_FILE.test(item)) files.add(item)
+            if (typeof item === 'string' && (AUDIO_FILE.test(item) || ALIGN_FILE.test(item))) files.add(item)
           }
         }
         known = files

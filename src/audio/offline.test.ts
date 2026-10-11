@@ -2,13 +2,15 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { voicesFor } from './voices'
-import { AUDIO_CACHE, discardAdded, dropOtherVoices, loadVoiceOffline } from './offline'
+import { AUDIO_CACHE, discardAdded, dropOtherVoices, loadVoiceOffline, voiceProgress } from './offline'
 
 const FILES = [
   'vi/vivos-22/emergency.help__any__base.m4a',
   'vi/vivos-22/emergency.help__any__base.r70.m4a',
+  'vi/vivos-22/emergency.help__any__base.align.json',
   'vi/emergency.help__any__base.m4a',
   'vi/emergency.help__any__base.r70.m4a',
+  'vi/emergency.help__any__base.align.json',
 ]
 
 type Store = Map<string, string>
@@ -81,15 +83,17 @@ describe('offline voice loading', () => {
     }, { dropOthers: () => true })
     expect(outcome.status).toBe('ready')
     expect(outcome.missing).toBe(0)
-    expect(outcome.added).toHaveLength(2)
+    expect(outcome.added).toHaveLength(3)
     expect(outcome.added.every((url) => url.includes('/vivos-22/'))).toBe(true)
-    expect(seen).toContain('1/2')
-    expect(seen.at(-1)).toBe('2/2')
+    expect(outcome.added.some((url) => url.endsWith('.align.json'))).toBe(true)
+    expect(seen).toContain('1/3')
+    expect(seen.at(-1)).toBe('3/3')
     const runtime = [...(stores.get(AUDIO_CACHE)?.keys() ?? [])]
     expect(runtime.some((url) => url.includes('/vivos-22/'))).toBe(true)
     expect(runtime.some((url) => url.includes('/audio/vi/emergency'))).toBe(false)
     const previous = [...(stores.get(old)?.keys() ?? [])]
     expect(previous.some((url) => url.includes('/audio/vi/emergency'))).toBe(false)
+    expect(previous.some((url) => url.endsWith('.align.json'))).toBe(false)
   })
 
   it('keeps the previous voice when the network fails and when storage is full', async () => {
@@ -146,7 +150,9 @@ describe('offline voice loading', () => {
     const text = readFileSync(fileURLToPath(new URL('../../rsbuild.config.ts', import.meta.url)), 'utf8')
     expect(text).toContain('statuses: [200]')
     expect(text).not.toContain('[0, 200]')
-    expect(text).toMatch(/maxEntries:\s*4000/)
+    expect(text).toMatch(/maxEntries:\s*5500/)
+    expect(text).toContain('**/*.align.json')
+    expect(text).toContain('align\\.json')
     expect(text).toContain('cleanupOutdatedCaches: false')
     expect(text).not.toContain('sw-migrate')
     expect(text).not.toContain('importScripts')
@@ -158,10 +164,50 @@ describe('offline voice loading', () => {
     const outcome = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, { dropOthers: () => true })
     expect(outcome.status).toBe('ready')
     expect(outcome.missing).toBe(1)
-    expect(outcome.added).toHaveLength(1)
-    expect(outcome.added[0]).toContain('/vivos-22/')
-    expect(outcome.added[0]).not.toContain('.r70.')
-    expect([...(stores.get(AUDIO_CACHE)?.keys() ?? [])].some((url) => url.includes('vivos-22') && !url.includes('.r70.'))).toBe(true)
+    expect(outcome.added).toHaveLength(2)
+    expect(outcome.added.every((url) => url.includes('/vivos-22/') && !url.includes('.r70.'))).toBe(true)
+    expect(outcome.added.some((url) => url.endsWith('.align.json'))).toBe(true)
+    expect([...(stores.get(AUDIO_CACHE)?.keys() ?? [])].some((url) => url.includes('vivos-22') && url.endsWith('.align.json'))).toBe(true)
     expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/emergency.help__any__base.m4a')).toBe(true)
+  })
+
+  it('counts a missing timing file like missing audio and keeps the other voice', async () => {
+    const stores = installCaches({ notFound: '.align.json' })
+    const legacy = '/audio/vi/emergency.help__any__base.m4a'
+    const legacyAlign = '/audio/vi/emergency.help__any__base.align.json'
+    stores.set(AUDIO_CACHE, new Map([[legacy, 'old'], [legacyAlign, 'times']]))
+    const outcome = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, { dropOthers: () => true })
+    expect(outcome.status).toBe('ready')
+    expect(outcome.missing).toBe(1)
+    expect(outcome.added).toHaveLength(2)
+    expect(outcome.added.every((url) => url.endsWith('.m4a'))).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has(legacyAlign)).toBe(true)
+  })
+
+  it('counts cached timing files in the voice progress', async () => {
+    const stores = installCaches()
+    stores.set(AUDIO_CACHE, new Map([
+      ['/audio/vi/vivos-22/emergency.help__any__base.m4a', 'audio'],
+      ['/audio/vi/vivos-22/emergency.help__any__base.align.json', 'times'],
+    ]))
+    await expect(voiceProgress('vi', voice('vivos-22'))).resolves.toEqual({ have: 2, total: 3 })
+  })
+
+  it('removes the other voice timing files together with its audio', async () => {
+    const stores = installCaches()
+    const keepAlign = '/audio/vi/emergency.help__any__base.align.json'
+    const otherAlign = '/audio/vi/vivos-22/emergency.help__any__base.align.json'
+    stores.set(AUDIO_CACHE, new Map([
+      ['/audio/vi/emergency.help__any__base.m4a', 'old'],
+      [keepAlign, 'old'],
+      ['/audio/vi/vivos-22/emergency.help__any__base.m4a', 'new'],
+      [otherAlign, 'new'],
+    ]))
+    await dropOtherVoices('vi', voice('vais1000'))
+    expect(stores.get(AUDIO_CACHE)?.has(keepAlign)).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/emergency.help__any__base.m4a')).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has(otherAlign)).toBe(false)
+    expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/vivos-22/emergency.help__any__base.m4a')).toBe(false)
   })
 })
