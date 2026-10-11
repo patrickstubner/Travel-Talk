@@ -226,7 +226,7 @@ a.menu-card span { color: var(--muted); }
   box-shadow: inset 0 -2px 0 var(--teal);
 }
 .karaoke button.now,
-.karaoke button.now[aria-pressed="true"] { background: #d7efe9; color: inherit; }
+.karaoke button.now[aria-pressed="true"] { background: #b7e0d4; color: inherit; }
 .show-mode .karaoke button.now,
 .show-mode .karaoke button.now[aria-pressed="true"] { background: #24574d; color: #f4efe6; }
 .word-gloss { margin: 0; }
