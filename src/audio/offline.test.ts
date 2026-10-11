@@ -129,6 +129,19 @@ describe('offline voice loading', () => {
     expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/vivos-22/emergency.help__any__base.m4a')).toBe(false)
   })
 
+  it('tells the voice buttons to refresh after another voice is dropped', async () => {
+    installCaches()
+    const seen: string[] = []
+    vi.stubGlobal('window', {
+      dispatchEvent(event: Event) {
+        seen.push(event.type)
+        return true
+      },
+    })
+    await dropOtherVoices('vi', voice('vais1000'))
+    expect(seen).toEqual(['travel-talk-audio-changed'])
+  })
+
   it('caches only status 200 and does not migrate audio during install', () => {
     const text = readFileSync(fileURLToPath(new URL('../../rsbuild.config.ts', import.meta.url)), 'utf8')
     expect(text).toContain('statuses: [200]')

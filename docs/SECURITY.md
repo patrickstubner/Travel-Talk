@@ -166,15 +166,15 @@ Eine unbekannte Stimmen-ID, die dem Muster `^[a-z0-9_-]{1,40}$` entspricht, wird
 
 ## Nachprüfung von Pull Request 14, zweiter Durchgang
 
-Geprüft am 11. Oktober 2026 am Stand `19535e2`. N14b-03 und N14b-04 sind geschlossen. N14b-01 ist danach bewusst akzeptiert, siehe den dritten Durchgang. N14b-02 und N14b-05 bleiben offen. Kein neues Paket. `npm audit` bleibt bei 0 Schwachstellen.
+Geprüft am 11. Oktober 2026 am Stand `19535e2`. N14b-03 und N14b-04 sind geschlossen. N14b-01 ist danach bewusst akzeptiert, siehe den dritten Durchgang. N14b-02 und N14b-05 sind in 0.5.0 geschlossen. Kein neues Paket. `npm audit` bleibt bei 0 Schwachstellen.
 
 | ID | Schwere | Status | Auflösung |
 | --- | --- | --- | --- |
 | N14b-01 | Mittel | bewusst akzeptiert | Die Aktivierung löscht Precache-Einträge, die nicht mehr im Manifest stehen, darunter die alten Audiodateien. Eine Kopie beim Installieren hält sie nicht: die gespeicherte Adresse behält `?__WB_REVISION__` und trifft nie, wenig Speicher lässt das Installieren dauerhaft scheitern, der Speicher verdoppelt sich, und jeder Cache der gemeinsamen Origin wird gelesen. Die Migration ist entfernt. Nach dem Update, das online läuft, sagt die Startseite «Offline-Audio nach dem Update neu laden», solange die Lernsprache nicht vollständig im Cache liegt. Ein Tippen auf «Für offline laden» holt sie. |
-| N14b-02 | Niedrig | Offen | Testlücken aus dieser Nachprüfung. Bleibt für den nächsten Pull Request. |
+| N14b-02 | Niedrig | Geschlossen | Die Nachprüfung nannte die Lücken nicht einzeln. Geschlossen mit den beiden Tests, die danach noch offen waren: «Speicher voll» wählt die vorige Stimme wieder, und `dropOtherVoices` ruft `notifyAudioChanged`. Tests: `src/components/language-choice-offline.test.tsx`, `src/audio/offline.test.ts`. |
 | N14b-03 | Niedrig | Geschlossen | Eine 404 wird übersprungen. Der Rest der Stimme wird geladen. Die Oberfläche sagt «n Dateien fehlen». Die anderen Stimmen dieser Sprache bleiben, solange Dateien fehlen. Test: `src/audio/offline.test.ts`. |
 | N14b-04 | Niedrig | Geschlossen | «Speicher voll» zeigt den Fortschritt, «Erneut versuchen» und «Bisherige Stimme behalten». Der zweite Knopf entfernt nur die Dateien dieses Versuchs. Nach einem Neuladen bleibt `n/597` sichtbar, wenn Dateien im Cache liegen. Test: `src/components/voice-offline.test.tsx`. |
-| N14b-05 | Niedrig | Offen | Prüfsummen für die `.onnx.json`-Dateien und für die älteren Modelle. Bleibt für den nächsten Pull Request. |
+| N14b-05 | Niedrig | Geschlossen | `tools/generate_audio.py` prüft SHA-256 der `.onnx`-Datei und der `.onnx.json` daneben, für die vier Modelle von 0.4.0 und für `thorsten-medium`, `ljspeech`, `faber` und `vais1000`. `pt_BR-jeff` bleibt draussen. |
 
 Die Startseite bietet das Laden nur für die Lernsprache an, nicht für die Sprache der App. Die README nennt die App nicht pauschal offline.
 
@@ -190,3 +190,21 @@ Geprüft am 11. Oktober 2026 am Stand `d191c25`. Die Installations-Migration ist
 | N14c-04 | Niedrig | Geschlossen | Das Installieren las jeden Cache der gemeinsamen Origin. Behoben durch Entfernen der Migration. |
 
 `discardAdded` löscht nur die Adressen dieses Versuchs. `added` listet sie. «Bisherige Stimme behalten» ruft `onKeepPrevious`. Danach lesen die Nachbarstimmen ihren Stand neu. Tests: `src/audio/offline.test.ts`, `src/components/voice-offline.test.tsx`.
+
+## 0.5.0
+
+Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit und keine neue npm-Abhängigkeit. `npm audit` bleibt bei 0 Schwachstellen.
+
+**Wortzeiten.** `tools/align_clips.py` liest Phonemlängen aus Piper 1.8.0. Dafür lädt Piper das Modell mit `include_alignments`, und das braucht das Python-Paket `onnx` 1.17.0 nur auf der Maschine, die die Dateien erzeugt. `onnx` steht nicht in `package.json` und nicht im Service Worker. `numpy` ist dort schon vorhanden. Montreal Forced Aligner ist nicht installiert und wird nicht aufgerufen. Die JSON-Dateien liegen unter `public/audio/` neben der normalen `m4a`. Sie stehen in `globIgnores` und kommen nicht in den Precache. Sie stehen nicht in `manifest.json`, eine fehlende Zeitdatei zählt also nicht als fehlende Stimme.
+
+**Prüfung der JSON.** `src/audio/align.ts` liest die Datei mit Zod, `strictObject`, ohne zusätzliche Felder. Erlaubt sind 1 bis 64 Wörter, jede Zeit eine endliche Zahl von 0 bis 60 Sekunden, Ende nach Anfang, und die Folge steigt. Die Anzahl muss die Wörter der gesprochenen Zeile treffen, sonst wird die Datei verworfen. Eine 404, ein Parsefehler oder eine ungültige Datei ergibt keine Markierung. 70 % und 85 % skalieren die Zeiten der normalen Datei. Nach der Skalierung gilt dieselbe Prüfung.
+
+**Wortzuordnung.** `content/gloss.ts` verbindet Wörter der vorhandenen Sätze. `GLOSS_CHECKED` ist falsch. Die Oberfläche sagt «Die Wortzuordnung ist nicht geprüft.» Eine Gruppe, deren Wörter in der Zeile nicht vorkommen, wird ausgelassen. Nichts davon ist eine neue Übersetzung.
+
+**N14d-01.** Die Startseite sagt «Für offline noch nicht vollständig geladen», nur solange die Lernsprache nicht vollständig im Cache liegt. Der Satz setzt kein Update voraus.
+
+**N14d-02.** «Speicher voll» und «Bisherige Stimme behalten» wählen die vorige Stimme wieder. `dropOtherVoices` sendet `travel-talk-audio-changed`. Tests: `src/components/language-choice-offline.test.tsx`, `src/audio/offline.test.ts`.
+
+**N14b-05.** Vor der Synthese und vor den Wortzeiten prüft `require_model` die SHA-256 der `.onnx`-Datei und der `.onnx.json`. Das gilt für die vier Modelle von 0.4.0 und für die vier älteren Modelle.
+
+Von 1297 Clips haben 1254 eine Zeitdatei. 43 nicht: meist Englisch, wo espeak mehrere Wörter zu einer Phonemgruppe macht, etwa «I am». Die bleiben ohne Markierung. Der Median des Abstands einer inneren Grenze zum nächsten Energie-Dip in ±80 ms ist 0,040 s, das 90.-Perzentil 0,070 s. Die stille Referenz ist im Median etwa 7 % kürzer als die ausgelieferte Datei.

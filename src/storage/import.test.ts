@@ -135,6 +135,8 @@ describe('import', () => {
     expect(coerceSettings({ personalNote: 'Erd\u0007nüsse\nZeile' }).personalNote).toBe('Erdnüsse\nZeile')
     expect(coerceSettings({ voices: { vi: 'not a voice', de: 'thorsten' } }).voices).toEqual({ de: 'thorsten' })
     expect(coerceSettings({ voices: { vi: 'not-a-bundled-voice', de: 'thorsten' } }).voices).toEqual({ de: 'thorsten' })
+    expect(coerceSettings({ highlightWords: false }).highlightWords).toBe(false)
+    expect(coerceSettings({ highlightWords: true }).highlightWords).toBeUndefined()
   })
 
   it('rejects a settings object that carries an unknown field', () => {
@@ -304,6 +306,8 @@ describe('import', () => {
   it('keeps the voice hint out of the export', () => {
     const text = toExport({ settings: { ...current, voiceHintSeen: true }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
     expect(text).not.toContain('voiceHintSeen')
+    const withHighlight = toExport({ settings: { ...current, highlightWords: false }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
+    expect(withHighlight).not.toContain('highlightWords')
   })
 
   it('maps every old pair, including pt-vi, onto the two languages', () => {

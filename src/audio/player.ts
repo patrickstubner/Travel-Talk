@@ -56,6 +56,7 @@ export async function playClip(
   _lang: string,
   _rate: SpeedStep = 1,
   onEnd?: () => void,
+  onTime?: (seconds: number) => void,
 ): Promise<'file' | 'offline'> {
   let files: Set<string>
   try {
@@ -70,6 +71,7 @@ export async function playClip(
   const audio = new Audio(publicUrl(`audio/${file}`))
   audio.playbackRate = 1
   audio.onended = () => onEnd?.()
+  audio.ontimeupdate = () => onTime?.(audio.currentTime)
   current = audio
   try {
     await audio.play()

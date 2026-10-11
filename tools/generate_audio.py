@@ -15,11 +15,27 @@ from piper import PiperVoice
 from piper.config import SynthesisConfig
 
 PIPER_VERSION = "1.8.0"
+# onnx weights. The four 0.4.0 models, plus the four voices shipped before that.
 MODEL_SHA256 = {
     "de_DE-thorsten-high": "9df1c43c61149ef9b39e618e2b861fbe41e1fcea9390b2dac62e8761573ea4f1",
     "en_US-joe-medium": "58afce0321b8d9c46d7cdf9c16500cc55a793b4220212dba6b70fb788b3baf06",
     "pt_BR-cadu-medium": "765f0809a6ea9035d4a6d0d008dbf8876e68b2dd32029312672fa8f405bdb535",
     "vi_VN-vivos-x_low": "6ab13374eb0862021a545befe7727aef59e16117f1c075aa9e0362237ecc98ae",
+    "de_DE-thorsten-medium": "7e64762d8e5118bb578f2eea6207e1a35a8e0c30595010b666f983fc87bb7819",
+    "en_US-ljspeech-medium": "6f52a751e2349abe7a76735eb09dc1875298c77ea2342ffd2fef79ff81b87f22",
+    "pt_BR-faber-medium": "858555e3a064209c57088fe6bd70c4c3dc54d03eaa00c45d5ecaf43a33f95aa7",
+    "vi_VN-vais1000-medium": "ec7c89e2c85f4d1edc24b6120c18aaf1bda614f06b511567eb9c7c0de15e2dab",
+}
+# Sidecar next to the onnx file. Checked with the weights. Not a runtime file.
+JSON_SHA256 = {
+    "de_DE-thorsten-high": "6de734444e4c3f9e33b7ebe2746dbc19b71e85f613e79c65acf623200b99a76a",
+    "en_US-joe-medium": "3d6d5410b3795cb1950595247ef8f06190719e6fdbfa3a2356d8ec368e1aad33",
+    "pt_BR-cadu-medium": "5fe03aa3d4901880554905b12075713cd552598c8a350455a1ec73f8b4e6be19",
+    "vi_VN-vivos-x_low": "9dc373d69b0e4f39d864cb8ac9fe42cee49817a0f02d831e57a9ce6e944e234a",
+    "de_DE-thorsten-medium": "974adee790533adb273a1ac88f49027d2a1b8f0f2cf4905954a4791e79264e85",
+    "en_US-ljspeech-medium": "141d612cc0a95ed7efc1ca936b845c2364967f2e9217c5dbfcf69fc4d6c65860",
+    "pt_BR-faber-medium": "7e694de195ae3fc36dd732c445eb04fb49b649854893cb5506b978f0d50a1d6f",
+    "vi_VN-vais1000-medium": "fafb9da1354ed4b77c31af228ed41fb41cd825c14cffa105454b25e6ae751ee0",
 }
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,11 +66,15 @@ def require_piper() -> None:
 
 def require_model(model_dir: Path, model: str) -> None:
     expected = MODEL_SHA256.get(model)
-    if expected is None:
+    expected_json = JSON_SHA256.get(model)
+    if expected is None or expected_json is None:
         raise SystemExit(f"no pinned checksum for {model}")
     digest = hashlib.sha256((model_dir / f"{model}.onnx").read_bytes()).hexdigest()
     if digest != expected:
         raise SystemExit(f"checksum mismatch for {model}")
+    digest_json = hashlib.sha256((model_dir / f"{model}.onnx.json").read_bytes()).hexdigest()
+    if digest_json != expected_json:
+        raise SystemExit(f"checksum mismatch for {model}.onnx.json")
 
 
 def main() -> None:

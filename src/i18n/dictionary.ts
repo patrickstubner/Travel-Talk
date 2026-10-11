@@ -117,6 +117,9 @@ export type Dictionary = {
   voicesChanged: string
   offlineLoad: string
   offlineReload: string
+  highlightTitle: string
+  highlightHint: string
+  glossUnchecked: string
   offlineReady: string
   offlineRetry: string
   offlineFull: string
@@ -354,7 +357,10 @@ export const de: Dictionary = {
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'Das Material wurde verändert.',
   offlineLoad: 'Für offline laden',
-  offlineReload: 'Offline-Audio nach dem Update neu laden',
+  offlineReload: 'Für offline noch nicht vollständig geladen',
+  highlightTitle: 'Wörter mitlaufen lassen',
+  highlightHint: 'Während die Stimme spielt, wird das Wort markiert. Darunter steht eine Wortzuordnung. Sie ist nicht geprüft.',
+  glossUnchecked: 'Die Wortzuordnung ist nicht geprüft.',
   offlineReady: 'offline bereit',
   offlineRetry: 'Erneut versuchen',
   offlineFull: 'Der Speicher ist voll. Die Stimme ist nicht vollständig geladen.',
@@ -372,7 +378,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.4.0',
+  version: 'Version 0.5.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
@@ -590,7 +596,10 @@ export const en: Dictionary = {
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'The material was changed.',
   offlineLoad: 'Load for offline',
-  offlineReload: 'Reload offline audio after the update',
+  offlineReload: 'Not fully loaded for offline yet',
+  highlightTitle: 'Follow the words',
+  highlightHint: 'While the voice plays, the word is marked. Under the line is a word-by-word gloss. It has not been checked.',
+  glossUnchecked: 'The word links have not been checked.',
   offlineReady: 'ready offline',
   offlineRetry: 'Try again',
   offlineFull: 'Storage is full. The voice is not fully loaded.',
@@ -826,7 +835,10 @@ export const pt: Dictionary = {
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'O material foi alterado.',
   offlineLoad: 'Carregar para offline',
-  offlineReload: 'Recarregar o áudio offline depois da atualização',
+  offlineReload: 'Ainda não está completo para offline',
+  highlightTitle: 'Acompanhar as palavras',
+  highlightHint: 'Enquanto a voz toca, a palavra fica marcada. Abaixo está a relação entre as palavras. Ela não foi revista.',
+  glossUnchecked: 'A relação entre as palavras não foi revista.',
   offlineReady: 'pronto offline',
   offlineRetry: 'Tentar de novo',
   offlineFull: 'O armazenamento está cheio. A voz não foi carregada por completo.',
@@ -1060,7 +1072,10 @@ export const vi: Dictionary = {
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'Tài liệu đã được thay đổi.',
   offlineLoad: 'Tải để dùng offline',
-  offlineReload: 'Tải lại âm thanh offline sau bản cập nhật',
+  offlineReload: 'Chưa tải đủ để dùng offline',
+  highlightTitle: 'Theo từng tiếng',
+  highlightHint: 'Khi giọng đọc, tiếng đang phát được đánh dấu. Bên dưới là nghĩa từng tiếng. Phần này chưa được kiểm tra.',
+  glossUnchecked: 'Phần nối nghĩa từng tiếng chưa được kiểm tra.',
   offlineReady: 'sẵn sàng offline',
   offlineRetry: 'Thử lại',
   offlineFull: 'Bộ nhớ đã đầy. Giọng chưa được tải đủ.',

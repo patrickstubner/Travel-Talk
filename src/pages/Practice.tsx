@@ -3,11 +3,14 @@ import { Link, useSearchParams } from 'react-router-dom'
 import type { Concept } from '../../content/phrase'
 import { spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
+import { loadAlignment, type WordTime } from '../audio/align'
 import { playClip } from '../audio/player'
+import { linksFor } from '../content/word-links'
 import { tempoFile } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
+import { KaraokeLine } from '../components/KaraokeLine'
 import { RichText } from '../components/RichText'
 import { Rating, emptyCard, fromStored, previewDue, reviewCard, toStored, type Grade } from '../srs/scheduler'
 import {
@@ -47,6 +50,8 @@ export function PracticePage() {
   const [picked, setPicked] = useState<string | null>(null)
   const [choices, setChoices] = useState<Concept[]>([])
   const [playing, setPlaying] = useState(false)
+  const [seconds, setSeconds] = useState<number | null>(null)
+  const [times, setTimes] = useState<WordTime[] | null>(null)
   const [offlineAudio, setOfflineAudio] = useState(false)
   const [recording, setRecording] = useState(false)
   const [micNote, setMicNote] = useState(false)
@@ -117,15 +122,47 @@ export function PracticePage() {
     let live = true
     const rate = step === 'slow' ? 0.7 : 1
     setPlaying(true)
+    setSeconds(0)
     setOfflineAudio(false)
-    void playClip(tempoFile(spokenFile(settings, settings.targetLang, line.file), rate), line.speech, settings.targetLang, rate, () => {
-      if (live && aliveRef.current) setPlaying(false)
-    }).then((result) => {
+    void playClip(
+      tempoFile(spokenFile(settings, settings.targetLang, line.file), rate),
+      line.speech,
+      settings.targetLang,
+      rate,
+      () => {
+        if (live && aliveRef.current) {
+          setPlaying(false)
+          setSeconds(null)
+        }
+      },
+      (time) => {
+        if (live && aliveRef.current) setSeconds(time)
+      },
+    ).then((result) => {
       if (!live || !aliveRef.current) return
       if (result === 'offline') {
         setPlaying(false)
+        setSeconds(null)
         setOfflineAudio(true)
       }
+    })
+    return () => {
+      live = false
+    }
+  }, [concept, settings, step])
+
+  useEffect(() => {
+    if (settings.highlightWords === false || !concept || !settings.targetLang) {
+      setTimes(null)
+      return
+    }
+    const line = resolvePlayback(concept, settings.targetLang, settings.viRegion, prefsFromSettings(settings.targetLang, settings))
+    if (!line) return
+    const rate = step === 'slow' ? 0.7 : 1
+    const file = tempoFile(spokenFile(settings, settings.targetLang, line.file), rate)
+    let live = true
+    void loadAlignment(file, line.speech).then((value) => {
+      if (live) setTimes(value)
     })
     return () => {
       live = false
@@ -179,11 +216,24 @@ export function PracticePage() {
     if (!targetLang) return
     setPlaying(true)
     setOfflineAudio(false)
-    const result = await playClip(tempoFile(spokenFile(settings, targetLang, file), rate), speech, targetLang, rate, () => {
-      if (aliveRef.current) setPlaying(false)
-    })
+    setSeconds(0)
+    const result = await playClip(
+      tempoFile(spokenFile(settings, targetLang, file), rate),
+      speech,
+      targetLang,
+      rate,
+      () => {
+        if (!aliveRef.current) return
+        setPlaying(false)
+        setSeconds(null)
+      },
+      (time) => {
+        if (aliveRef.current) setSeconds(time)
+      },
+    )
     if (aliveRef.current && result === 'offline') {
       setPlaying(false)
+      setSeconds(null)
       setOfflineAudio(true)
     }
   }
@@ -245,6 +295,19 @@ export function PracticePage() {
   }
 
   const showTarget = targetTextVisible(step, item.isNew, answered)
+  const followWords = settings.highlightWords !== false
+  const links = followWords ? linksFor(concept.id, targetLang, app, target.speech, source.speech, settings) : []
+  const spoken = followWords ? (
+    <KaraokeLine
+      lang={targetLang}
+      speech={target.speech}
+      gloss={source.speech}
+      links={links}
+      times={times}
+      seconds={playing ? seconds : null}
+      note={copy.glossUnchecked}
+    />
+  ) : null
   const stored = snapshot.cards.find((card) => card.cardId === cardIdFor(activeDirection, concept.id))
   const now = new Date()
   const dues = step === 'recall' && answered ? previewDue(stored ? fromStored(stored) : emptyCard(now), now, settings.retention) : null
@@ -290,9 +353,13 @@ export function PracticePage() {
             {playing ? (step === 'slow' ? copy.playingSlow : copy.playingNormal) : step === 'slow' ? copy.playSlow : copy.playNormal}
           </button>
           {showTarget ? (
-            <p className={playing ? 'target-line playing' : 'target-line'} data-testid="target-line" lang={targetLang}>
-              <RichText text={target.text} />
-            </p>
+            followWords && spoken ? (
+              spoken
+            ) : (
+              <p className={playing ? 'target-line playing' : 'target-line'} data-testid="target-line" lang={targetLang}>
+                <RichText text={target.text} />
+              </p>
+            )
           ) : null}
           <p className="hint">{concept.context[app]}</p>
           {step === 'slow' ? (
@@ -315,9 +382,13 @@ export function PracticePage() {
         <>
           <h1>{copy.stepRepeat(index + 1, queue.length)}</h1>
           {showTarget ? (
-            <p className="target-line" data-testid="target-line" lang={targetLang}>
-              <RichText text={target.text} />
-            </p>
+            followWords && spoken ? (
+              spoken
+            ) : (
+              <p className="target-line" data-testid="target-line" lang={targetLang}>
+                <RichText text={target.text} />
+              </p>
+            )
           ) : null}
           <button type="button" className="button wide" aria-pressed={playing} onClick={() => void hear(target.file, target.speech, 1)}>
             {playing ? copy.playing : copy.play}
@@ -387,9 +458,13 @@ export function PracticePage() {
             {playing ? copy.playingNormal : copy.play}
           </button>
           {showTarget ? (
-            <p className={playing ? 'target-line playing' : 'target-line'} data-testid="target-line" lang={targetLang}>
-              <RichText text={target.text} />
-            </p>
+            followWords && spoken ? (
+              spoken
+            ) : (
+              <p className={playing ? 'target-line playing' : 'target-line'} data-testid="target-line" lang={targetLang}>
+                <RichText text={target.text} />
+              </p>
+            )
           ) : null}
           <ul className="choices">
             {choices.map((choice) => {
@@ -444,9 +519,13 @@ export function PracticePage() {
                 <span className="play-mark" aria-hidden="true" />
                 {playing ? copy.playingNormal : copy.play}
               </button>
-              <p className={playing ? 'target-line playing' : 'target-line'} data-testid="target-line" lang={targetLang}>
-                <RichText text={target.text} />
-              </p>
+              {followWords && spoken ? (
+                spoken
+              ) : (
+                <p className={playing ? 'target-line playing' : 'target-line'} data-testid="target-line" lang={targetLang}>
+                  <RichText text={target.text} />
+                </p>
+              )}
             </div>
           )}
           {answered ? (
