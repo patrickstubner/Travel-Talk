@@ -328,6 +328,7 @@ export function PracticePage() {
         <>
           <h1>{item.isNew ? copy.visibleTitle : copy.meaningPrompt}</h1>
           {item.isNew ? <p>{copy.newStays}</p> : null}
+          {item.isNew ? <p>{copy.meaningPrompt}</p> : null}
           <button
             type="button"
             className="play-row"
@@ -342,7 +343,6 @@ export function PracticePage() {
               <RichText text={target.text} />
             </p>
           ) : null}
-          <p>{copy.meaningPrompt}</p>
           <ul className="choices">
             {choices.map((choice) => {
               const line = resolvePlayback(choice, app, settings.viRegion, prefsFromSettings(app, settings))
