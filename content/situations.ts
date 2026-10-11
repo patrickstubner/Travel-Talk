@@ -217,4 +217,27 @@ export const situations: Situation[] = [
       vi: 'Bạn có thể giới thiệu bản thân.',
     },
   },
+  {
+    id: 'transport',
+    order: 10,
+    depth: 'sample',
+    title: {
+      de: 'Transport',
+      en: 'Transport',
+      'pt-BR': 'Transporte',
+      vi: 'Đi lại',
+    },
+    summary: {
+      de: 'Taxi, App, Bus, Tram, Metro, Flug und Fähre. Kurze Sätze, vom kurzen zum längeren.',
+      en: 'Taxi, app, bus, tram, metro, flight and ferry. Short lines, from short to longer.',
+      'pt-BR': 'Táxi, aplicativo, ônibus, bonde, metrô, voo e balsa. Frases curtas, da curta à mais longa.',
+      vi: 'Taxi, ứng dụng, xe buýt, tàu điện, metro, máy bay và phà. Câu ngắn, từ ngắn đến dài.',
+    },
+    canDo: {
+      de: 'Du kannst nach dem Weg, dem Preis und dem Ticket fragen.',
+      en: 'You can ask the way, the price and for a ticket.',
+      'pt-BR': 'Você pode perguntar o caminho, o preço e uma passagem.',
+      vi: 'Bạn có thể hỏi đường, hỏi giá và hỏi vé.',
+    },
+  },
 ]

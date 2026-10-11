@@ -32,7 +32,8 @@ export function HomePage() {
         ui={settings.appLang ?? 'de'}
         mode="onboarding"
         onChange={(patch) => {
-          void saveSettings({ ...settings, ...patch })
+          const next = { ...settings, ...patch }
+          void saveSettings(next.appLang && next.targetLang ? withDefaultVoices(next) : next)
         }}
         onContinue={() => {
           if (!settings.appLang || !settings.targetLang) return

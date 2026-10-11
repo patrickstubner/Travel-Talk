@@ -410,7 +410,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.6.0',
+  version: 'Version 0.7.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',

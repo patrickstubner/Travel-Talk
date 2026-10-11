@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { forgetVoiceIfUnused } from '../audio/offline'
 import { stopClip } from '../audio/player'
+import { withDefaultVoices } from '../audio/voices'
 import type { Catalog } from '../domain/schema'
 import { tryLoadCatalog } from '../content/load'
 import { DexieProgressRepository } from '../storage/dexie-repository'
@@ -52,15 +53,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (settings: Settings) => {
       const personId = activePersonId
       if (!personId) return
+      const previous = snapshot?.activePersonId === personId ? snapshot.settings : snapshot?.people?.find((person) => person.id === personId)?.settings
+      const finishing = Boolean(settings.appLang && settings.targetLang) && !(previous?.appLang && previous?.targetLang)
+      const next = finishing ? withDefaultVoices(settings) : settings
       setSnapshot((prev) => {
         if (!prev) return prev
-        const people = (prev.people ?? []).map((person) => (person.id === personId ? { ...person, settings } : person))
+        const people = (prev.people ?? []).map((person) => (person.id === personId ? { ...person, settings: next } : person))
         if (prev.activePersonId !== personId) return { ...prev, people, repaired: prev.repaired }
-        return { ...prev, settings, people, repaired: prev.repaired }
+        return { ...prev, settings: next, people, repaired: prev.repaired }
       })
-      await repository.saveSettings(personId, settings)
+      await repository.saveSettings(personId, next)
     },
-    [activePersonId, repository],
+    [activePersonId, repository, snapshot],
   )
 
   const saveCard = useCallback(

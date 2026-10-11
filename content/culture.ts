@@ -1,3 +1,4 @@
+import { transportNotes } from './culture-transport'
 import type { CultureNote, InfoCard, PairNote } from './phrase'
 
 const accessed = '2026-10-10'
@@ -263,6 +264,7 @@ export const cultureNotes: CultureNote[] = [
       },
     ],
   },
+  ...transportNotes,
 ]
 
 export const infoCards: InfoCard[] = [

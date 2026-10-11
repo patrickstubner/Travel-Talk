@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0 — 2026-10-11
+
+- Neue Situation Transport, nach den bisherigen neun. Zwanzig kurze Sätze, vom kurzen zum längeren: Taxi und Ziel, Preis und Taxameter, Halt, Kennzeichen, Bestellung in der App, Ticket, Haltestelle, Aussteigen, Linie, Gleis, Dauer, Gate, Verspätung, verpasster Anschluss, Fähre und Übelkeit auf dem Schiff. Dieselben vier Sprachen und dieselben Stimmen wie bisher, mit 70 %, 85 % und 100 %, Wortzeiten wo die Zuordnung trägt, und der Wort-für-Wort-Gloss. Der Kann-Satz der Situation sagt, dass man nach Weg, Preis und Ticket fragen kann.
+- Vier Kulturhinweise, ungeprüft wie die übrigen: Vietnam (Taxameter und App nach Nghị định 158/2024/NĐ-CP, Grab, Einzelticket der Hà Nội Metro), São Paulo und Brasilien (Taxameter nach dem Gemeindegesetz, 99 und Uber), ZVV (Ticket vor der Abfahrt, Schiff, Kurzstrecke), London (Pay as you go, antippen). Was nicht belegt ist, steht als «noch nicht geprüft». Philippinen, Paraguay, Thailand und Portugal als Land haben keinen eigenen Ländercode in den Hinweisen.
+- Wer beide Sprachen wählt und die Seite verlässt, ohne «Weiter» zu tippen, hat trotzdem die Männerstimme als Standard. Der Hinweis auf Männerstimmen erscheint dann nicht.
+- Ein Personenname im Import muss sichtbar sein. Ein unsichtbarer Name lehnt die ganze Datei ab. «Alle ersetzen» lässt niemanden aus. Ein ZWJ zwischen zwei Emoji bleibt im Namen. Ein Speichern für eine gerade gelöschte Person schreibt keine Zeile.
+
 ## 0.6.0 — 2026-10-11
 
 - Mehrere Personen können auf einem Gerät lernen, bis zu zehn. Jede Person hat einen eigenen Namen, eine eigene App-Sprache, eine eigene Lernsprache, eine eigene Stimme und einen eigenen Lernstand. Geladene Stimmen und Audiodateien bleiben gemeinsam und werden nicht pro Person kopiert.

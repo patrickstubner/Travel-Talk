@@ -82,11 +82,7 @@ const settingsSchemaV4 = z.strictObject({
   moreTargets: z.array(lang).max(3).optional(),
 })
 
-const personName = z
-  .string()
-  .min(1)
-  .max(40)
-  .refine((value) => value === value.trim() && !/[^\P{C}]/u.test(value))
+const personName = z.string().refine((value) => cleanPersonName(value) === value)
 
 const stamp = z.iso.datetime().max(40)
 

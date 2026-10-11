@@ -124,11 +124,17 @@ export class DexieProgressRepository implements ProgressRepository {
   }
 
   async saveSettings(personId: string, settings: Settings): Promise<void> {
-    await this.db.people.update(personId, { settings })
+    await this.db.transaction('rw', this.db.people, async () => {
+      if (!(await this.db.people.get(personId))) return
+      await this.db.people.update(personId, { settings })
+    })
   }
 
   async saveCard(personId: string, card: StoredCard): Promise<void> {
-    await this.db.personCards.put({ ...card, personId })
+    await this.db.transaction('rw', this.db.people, this.db.personCards, async () => {
+      if (!(await this.db.people.get(personId))) return
+      await this.db.personCards.put({ ...card, personId })
+    })
   }
 
   async replaceAll(personId: string, snapshot: ProgressSnapshot): Promise<void> {
@@ -217,16 +223,15 @@ export class DexieProgressRepository implements ProgressRepository {
   }
 
   async importAll(people: readonly ImportedPerson[]): Promise<void> {
+    const chosen = acceptedPeople(people)
     await this.db.transaction('rw', this.db.people, this.db.device, this.db.personCards, async () => {
       await this.db.personCards.clear()
       await this.db.people.clear()
       let first = ''
-      for (const person of people.slice(0, PERSON_LIMIT)) {
-        const name = cleanPersonName(person.name)
-        if (!name) continue
+      for (const person of chosen) {
         const id = crypto.randomUUID()
         if (!first) first = id
-        await this.db.people.add({ id, name, level: LEVEL_PLACEHOLDER, settings: person.settings })
+        await this.db.people.add({ id, name: person.name, level: LEVEL_PLACEHOLDER, settings: person.settings })
         if (person.cards.length > 0) {
           await this.db.personCards.bulkPut(person.cards.map((card) => ({ ...card, personId: id })))
         }
@@ -259,11 +264,20 @@ export class DexieProgressRepository implements ProgressRepository {
 
   private async writePerson(personId: string, settings: Settings, cards: readonly StoredCard[]): Promise<void> {
     await this.db.transaction('rw', this.db.people, this.db.personCards, async () => {
+      if (!(await this.db.people.get(personId))) return
       await this.db.people.update(personId, { settings })
       await this.db.personCards.where('personId').equals(personId).delete()
       if (cards.length > 0) await this.db.personCards.bulkPut(cards.map((card) => ({ ...card, personId })))
     })
   }
+}
+
+function acceptedPeople(people: readonly ImportedPerson[]): ImportedPerson[] {
+  return people.slice(0, PERSON_LIMIT).map((person) => {
+    const name = cleanPersonName(person.name)
+    if (!name) throw new Error('IMPORT_REJECTED')
+    return { ...person, name }
+  })
 }
 
 function mergeLocal(incoming: Settings, local: Settings | undefined): Settings {
