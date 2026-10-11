@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DUE_LIMIT_DAYS, Rating, emptyCard, reviewCard, toStored } from '../srs/scheduler'
-import { EXPORT_FORMAT, IMPORT_FUTURE, IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport } from './import'
+import { EXPORT_FORMAT, IMPORT_CARD_LIMIT, IMPORT_FUTURE, IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport } from './import'
 import { cleanPersonalNote, coerceSettings, defaultSettings } from './types'
 
 const current = { ...defaultSettings, appLang: 'de' as const, targetLang: 'vi' as const, personalNote: 'Erdnüsse' }
@@ -314,6 +314,30 @@ describe('import', () => {
     expect(withHighlight).not.toContain('highlightWords')
   })
 
+  it('caps last review and due in a format 4 file', () => {
+    const exportedAt = Date.now() - 60_000
+    const raw = JSON.parse(personBundle([v4Person('A', [card()])])) as {
+      exportedAt: string
+      people: { cards: { due: string; last_review: string }[] }[]
+    }
+    raw.exportedAt = new Date(exportedAt).toISOString()
+    raw.people[0]!.cards[0]!.last_review = new Date(exportedAt + 5_000).toISOString()
+    const capped = parseImport(JSON.stringify(raw), concepts)
+    expect(capped.people[0]?.cards[0]?.last_review).toBe(new Date(exportedAt).toISOString())
+    raw.people[0]!.cards[0]!.last_review = '2020-01-01T00:00:00.000Z'
+    raw.people[0]!.cards[0]!.due = '2300-01-01T00:00:00.000Z'
+    const due = Date.parse(parseImport(JSON.stringify(raw), concepts).people[0]?.cards[0]?.due ?? '')
+    expect(due).toBe(Date.parse('2020-01-01T00:00:00.000Z') + DUE_LIMIT_DAYS * 86_400_000)
+  })
+
+  it('rejects duplicate cards, a one-person file with several people, and more than 8000 cards', () => {
+    expect(() => parseImport(personBundle([v4Person('A', [card(), card()])]), concepts)).toThrow('IMPORT_REJECTED')
+    expect(() => parseImport(personBundle([v4Person('A', []), v4Person('B', [])]), concepts)).toThrow('IMPORT_REJECTED')
+    const many = Array.from({ length: IMPORT_CARD_LIMIT / 2 + 1 }, (_, index) => ({ ...card(), cardId: `de-vi:n${index}` }))
+    const over = personBundle([v4Person('A', many.slice(0, IMPORT_CARD_LIMIT / 2)), v4Person('B', many)], 'all')
+    expect(() => parseImport(over, concepts)).toThrow('IMPORT_REJECTED')
+  })
+
   it('maps every old pair, including pt-vi, onto the two languages', () => {
     const pairs: Array<[string, string, string]> = [
       ['de-vi', 'de', 'vi'],
@@ -336,6 +360,36 @@ describe('import', () => {
     }
   })
 })
+
+function v4Settings(note = '') {
+  return {
+    appLang: 'de',
+    targetLang: 'vi',
+    viRegion: 'south',
+    addressVi: 'anh',
+    addressPt: 'voce',
+    addressDe: 'sie',
+    ptSpeaker: 'obrigado',
+    viContact: 'phone',
+    retention: 0.9,
+    personalNote: note,
+    speed: 'auto',
+  }
+}
+
+function v4Person(name: string, cards: unknown[], note = '') {
+  return { name, level: 0, settings: v4Settings(note), cards }
+}
+
+function personBundle(people: unknown[], scope: 'person' | 'all' = 'person'): string {
+  return JSON.stringify({
+    app: 'travel-talk',
+    format: 4,
+    exportedAt: new Date(Date.now() - 60_000).toISOString(),
+    scope,
+    people,
+  })
+}
 
 function card(cardId = 'de-vi:emergency.help') {
   return {

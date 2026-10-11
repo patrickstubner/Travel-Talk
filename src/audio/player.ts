@@ -7,10 +7,22 @@ let known: Set<string> | null = null
 let loading: Promise<Set<string>> | null = null
 let current: HTMLAudioElement | null = null
 let clock = 0
+let playToken = 0
 
 function stopClock(): void {
   if (clock !== 0 && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(clock)
   clock = 0
+}
+
+/** Stops the clip that is playing, including one whose start has not finished yet. */
+export function stopClip(): void {
+  playToken += 1
+  stopClock()
+  const audio = current
+  current = null
+  if (!audio) return
+  audio.onended = null
+  audio.pause()
 }
 
 /** Tests start from an empty list. The page keeps the list for the session. */
@@ -71,32 +83,43 @@ export async function playClip(
   onTime?: (seconds: number) => void,
   onDuration?: (seconds: number) => void,
 ): Promise<'file' | 'offline'> {
+  const token = playToken
   let files: Set<string>
   try {
     files = await loadManifest()
   } catch {
     return 'offline'
   }
+  if (token !== playToken) return 'file'
   if (!AUDIO_FILE.test(file) || !files.has(file)) return 'offline'
   const cached = await clipIsCached(file)
+  if (token !== playToken) return 'file'
   if (!cached && typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline'
   stopClock()
   current?.pause()
+  if (token !== playToken) return 'file'
   const audio = new Audio(publicUrl(`audio/${file}`))
   audio.playbackRate = 1
   audio.onloadedmetadata = () => {
+    if (token !== playToken) return
     if (Number.isFinite(audio.duration) && audio.duration > 0) onDuration?.(audio.duration)
   }
   audio.onended = () => {
     if (current === audio) stopClock()
-    onEnd?.()
+    if (token === playToken) onEnd?.()
   }
   current = audio
   try {
     await audio.play()
   } catch {
+    if (token !== playToken) return 'file'
     if (!cached) return 'offline'
     onEnd?.()
+    return 'file'
+  }
+  if (token !== playToken) {
+    audio.pause()
+    if (current === audio) current = null
     return 'file'
   }
   if (onTime && typeof requestAnimationFrame === 'function') {

@@ -23,7 +23,7 @@ export function withTarget(settings: Settings, lang: Lang): Settings {
   return next
 }
 
-export function TopBar({ askName = false }: { askName?: boolean }) {
+export function TopBar({ askName = false, hidePerson = false }: { askName?: boolean; hidePerson?: boolean }) {
   const { snapshot, saveSettings, switchPerson, addPerson, renamePerson, deletePerson } = useApp()
   const settings = useSettings()
   const copy = useCopy()
@@ -35,6 +35,8 @@ export function TopBar({ askName = false }: { askName?: boolean }) {
   const [renameDraft, setRenameDraft] = useState(active?.name ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [rejected, setRejected] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const addingRef = useRef(false)
   const personMenu = useId()
   const langMenu = useId()
   const personButton = useRef<HTMLButtonElement>(null)
@@ -86,11 +88,19 @@ export function TopBar({ askName = false }: { askName?: boolean }) {
     }
     setRejected(false)
     if (mode === 'add') {
-      const added = await addPerson(value)
-      if (!added) setRejected(true)
-      else {
-        setDraft('')
-        close()
+      if (addingRef.current) return
+      addingRef.current = true
+      setAdding(true)
+      try {
+        const added = await addPerson(value)
+        if (!added) setRejected(true)
+        else {
+          setDraft('')
+          close()
+        }
+      } finally {
+        addingRef.current = false
+        setAdding(false)
       }
       return
     }
@@ -102,17 +112,19 @@ export function TopBar({ askName = false }: { askName?: boolean }) {
 
   return (
     <div className="top-switch" data-testid="top-switch">
-      <button
-        ref={personButton}
-        type="button"
-        className="top-trigger"
-        aria-expanded={open === 'person'}
-        aria-controls={personMenu}
-        aria-label={`${copy.whoTitle}: ${personText}`}
-        onClick={() => setOpen((value) => (value === 'person' ? null : 'person'))}
-      >
-        {personText}
-      </button>
+      {hidePerson ? null : (
+        <button
+          ref={personButton}
+          type="button"
+          className="top-trigger"
+          aria-expanded={open === 'person'}
+          aria-controls={personMenu}
+          aria-label={`${copy.whoTitle}: ${personText}`}
+          onClick={() => setOpen((value) => (value === 'person' ? null : 'person'))}
+        >
+          <bdi>{personText}</bdi>
+        </button>
+      )}
       <button
         ref={langButton}
         type="button"
@@ -124,7 +136,7 @@ export function TopBar({ askName = false }: { askName?: boolean }) {
       >
         {variant ? `${targetText} · ${variant}` : targetText}
       </button>
-      {open === 'person' ? (
+      {!hidePerson && open === 'person' ? (
         <div ref={menuRef} id={personMenu} className="top-menu" role="group" aria-label={copy.whoTitle}>
           {people.map((person) => (
             <button
@@ -136,7 +148,7 @@ export function TopBar({ askName = false }: { askName?: boolean }) {
                 close()
               }}
             >
-              {person.name || copy.personNameAsk}
+              <bdi>{person.name || copy.personNameAsk}</bdi>
             </button>
           ))}
           {active && active.name === '' ? (
@@ -178,7 +190,9 @@ export function TopBar({ askName = false }: { askName?: boolean }) {
                 {copy.personAdd}
                 <input value={draft} maxLength={40} onChange={(event) => setDraft(event.target.value)} />
               </label>
-              <button type="submit">{copy.personAdd}</button>
+              <button type="submit" disabled={adding}>
+                {copy.personAdd}
+              </button>
             </form>
           ) : null}
           {active?.name && people.length >= PERSON_LIMIT ? <p>{copy.personLimit}</p> : null}

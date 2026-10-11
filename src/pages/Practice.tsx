@@ -98,7 +98,8 @@ export function PracticePage() {
 
   useEffect(() => {
     if (!catalog || !snapshot || !direction || !settings.appLang || !settings.targetLang) return
-    const key = `${direction}:${kind}:${run}`
+    const personId = snapshot.activePersonId ?? ''
+    const key = `${personId}:${direction}:${kind}:${run}`
     if (readyFor === key) return
     const usable = usableConcepts(orderedConcepts(catalog), settings.appLang, settings.targetLang, settings.viRegion)
     setQueue(buildSession(usable, snapshot.cards, direction, new Date(), kind))

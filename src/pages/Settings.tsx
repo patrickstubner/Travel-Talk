@@ -35,6 +35,7 @@ export function SettingsPage() {
   const [confirmReset, setConfirmReset] = useState(false)
   const [includeNote, setIncludeNote] = useState(false)
   const [addName, setAddName] = useState('')
+  const [confirmAll, setConfirmAll] = useState(false)
   const [persistState, setPersistState] = useState<'ok' | 'no' | null>(null)
   if (!snapshot) return null
   const current = snapshot
@@ -60,6 +61,7 @@ export function SettingsPage() {
   async function onImport(file: File | undefined): Promise<void> {
     setImportState(null)
     setPending(null)
+    setConfirmAll(false)
     setSkipped(0)
     if (!file || file.size > IMPORT_LIMIT) {
       setImportState('bad')
@@ -222,11 +224,47 @@ export function SettingsPage() {
           />
         </label>
       </div>
-      {pending ? (
+      {!canExportAll ? <p className="hint">{copy.exportAllHint}</p> : null}
+      {pending && confirmAll ? (
+        <div className="card dialog" role="dialog" aria-modal="true" aria-labelledby="import-all-title">
+          <h2 id="import-all-title">{copy.importAllConfirmTitle}</h2>
+          <p>{copy.importAllConfirmBody}</p>
+          <div className="row">
+            <button
+              type="button"
+              className="button clay"
+              onClick={() => {
+                const people = pending.people
+                const leftOut = pending.skipped
+                setPending(null)
+                setConfirmAll(false)
+                void importAll(people).then(() => {
+                  setSkipped(leftOut)
+                  setImportState('ok')
+                })
+              }}
+            >
+              {copy.importAllConfirm}
+            </button>
+            <button type="button" onClick={() => setConfirmAll(false)}>
+              {copy.cancel}
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {pending && !confirmAll ? (
         <div className="card dialog" role="dialog" aria-modal="true" aria-labelledby="import-title">
           <h2 id="import-title">{copy.confirmImport}</h2>
           <p>{copy.importSummary(pending.preview.cards, pending.preview.earliest, pending.preview.latest, pending.preview.hasNote)}</p>
-          <p>{importKeepsLocalNote(pending.snapshot.settings.personalNote) ? copy.importNoteKept : copy.importNoteReplaced}</p>
+          <p>
+            {pending.scope === 'all'
+              ? pending.people.every((person) => importKeepsLocalNote(person.settings.personalNote))
+                ? copy.importAllNotesCleared
+                : copy.importAllNotesReplaced
+              : importKeepsLocalNote(pending.snapshot.settings.personalNote)
+                ? copy.importNoteKept
+                : copy.importNoteReplaced}
+          </p>
           <p className="hint">{copy.importBackup}</p>
           {pending.scope === 'all' ? <p>{copy.importAllAsk}</p> : null}
           {pending.scope === 'all' ? <p>{copy.importPeople(pending.people.length)}</p> : null}
@@ -238,23 +276,16 @@ export function SettingsPage() {
           ) : null}
           {pending.skipped > 0 ? <p>{copy.importSkipped(pending.skipped)}</p> : null}
           <div className="row">
-            <button type="button" disabled={!canExport} onClick={() => void downloadSnapshot(includeNote, 'travel-talk-sicherung.json', 'person')}>
+            <button
+              type="button"
+              disabled={pending.scope === 'all' ? !canExportAll : !canExport}
+              onClick={() => void downloadSnapshot(includeNote, 'travel-talk-sicherung.json', pending.scope)}
+            >
               {copy.backupDownload}
             </button>
+            {pending.scope === 'all' && !canExportAll ? <p className="hint">{copy.exportAllHint}</p> : null}
             {pending.scope === 'all' ? (
-              <button
-                type="button"
-                className="button"
-                onClick={() => {
-                  const people = pending.people
-                  const leftOut = pending.skipped
-                  setPending(null)
-                  void importAll(people).then(() => {
-                    setSkipped(leftOut)
-                    setImportState('ok')
-                  })
-                }}
-              >
+              <button type="button" className="button" onClick={() => setConfirmAll(true)}>
                 {copy.importReplaceAll}
               </button>
             ) : (
@@ -305,7 +336,13 @@ export function SettingsPage() {
                 </button>
               </>
             )}
-            <button type="button" onClick={() => setPending(null)}>
+            <button
+              type="button"
+              onClick={() => {
+                setPending(null)
+                setConfirmAll(false)
+              }}
+            >
               {copy.cancel}
             </button>
           </div>

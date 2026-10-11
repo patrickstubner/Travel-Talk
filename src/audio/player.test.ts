@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { clearManifestCache, playClip } from './player'
+import { clearManifestCache, playClip, stopClip } from './player'
 
 class FakeAudio {
   playbackRate = 1
@@ -98,5 +98,34 @@ describe('playClip', () => {
     expect(result).toBe('file')
     tick?.(0)
     expect(onTime).toHaveBeenCalledWith(0.4)
+  })
+
+  it('does not start audio after stopClip', async () => {
+    clearManifestCache()
+    const created: FakeAudio[] = []
+    let release: (value: { ok: boolean; json: () => Promise<string[]> }) => void = () => undefined
+    vi.stubGlobal(
+      'Audio',
+      class extends FakeAudio {
+        constructor(src: string) {
+          super(src)
+          created.push(this)
+        }
+      },
+    )
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            release = resolve
+          }),
+      ),
+    )
+    const pending = playClip('vi/emergency.help__any__base.r70.m4a', 'Hilfe', 'vi', 0.7)
+    stopClip()
+    release({ ok: true, json: async () => ['vi/emergency.help__any__base.r70.m4a'] })
+    await expect(pending).resolves.toBe('file')
+    expect(created).toHaveLength(0)
   })
 })

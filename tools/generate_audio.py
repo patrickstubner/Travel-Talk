@@ -70,7 +70,10 @@ def require_onnx() -> None:
     """Pin used by align_clips.py. generate_audio.py does not call this."""
     import importlib.metadata
 
-    found = importlib.metadata.version("onnx")
+    try:
+        found = importlib.metadata.version("onnx")
+    except importlib.metadata.PackageNotFoundError:
+        raise SystemExit(f"onnx {ONNX_VERSION} is not installed") from None
     if found != ONNX_VERSION:
         raise SystemExit(f"onnx {found} is not the pinned {ONNX_VERSION}")
 

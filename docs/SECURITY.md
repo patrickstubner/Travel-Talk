@@ -166,12 +166,12 @@ Eine unbekannte Stimmen-ID, die dem Muster `^[a-z0-9_-]{1,40}$` entspricht, wird
 
 ## Nachprüfung von Pull Request 14, zweiter Durchgang
 
-Geprüft am 11. Oktober 2026 am Stand `19535e2`. N14b-03 und N14b-04 sind geschlossen. N14b-01 ist danach bewusst akzeptiert, siehe den dritten Durchgang. N14b-05 ist in 0.5.0 geschlossen. N14b-02 ist in 0.6.0 geschlossen. Kein neues Paket. `npm audit` bleibt bei 0 Schwachstellen.
+Geprüft am 11. Oktober 2026 am Stand `19535e2`. N14b-03 und N14b-04 sind geschlossen. N14b-01 ist danach bewusst akzeptiert, siehe den dritten Durchgang. N14b-05 ist in 0.5.0 geschlossen. N14b-02 ist nicht geschlossen. Kein neues Paket. `npm audit` bleibt bei 0 Schwachstellen.
 
 | ID | Schwere | Status | Auflösung |
 | --- | --- | --- | --- |
 | N14b-01 | Mittel | bewusst akzeptiert | Die Aktivierung löscht Precache-Einträge, die nicht mehr im Manifest stehen, darunter die alten Audiodateien. Eine Kopie beim Installieren hält sie nicht: die gespeicherte Adresse behält `?__WB_REVISION__` und trifft nie, wenig Speicher lässt das Installieren dauerhaft scheitern, der Speicher verdoppelt sich, und jeder Cache der gemeinsamen Origin wird gelesen. Die Migration ist entfernt. Nach dem Update, das online läuft, sagt die Startseite «Offline-Audio nach dem Update neu laden», solange die Lernsprache nicht vollständig im Cache liegt. Ein Tippen auf «Für offline laden» holt sie. |
-| N14b-02 | Niedrig | Geschlossen | Die Tests in `src/audio/offline.test.ts` sperren die Verhaltensweisen, die M1, M2, N4 und N15–N17 beschreiben. Die ursprünglichen Mutanten-Diffs lagen nicht im Repo. |
+| N14b-02 | Niedrig | Offen | Nicht geschlossen. Die Tests in `src/audio/offline.test.ts` beschreiben die Verhaltensweisen von M1, M2, N4 und N15–N17. Sie schliessen den Befund nicht, weil die ursprünglichen Mutanten-Diffs nicht im Repo lagen. |
 | N14b-03 | Niedrig | Geschlossen | Eine 404 wird übersprungen. Der Rest der Stimme wird geladen. Die Oberfläche sagt «n Dateien fehlen». Die anderen Stimmen dieser Sprache bleiben, solange Dateien fehlen. Test: `src/audio/offline.test.ts`. |
 | N14b-04 | Niedrig | Geschlossen | «Speicher voll» zeigt den Fortschritt, «Erneut versuchen» und «Bisherige Stimme behalten». Der zweite Knopf entfernt nur die Dateien dieses Versuchs. Nach einem Neuladen bleibt `n/597` sichtbar, wenn Dateien im Cache liegen. Test: `src/components/voice-offline.test.tsx`. |
 | N14b-05 | Niedrig | Geschlossen | `tools/generate_audio.py` prüft SHA-256 der `.onnx`-Datei und der `.onnx.json` daneben, für die vier Modelle von 0.4.0 und für `thorsten-medium`, `ljspeech`, `faber` und `vais1000`. `pt_BR-jeff` bleibt draussen. |
@@ -205,7 +205,7 @@ Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit und keine neue np
 
 **N14d-02.** In den Einstellungen wählen «Speicher voll» und «Bisherige Stimme behalten» die vorige Stimme wieder. `dropOtherVoices` sendet `travel-talk-audio-changed`. Tests: `src/components/language-choice-offline.test.tsx`, `src/audio/offline.test.ts`. Das schliesst N14b-02 nicht.
 
-**N14b-02.** In 0.6.0 geschlossen. Die Verhaltensweisen stehen dort.
+**N14b-02.** Nicht geschlossen. Die Verhaltensweisen stehen unter 0.6.0. Die Tests schliessen den Befund nicht, weil die ursprünglichen Mutanten-Diffs nicht im Repo lagen.
 
 **N15.** Im Schritt Hören bleibt die Wortzuordnung verborgen, bis die Bedeutung gewählt ist. Eine Zeile mit Platzhalter, etwa `[tên]`, bleibt neben der gesprochenen Zeile sichtbar. Auf der Startseite erscheint «Bisherige Stimme behalten» nur, wenn eine andere Stimme dieser Sprache vollständig im Cache liegt, und der Knopf wählt diese Stimme.
 
@@ -217,16 +217,35 @@ Von 1297 Clips haben 1254 eine Zeitdatei. 43 nicht: meist Englisch, wo espeak me
 
 Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit. `onnx` 1.17.0 bleibt nur im Erzeugungspfad der Wortzeiten. `require_onnx` prüft die Version mit `importlib.metadata`, bevor `align_clips.py` das Modell mit `include_alignments` lädt. `generate_audio.py` ruft das nicht auf.
 
-**Namen.** `cleanPersonName` entfernt Steuerzeichen, schneidet Leerzeichen ab und behält 1 bis 40 Zeichen. Alles andere wird abgelehnt. Die Oberfläche setzt den Namen als React-Text. Namen stehen nicht im Repo und nicht in den Logs. Zehn Personen sind das Maximum. Die elfte wird nicht angelegt, und der Knopf zum Hinzufügen ist dann weg.
+**Namen.** `cleanPersonName` normalisiert auf NFC, entfernt Steuerzeichen, schneidet Leerzeichen ab und behält 1 bis 40 Zeichen. Mindestens ein Zeichen muss sichtbar sein. Unsichtbare Zeichen wie U+3164, U+2800 oder ein einzelnes kombinierendes Zeichen werden abgelehnt. Die Oberfläche setzt den Namen als React-Text in `<bdi>`. Namen stehen nicht im Repo und nicht in den Logs. Zehn Personen sind das Maximum. Zählen und Anlegen laufen in einer Transaktion, und der Knopf ist während des Speicherns aus. Die elfte Person wird nicht angelegt.
 
-**Import.** Format 4 ist eine Person oder alle Personen, höchstens 4 MB und 8000 Karten. Eine Person ersetzen lässt die anderen stehen. Als neue Person geht nur unter zehn und mit einem gültigen Namen. Alle Personen ersetzen läuft erst nach der eigenen Bestätigung und löscht vorher den bisherigen Stand. Formate 1 bis 3 bleiben eine Person mit leerem Namen. Eine Datei, die das Schema nicht trifft, wirft `IMPORT_REJECTED`. Die Meldung enthält den Dateiinhalt nicht. `level` ist 0. Eine andere Stufe wird abgelehnt, bis der Einstufungstest kommt.
+**Import.** Format 4 ist eine Person oder alle Personen, höchstens 4 MB und 8000 Karten. `last_review` und `due` werden gekürzt. Doppelte Karten-IDs in einer Person lehnen die Datei ab. Eine Datei mit `scope: person` und mehreren Personen wird abgelehnt. Eine Person ersetzen lässt die anderen stehen und benennt die aktive Person nicht um. Als neue Person geht nur unter zehn, in derselben Transaktion gezählt, und nur mit einem gültigen Namen. Alle Personen ersetzen fragt in einem zweiten Dialog noch einmal. Die Sicherung in diesem Dialog enthält alle Personen. Enthält die Datei keine Notiz, sagt der Dialog, dass die Notizen aller Personen überschrieben werden. Mehr als zehn Personen in der Datei werden auf zehn gekürzt. Formate 1 bis 3 bleiben eine Person mit leerem Namen. Eine Datei, die das Schema nicht trifft, wirft `IMPORT_REJECTED`. Die Meldung enthält den Dateiinhalt nicht. `level` ist 0. Eine andere Stufe wird abgelehnt, bis der Einstufungstest kommt. «Alle Personen exportieren» bleibt aus, solange eine Person keinen Namen oder nicht beide Sprachen hat, und der Satz daneben sagt das.
 
-**Isolation und Löschen.** Karten hängen an `personId`. Der Lernstand einer Person ist für die andere unsichtbar. `replaceAll` schreibt nur die aktive Person. Löschen entfernt die Karten dieser Person. Die letzte Person wird durch eine neue ohne Namen ersetzt, damit die App wieder starten kann. Der Audio-Cache bleibt.
+**Isolation und Löschen.** Karten hängen an `personId`. Der Lernstand einer Person ist für die andere unsichtbar. `saveSettings`, `saveCard` und `replaceAll` bekommen die Personen-ID vom Tippen und folgen nicht der Person, die beim Schreiben gerade aktiv ist. Ein Wechsel setzt die Seite neu (`<Outlet key={activePersonId}>`), nimmt die Personen-ID in den Sitzungsschlüssel und stoppt laufendes Audio. Löschen entfernt die Karten dieser Person. Die letzte Person wird durch eine neue ohne Namen ersetzt, damit die App wieder starten kann. Eine Stimme, die danach niemand mehr benutzt, wird aus dem Offline-Speicher genommen.
 
 **Stimmen.** `dropOtherVoices` behält die Stimmen-IDs, die andere Personen dieser Sprache noch benutzen. Die eigene vorige Stimme gehört nicht dazu. Ein Ordner zählt nur, wenn er genau die ID ist: `vivos-220/` bleibt nicht, wenn `vivos-22` behalten wird. Dateien einer anderen Sprache bleiben. `discardAdded([])` löscht nichts.
 
-**N14b-02.** Geschlossen durch Tests in `src/audio/offline.test.ts`. Die ursprünglichen Mutanten-Diffs waren nicht auffindbar. Die Tests sperren diese Verhaltensweisen: ein HTTP-Status ausser 404 bricht den Download ab und behält die andere Stimme (M1). Bei vollem Speicher listet `added` die Adressen, die dieser Versuch schon geschrieben hat (M2). `dropOthers: () => false` löscht nach einem vollständigen Laden nichts (N4). Eine Stimmen-ID trifft nur den Ordner plus Schrägstrich (N15). Dateien einer anderen Sprache bleiben (N16). `discardAdded` löscht nur die genannten Adressen, eine leere Liste nichts (N17).
+**N14b-02.** Nicht geschlossen. Tests in `src/audio/offline.test.ts` beschreiben diese Verhaltensweisen und schliessen den Befund nicht, weil die ursprünglichen Mutanten-Diffs nicht im Repo lagen: ein HTTP-Status ausser 404 bricht den Download ab und behält die andere Stimme (M1). Bei vollem Speicher listet `added` die Adressen, die dieser Versuch schon geschrieben hat (M2). `dropOthers: () => false` löscht nach einem vollständigen Laden nichts (N4). Eine Stimmen-ID trifft nur den Ordner plus Schrägstrich (N15). Dateien einer anderen Sprache bleiben (N16). `discardAdded` löscht nur die genannten Adressen, eine leere Liste nichts (N17).
 
 **Lernsprache.** Die Lernsprache und die vietnamesische Variante stehen nur in der oberen Leiste. Die Einstellungen behalten die App-Sprache und die Stimme. «Bisherige Stimme behalten» erscheint dort nur, wenn die vorige Stimme vollständig im Cache liegt.
 
-**Wortzeiten.** Eine fehlgeschlagene Zeitdatei wird nicht gecacht. Der nächste Versuch liest sie neu. Während eine Datei spielt, bleiben die Zeiten dieser Datei, auch wenn das Tempo wechselt. `playClip` meldet die Zeit über `requestAnimationFrame`, nicht über `ontimeupdate`.
+**Wortzeiten.** Eine fehlgeschlagene Zeitdatei wird nicht gecacht. Der nächste Versuch liest sie neu. Während eine Datei spielt, bleiben die Zeiten dieser Datei, auch wenn das Tempo wechselt. Das gilt in Üben und im Zeigen-Modus. `playClip` meldet die Zeit über `requestAnimationFrame`, nicht über `ontimeupdate`. `require_onnx` beendet sich mit einem Satz, wenn das Paket `onnx` fehlt, statt eine Fehlerspur zu zeigen.
+
+**Zeigen.** Im Zeigen-Modus steht der Name der Person nicht in der oberen Leiste. Die Lernsprache bleibt sichtbar. Die App hat keine Bilder. Die Texte sagen Stimmen und Audiodateien, nicht Bilder oder Wortbilder.
+
+## Nachprüfung von Pull Request 16
+
+Geprüft am 11. Oktober 2026 am Branch `cursor/people-v060-d07c`. Kein neues Paket. `npm audit` bleibt bei 0 Schwachstellen. N14b-02 bleibt offen.
+
+| ID | Schwere | Status | Auflösung |
+| --- | --- | --- | --- |
+| P16-01 | Hoch | Geschlossen | Die Startseite hält keinen eigenen Entwurf der Sprachen mehr. Jede Wahl ruft `saveSettings` auf. «Weiter» wird frei, sobald beide Sprachen stehen, auch wenn die Lernsprache oben gewählt wird. Die Seite bleibt bis «Weiter», damit die Standardstimme gesetzt wird. Test: `src/pages/home-onboarding.test.tsx`. |
+| P16-02 | Mittel | Geschlossen | `<Outlet key={activePersonId}>` setzt die Seite neu. Der Sitzungsschlüssel enthält die Personen-ID. `stopClip` stoppt Audio beim Wechsel. Jedes Speichern übergibt die Personen-ID. Tests: `src/pages/person-switch.test.tsx`, `src/storage/people.test.ts`, `src/audio/player.test.ts`. |
+| P16-03 | Mittel | Geschlossen | «Sicherung herunterladen» im Dialog «Alle Personen ersetzen» sichert alle Personen. Eine leere Notiz sagt, dass alle Notizen überschrieben werden. Die Ersetzung braucht einen zweiten Dialog. Test: `src/pages/settings-import.test.tsx`. |
+| P16-04 | Niedrig | Geschlossen | Zählen und Anlegen laufen in einer Transaktion. Der Knopf ist während des Speicherns aus. Test: `src/storage/people.test.ts`, `src/components/top-bar.test.tsx`. |
+| P16-05 | Pflicht | Geschlossen | N14b-02 ist nicht geschlossen. Die Zeilen zum zweiten Durchgang, zu 0.5.0 und zu 0.6.0 sagen das. |
+| P16-06 | Niedrig | Geschlossen | Tests für die Kürzung von `last_review` und `due` in Format 4, doppelte Karten, die Grenze von 8000 Karten, eine Personen-Datei mit mehreren Personen, die Grenze beim Import als neue Person, die Kürzung von `importAll`, die gemerkte Datei in Üben und Zeigen, und N15c-01 in Üben und Zeigen. `src/storage/import.test.ts`, `src/storage/people.test.ts`, `src/pages/practice-show-gap.test.tsx`. |
+| P16-07 | Niedrig | Geschlossen | NFC, mindestens ein sichtbares Zeichen, Anzeige in `<bdi>`. Test: `src/storage/people.test.ts`, `src/components/top-bar.test.tsx`. |
+| P16-08 | Niedrig | Geschlossen | Ersetzen mit einer Format-4-Datei benennt die aktive Person nicht um. Test: `src/storage/people.test.ts`. |
+
+Eine gelöschte Stimme verlässt den Cache, wenn keine verbleibende Person sie benutzt. Im Zeigen-Modus ist der Name verborgen. «Alle Personen exportieren» nennt den Grund, solange der Knopf aus ist. `require_onnx` endet mit einem Satz, wenn das Paket fehlt.

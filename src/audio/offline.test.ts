@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { defaultSettings } from '../storage/types'
 import { voicesFor } from './voices'
-import { AUDIO_CACHE, discardAdded, dropOtherVoices, loadVoiceOffline, voiceProgress } from './offline'
+import { AUDIO_CACHE, discardAdded, dropOtherVoices, forgetVoiceIfUnused, loadVoiceOffline, voiceProgress } from './offline'
 
 const FILES = [
   'vi/vivos-22/emergency.help__any__base.m4a',
@@ -142,6 +143,23 @@ describe('offline voice loading', () => {
     await dropOtherVoices('vi', voice('vais1000'))
     expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(true)
     expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/vivos-22/emergency.help__any__base.m4a')).toBe(false)
+  })
+
+  it('removes a deleted person voice when nobody else uses it', async () => {
+    const stores = installCaches()
+    const legacy = '/audio/vi/emergency.help__any__base.m4a'
+    const mann = '/audio/vi/vivos-22/emergency.help__any__base.m4a'
+    const gone = { ...defaultSettings, appLang: 'de' as const, targetLang: 'vi' as const, voices: { vi: 'vivos-22' } }
+    stores.set(AUDIO_CACHE, new Map([[legacy, 'old'], [mann, 'new']]))
+    await forgetVoiceIfUnused(gone, [{ id: 'b', settings: { ...defaultSettings, appLang: 'de', targetLang: 'vi' } }])
+    expect(stores.get(AUDIO_CACHE)?.has(mann)).toBe(false)
+    expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(true)
+    stores.set(AUDIO_CACHE, new Map([[legacy, 'old'], [mann, 'new']]))
+    await forgetVoiceIfUnused(gone, [
+      { id: 'b', settings: { ...defaultSettings, appLang: 'de', targetLang: 'vi', voices: { vi: 'vivos-22' } } },
+    ])
+    expect(stores.get(AUDIO_CACHE)?.has(mann)).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(true)
   })
 
   it('tells the voice buttons to refresh after another voice is dropped', async () => {

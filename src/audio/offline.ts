@@ -1,7 +1,8 @@
 import type { Lang } from '../../content/phrase'
 import { publicUrl } from '../public-url'
 import { loadManifest } from './player'
-import { filesForVoice, voicesFor, type CatalogVoice } from './voices'
+import type { Settings } from '../storage/types'
+import { filesForVoice, selectedVoice, voicesFor, voicesKeptByOthers, type CatalogVoice } from './voices'
 
 /** Runtime cache filled by «Für offline laden». Install does not write it. */
 export const AUDIO_CACHE = 'travel-talk-audio'
@@ -151,19 +152,40 @@ export async function discardAdded(urls: readonly string[]): Promise<void> {
   notifyAudioChanged()
 }
 
-/** Removes voices of this language that nobody in `alsoKeep` still has selected. */
-export async function dropOtherVoices(lang: Lang, keep: CatalogVoice, alsoKeep: readonly string[] = []): Promise<void> {
-  const keepIds = new Set([keep.id, ...alsoKeep])
+/** Removes cached files of this language whose voice id is not in `keepIds`. */
+export async function dropVoicesExcept(lang: Lang, keepIds: readonly string[]): Promise<void> {
+  const keep = new Set(keepIds)
   if ('caches' in globalThis) {
     const names = await caches.keys()
     for (const name of names) {
       const cache = await caches.open(name)
       for (const request of await cache.keys()) {
-        if (isOtherVoice(requestUrl(request), lang, keepIds)) await cache.delete(request)
+        if (isOtherVoice(requestUrl(request), lang, keep)) await cache.delete(request)
       }
     }
   }
   notifyAudioChanged()
+}
+
+/** Removes voices of this language that nobody in `alsoKeep` still has selected. */
+export async function dropOtherVoices(lang: Lang, keep: CatalogVoice, alsoKeep: readonly string[] = []): Promise<void> {
+  await dropVoicesExcept(lang, [keep.id, ...alsoKeep])
+}
+
+/**
+ * After a person is deleted, drop their voice when no remaining person still uses it.
+ * An empty `remaining` list drops every voice of the languages that person learned.
+ */
+export async function forgetVoiceIfUnused(gone: Settings, remaining: readonly { id: string; settings: Settings }[]): Promise<void> {
+  const langs = new Set<Lang>()
+  if (gone.appLang) langs.add(gone.appLang)
+  if (gone.targetLang) langs.add(gone.targetLang)
+  for (const extra of gone.moreTargets ?? []) langs.add(extra)
+  for (const lang of langs) {
+    const used = voicesKeptByOthers(remaining, undefined, lang)
+    if (used.includes(selectedVoice(gone, lang).id)) continue
+    await dropVoicesExcept(lang, used)
+  }
 }
 
 /** After a switch to a voice that is already complete, unused voices of that language can go. */

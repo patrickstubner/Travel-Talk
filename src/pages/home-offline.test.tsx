@@ -15,6 +15,7 @@ vi.mock('../audio/offline', () => ({
   voiceProgress: vi.fn(async () => ({ have: 0, total: 10 })),
   loadVoiceOffline: vi.fn(),
   discardAdded: vi.fn(async () => undefined),
+  forgetVoiceIfUnused: vi.fn(async () => undefined),
   notifyAudioChanged: vi.fn(() => {
     window.dispatchEvent(new Event('travel-talk-audio-changed'))
   }),
@@ -32,7 +33,8 @@ afterEach(() => {
 
 async function renderHome(voices: { vi: string }): Promise<void> {
   const repo = new DexieProgressRepository('travel-talk')
-  await repo.saveSettings({
+  const personId = (await repo.load()).activePersonId ?? ''
+  await repo.saveSettings(personId, {
     ...defaultSettings,
     appLang: 'de',
     targetLang: 'vi',

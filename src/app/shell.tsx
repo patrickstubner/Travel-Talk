@@ -43,7 +43,7 @@ export function Shell() {
         <p className="brand">{copy.appName}</p>
         <p className="version">{copy.version}</p>
       </header>
-      <TopBar askName={needsName} />
+      <TopBar askName={needsName} hidePerson={showMode && !needsName} />
       <div className="layout">
         <nav className="nav" aria-label={copy.appName}>
           <NavLink to="/" end>
@@ -59,7 +59,7 @@ export function Shell() {
               {copy.personNameHint}
             </p>
           ) : (
-            <Outlet />
+            <Outlet key={snapshot.activePersonId} />
           )}
         </main>
       </div>

@@ -10,6 +10,7 @@ import { PracticePage } from './Practice'
 
 vi.mock('../audio/player', () => ({
   playClip: vi.fn(async () => 'file'),
+  stopClip: vi.fn(),
 }))
 
 function ReadyPractice({ children }: { children: ReactNode }) {

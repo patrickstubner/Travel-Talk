@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { voiceProgress } from '../audio/offline'
 import { selectedVoice, voicesFor, voicesKeptByOthers, withDefaultVoices } from '../audio/voices'
@@ -15,22 +15,29 @@ export function HomePage() {
   const { catalog, snapshot, saveSettings } = useApp()
   const settings = useSettings()
   const copy = useCopy()
-  const [draft, setDraft] = useState<Settings | null>(null)
+  const [confirmed, setConfirmed] = useState(false)
+  const startedComplete = useRef<boolean | null>(null)
+  if (snapshot && startedComplete.current === null) {
+    startedComplete.current = Boolean(settings.appLang && settings.targetLang)
+  }
   if (!catalog || !snapshot) return null
   const direction = currentDirection(settings.appLang, settings.targetLang)
+  const stayOnboarding = startedComplete.current === false && !confirmed
 
-  if (!direction || !settings.appLang || !settings.targetLang) {
-    const pending = draft ?? settings
+  if (stayOnboarding || !direction || !settings.appLang || !settings.targetLang) {
     return (
       <LanguageChoice
-        settings={pending}
+        settings={settings}
         copy={copy}
-        ui={pending.appLang ?? 'de'}
+        ui={settings.appLang ?? 'de'}
         mode="onboarding"
-        onChange={(patch) => setDraft({ ...pending, ...patch })}
+        onChange={(patch) => {
+          void saveSettings({ ...settings, ...patch })
+        }}
         onContinue={() => {
-          if (!pending.appLang || !pending.targetLang) return
-          void saveSettings(withDefaultVoices(pending))
+          if (!settings.appLang || !settings.targetLang) return
+          setConfirmed(true)
+          void saveSettings(withDefaultVoices(settings))
         }}
       />
     )

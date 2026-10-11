@@ -123,30 +123,29 @@ export class DexieProgressRepository implements ProgressRepository {
     }
   }
 
-  async saveSettings(settings: Settings): Promise<void> {
-    const device = await this.activeDevice()
-    await this.db.people.update(device.activePersonId, { settings })
+  async saveSettings(personId: string, settings: Settings): Promise<void> {
+    await this.db.people.update(personId, { settings })
   }
 
-  async saveCard(card: StoredCard): Promise<void> {
-    const device = await this.activeDevice()
-    await this.db.personCards.put({ ...card, personId: device.activePersonId })
+  async saveCard(personId: string, card: StoredCard): Promise<void> {
+    await this.db.personCards.put({ ...card, personId })
   }
 
-  async replaceAll(snapshot: ProgressSnapshot): Promise<void> {
-    const device = await this.activeDevice()
-    await this.writePerson(device.activePersonId, snapshot.settings, snapshot.cards)
+  async replaceAll(personId: string, snapshot: ProgressSnapshot): Promise<void> {
+    await this.writePerson(personId, snapshot.settings, snapshot.cards)
   }
 
   async addPerson(name: string): Promise<boolean> {
     const clean = cleanPersonName(name)
     if (!clean) return false
-    const count = await this.db.people.count()
-    if (count >= PERSON_LIMIT) return false
-    const id = crypto.randomUUID()
-    await this.db.people.add({ id, name: clean, level: LEVEL_PLACEHOLDER, settings: { ...defaultSettings } })
-    await this.db.device.put({ id: 'device', activePersonId: id })
-    return true
+    return this.db.transaction('rw', this.db.people, this.db.device, async () => {
+      const count = await this.db.people.count()
+      if (count >= PERSON_LIMIT) return false
+      const id = crypto.randomUUID()
+      await this.db.people.add({ id, name: clean, level: LEVEL_PLACEHOLDER, settings: { ...defaultSettings } })
+      await this.db.device.put({ id: 'device', activePersonId: id })
+      return true
+    })
   }
 
   async renamePerson(id: string, name: string): Promise<boolean> {
@@ -183,24 +182,25 @@ export class DexieProgressRepository implements ProgressRepository {
     await this.db.device.put({ id: 'device', activePersonId: id })
   }
 
-  async importPerson(mode: 'replace' | 'add', person: ImportedPerson, keepLocal?: Settings): Promise<'ok' | 'full'> {
+  async importPerson(mode: 'replace' | 'add', person: ImportedPerson, keepLocal?: Settings, personId?: string): Promise<'ok' | 'full'> {
     const settings = mergeLocal(person.settings, keepLocal)
     if (mode === 'add') {
       const clean = cleanPersonName(person.name)
       if (!clean) return 'full'
-      const count = await this.db.people.count()
-      if (count >= PERSON_LIMIT) return 'full'
-      const id = crypto.randomUUID()
-      await this.db.people.add({ id, name: clean, level: LEVEL_PLACEHOLDER, settings })
-      await this.writePerson(id, settings, person.cards)
-      await this.db.device.put({ id: 'device', activePersonId: id })
-      return 'ok'
+      return this.db.transaction('rw', this.db.people, this.db.device, this.db.personCards, async () => {
+        const count = await this.db.people.count()
+        if (count >= PERSON_LIMIT) return 'full' as const
+        const id = crypto.randomUUID()
+        await this.db.people.add({ id, name: clean, level: LEVEL_PLACEHOLDER, settings })
+        if (person.cards.length > 0) {
+          await this.db.personCards.bulkPut(person.cards.map((card) => ({ ...card, personId: id })))
+        }
+        await this.db.device.put({ id: 'device', activePersonId: id })
+        return 'ok' as const
+      })
     }
-    const device = await this.activeDevice()
-    const current = await this.db.people.get(device.activePersonId)
-    const name = cleanPersonName(person.name) ?? current?.name ?? ''
-    if (name) await this.db.people.update(device.activePersonId, { name })
-    await this.writePerson(device.activePersonId, settings, person.cards)
+    const id = personId ?? (await this.activeDevice()).activePersonId
+    await this.writePerson(id, settings, person.cards)
     return 'ok'
   }
 

@@ -12,8 +12,9 @@ describe('dexie repository', () => {
     expect(empty.settings).toEqual(defaultSettings)
     expect(empty.cards).toEqual([])
     const settings = { ...defaultSettings, appLang: 'pt-BR' as const, targetLang: 'vi' as const, personalNote: 'Nur lokal' }
-    await repo.saveSettings(settings)
-    await repo.saveCard({
+    const personId = empty.activePersonId ?? ''
+    await repo.saveSettings(personId, settings)
+    await repo.saveCard(personId, {
       cardId: 'pt-vi:meet.hello',
       due: '2026-10-12T00:00:00.000Z',
       stability: 2,
@@ -31,7 +32,7 @@ describe('dexie repository', () => {
     expect(loaded.settings.targetLang).toBe('vi')
     expect(loaded.settings).not.toHaveProperty('pairId')
     expect(loaded.cards).toHaveLength(1)
-    await repo.replaceAll({ settings: defaultSettings, cards: [] })
+    await repo.replaceAll(personId, { settings: defaultSettings, cards: [] })
     const cleared = await repo.load()
     expect(cleared.cards).toEqual([])
   })

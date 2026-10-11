@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppContext, AppProvider } from '../app/state'
 import { TopBar } from '../components/TopBar'
+import { toExport } from '../storage/import'
 import { defaultSettings } from '../storage/types'
 import { SettingsPage } from './Settings'
 
@@ -214,6 +215,55 @@ describe('settings import', () => {
     await screen.findByText('Import gespeichert.')
     expect(screen.getByRole('button', { name: 'Mann 1' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', { name: 'Frau (Norden)' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('explains why exporting every person stays off', async () => {
+    renderSettings()
+    const all = await screen.findByRole('button', { name: 'Alle Personen exportieren' })
+    expect((all as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByText('Alle Personen exportieren bleibt aus, solange eine Person keinen Namen oder nicht beide Sprachen hat.')).toBeTruthy()
+  })
+
+  it('backs up every person, says an empty note overwrites, and confirms replace all in a second step', async () => {
+    const saved = spyDownloads()
+    renderSettings()
+    await chooseLanguages()
+    fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: A' }))
+    fireEvent.change(screen.getByLabelText('Person hinzufügen'), { target: { value: 'B' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Person hinzufügen' }))
+    await screen.findByRole('button', { name: 'Wer lernt?: B' })
+    fireEvent.click(within(screen.getByRole('group', { name: 'Sprache der App' })).getByRole('button', { name: 'Deutsch' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Sprache, die du lernst/ }))
+    const groups = await screen.findAllByRole('group', { name: 'Sprache, die du lernst' })
+    fireEvent.click(within(groups[groups.length - 1]!).getByRole('button', { name: 'Englisch' }))
+    await waitFor(() => {
+      expect((screen.getByRole('button', { name: 'Alle Personen exportieren' }) as HTMLButtonElement).disabled).toBe(false)
+    })
+    const settings = { ...defaultSettings, appLang: 'de' as const, targetLang: 'vi' as const }
+    const text = toExport({ settings, cards: [] }, new Date(), false, {
+      scope: 'all',
+      people: [
+        { name: 'AusDatei', settings, cards: [] },
+        { name: 'Zweite', settings: { ...settings, targetLang: 'en' }, cards: [] },
+      ],
+    })
+    fireEvent.change(screen.getByLabelText('Fortschritt importieren'), {
+      target: { files: [new File([text], 'alle.json', { type: 'application/json' })] },
+    })
+    await screen.findByRole('dialog')
+    expect(screen.getByText('Die Datei enthält keine Notiz. Die Notizen aller Personen auf diesem Gerät werden überschrieben.')).toBeTruthy()
+    expect(screen.queryByText('Die Datei enthält keine Notiz. Die Notiz auf diesem Gerät bleibt.')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Sicherung herunterladen' }))
+    await waitFor(() => expect(saved[0]).toBeTruthy())
+    const packed = JSON.parse(await saved[0]!.body) as { scope: string; people: { name: string }[] }
+    expect(packed.scope).toBe('all')
+    expect(packed.people.map((person) => person.name).sort()).toEqual(['A', 'B'])
+    fireEvent.click(screen.getByRole('button', { name: 'Alle Personen ersetzen' }))
+    expect(screen.queryByText('Import gespeichert.')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Alle Personen ersetzen?' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Ja, alle ersetzen' }))
+    expect(await screen.findByText('Import gespeichert.')).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Wer lernt?: AusDatei' })).toBeTruthy()
   })
 
   it('keeps import disabled until a catalog is loaded', () => {

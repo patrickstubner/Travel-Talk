@@ -6,7 +6,12 @@
 - Oben in der Mitte stehen immer die aktuelle Person und die gewählte Lernsprache, mit der Variante, wenn es eine gibt. Ein Tippen wechselt die Person oder die Lernsprache an dieser Stelle. Das ist der einzige Schalter für beides. Hinzufügen, Umbenennen und Löschen sitzen in demselben Menü. Löschen fragt nach und entfernt nur den Lernstand dieser Person.
 - Ein bestehendes Gerät wird zur ersten Person. Karten, Notiz und Stimme bleiben. Der Name ist leer, bis er eingegeben ist. Exportformat 4 speichert eine Person oder alle Personen. Formate 1 bis 3 werden als eine Person gelesen und ersetzen die anderen nicht still. Alle Personen ersetzen braucht eine eigene Bestätigung. Eine abgelehnte Datei zeigt ihren Inhalt nicht.
 - Wechselt eine Person die Stimme, bleibt eine Stimme, die eine andere Person noch benutzt. «Bisherige Stimme behalten» erscheint in den Einstellungen nur, wenn die vorige Stimme vollständig geladen ist.
-- Während eine Datei spielt, bleiben ihre Wortzeiten, auch wenn das Tempo wechselt. Die Markierung folgt `requestAnimationFrame`. Eine fehlende Zeitdatei wird nicht für den Rest der Sitzung gemerkt. `onnx` 1.17.0 ist nur für das Erzeugen der Zeiten festgelegt, nicht als Abhängigkeit der App.
+- Während eine Datei spielt, bleiben ihre Wortzeiten, auch wenn das Tempo wechselt. Die Markierung folgt `requestAnimationFrame`. Eine fehlende Zeitdatei wird nicht für den Rest der Sitzung gemerkt. `onnx` 1.17.0 ist nur für das Erzeugen der Zeiten festgelegt, nicht als Abhängigkeit der App. Fehlt das Paket, endet das Skript mit einem Satz.
+- Die Sprachwahl zu Beginn speichert jede Wahl sofort. «Weiter» wird frei, sobald beide Sprachen stehen, auch wenn die Lernsprache oben gewählt wird. Die Seite bleibt bis zu diesem Knopf, damit die Standardstimme gesetzt wird.
+- Ein Personenwechsel setzt die offene Seite neu, stoppt laufendes Audio und schreibt den Lernstand auf die Person, die beim Tippen aktiv war.
+- «Alle Personen ersetzen» sichert vorher alle Personen, sagt bei einer leeren Notiz, dass alle Notizen überschrieben werden, und fragt in einem zweiten Schritt nach. Ersetzen einer einzelnen Person benennt sie nicht um.
+- Zehn Personen bleiben das Maximum, auch bei einem zweiten Klick. Ein Name braucht ein sichtbares Zeichen. In der Leiste steht er so, dass eine fremde Schreibrichtung den Rest nicht mitzieht. Im Zeigen-Modus steht der Name nicht oben.
+- Eine Stimme, die nach dem Löschen niemand mehr benutzt, verlässt den Offline-Speicher. «Alle Personen exportieren» sagt, warum der Knopf aus ist, solange eine Person unvollständig ist. Die Texte nennen Stimmen und Audiodateien, nicht Bilder.
 
 ## 0.5.0 — 2026-10-11
 

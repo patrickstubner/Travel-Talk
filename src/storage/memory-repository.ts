@@ -16,22 +16,22 @@ export class MemoryProgressRepository implements ProgressRepository {
     }
   }
 
-  async saveSettings(settings: Settings): Promise<void> {
-    const active = this.current()
-    if (active) active.settings = { ...settings }
+  async saveSettings(personId: string, settings: Settings): Promise<void> {
+    const person = this.people.find((item) => item.id === personId)
+    if (person) person.settings = { ...settings }
   }
 
-  async saveCard(card: StoredCard): Promise<void> {
-    const active = this.current()
-    if (!active) return
-    active.cards = [...active.cards.filter((item) => item.cardId !== card.cardId), { ...card }]
+  async saveCard(personId: string, card: StoredCard): Promise<void> {
+    const person = this.people.find((item) => item.id === personId)
+    if (!person) return
+    person.cards = [...person.cards.filter((item) => item.cardId !== card.cardId), { ...card }]
   }
 
-  async replaceAll(snapshot: ProgressSnapshot): Promise<void> {
-    const active = this.current()
-    if (!active) return
-    active.settings = { ...snapshot.settings }
-    active.cards = snapshot.cards.map((card) => ({ ...card }))
+  async replaceAll(personId: string, snapshot: ProgressSnapshot): Promise<void> {
+    const person = this.people.find((item) => item.id === personId)
+    if (!person) return
+    person.settings = { ...snapshot.settings }
+    person.cards = snapshot.cards.map((card) => ({ ...card }))
   }
 
   async addPerson(name: string): Promise<boolean> {
@@ -66,17 +66,18 @@ export class MemoryProgressRepository implements ProgressRepository {
     if (this.people.some((person) => person.id === id)) this.activeId = id
   }
 
-  async importPerson(mode: 'replace' | 'add', person: ImportedPerson): Promise<'ok' | 'full'> {
+  async importPerson(mode: 'replace' | 'add', person: ImportedPerson, _keepLocal?: Settings, personId?: string): Promise<'ok' | 'full'> {
     if (mode === 'add') {
       const added = await this.addPerson(person.name)
       if (!added) return 'full'
-      await this.replaceAll({ settings: person.settings, cards: person.cards })
+      const active = this.current()
+      if (!active) return 'full'
+      active.settings = { ...person.settings }
+      active.cards = person.cards.map((card) => ({ ...card }))
       return 'ok'
     }
-    const active = this.current()
+    const active = (personId ? this.people.find((item) => item.id === personId) : undefined) ?? this.current()
     if (!active) return 'full'
-    const name = cleanPersonName(person.name)
-    if (name) active.name = name
     active.settings = { ...person.settings }
     active.cards = person.cards.map((card) => ({ ...card }))
     return 'ok'

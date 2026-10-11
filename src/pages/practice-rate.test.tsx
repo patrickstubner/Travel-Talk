@@ -11,6 +11,7 @@ import { PracticePage } from './Practice'
 
 vi.mock('../audio/player', () => ({
   playClip: vi.fn(async () => 'file'),
+  stopClip: vi.fn(),
 }))
 
 beforeEach(() => {
@@ -26,8 +27,9 @@ describe('rating buttons', () => {
     const now = Date.now()
     const far = new Date(now + 400 * 86_400_000).toISOString()
     const repo = new DexieProgressRepository('travel-talk')
-    await repo.saveSettings({ ...defaultSettings, appLang: 'de', targetLang: 'vi' })
-    await repo.saveCard({
+    const personId = (await repo.load()).activePersonId ?? ''
+    await repo.saveSettings(personId, { ...defaultSettings, appLang: 'de', targetLang: 'vi' })
+    await repo.saveCard(personId, {
       cardId: 'de-vi:emergency.help',
       due: new Date(now - 86_400_000).toISOString(),
       stability: 2,

@@ -10,6 +10,7 @@ import { PhrasePage } from './Phrase'
 
 vi.mock('../audio/player', () => ({
   playClip: vi.fn(async () => 'file'),
+  stopClip: vi.fn(),
   decodeContourFile: vi.fn(async () => null),
 }))
 

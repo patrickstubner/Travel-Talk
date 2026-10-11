@@ -123,11 +123,18 @@ export function cleanVoices(value: unknown): VoiceMap | undefined {
   return Object.keys(voices).length > 0 ? voices : undefined
 }
 
-/** Strips control characters, then keeps a trimmed name of 1 to 40 characters. */
+/** Hangul fillers and the blank braille cell look empty but are not whitespace. */
+const INVISIBLE_NAME = /[\p{Z}\p{Mn}\p{Me}\u115F\u1160\u3164\uFFA0\u2800]/gu
+
+/**
+ * NFC, then no control characters.
+ * A name needs 1 to 40 characters and at least one that is actually visible.
+ */
 export function cleanPersonName(value: unknown): string | null {
   if (typeof value !== 'string') return null
-  const stripped = value.replace(/[^\P{C}]/gu, '').trim()
+  const stripped = value.normalize('NFC').replace(/[^\P{C}]/gu, '').trim()
   if (stripped.length < 1 || stripped.length > NAME_LIMIT) return null
+  if (stripped.replace(INVISIBLE_NAME, '').length < 1) return null
   return stripped
 }
 
@@ -184,15 +191,17 @@ export function usesLang(settings: Settings, lang: Lang): boolean {
 
 export interface ProgressRepository {
   load(): Promise<ProgressSnapshot>
-  saveSettings(settings: Settings): Promise<void>
-  saveCard(card: StoredCard): Promise<void>
-  /** Replaces the active person's settings and cards. Other people stay. */
-  replaceAll(snapshot: ProgressSnapshot): Promise<void>
+  /** Writes this person, even if another person is active by the time the write runs. */
+  saveSettings(personId: string, settings: Settings): Promise<void>
+  saveCard(personId: string, card: StoredCard): Promise<void>
+  /** Replaces this person's settings and cards. Other people stay. */
+  replaceAll(personId: string, snapshot: ProgressSnapshot): Promise<void>
   addPerson(name: string): Promise<boolean>
   renamePerson(id: string, name: string): Promise<boolean>
   deletePerson(id: string): Promise<void>
   switchPerson(id: string): Promise<void>
-  importPerson(mode: 'replace' | 'add', person: ImportedPerson, keepLocal?: Settings): Promise<'ok' | 'full'>
+  /** `personId` is the person a replace writes. Add ignores it and creates a new row. */
+  importPerson(mode: 'replace' | 'add', person: ImportedPerson, keepLocal?: Settings, personId?: string): Promise<'ok' | 'full'>
   importAll(people: readonly ImportedPerson[]): Promise<void>
   everyone(): Promise<ImportedPerson[]>
 }

@@ -3,9 +3,10 @@ import 'fake-indexeddb/auto'
 import { freshIndexedDb } from '../test-idb'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Shell } from '../app/shell'
 import { AppContext, AppProvider } from '../app/state'
+import { DexieProgressRepository } from '../storage/dexie-repository'
 import { defaultSettings, LEVEL_PLACEHOLDER, type PersonRecord } from '../storage/types'
 import { SettingsPage } from '../pages/Settings'
 import { TopBar, withTarget } from './TopBar'
@@ -57,6 +58,7 @@ describe('top bar', () => {
     fireEvent.change(name, { target: { value: 'A' } })
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
     const named = await screen.findByRole('button', { name: 'Wer lernt?: A' })
+    expect(named.querySelector('bdi')?.textContent).toBe('A')
     fireEvent.click(language)
     const groups = await screen.findAllByRole('group', { name: 'Sprache, die du lernst' })
     fireEvent.click(within(groups[groups.length - 1]!).getByRole('button', { name: 'Vietnamesisch' }))
@@ -101,7 +103,7 @@ describe('top bar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Person löschen' }))
     expect(
       screen.getByText(
-        'Der Lernstand dieser Person wird gelöscht. Die anderen Personen bleiben. Stimmen und Audiodateien bleiben auf dem Gerät.',
+        'Der Lernstand dieser Person wird gelöscht. Die anderen Personen bleiben. Eine Stimme, die niemand mehr benutzt, wird aus dem Offline-Speicher genommen.',
       ),
     ).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Wer lernt?: B' })).toBeTruthy()
@@ -156,5 +158,68 @@ describe('top bar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
     expect(await screen.findByText('heute')).toBeTruthy()
     expect(screen.queryByTestId('name-ask')).toBeNull()
+  })
+
+  it('hides the person name in show mode and ignores a second add while the first is saving', async () => {
+    const repo = new DexieProgressRepository('travel-talk')
+    const id = (await repo.load()).activePersonId ?? ''
+    await repo.renamePerson(id, 'A')
+    await repo.saveSettings(id, { ...defaultSettings, appLang: 'de', targetLang: 'vi' })
+    render(
+      <AppProvider>
+        <MemoryRouter initialEntries={['/show']}>
+          <Routes>
+            <Route path="/" element={<Shell />}>
+              <Route path="show" element={<p>zeigen</p>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </AppProvider>,
+    )
+    expect(await screen.findByText('zeigen')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Wer lernt\?: A/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /Sprache, die du lernst/ })).toBeTruthy()
+    cleanup()
+
+    let release: (value: boolean) => void = () => undefined
+    const addPerson = vi.fn(() => new Promise<boolean>((resolve) => {
+      release = resolve
+    }))
+    const people = [person('p0', 'A')]
+    render(
+      <AppContext.Provider
+        value={{
+          catalog: null,
+          catalogOk: true,
+          snapshot: { settings: people[0]!.settings, cards: [], people, activePersonId: 'p0' },
+          storageError: false,
+          saveSettings: async () => undefined,
+          saveCard: async () => undefined,
+          replaceAll: async () => undefined,
+          addPerson,
+          renamePerson: async () => false,
+          deletePerson: async () => undefined,
+          switchPerson: async () => undefined,
+          importPerson: async () => 'ok',
+          importAll: async () => undefined,
+          everyone: async () => [],
+        }}
+      >
+        <TopBar />
+      </AppContext.Provider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: A' }))
+    fireEvent.change(screen.getByLabelText('Person hinzufügen'), { target: { value: '\u3164' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Person hinzufügen' }))
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Die Datei ist kein gültiger Travel-Talk-Export.')
+    expect(addPerson).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByLabelText('Person hinzufügen'), { target: { value: 'B' } })
+    const add = screen.getByRole('button', { name: 'Person hinzufügen' })
+    fireEvent.click(add)
+    fireEvent.click(add)
+    expect(addPerson).toHaveBeenCalledTimes(1)
+    expect((add as HTMLButtonElement).disabled).toBe(true)
+    release(true)
+    await waitFor(() => expect(screen.queryByLabelText('Person hinzufügen')).toBeNull())
   })
 })

@@ -3,7 +3,7 @@ import Dexie from 'dexie'
 import { describe, expect, it } from 'vitest'
 import { DexieProgressRepository } from './dexie-repository'
 import { parseImport, toExport } from './import'
-import { defaultSettings, type Settings, type StoredCard } from './types'
+import { cleanPersonName, defaultSettings, type Settings, type StoredCard } from './types'
 
 const concepts = new Set(['emergency.water', 'meet.hello'])
 
@@ -64,8 +64,8 @@ describe('people on one device', () => {
     const first = await repo.load()
     const firstId = first.activePersonId ?? ''
     expect(await repo.renamePerson(firstId, 'A')).toBe(true)
-    await repo.saveSettings(learning('de', 'vi', 'vivos-22'))
-    await repo.saveCard(card('de-vi:emergency.water'))
+    await repo.saveSettings(firstId, learning('de', 'vi', 'vivos-22'))
+    await repo.saveCard(firstId, card('de-vi:emergency.water'))
     expect(await repo.addPerson('\u0001')).toBe(false)
     expect(await repo.addPerson('B'.repeat(41))).toBe(false)
     for (let index = 1; index < 10; index += 1) {
@@ -82,7 +82,7 @@ describe('people on one device', () => {
     const back = await repo.load()
     expect(back.settings.voices?.vi).toBe('vivos-22')
     expect(back.cards.map((item) => item.cardId)).toEqual(['de-vi:emergency.water'])
-    await repo.replaceAll({ settings: learning('de', 'vi'), cards: [] })
+    await repo.replaceAll(firstId, { settings: learning('de', 'vi'), cards: [] })
     const cleared = await repo.load()
     expect(cleared.cards).toEqual([])
     expect(cleared.people).toHaveLength(10)
@@ -93,7 +93,7 @@ describe('people on one device', () => {
     const first = await repo.load()
     const firstId = first.activePersonId ?? ''
     await repo.renamePerson(firstId, 'A')
-    await repo.saveCard(card('de-vi:emergency.water'))
+    await repo.saveCard(firstId, card('de-vi:emergency.water'))
     expect(await repo.addPerson('B')).toBe(true)
     const both = await repo.load()
     const personB = both.people?.find((person) => person.name === 'B')
@@ -114,8 +114,8 @@ describe('people on one device', () => {
     const first = await repo.load()
     const firstId = first.activePersonId ?? ''
     await repo.renamePerson(firstId, 'A')
-    await repo.saveSettings(learning('de', 'vi'))
-    await repo.saveCard(card('de-vi:emergency.water'))
+    await repo.saveSettings(firstId, learning('de', 'vi'))
+    await repo.saveCard(firstId, card('de-vi:emergency.water'))
     const older = JSON.stringify({
       app: 'travel-talk',
       format: 3,
@@ -154,6 +154,81 @@ describe('people on one device', () => {
     expect(replaced.people?.map((person) => person.name).sort()).toEqual(['A', 'B'])
     expect(replaced.cards.map((item) => item.cardId)).toEqual(['de-vi:emergency.water'])
     expect(JSON.parse(packed).people[0].level).toBe(0)
+  })
+
+  it('rejects an invisible name and stores a composed character', () => {
+    expect(cleanPersonName('\u3164')).toBeNull()
+    expect(cleanPersonName('\u2800')).toBeNull()
+    expect(cleanPersonName('\u0301')).toBeNull()
+    expect(cleanPersonName(' \u3164 ')).toBeNull()
+    expect(cleanPersonName('a\u0301')).toBe('\u00e1')
+    expect(cleanPersonName('Anna')).toBe('Anna')
+  })
+
+  it('writes a late save to the person it names, not whoever is active', async () => {
+    const repo = new DexieProgressRepository(`travel-talk-test-${crypto.randomUUID()}`)
+    const first = await repo.load()
+    const firstId = first.activePersonId ?? ''
+    await repo.renamePerson(firstId, 'A')
+    expect(await repo.addPerson('C')).toBe(true)
+    await repo.saveSettings(firstId, learning('pt-BR', 'en'))
+    await repo.saveCard(firstId, card('pt-en:meet.hello'))
+    const active = await repo.load()
+    expect(active.people?.find((person) => person.id === active.activePersonId)?.name).toBe('C')
+    expect(active.settings.appLang).toBeNull()
+    expect(active.cards).toEqual([])
+    await repo.switchPerson(firstId)
+    const back = await repo.load()
+    expect(back.settings.appLang).toBe('pt-BR')
+    expect(back.cards.map((item) => item.cardId)).toEqual(['pt-en:meet.hello'])
+  })
+
+  it('does not go past ten people when two adds run together', async () => {
+    const repo = new DexieProgressRepository(`travel-talk-test-${crypto.randomUUID()}`)
+    const first = await repo.load()
+    await repo.renamePerson(first.activePersonId ?? '', 'A')
+    for (let index = 1; index < 9; index += 1) {
+      expect(await repo.addPerson(String.fromCharCode(65 + index))).toBe(true)
+    }
+    const [left, right] = await Promise.all([repo.addPerson('Y'), repo.addPerson('Z')])
+    expect([left, right].filter(Boolean)).toHaveLength(1)
+    expect((await repo.load()).people).toHaveLength(10)
+  })
+
+  it('keeps the current name when a format 4 file replaces that person', async () => {
+    const repo = new DexieProgressRepository(`travel-talk-test-${crypto.randomUUID()}`)
+    const first = await repo.load()
+    const firstId = first.activePersonId ?? ''
+    await repo.renamePerson(firstId, 'A')
+    expect(
+      await repo.importPerson('replace', { name: 'C', settings: learning('de', 'en'), cards: [card('de-en:meet.hello')] }, undefined, firstId),
+    ).toBe('ok')
+    const loaded = await repo.load()
+    expect(loaded.people?.find((person) => person.id === firstId)?.name).toBe('A')
+    expect(loaded.settings.targetLang).toBe('en')
+    expect(loaded.cards.map((item) => item.cardId)).toEqual(['de-en:meet.hello'])
+  })
+
+  it('refuses another person from a file once ten are stored, and import all keeps only ten', async () => {
+    const repo = new DexieProgressRepository(`travel-talk-test-${crypto.randomUUID()}`)
+    const first = await repo.load()
+    await repo.renamePerson(first.activePersonId ?? '', 'A')
+    for (let index = 1; index < 10; index += 1) {
+      expect(await repo.addPerson(String.fromCharCode(65 + index))).toBe(true)
+    }
+    expect(await repo.importPerson('add', { name: 'K', settings: learning('de', 'en'), cards: [] })).toBe('full')
+    expect((await repo.load()).people).toHaveLength(10)
+    const crowd = Array.from({ length: 11 }, (_, index) => ({
+      name: `P${index}`,
+      settings: learning('de', 'vi'),
+      cards: index === 0 ? [card('de-vi:emergency.water')] : [],
+    }))
+    await repo.importAll(crowd)
+    const sliced = await repo.load()
+    expect(sliced.people).toHaveLength(10)
+    expect(sliced.people?.some((person) => person.name === 'P10')).toBe(false)
+    expect(sliced.people?.some((person) => person.name === 'P0')).toBe(true)
+    expect(sliced.cards.map((item) => item.cardId)).toEqual(['de-vi:emergency.water'])
   })
 
   it('rejects a broken file without showing its content', () => {

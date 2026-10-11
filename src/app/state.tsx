@@ -1,4 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { forgetVoiceIfUnused } from '../audio/offline'
+import { stopClip } from '../audio/player'
 import type { Catalog } from '../domain/schema'
 import { tryLoadCatalog } from '../content/load'
 import { DexieProgressRepository } from '../storage/dexie-repository'
@@ -44,36 +46,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [repository])
 
+  const activePersonId = snapshot?.activePersonId
+
   const saveSettings = useCallback(
     async (settings: Settings) => {
+      const personId = activePersonId
+      if (!personId) return
       setSnapshot((prev) => {
         if (!prev) return prev
-        const people = (prev.people ?? []).map((person) => (person.id === prev.activePersonId ? { ...person, settings } : person))
+        const people = (prev.people ?? []).map((person) => (person.id === personId ? { ...person, settings } : person))
+        if (prev.activePersonId !== personId) return { ...prev, people, repaired: prev.repaired }
         return { ...prev, settings, people, repaired: prev.repaired }
       })
-      await repository.saveSettings(settings)
+      await repository.saveSettings(personId, settings)
     },
-    [repository],
+    [activePersonId, repository],
   )
 
   const saveCard = useCallback(
     async (card: StoredCard) => {
+      const personId = activePersonId
+      if (!personId) return
       setSnapshot((prev) => {
-        if (!prev) return prev
+        if (!prev || prev.activePersonId !== personId) return prev
         const cards = prev.cards.filter((item) => item.cardId !== card.cardId)
         return { ...prev, cards: [...cards, card], repaired: prev.repaired }
       })
-      await repository.saveCard(card)
+      await repository.saveCard(personId, card)
     },
-    [repository],
+    [activePersonId, repository],
   )
 
   const replaceAll = useCallback(
     async (next: ProgressSnapshot) => {
-      await repository.replaceAll(next)
+      const personId = activePersonId
+      if (!personId) return
+      await repository.replaceAll(personId, next)
       setSnapshot(await repository.load())
     },
-    [repository],
+    [activePersonId, repository],
   )
 
   const reload = useCallback(async () => {
@@ -100,14 +111,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deletePerson = useCallback(
     async (id: string) => {
+      stopClip()
+      const people = snapshot?.people ?? []
+      const gone = people.find((person) => person.id === id)
       await repository.deletePerson(id)
       await reload()
+      if (gone) await forgetVoiceIfUnused(gone.settings, people.filter((person) => person.id !== id))
     },
-    [reload, repository],
+    [reload, repository, snapshot?.people],
   )
 
   const switchPerson = useCallback(
     async (id: string) => {
+      stopClip()
       await repository.switchPerson(id)
       await reload()
     },
@@ -116,16 +132,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const importPerson = useCallback(
     async (mode: 'replace' | 'add', person: ImportedPerson) => {
+      stopClip()
       const local = mode === 'replace' ? snapshot?.settings : undefined
-      const result = await repository.importPerson(mode, person, local)
+      const result = await repository.importPerson(mode, person, local, mode === 'replace' ? activePersonId : undefined)
       if (result === 'ok') await reload()
       return result
     },
-    [reload, repository, snapshot?.settings],
+    [activePersonId, reload, repository, snapshot?.settings],
   )
 
   const importAll = useCallback(
     async (people: readonly ImportedPerson[]) => {
+      stopClip()
       await repository.importAll(people)
       await reload()
     },

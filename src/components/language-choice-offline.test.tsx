@@ -9,6 +9,7 @@ import { LanguageChoice } from './LanguageChoice'
 
 vi.mock('../audio/player', () => ({
   playClip: vi.fn(async () => 'file'),
+  stopClip: vi.fn(),
 }))
 
 vi.mock('../audio/offline', () => ({
