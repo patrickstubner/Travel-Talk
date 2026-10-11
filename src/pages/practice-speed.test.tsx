@@ -2,7 +2,7 @@
 import 'fake-indexeddb/auto'
 import { freshIndexedDb } from '../test-idb'
 import { useEffect, type ReactNode } from 'react'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { playClip } from '../audio/player'
@@ -48,6 +48,7 @@ describe('listening practice speed', () => {
       </AppProvider>,
     )
     expect(await screen.findByTestId('target-line')).toBeTruthy()
+    await waitFor(() => expect(playClip).toHaveBeenCalled())
     expect(vi.mocked(playClip).mock.calls[0]?.[0]).toMatch(/\.r70\.m4a$/)
     expect(vi.mocked(playClip).mock.calls[0]?.[3]).toBe(0.7)
   })
