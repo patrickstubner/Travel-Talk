@@ -105,4 +105,35 @@ describe('phrase microphone', () => {
     window.dispatchEvent(new Event('pagehide'))
     await waitFor(() => expect(track.stop).toHaveBeenCalled())
   })
+
+  it('releases a microphone that starts after navigation', async () => {
+    const track = { stop: vi.fn() }
+    const stream = { getTracks: () => [track] }
+    let resolveStream: (value: typeof stream) => void = () => undefined
+    const pending = new Promise<typeof stream>((resolve) => {
+      resolveStream = resolve
+    })
+    vi.stubGlobal('MediaRecorder', FakeRecorder)
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: vi.fn(() => pending) },
+    })
+    render(
+      <AppProvider>
+        <ReadyPhrase>
+          <MemoryRouter initialEntries={['/phrase/emergency.help']}>
+            <Routes>
+              <Route path="/phrase/:conceptId" element={<PhrasePage />} />
+              <Route path="/situation/:situationId" element={<h1>Situation</h1>} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPhrase>
+      </AppProvider>,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Aufnehmen' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Zurück' }))
+    expect(await screen.findByRole('heading', { name: 'Situation' })).toBeTruthy()
+    resolveStream(stream)
+    await waitFor(() => expect(track.stop).toHaveBeenCalled())
+  })
 })

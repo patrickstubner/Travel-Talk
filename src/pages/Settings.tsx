@@ -5,7 +5,7 @@ import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { publicUrl } from '../public-url'
-import { IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport, type ImportPreview } from '../storage/import'
+import { IMPORT_FUTURE, IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport, type ImportPreview } from '../storage/import'
 import { cleanPersonalNote, usesLang, type ProgressSnapshot, type Settings } from '../storage/types'
 
 function cleanNote(value: string): string {
@@ -25,7 +25,7 @@ export function SettingsPage() {
   const copy = useCopy()
   const ui = interfaceLang(settings)
   const conceptIds = useMemo(() => new Set(catalog?.concepts.map((concept) => concept.id) ?? []), [catalog])
-  const [importState, setImportState] = useState<'ok' | 'bad' | 'newer' | 'reset' | null>(null)
+  const [importState, setImportState] = useState<'ok' | 'bad' | 'newer' | 'future' | 'reset' | null>(null)
   const [keptDirection, setKeptDirection] = useState(false)
   const [skipped, setSkipped] = useState(0)
   const [pending, setPending] = useState<PendingImport | null>(null)
@@ -69,7 +69,9 @@ export function SettingsPage() {
         uiNotRelabeled: outcome.uiNotRelabeled,
       })
     } catch (error) {
-      setImportState(error instanceof Error && error.message === IMPORT_NEWER ? 'newer' : 'bad')
+      if (error instanceof Error && error.message === IMPORT_NEWER) setImportState('newer')
+      else if (error instanceof Error && error.message === IMPORT_FUTURE) setImportState('future')
+      else setImportState('bad')
     }
   }
 
@@ -232,6 +234,7 @@ export function SettingsPage() {
       {importState === 'ok' && keptDirection ? <p role="status">{copy.directionKept}</p> : null}
       {skipped > 0 && importState === 'ok' ? <p role="status">{copy.importSkipped(skipped)}</p> : null}
       {importState === 'newer' ? <p role="alert">{copy.importNewer}</p> : null}
+      {importState === 'future' ? <p role="alert">{copy.importFuture}</p> : null}
       {importState === 'bad' ? <p role="alert">{copy.importBad}</p> : null}
       <button type="button" onClick={() => setConfirmReset(true)}>
         {copy.reset}

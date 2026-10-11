@@ -155,6 +155,45 @@ describe('settings import', () => {
     expect((screen.getByLabelText('Persönliche Notiz') as HTMLTextAreaElement).value).toBe('Pollen')
   })
 
+  it('says when the export date is more than a day ahead', async () => {
+    const file = new File(
+      [
+        JSON.stringify({
+          app: 'travel-talk',
+          format: 3,
+          exportedAt: '2031-01-01T00:00:00.000Z',
+          settings: {
+            appLang: 'de',
+            targetLang: 'vi',
+            viRegion: 'south',
+            addressVi: 'anh',
+            addressPt: 'voce',
+            addressDe: 'sie',
+            ptSpeaker: 'obrigado',
+            viContact: 'phone',
+            retention: 0.9,
+            personalNote: '',
+            speed: 'auto',
+          },
+          cards: [],
+        }),
+      ],
+      'future.json',
+      { type: 'application/json' },
+    )
+    render(
+      <AppProvider>
+        <SettingsPage />
+      </AppProvider>,
+    )
+    fireEvent.change(await screen.findByLabelText('Fortschritt importieren'), { target: { files: [file] } })
+    expect(await screen.findByRole('alert')).toHaveProperty(
+      'textContent',
+      'Die Datei stammt mehr als einen Tag aus der Zukunft. Bitte die Uhr prüfen.',
+    )
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('asks to reload when the file comes from a newer app', async () => {
     const file = new File([JSON.stringify({ app: 'travel-talk', format: 4, surprise: true })], 'new.json', { type: 'application/json' })
     render(

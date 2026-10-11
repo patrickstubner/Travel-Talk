@@ -11,6 +11,11 @@ export const EXPORT_FORMAT = 3
 
 export const IMPORT_NEWER = 'IMPORT_NEWER'
 
+/** The file claims it was written more than a day ahead of this clock. */
+export const IMPORT_FUTURE = 'IMPORT_FUTURE'
+
+const DAY_MS = 86_400_000
+
 const pairIds = PAIRS.map((pair) => pair.id) as [string, ...string[]]
 const lang = z.enum(['de', 'en', 'pt-BR', 'vi'])
 const speedChoice = z.union([z.literal('auto'), z.literal(0.7), z.literal(0.85), z.literal(1)])
@@ -65,7 +70,7 @@ const settingsSchemaV3 = z.strictObject({
 
 const stamp = z.iso.datetime().max(40)
 
-const cardSchema = z.strictObject({
+export const storedCardSchema = z.strictObject({
   cardId: z.string().max(80).regex(/^[a-z0-9-]+:[a-z0-9.-]+$/),
   due: stamp,
   stability: z.number().finite().min(0).max(100000),
@@ -82,7 +87,7 @@ const cardSchema = z.strictObject({
 const bundleEnvelope = {
   app: z.literal('travel-talk'),
   exportedAt: z.string().max(40),
-  cards: z.array(cardSchema).max(2000),
+  cards: z.array(storedCardSchema).max(2000),
 }
 
 const bundleSchema = z.discriminatedUnion('format', [
@@ -137,6 +142,15 @@ function isNewerExport(raw: unknown): boolean {
   return header.app === 'travel-talk' && typeof format === 'number' && Number.isSafeInteger(format) && format > EXPORT_FORMAT
 }
 
+/** A review a few seconds after the export, or ahead of this clock, stays in the file. */
+function capLastReview(value: string | null, exportedAt: number, now: number): string | null {
+  if (!value) return null
+  const reviewed = Date.parse(value)
+  const cap = Math.min(reviewed, exportedAt, now)
+  if (cap === reviewed) return value
+  return new Date(cap).toISOString()
+}
+
 function knownCard(cardId: string, conceptIds: ReadonlySet<string>): boolean {
   const split = cardId.indexOf(':')
   if (split < 1) return false
@@ -159,14 +173,17 @@ export function parseImport(text: string, conceptIds: ReadonlySet<string>): Impo
   if (parsed.data.format === 3 && parsed.data.settings.appLang === parsed.data.settings.targetLang) throw new Error('IMPORT_REJECTED')
   const exportedAt = Date.parse(parsed.data.exportedAt)
   if (!Number.isFinite(exportedAt)) throw new Error('IMPORT_REJECTED')
-  for (const card of parsed.data.cards) {
-    if (card.last_review && Date.parse(card.last_review) > exportedAt) throw new Error('IMPORT_REJECTED')
-  }
-  const ids = parsed.data.cards.map((card) => card.cardId)
+  const now = Date.now()
+  if (exportedAt > now + DAY_MS) throw new Error(IMPORT_FUTURE)
+  const capped = parsed.data.cards.map((card) => ({
+    ...card,
+    last_review: capLastReview(card.last_review, exportedAt, now),
+  }))
+  const ids = capped.map((card) => card.cardId)
   if (new Set(ids).size !== ids.length) throw new Error('IMPORT_REJECTED')
   const cards: StoredCard[] = []
   let skipped = 0
-  for (const card of parsed.data.cards) {
+  for (const card of capped) {
     if (!knownCard(card.cardId, conceptIds)) {
       skipped += 1
       continue
