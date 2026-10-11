@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { selectedVoice, spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { directionId } from '../domain/direction'
-import { alignmentFitsDuration, loadAlignment, type WordTime } from '../audio/align'
+import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
 import { decodeContourFile, playClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { SPEED_STEPS, effectiveSpeed, speedPercent, tempoFile, type SpeedStep } from '../audio/speed'
@@ -70,6 +70,11 @@ export function PhrasePage() {
   const source = concept && app ? resolvePlayback(concept, app, settings.viRegion, prefsFromSettings(app, settings)) : undefined
   const targetFile = target && targetLang ? spokenFile(settings, targetLang, target.file) : ''
   const followWords = settings.highlightWords !== false
+  const stored = direction && concept && snapshot
+    ? snapshot.cards.find((card) => card.cardId === cardIdFor(direction, concept.id))
+    : undefined
+  const step = effectiveSpeed(settings.speed, stored)
+  const alignFile = targetFile ? tempoFile(targetFile, step) : ''
   const links = useMemo(() => {
     if (!concept || !target || !source || !app || !targetLang || !followWords) return []
     return linksFor(concept.id, targetLang, app, target.speech, source.speech, settings)
@@ -97,17 +102,17 @@ export function PhrasePage() {
   const targetSpeech = target?.speech ?? ''
   useEffect(() => {
     let live = true
-    if (!followWords || !targetFile || !targetSpeech) {
+    if (!followWords || !alignFile || !targetSpeech) {
       setTimes(null)
       return
     }
-    void loadAlignment(targetFile, targetSpeech).then((value) => {
+    void loadAlignment(alignFile, targetSpeech).then((value) => {
       if (live) setTimes(value)
     })
     return () => {
       live = false
     }
-  }, [followWords, targetFile, targetSpeech])
+  }, [alignFile, followWords, targetSpeech])
 
   useEffect(() => {
     let active = true
@@ -134,8 +139,6 @@ export function PhrasePage() {
   const pairNotes = catalog.pairNotes.filter(
     (note) => note.sourceLang === app && note.targetLang === targetLang && (!note.conceptId || note.conceptId === concept.id),
   )
-  const stored = snapshot?.cards.find((card) => card.cardId === cardIdFor(direction, concept.id))
-  const step = effectiveSpeed(settings.speed, stored)
   const percent = speedPercent(step)
 
   async function onPlay(file: string, rate: SpeedStep): Promise<void> {
@@ -212,7 +215,7 @@ export function PhrasePage() {
           speech={target.speech}
           gloss={source.speech}
           links={links}
-          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration)) ? times : null}
+          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration, alignmentScale(alignFile))) ? times : null}
           seconds={playing ? seconds : null}
           note={copy.glossUnchecked}
           template={target.text}

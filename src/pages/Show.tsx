@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { conceptsForSituation, resolvePlayback } from '../content/resolve'
 import { directionId } from '../domain/direction'
-import { alignmentFitsDuration, loadAlignment, type WordTime } from '../audio/align'
+import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
 import { playClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { spokenFile } from '../audio/voices'
@@ -83,7 +83,7 @@ export function ShowPage() {
           speech={target.speech}
           gloss={gloss && source ? source.speech : null}
           links={gloss ? links : []}
-          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration)) ? times : null}
+          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration, alignmentScale(targetFile))) ? times : null}
           seconds={playing ? seconds : null}
           note={gloss ? copy.glossUnchecked : undefined}
           template={target.text}

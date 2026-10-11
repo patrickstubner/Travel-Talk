@@ -8,8 +8,12 @@ import { loadManifest } from './player'
 /** A larger file is refused before JSON.parse. */
 export const ALIGN_MAX_BYTES = 16 * 1024
 
-/** Last word may end this far after the clip. Trailing silence stays allowed. */
-export const ALIGN_DURATION_TOLERANCE = 0.05
+/**
+ * Last word may end this far after the clip, times the tempo scale.
+ * 100 % allows 0.1 s. 70 % allows about 0.14 s, because stretching
+ * magnifies a small gap between the timing and the encoded file.
+ */
+export const ALIGN_DURATION_TOLERANCE = 0.1
 
 const wordSchema = z.strictObject({
   start: z.number().finite().min(0).max(60),
@@ -63,11 +67,12 @@ export function parseAlignment(data: unknown, wordCount: number): WordTime[] | n
   return words
 }
 
-/** True when every span ends by the clip length, plus a short tolerance. */
-export function alignmentFitsDuration(words: readonly WordTime[], duration: number): boolean {
+/** True when the last word ends by the clip length, plus the scaled tolerance. */
+export function alignmentFitsDuration(words: readonly WordTime[], duration: number, scale = 1): boolean {
   if (!Number.isFinite(duration) || duration <= 0 || words.length === 0) return false
+  if (!Number.isFinite(scale) || scale <= 0) return false
   const last = words[words.length - 1]
-  return last != null && last.end <= duration + ALIGN_DURATION_TOLERANCE
+  return last != null && last.end <= duration + ALIGN_DURATION_TOLERANCE * scale
 }
 
 export function scaleTimes(words: readonly WordTime[], scale: number): WordTime[] | null {

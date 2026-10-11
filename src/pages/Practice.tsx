@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import type { Concept } from '../../content/phrase'
 import { spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
-import { alignmentFitsDuration, loadAlignment, type WordTime } from '../audio/align'
+import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
 import { playClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { tempoFile } from '../audio/speed'
@@ -307,7 +307,13 @@ export function PracticePage() {
   const followWords = settings.highlightWords !== false
   const revealGloss = step !== 'understand' || answered
   const links = followWords && revealGloss ? linksFor(concept.id, targetLang, app, target.speech, source.speech, settings) : []
-  const markTimes = times && (clipDuration == null || alignmentFitsDuration(times, clipDuration)) ? times : null
+  const playRate = step === 'slow' ? 0.7 : 1
+  const markTimes =
+    times &&
+    (clipDuration == null ||
+      alignmentFitsDuration(times, clipDuration, alignmentScale(tempoFile(spokenFile(settings, targetLang, target.file), playRate))))
+      ? times
+      : null
   const spoken = followWords ? (
     <KaraokeLine
       lang={targetLang}
