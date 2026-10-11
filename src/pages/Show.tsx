@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { conceptsForSituation, resolvePlayback } from '../content/resolve'
-import { pairById } from '../domain/pairs'
+import { directionId } from '../domain/direction'
 import { playClip } from '../audio/player'
 import { effectiveSpeed, speedPercent, tempoFile } from '../audio/speed'
 import { useApp } from '../app/state'
@@ -15,9 +15,12 @@ export function ShowPage() {
   const { catalog, snapshot } = useApp()
   const settings = useSettings()
   const copy = useCopy()
-  const pair = pairById(settings.pairId)
+  const app = settings.appLang
+  const targetLang = settings.targetLang
+  const direction = app && targetLang ? directionId(app, targetLang) : null
   const [gloss, setGloss] = useState(false)
   const [note, setNote] = useState(false)
+  const [playing, setPlaying] = useState(false)
   const list = useMemo(() => {
     if (!catalog) return []
     if (!conceptId) return conceptsForSituation(catalog, 'emergency')
@@ -28,12 +31,12 @@ export function ShowPage() {
   const initial = Math.max(0, list.findIndex((item) => item.id === conceptId))
   const [index, setIndex] = useState(initial)
   if (!catalog) return null
-  if (!pair) return <p>{copy.needPair}</p>
+  if (!direction || !app || !targetLang) return <p>{copy.needPair}</p>
   const concept = list[index] ?? list[0]
   if (!concept) return <p>{copy.noResults}</p>
-  const target = resolvePlayback(concept, pair.target, settings.viRegion, prefsFromSettings(pair.target, settings))
-  const source = resolvePlayback(concept, pair.source, settings.viRegion, prefsFromSettings(pair.source, settings))
-  const stored = snapshot?.cards.find((card) => card.cardId === cardIdFor(pair.id, concept.id))
+  const target = resolvePlayback(concept, targetLang, settings.viRegion, prefsFromSettings(targetLang, settings))
+  const source = resolvePlayback(concept, app, settings.viRegion, prefsFromSettings(app, settings))
+  const stored = snapshot?.cards.find((card) => card.cardId === cardIdFor(direction, concept.id))
   const step = effectiveSpeed(settings.speed, stored)
   const percent = speedPercent(step)
 
@@ -58,11 +61,16 @@ export function ShowPage() {
         </button>
         <button
           type="button"
+          className="play-row"
+          aria-pressed={playing}
           onClick={() => {
-            if (target) void playClip(tempoFile(target.file, step), target.speech, pair.target, step)
+            if (!target) return
+            setPlaying(true)
+            void playClip(tempoFile(target.file, step), target.speech, targetLang, step, () => setPlaying(false))
           }}
         >
-          {copy.play}
+          <span className="play-mark" aria-hidden="true" />
+          {playing ? copy.playing : copy.play}
         </button>
         <p className="speed-now">{copy.speedShown(percent)}</p>
         <button type="button" onClick={() => setGloss((value) => !value)}>
@@ -78,7 +86,7 @@ export function ShowPage() {
         {copy.situations}
         <select value={concept.id} onChange={(event) => setIndex(list.findIndex((item) => item.id === event.target.value))}>
           {list.map((item) => {
-            const line = resolvePlayback(item, pair.target, settings.viRegion, prefsFromSettings(pair.target, settings))
+            const line = resolvePlayback(item, targetLang, settings.viRegion, prefsFromSettings(targetLang, settings))
             return (
               <option key={item.id} value={item.id}>
                 {line?.text ?? item.id}

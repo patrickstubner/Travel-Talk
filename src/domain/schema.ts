@@ -49,6 +49,7 @@ export const situationSchema = z.strictObject({
   depth: z.enum(['core', 'sample', 'starter']),
   title: text4,
   summary: text4,
+  canDo: text4,
 })
 
 export const cultureSchema = z.strictObject({

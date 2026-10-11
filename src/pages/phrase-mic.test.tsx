@@ -2,7 +2,7 @@
 import 'fake-indexeddb/auto'
 import { IDBFactory } from 'fake-indexeddb'
 import { useEffect, type ReactNode } from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppProvider, useApp } from '../app/state'
@@ -31,11 +31,11 @@ class FakeRecorder extends EventTarget {
 function ReadyPhrase({ children }: { children: ReactNode }) {
   const { snapshot, saveSettings } = useApp()
   useEffect(() => {
-    if (snapshot && snapshot.settings.pairId !== 'de-vi') {
-      void saveSettings({ ...snapshot.settings, pairId: 'de-vi' })
+    if (snapshot && (snapshot.settings.appLang !== 'de' || snapshot.settings.targetLang !== 'vi')) {
+      void saveSettings({ ...snapshot.settings, appLang: 'de', targetLang: 'vi' })
     }
   }, [snapshot, saveSettings])
-  if (snapshot?.settings.pairId !== 'de-vi') return null
+  if (snapshot?.settings.appLang !== 'de' || snapshot?.settings.targetLang !== 'vi') return null
   return children
 }
 
@@ -72,5 +72,37 @@ describe('phrase microphone', () => {
     await screen.findByRole('button', { name: 'Stopp' })
     cleanup()
     expect(track.stop).toHaveBeenCalled()
+  })
+
+  it('stops the track when the tab is hidden or the page hides', async () => {
+    const track = { stop: vi.fn() }
+    const stream = { getTracks: () => [track] }
+    vi.stubGlobal('MediaRecorder', FakeRecorder)
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: vi.fn(async () => stream) },
+    })
+    render(
+      <AppProvider>
+        <ReadyPhrase>
+          <MemoryRouter initialEntries={['/phrase/emergency.help']}>
+            <Routes>
+              <Route path="/phrase/:conceptId" element={<PhrasePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPhrase>
+      </AppProvider>,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Aufnehmen' }))
+    await screen.findByRole('button', { name: 'Stopp' })
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' })
+    document.dispatchEvent(new Event('visibilitychange'))
+    await waitFor(() => expect(track.stop).toHaveBeenCalled())
+    await screen.findByRole('button', { name: 'Aufnehmen' })
+    track.stop.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Aufnehmen' }))
+    await screen.findByRole('button', { name: 'Stopp' })
+    window.dispatchEvent(new Event('pagehide'))
+    await waitFor(() => expect(track.stop).toHaveBeenCalled())
   })
 })

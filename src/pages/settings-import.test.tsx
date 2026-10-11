@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto'
 import { IDBFactory } from 'fake-indexeddb'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppContext, AppProvider } from '../app/state'
-import { defaultSettings, type ProgressSnapshot } from '../storage/types'
+import { defaultSettings } from '../storage/types'
 import { SettingsPage } from './Settings'
 
 type Saved = { name: string; body: Promise<string> }
@@ -24,9 +24,28 @@ function spyDownloads(): Saved[] {
   return saved
 }
 
+function legacySettings(note: string) {
+  return {
+    pairId: 'de-vi',
+    uiLang: 'de',
+    viRegion: 'south',
+    addressVi: 'anh',
+    addressPt: 'voce',
+    addressDe: 'sie',
+    ptSpeaker: 'obrigado',
+    viContact: 'phone',
+    retention: 0.9,
+    personalNote: note,
+    speed: 'auto',
+  }
+}
+
 function importFile(): File {
-  const snapshot: ProgressSnapshot = {
-    settings: { ...defaultSettings, pairId: 'de-vi', personalNote: '' },
+  const text = JSON.stringify({
+    app: 'travel-talk',
+    format: 1,
+    exportedAt: '2026-10-10T00:00:00.000Z',
+    settings: legacySettings(''),
     cards: [
       {
         cardId: 'de-vi:emergency.help',
@@ -42,13 +61,6 @@ function importFile(): File {
         last_review: '2026-10-10T00:00:00.000Z',
       },
     ],
-  }
-  const text = JSON.stringify({
-    app: 'travel-talk',
-    format: 1,
-    exportedAt: '2026-10-10T00:00:00.000Z',
-    settings: snapshot.settings,
-    cards: snapshot.cards,
   })
   return new File([text], 'in.json', { type: 'application/json' })
 }
@@ -62,7 +74,25 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+async function chooseLanguages(): Promise<void> {
+  fireEvent.click(within(screen.getByRole('group', { name: 'Sprache der App' })).getByRole('button', { name: 'Deutsch' }))
+  fireEvent.click(within(screen.getByRole('group', { name: 'Sprache, die du lernst' })).getByRole('button', { name: 'Vietnamesisch' }))
+  await waitFor(() => {
+    expect((screen.getByRole('button', { name: 'Fortschritt exportieren' }) as HTMLButtonElement).disabled).toBe(false)
+  })
+}
+
 describe('settings import', () => {
+  it('does not export before the two languages are chosen', async () => {
+    render(
+      <AppProvider>
+        <SettingsPage />
+      </AppProvider>,
+    )
+    const button = await screen.findByRole('button', { name: 'Fortschritt exportieren' })
+    expect((button as HTMLButtonElement).disabled).toBe(true)
+  })
+
   it('downloads a backup only from the button, and leaves the note out unless asked', async () => {
     const saved = spyDownloads()
     render(
@@ -71,6 +101,7 @@ describe('settings import', () => {
       </AppProvider>,
     )
     const note = await screen.findByLabelText('Persönliche Notiz')
+    await chooseLanguages()
     fireEvent.change(note, { target: { value: 'Erdnüsse' } })
     const input = screen.getByLabelText('Fortschritt importieren')
     expect((input as HTMLInputElement).disabled).toBe(false)
@@ -106,7 +137,7 @@ describe('settings import', () => {
     const file = importFile()
     const text = JSON.stringify({
       ...JSON.parse(await file.text()),
-      settings: { ...defaultSettings, pairId: 'de-vi', personalNote: 'Pollen' },
+      settings: { ...legacySettings('Pollen') },
     })
     const withNote = new File([text], 'in.json', { type: 'application/json' })
     render(
@@ -125,7 +156,7 @@ describe('settings import', () => {
   })
 
   it('asks to reload when the file comes from a newer app', async () => {
-    const file = new File([JSON.stringify({ app: 'travel-talk', format: 3, surprise: true })], 'new.json', { type: 'application/json' })
+    const file = new File([JSON.stringify({ app: 'travel-talk', format: 4, surprise: true })], 'new.json', { type: 'application/json' })
     render(
       <AppProvider>
         <SettingsPage />

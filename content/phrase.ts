@@ -37,6 +37,8 @@ export type Situation = {
   depth: Depth
   title: Record<Lang, string>
   summary: Record<Lang, string>
+  /** One plain sentence about what the learner can say after this situation. */
+  canDo: Record<Lang, string>
 }
 
 export type Source = {

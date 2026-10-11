@@ -1,23 +1,21 @@
 import '../zod-setup'
 import { z } from 'zod'
 import { PAIRS } from '../domain/pairs'
-import { defaultSettings, normalizeSpeed, type ProgressSnapshot, type Settings, type StoredCard } from './types'
+import { directionLangs, legacyDirection } from '../domain/direction'
+import { VOICE_ID, cleanVoices, defaultSettings, normalizeSpeed, type ProgressSnapshot, type Settings, type StoredCard } from './types'
 
 export const IMPORT_LIMIT = 2_000_000
 
 /** Current export. Bump this whenever the exported shape changes. */
-export const EXPORT_FORMAT = 2
+export const EXPORT_FORMAT = 3
 
 export const IMPORT_NEWER = 'IMPORT_NEWER'
 
 const pairIds = PAIRS.map((pair) => pair.id) as [string, ...string[]]
-const knownPairs = new Set<string>(pairIds)
-
+const lang = z.enum(['de', 'en', 'pt-BR', 'vi'])
 const speedChoice = z.union([z.literal('auto'), z.literal(0.7), z.literal(0.85), z.literal(1)])
 
-const settingsFields = {
-  pairId: z.enum(pairIds).nullable(),
-  uiLang: z.enum(['de', 'source']),
+const sharedFields = {
   viRegion: z.enum(['south', 'north']),
   addressVi: z.enum(['anh', 'chi', 'em', 'co', 'chu', 'bac', 'ong', 'ba']),
   addressPt: z.enum(['voce', 'senhor', 'senhora']),
@@ -28,17 +26,41 @@ const settingsFields = {
   personalNote: z.string().max(500).refine((value) => !/[^\P{C}\n\t]/u.test(value)),
 }
 
-/** Format 1, unchanged: optional `slow` from 0.1.0, optional `speed`. */
+const legacyFields = {
+  pairId: z.enum(pairIds).nullable(),
+  uiLang: z.enum(['de', 'source']),
+  ...sharedFields,
+}
+
+/** Format 1, unchanged: optional `slow` from 0.1.0, optional `speed`, `pairId` and `uiLang`. */
 const settingsSchemaV1 = z.strictObject({
-  ...settingsFields,
+  ...legacyFields,
   slow: z.boolean().optional(),
   speed: speedChoice.optional(),
 })
 
-/** Format 2 requires `speed`. `slow` is not a field, so a present `slow` is rejected. */
+/** Format 2 requires `speed` and forbids `slow`. It still carries `pairId` and `uiLang`. */
 const settingsSchemaV2 = z.strictObject({
-  ...settingsFields,
+  ...legacyFields,
   speed: speedChoice,
+})
+
+const voicesSchema = z
+  .strictObject({
+    de: z.string().regex(VOICE_ID).optional(),
+    en: z.string().regex(VOICE_ID).optional(),
+    'pt-BR': z.string().regex(VOICE_ID).optional(),
+    vi: z.string().regex(VOICE_ID).optional(),
+  })
+  .optional()
+
+/** Format 3 stores the two languages. `pairId` and `uiLang` are not fields. */
+const settingsSchemaV3 = z.strictObject({
+  appLang: lang,
+  targetLang: lang,
+  ...sharedFields,
+  speed: speedChoice,
+  voices: voicesSchema,
 })
 
 const stamp = z.iso.datetime().max(40)
@@ -74,11 +96,18 @@ const bundleSchema = z.discriminatedUnion('format', [
     format: z.literal(2),
     settings: settingsSchemaV2,
   }),
+  z.strictObject({
+    ...bundleEnvelope,
+    format: z.literal(3),
+    settings: settingsSchemaV3,
+  }),
 ])
 
 export type ImportOutcome = {
   snapshot: ProgressSnapshot
   skipped: number
+  /** Format 1 or 2 kept the old source language when the interface was German. */
+  uiNotRelabeled: boolean
 }
 
 export type ImportPreview = {
@@ -111,9 +140,9 @@ function isNewerExport(raw: unknown): boolean {
 function knownCard(cardId: string, conceptIds: ReadonlySet<string>): boolean {
   const split = cardId.indexOf(':')
   if (split < 1) return false
-  const pairId = cardId.slice(0, split)
+  const direction = cardId.slice(0, split)
   const conceptId = cardId.slice(split + 1)
-  return knownPairs.has(pairId) && conceptIds.has(conceptId)
+  return directionLangs(direction) != null && conceptIds.has(conceptId)
 }
 
 export function parseImport(text: string, conceptIds: ReadonlySet<string>): ImportOutcome {
@@ -127,6 +156,12 @@ export function parseImport(text: string, conceptIds: ReadonlySet<string>): Impo
   if (isNewerExport(raw)) throw new Error(IMPORT_NEWER)
   const parsed = bundleSchema.safeParse(raw)
   if (!parsed.success) throw new Error('IMPORT_REJECTED')
+  if (parsed.data.format === 3 && parsed.data.settings.appLang === parsed.data.settings.targetLang) throw new Error('IMPORT_REJECTED')
+  const exportedAt = Date.parse(parsed.data.exportedAt)
+  if (!Number.isFinite(exportedAt)) throw new Error('IMPORT_REJECTED')
+  for (const card of parsed.data.cards) {
+    if (card.last_review && Date.parse(card.last_review) > exportedAt) throw new Error('IMPORT_REJECTED')
+  }
   const ids = parsed.data.cards.map((card) => card.cardId)
   if (new Set(ids).size !== ids.length) throw new Error('IMPORT_REJECTED')
   const cards: StoredCard[] = []
@@ -138,19 +173,39 @@ export function parseImport(text: string, conceptIds: ReadonlySet<string>): Impo
     }
     cards.push(card)
   }
+  const migrated = settingsFromBundle(parsed.data)
   return {
     snapshot: {
-      settings: settingsFromBundle(parsed.data),
+      settings: migrated.settings,
       cards,
     },
     skipped,
+    uiNotRelabeled: migrated.uiNotRelabeled,
   }
 }
 
-function settingsFromBundle(data: z.infer<typeof bundleSchema>): Settings {
-  if (data.format === 2) return data.settings as Settings
-  const { slow, speed, ...rest } = data.settings
-  return { ...rest, speed: normalizeSpeed(speed, slow) } as Settings
+function settingsFromBundle(data: z.infer<typeof bundleSchema>): { settings: Settings; uiNotRelabeled: boolean } {
+  if (data.format === 3) {
+    const voices = cleanVoices(data.settings.voices)
+    const { voices: _voices, ...rest } = data.settings
+    return { uiNotRelabeled: false, settings: voices ? { ...rest, voices } : rest }
+  }
+  const legacy = legacyDirection(data.settings.pairId)
+  const uiNotRelabeled = data.settings.uiLang === 'de' && legacy != null && legacy.app !== 'de'
+  const speed = data.format === 1 ? normalizeSpeed(data.settings.speed, data.settings.slow) : data.settings.speed
+  const shared =
+    data.format === 1
+      ? (({ pairId: _pairId, uiLang: _uiLang, slow: _slow, speed: _speed, ...rest }) => rest)(data.settings)
+      : (({ pairId: _pairId, uiLang: _uiLang, speed: _speed, ...rest }) => rest)(data.settings)
+  return {
+    uiNotRelabeled,
+    settings: {
+      ...shared,
+      appLang: legacy?.app ?? null,
+      targetLang: legacy?.target ?? null,
+      speed,
+    },
+  }
 }
 
 export function previewImport(snapshot: ProgressSnapshot): ImportPreview {
@@ -180,7 +235,22 @@ export function importKeepsLocalNote(incoming: string): boolean {
 }
 
 export function toExport(snapshot: ProgressSnapshot, now: Date, includeNote = false): string {
-  const settings = includeNote ? snapshot.settings : { ...snapshot.settings, personalNote: '' }
+  const current = includeNote ? snapshot.settings : { ...snapshot.settings, personalNote: '' }
+  const voices = cleanVoices(current.voices)
+  const settings = {
+    appLang: current.appLang,
+    targetLang: current.targetLang,
+    viRegion: current.viRegion,
+    addressVi: current.addressVi,
+    addressPt: current.addressPt,
+    addressDe: current.addressDe,
+    ptSpeaker: current.ptSpeaker,
+    viContact: current.viContact,
+    retention: current.retention,
+    personalNote: current.personalNote,
+    speed: current.speed,
+    ...(voices ? { voices } : {}),
+  }
   return JSON.stringify(
     {
       app: 'travel-talk',

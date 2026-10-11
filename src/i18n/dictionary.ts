@@ -1,7 +1,8 @@
 export type Dictionary = {
   appName: string
   skip: string
-  nav: { home: string; practice: string; show: string; culture: string; settings: string }
+  nav: { today: string; lookup: string; show: string; settings: string }
+  cultureTitle: string
   pairTitle: string
   pairLead: string
   uncheckedBanner: string
@@ -54,7 +55,6 @@ export type Dictionary = {
     similar: string
     apart: string
   }
-  schemaTitle: string
   listen: string
   recall: string
   listenPrompt: string
@@ -123,12 +123,87 @@ export type Dictionary = {
   pairNote: string
   noResults: string
   phrases: (count: number) => string
+  learnToday: string
+  reviewCard: (count: number) => string
+  reviewNone: string
+  learnNew: string
+  learnNewHint: string
+  lookupCard: string
+  lookupHint: string
+  showCard: string
+  showHint: string
+  sessionLength: string
+  onboardingKicker: string
+  onboardingTitle: string
+  sameChoice: string
+  sameChoiceLead: string
+  appLangTitle: string
+  appLangHint: string
+  targetLangTitle: string
+  targetLangHint: string
+  scriptTitle: string
+  scriptHint: string
+  voiceTitle: string
+  voiceVi: string
+  voiceEn: string
+  voiceDe: string
+  voicePt: string
+  voiceViNote: string
+  voiceEnNote: string
+  voicePlainNote: string
+  continueOn: string
+  ifThen: string
+  everyPair: string
+  missingLine: string
+  stepSlow: (index: number, total: number) => string
+  stepNormal: (index: number, total: number) => string
+  stepRepeat: (index: number, total: number) => string
+  stepUnderstand: (index: number, total: number) => string
+  stepRecall: (index: number, total: number) => string
+  visibleTitle: string
+  recallTitle: string
+  newStays: string
+  sessionKicker: string
+  noReviewWasDue: string
+  sessionNewCount: (count: number) => string
+  playingSlow: string
+  playingNormal: string
+  replaySlow: string
+  playNormal: string
+  playSlow: string
+  saidIt: string
+  micSkipped: string
+  meaningPrompt: string
+  afterChoice: string
+  rateAgain: string
+  rateSoon: string
+  rateLater: string
+  rateMuchLater: string
+  rateHint: string
+  inMinutes: (count: number) => string
+  inHours: (count: number) => string
+  inDays: (count: number) => string
+  tomorrow: string
+  sessionDone: string
+  sessionCount: (count: number) => string
+  tomorrowReviews: string
+  anotherSession: string
+  done: string
+  uncheckedCalm: string
+  directionKept: string
+  playing: string
+  lookupTitle: string
+  noReviews: string
+  noNewToday: string
+  reviewTitle: string
+  startLead: (fresh: number, due: number) => string
 }
 
 export const de: Dictionary = {
   appName: 'Travel Talk',
   skip: 'Zum Inhalt',
-  nav: { home: 'Start', practice: 'Üben', show: 'Zeigen', culture: 'Kultur', settings: 'Einstellungen' },
+  nav: { today: 'Heute', lookup: 'Nachschlagen', show: 'Zeigen', settings: 'Einstellungen' },
+  cultureTitle: 'Kultur',
   pairTitle: 'Sprachpaar',
   pairLead: 'Zuerst das Paar. Deutsch bleibt die Oberfläche, bis du sie auf die Ausgangssprache umstellst.',
   uncheckedBanner:
@@ -185,7 +260,6 @@ export const de: Dictionary = {
     similar: 'Die Kurven liegen nahe beieinander. Das ist ein Hinweis, keine Bewertung.',
     apart: 'Die Kurven weichen ab. Das ist ein Hinweis, keine Bewertung.',
   },
-  schemaTitle: 'Schema der fünf südlichen Töne, keine Aufnahme. hỏi und ngã fallen im Süden häufig zusammen.',
   listen: 'Hören',
   recall: 'Abrufen',
   listenPrompt: 'Höre den Satz und wähle die Bedeutung.',
@@ -258,17 +332,92 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.2.2',
+  version: 'Version 0.3.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
   phrases: (count) => (count === 1 ? '1 Satz' : `${count} Sätze`),
+  learnToday: 'Heute lernen',
+  reviewCard: (count) => (count === 1 ? '1 fälliger Satz.' : `${count} fällige Sätze.`),
+  reviewNone: 'Fällige Sätze. Heute keine.',
+  learnNew: 'Neu lernen',
+  learnNewHint: 'Der nächste Satz aus der Situation.',
+  lookupCard: 'Nachschlagen',
+  lookupHint: 'Sätze lesen, ohne Prüfung.',
+  showCard: 'Zeigen',
+  showHint: 'Grosser Text für die andere Person.',
+  sessionLength: 'Eine kurze Sitzung, etwa 8 Minuten. Danach ist sie zu Ende.',
+  onboardingKicker: 'Einmal zu Beginn',
+  onboardingTitle: 'Zwei Sprachen',
+  sameChoice: 'Dieselbe Wahl',
+  sameChoiceLead: 'Dieselbe Stelle wie zu Beginn. Keine zweite Wahl an den Sätzen.',
+  appLangTitle: 'Sprache der App',
+  appLangHint: 'Damit liest du. Damit sind auch die Übersetzungen geschrieben.',
+  targetLangTitle: 'Sprache, die du lernst',
+  targetLangHint: 'Dazu gehören Stimme und, bei Vietnamesisch, die Variante der Wörter.',
+  scriptTitle: 'Schrift und Wörter',
+  scriptHint: 'Nur weil die Lernsprache Vietnamesisch ist. Das ist nicht die Stimme.',
+  voiceTitle: 'Stimme',
+  voiceVi: 'Eine Stimme, Frau, Norden',
+  voiceEn: 'Eine Stimme, Frau',
+  voiceDe: 'Eine Stimme',
+  voicePt: 'Eine Stimme',
+  voiceViNote: 'Eine Stimme. Eine Männerstimme und eine südliche Stimme mit klarer Lizenz gibt es hier nicht.',
+  voiceEnNote: 'Eine Stimme, Frau. Eine zweite Stimme kommt erst nach einer Hörprobe.',
+  voicePlainNote: 'Eine Stimme. Mann oder Frau steht hier erst, wenn eine Quelle das sagt.',
+  continueOn: 'Weiter zu Heute lernen',
+  ifThen: 'Wenn ich morgens Kaffee trinke, öffne ich Heute lernen. Das kannst du überspringen.',
+  everyPair: 'Sätze gibt es für jede Kombination aus zwei verschiedenen Sprachen.',
+  missingLine: 'Für diese Kombination gibt es den Satz noch nicht.',
+  stepSlow: (index, total) => `Neuer Satz · ${index} von ${total} · langsam`,
+  stepNormal: (index, total) => `Neuer Satz · ${index} von ${total} · normal`,
+  stepRepeat: (index, total) => `Nachsprechen · ${index} von ${total}`,
+  stepUnderstand: (index, total) => `Hören · ${index} von ${total}`,
+  stepRecall: (index, total) => `Abrufen · ${index} von ${total}`,
+  visibleTitle: 'Der Satz bleibt sichtbar',
+  recallTitle: 'Wie sagst du das?',
+  newStays: 'Er ist neu. Du liest mit, während er läuft.',
+  sessionKicker: 'Sitzung',
+  noReviewWasDue: 'Keine Wiederholung war fällig.',
+  sessionNewCount: (count) => (count === 1 ? '1 neuer Satz.' : `${count} neue Sätze.`),
+  playingSlow: 'Läuft langsam.',
+  playingNormal: 'Läuft in normalem Tempo.',
+  replaySlow: 'Noch einmal langsam',
+  playNormal: 'Jetzt in normalem Tempo',
+  playSlow: 'Langsam anhören',
+  saidIt: 'Ich habe es gesagt',
+  micSkipped: 'Ohne Mikrofon wird nichts aufgenommen. Du kannst weiter.',
+  meaningPrompt: 'Was bedeutet der Satz?',
+  afterChoice: 'Die Bedeutung wählst du. Nach der Wahl siehst du die richtige Zeile noch einmal, mit demselben Ton.',
+  rateAgain: 'Gleich noch einmal',
+  rateSoon: 'Bald wieder',
+  rateLater: 'Später wieder',
+  rateMuchLater: 'Viel später',
+  rateHint: 'Der Abstand kommt vom Wiederholungsplaner, nicht aus einem festen Spruch.',
+  inMinutes: (count) => (count === 1 ? 'in 1 Minute' : `in ${count} Minuten`),
+  inHours: (count) => (count === 1 ? 'in 1 Stunde' : `in ${count} Stunden`),
+  inDays: (count) => `in ${count} Tagen`,
+  tomorrow: 'morgen',
+  sessionDone: 'Heute geschafft',
+  sessionCount: (count) => (count === 1 ? '1 Satz.' : `${count} Sätze.`),
+  tomorrowReviews: 'Morgen liegen diese Sätze unter Wiederholen.',
+  anotherSession: 'Noch eine kurze Sitzung',
+  done: 'Fertig',
+  uncheckedCalm: 'Die Sätze sind noch nicht von einer muttersprachlichen Person geprüft.',
+  directionKept: 'Die Oberfläche war Deutsch. Die Aufgaben bleiben bei der bisherigen Ausgangssprache.',
+  playing: 'Läuft',
+  lookupTitle: 'Nachschlagen',
+  noReviews: 'Keine Wiederholung ist fällig.',
+  noNewToday: 'Heute keine neuen Sätze mehr. Die Wiederholungen liegen unter Wiederholen.',
+  reviewTitle: 'Wiederholen',
+  startLead: (fresh, due) => `${fresh === 1 ? '1 neuer Satz' : `${fresh} neue Sätze`}. ${due === 0 ? 'Keine Wiederholung.' : due === 1 ? '1 Wiederholung.' : `${due} Wiederholungen.`}`,
 }
 
 export const en: Dictionary = {
   ...de,
   skip: 'Skip to content',
-  nav: { home: 'Home', practice: 'Practice', show: 'Show', culture: 'Culture', settings: 'Settings' },
+  nav: { today: 'Today', lookup: 'Look up', show: 'Show', settings: 'Settings' },
+  cultureTitle: 'Culture',
   pairTitle: 'Language pair',
   pairLead: 'Choose the pair first. German stays the interface until you switch it to the source language.',
   uncheckedBanner:
@@ -325,7 +474,6 @@ export const en: Dictionary = {
     similar: 'The curves sit close. That is a hint, not a grade.',
     apart: 'The curves differ. That is a hint, not a grade.',
   },
-  schemaTitle: 'A schema of the five southern tones, not a recording. hỏi and ngã often fall together in the south.',
   listen: 'Listen',
   recall: 'Recall',
   listenPrompt: 'Listen, then choose the meaning.',
@@ -399,12 +547,87 @@ export const en: Dictionary = {
   pairNote: 'Note for this pair',
   noResults: 'No matches.',
   phrases: (count) => (count === 1 ? '1 line' : `${count} lines`),
+  learnToday: 'Learn today',
+  reviewCard: (count) => (count === 1 ? '1 line is due.' : `${count} lines are due.`),
+  reviewNone: 'Due lines. None today.',
+  learnNew: 'Learn something new',
+  learnNewHint: 'The next line from the situation.',
+  lookupCard: 'Look up',
+  lookupHint: 'Read the lines, without a test.',
+  showCard: 'Show',
+  showHint: 'Large text for the other person.',
+  sessionLength: 'A short session, about 8 minutes. Then it ends.',
+  onboardingKicker: 'Once at the start',
+  onboardingTitle: 'Two languages',
+  sameChoice: 'The same choice',
+  sameChoiceLead: 'The same place as at the start. No second choice on the lines.',
+  appLangTitle: 'Language of the app',
+  appLangHint: 'This is what you read. The translations are written in it too.',
+  targetLangTitle: 'Language you are learning',
+  targetLangHint: 'The voice belongs here, and for Vietnamese the variant of the words.',
+  scriptTitle: 'Script and words',
+  scriptHint: 'Only because the language you learn is Vietnamese. This is not the voice.',
+  voiceTitle: 'Voice',
+  voiceVi: 'One voice, woman, north',
+  voiceEn: 'One voice, woman',
+  voiceDe: 'One voice',
+  voicePt: 'One voice',
+  voiceViNote: 'One voice. There is no male voice and no southern voice with a clear licence here.',
+  voiceEnNote: 'One voice, a woman. A second voice comes only after someone has listened to it.',
+  voicePlainNote: 'One voice. Man or woman is written here only when a source says so.',
+  continueOn: 'Continue to Learn today',
+  ifThen: 'When I have coffee in the morning, I open Learn today. You can skip this.',
+  everyPair: 'There is a line for every combination of two different languages.',
+  missingLine: 'This line is not available for this combination yet.',
+  stepSlow: (index, total) => `New line · ${index} of ${total} · slow`,
+  stepNormal: (index, total) => `New line · ${index} of ${total} · normal`,
+  stepRepeat: (index, total) => `Repeat aloud · ${index} of ${total}`,
+  stepUnderstand: (index, total) => `Listen · ${index} of ${total}`,
+  stepRecall: (index, total) => `Say it · ${index} of ${total}`,
+  visibleTitle: 'The line stays visible',
+  recallTitle: 'How do you say that?',
+  newStays: 'It is new. You read along while it plays.',
+  sessionKicker: 'Session',
+  noReviewWasDue: 'No review was due.',
+  sessionNewCount: (count) => (count === 1 ? '1 new line.' : `${count} new lines.`),
+  playingSlow: 'Playing slowly.',
+  playingNormal: 'Playing at normal speed.',
+  replaySlow: 'Slowly once more',
+  playNormal: 'Now at normal speed',
+  playSlow: 'Listen slowly',
+  saidIt: 'I have said it',
+  micSkipped: 'Without a microphone nothing is recorded. You can continue.',
+  meaningPrompt: 'What does the line mean?',
+  afterChoice: 'You choose the meaning. After that you see the correct line again, with the same audio.',
+  rateAgain: 'Again right away',
+  rateSoon: 'Again soon',
+  rateLater: 'Again later',
+  rateMuchLater: 'Much later',
+  rateHint: 'The gap comes from the scheduler, not from a fixed label.',
+  inMinutes: (count) => (count === 1 ? 'in 1 minute' : `in ${count} minutes`),
+  inHours: (count) => (count === 1 ? 'in 1 hour' : `in ${count} hours`),
+  inDays: (count) => `in ${count} days`,
+  tomorrow: 'tomorrow',
+  sessionDone: 'Done for today',
+  sessionCount: (count) => (count === 1 ? '1 line.' : `${count} lines.`),
+  tomorrowReviews: 'Tomorrow these lines are under Review.',
+  anotherSession: 'Another short session',
+  done: 'Done',
+  uncheckedCalm: 'The lines have not been checked by a native speaker yet.',
+  directionKept: 'The interface was German. The tasks stay with the previous source language.',
+  playing: 'Playing',
+  lookupTitle: 'Look up',
+  noReviews: 'No review is due.',
+  noNewToday: 'No new lines today. Reviews are under Review.',
+  reviewTitle: 'Review',
+  startLead: (fresh, due) => `${fresh === 1 ? '1 new line' : `${fresh} new lines`}. ${due === 0 ? 'No review.' : due === 1 ? '1 review.' : `${due} reviews.`}`,
 }
 
 export const pt: Dictionary = {
   ...en,
   skip: 'Ir ao conteúdo',
-  nav: { home: 'Início', practice: 'Praticar', show: 'Mostrar', culture: 'Cultura', settings: 'Ajustes' },
+  nav: { today: 'Hoje', lookup: 'Consultar', show: 'Mostrar', settings: 'Ajustes' },
+  cultureTitle: 'Cultura',
   pairTitle: 'Par de línguas',
   pairLead: 'Primeiro o par. O alemão continua na tela até você mudar para a língua de partida.',
   uncheckedBanner:
@@ -461,7 +684,6 @@ export const pt: Dictionary = {
     similar: 'As curvas ficam perto. É um indício, não uma nota.',
     apart: 'As curvas divergem. É um indício, não uma nota.',
   },
-  schemaTitle: 'Um esquema dos cinco tons do sul, não uma gravação. hỏi e ngã muitas vezes se juntam no sul.',
   listen: 'Ouvir',
   recall: 'Lembrar',
   listenPrompt: 'Ouça e escolha o sentido.',
@@ -537,12 +759,87 @@ export const pt: Dictionary = {
   pairNote: 'Nota deste par',
   noResults: 'Nenhum resultado.',
   phrases: (count) => (count === 1 ? '1 frase' : `${count} frases`),
+  learnToday: 'Aprender hoje',
+  reviewCard: (count) => (count === 1 ? '1 frase para revisar.' : `${count} frases para revisar.`),
+  reviewNone: 'Frases para revisar. Hoje nenhuma.',
+  learnNew: 'Aprender algo novo',
+  learnNewHint: 'A próxima frase da situação.',
+  lookupCard: 'Consultar',
+  lookupHint: 'Ler as frases, sem prova.',
+  showCard: 'Mostrar',
+  showHint: 'Texto grande para a outra pessoa.',
+  sessionLength: 'Uma sessão curta, cerca de 8 minutos. Depois ela acaba.',
+  onboardingKicker: 'Uma vez no começo',
+  onboardingTitle: 'Duas línguas',
+  sameChoice: 'A mesma escolha',
+  sameChoiceLead: 'O mesmo lugar do começo. Nenhuma segunda escolha nas frases.',
+  appLangTitle: 'Língua do aplicativo',
+  appLangHint: 'É com ela que você lê. As traduções também estão nela.',
+  targetLangTitle: 'Língua que você aprende',
+  targetLangHint: 'A voz fica aqui e, no vietnamita, a variante das palavras.',
+  scriptTitle: 'Escrita e palavras',
+  scriptHint: 'Só porque a língua que você aprende é o vietnamita. Isso não é a voz.',
+  voiceTitle: 'Voz',
+  voiceVi: 'Uma voz, mulher, norte',
+  voiceEn: 'Uma voz, mulher',
+  voiceDe: 'Uma voz',
+  voicePt: 'Uma voz',
+  voiceViNote: 'Uma voz. Não há voz masculina nem voz do sul com licença clara aqui.',
+  voiceEnNote: 'Uma voz, mulher. Uma segunda voz só depois de alguém ouvir.',
+  voicePlainNote: 'Uma voz. Homem ou mulher só aparece aqui quando uma fonte diz isso.',
+  continueOn: 'Seguir para Aprender hoje',
+  ifThen: 'Quando tomo café de manhã, abro Aprender hoje. Você pode pular isso.',
+  everyPair: 'Há frases para cada combinação de duas línguas diferentes.',
+  missingLine: 'Esta frase ainda não existe para esta combinação.',
+  stepSlow: (index, total) => `Frase nova · ${index} de ${total} · devagar`,
+  stepNormal: (index, total) => `Frase nova · ${index} de ${total} · normal`,
+  stepRepeat: (index, total) => `Repetir em voz alta · ${index} de ${total}`,
+  stepUnderstand: (index, total) => `Ouvir · ${index} de ${total}`,
+  stepRecall: (index, total) => `Dizer · ${index} de ${total}`,
+  visibleTitle: 'A frase fica visível',
+  recallTitle: 'Como você diz isso?',
+  newStays: 'Ela é nova. Você acompanha a leitura enquanto ela toca.',
+  sessionKicker: 'Sessão',
+  noReviewWasDue: 'Nenhuma revisão estava na hora.',
+  sessionNewCount: (count) => (count === 1 ? '1 frase nova.' : `${count} frases novas.`),
+  playingSlow: 'Está tocando devagar.',
+  playingNormal: 'Está tocando no tempo normal.',
+  replaySlow: 'Devagar mais uma vez',
+  playNormal: 'Agora no tempo normal',
+  playSlow: 'Ouvir devagar',
+  saidIt: 'Eu disse',
+  micSkipped: 'Sem microfone nada é gravado. Você pode continuar.',
+  meaningPrompt: 'O que a frase significa?',
+  afterChoice: 'Você escolhe o sentido. Depois vê a linha certa de novo, com o mesmo áudio.',
+  rateAgain: 'De novo agora',
+  rateSoon: 'De novo em breve',
+  rateLater: 'De novo mais tarde',
+  rateMuchLater: 'Muito mais tarde',
+  rateHint: 'O intervalo vem do planejador, não de um texto fixo.',
+  inMinutes: (count) => (count === 1 ? 'em 1 minuto' : `em ${count} minutos`),
+  inHours: (count) => (count === 1 ? 'em 1 hora' : `em ${count} horas`),
+  inDays: (count) => `em ${count} dias`,
+  tomorrow: 'amanhã',
+  sessionDone: 'Feito por hoje',
+  sessionCount: (count) => (count === 1 ? '1 frase.' : `${count} frases.`),
+  tomorrowReviews: 'Amanhã estas frases ficam em Revisar.',
+  anotherSession: 'Mais uma sessão curta',
+  done: 'Pronto',
+  uncheckedCalm: 'As frases ainda não foram revistas por uma pessoa falante nativa.',
+  directionKept: 'A tela estava em alemão. As tarefas continuam na língua de partida anterior.',
+  playing: 'Tocando',
+  lookupTitle: 'Consultar',
+  noReviews: 'Nenhuma revisão está para hoje.',
+  noNewToday: 'Hoje não há frases novas. As revisões ficam em Revisar.',
+  reviewTitle: 'Revisar',
+  startLead: (fresh, due) => `${fresh === 1 ? '1 frase nova' : `${fresh} frases novas`}. ${due === 0 ? 'Nenhuma revisão.' : due === 1 ? '1 revisão.' : `${due} revisões.`}`,
 }
 
 export const vi: Dictionary = {
   ...en,
   skip: 'Tới nội dung',
-  nav: { home: 'Đầu', practice: 'Luyện', show: 'Đưa', culture: 'Văn hoá', settings: 'Cài đặt' },
+  nav: { today: 'Hôm nay', lookup: 'Tra cứu', show: 'Đưa', settings: 'Cài đặt' },
+  cultureTitle: 'Văn hoá',
   pairTitle: 'Cặp ngôn ngữ',
   pairLead: 'Chọn cặp trước. Giao diện vẫn là tiếng Đức cho đến khi bạn chuyển sang ngôn ngữ xuất phát.',
   uncheckedBanner:
@@ -599,7 +896,6 @@ export const vi: Dictionary = {
     similar: 'Hai đường gần nhau. Đây là gợi ý, không phải điểm.',
     apart: 'Hai đường lệch. Đây là gợi ý, không phải điểm.',
   },
-  schemaTitle: 'Sơ đồ năm thanh miền Nam, không phải bản thu. hỏi và ngã ở miền Nam thường nhập làm một.',
   listen: 'Nghe',
   recall: 'Nhớ lại',
   listenPrompt: 'Nghe rồi chọn nghĩa.',
@@ -673,6 +969,80 @@ export const vi: Dictionary = {
   pairNote: 'Ghi chú của cặp này',
   noResults: 'Không thấy.',
   phrases: (count) => (count === 1 ? '1 câu' : `${count} câu`),
+  learnToday: 'Học hôm nay',
+  reviewCard: (count) => (count === 1 ? '1 câu đến hạn.' : `${count} câu đến hạn.`),
+  reviewNone: 'Câu đến hạn. Hôm nay không có.',
+  learnNew: 'Học câu mới',
+  learnNewHint: 'Câu tiếp theo trong tình huống.',
+  lookupCard: 'Tra cứu',
+  lookupHint: 'Đọc câu, không kiểm tra.',
+  showCard: 'Đưa',
+  showHint: 'Chữ lớn cho người kia.',
+  sessionLength: 'Một buổi ngắn, khoảng 8 phút. Rồi buổi học kết thúc.',
+  onboardingKicker: 'Một lần lúc đầu',
+  onboardingTitle: 'Hai ngôn ngữ',
+  sameChoice: 'Cùng một lựa chọn',
+  sameChoiceLead: 'Cùng chỗ như lúc đầu. Không có lựa chọn thứ hai trên câu.',
+  appLangTitle: 'Ngôn ngữ của ứng dụng',
+  appLangHint: 'Bạn đọc bằng ngôn ngữ này. Bản dịch cũng viết bằng ngôn ngữ này.',
+  targetLangTitle: 'Ngôn ngữ bạn học',
+  targetLangHint: 'Giọng nói nằm ở đây, và với tiếng Việt là dạng của từ.',
+  scriptTitle: 'Chữ và từ',
+  scriptHint: 'Chỉ vì ngôn ngữ bạn học là tiếng Việt. Đây không phải giọng nói.',
+  voiceTitle: 'Giọng',
+  voiceVi: 'Một giọng, nữ, miền Bắc',
+  voiceEn: 'Một giọng, nữ',
+  voiceDe: 'Một giọng',
+  voicePt: 'Một giọng',
+  voiceViNote: 'Một giọng. Ở đây không có giọng nam và không có giọng miền Nam với giấy phép rõ.',
+  voiceEnNote: 'Một giọng, nữ. Giọng thứ hai chỉ sau khi có người nghe.',
+  voicePlainNote: 'Một giọng. Nam hay nữ chỉ ghi ở đây khi nguồn nói rõ.',
+  continueOn: 'Tiếp tục tới Học hôm nay',
+  ifThen: 'Khi sáng uống cà phê, tôi mở Học hôm nay. Bạn có thể bỏ qua.',
+  everyPair: 'Có câu cho mỗi cặp hai ngôn ngữ khác nhau.',
+  missingLine: 'Câu này chưa có cho cặp ngôn ngữ này.',
+  stepSlow: (index, total) => `Câu mới · ${index} / ${total} · chậm`,
+  stepNormal: (index, total) => `Câu mới · ${index} / ${total} · bình thường`,
+  stepRepeat: (index, total) => `Nhắc lại · ${index} / ${total}`,
+  stepUnderstand: (index, total) => `Nghe · ${index} / ${total}`,
+  stepRecall: (index, total) => `Nói · ${index} / ${total}`,
+  visibleTitle: 'Câu vẫn hiện',
+  recallTitle: 'Bạn nói thế nào?',
+  newStays: 'Câu này mới. Bạn đọc theo trong lúc nghe.',
+  sessionKicker: 'Buổi học',
+  noReviewWasDue: 'Không có câu nào đến hạn ôn.',
+  sessionNewCount: (count) => (count === 1 ? '1 câu mới.' : `${count} câu mới.`),
+  playingSlow: 'Đang phát chậm.',
+  playingNormal: 'Đang phát tốc độ bình thường.',
+  replaySlow: 'Chậm thêm một lần',
+  playNormal: 'Bây giờ tốc độ bình thường',
+  playSlow: 'Nghe chậm',
+  saidIt: 'Tôi đã nói',
+  micSkipped: 'Không có micro thì không ghi âm. Bạn có thể tiếp tục.',
+  meaningPrompt: 'Câu này nghĩa là gì?',
+  afterChoice: 'Bạn chọn nghĩa. Sau đó bạn thấy lại dòng đúng, với cùng âm thanh.',
+  rateAgain: 'Ngay lần nữa',
+  rateSoon: 'Sắp nữa',
+  rateLater: 'Lát nữa',
+  rateMuchLater: 'Lâu hơn nhiều',
+  rateHint: 'Khoảng cách đến từ bộ lập lịch, không phải một câu cố định.',
+  inMinutes: (count) => `trong ${count} phút`,
+  inHours: (count) => `trong ${count} giờ`,
+  inDays: (count) => `trong ${count} ngày`,
+  tomorrow: 'ngày mai',
+  sessionDone: 'Hôm nay xong',
+  sessionCount: (count) => (count === 1 ? '1 câu.' : `${count} câu.`),
+  tomorrowReviews: 'Ngày mai các câu này nằm ở Ôn lại.',
+  anotherSession: 'Thêm một buổi ngắn',
+  done: 'Xong',
+  uncheckedCalm: 'Các câu chưa được người bản ngữ kiểm tra.',
+  directionKept: 'Giao diện đã là tiếng Đức. Bài tập giữ ngôn ngữ xuất phát trước đó.',
+  playing: 'Đang phát',
+  lookupTitle: 'Tra cứu',
+  noReviews: 'Không có câu ôn đến hạn.',
+  noNewToday: 'Hôm nay không còn câu mới. Phần ôn nằm ở Ôn lại.',
+  reviewTitle: 'Ôn lại',
+  startLead: (fresh, due) => `${fresh === 1 ? '1 câu mới' : `${fresh} câu mới`}. ${due === 0 ? 'Không có ôn lại.' : `${due} câu ôn.`}`,
 }
 
 export const dictionaries = { de, en, 'pt-BR': pt, vi } as const

@@ -1,5 +1,4 @@
 import type { Lang } from '../../content/phrase'
-import { pairById } from '../domain/pairs'
 import type { Settings } from '../storage/types'
 
 export const LANG_LABEL: Record<Lang, Record<Lang, string>> = {
@@ -30,10 +29,7 @@ export const LANG_LABEL: Record<Lang, Record<Lang, string>> = {
 }
 
 export function interfaceLang(settings: Settings): Lang {
-  if (settings.uiLang === 'source' && settings.pairId) {
-    return pairById(settings.pairId)?.source ?? 'de'
-  }
-  return 'de'
+  return settings.appLang ?? 'de'
 }
 
 export function htmlLang(lang: Lang): string {

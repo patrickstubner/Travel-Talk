@@ -1,74 +1,68 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { Lang } from '../../content/phrase'
-import { conceptsForSituation } from '../content/resolve'
-import { PAIRS, pairById } from '../domain/pairs'
-import { dueConcepts } from '../srs/session'
-import { LANG_LABEL } from '../app/labels'
+import { LanguageChoice } from '../components/LanguageChoice'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
+import { buildSession, currentDirection, dueConcepts, orderedConcepts, usableConcepts } from '../srs/session'
+import type { Settings } from '../storage/types'
 
 export function HomePage() {
   const { catalog, snapshot, saveSettings } = useApp()
   const settings = useSettings()
   const copy = useCopy()
+  const [draft, setDraft] = useState<Settings | null>(null)
   if (!catalog || !snapshot) return null
-  const ui = settings.uiLang === 'source' && settings.pairId ? (pairById(settings.pairId)?.source ?? 'de') : 'de'
-  const pair = pairById(settings.pairId)
-  const due = pair ? dueConcepts(catalog.concepts, snapshot.cards, pair.id, new Date()).length : 0
+  const direction = currentDirection(settings.appLang, settings.targetLang)
+
+  if (!direction || !settings.appLang || !settings.targetLang) {
+    const pending = draft ?? settings
+    return (
+      <LanguageChoice
+        settings={pending}
+        copy={copy}
+        ui={pending.appLang ?? 'de'}
+        mode="onboarding"
+        onChange={(patch) => setDraft({ ...pending, ...patch })}
+        onContinue={() => {
+          if (!pending.appLang || !pending.targetLang) return
+          void saveSettings(pending)
+        }}
+      />
+    )
+  }
+
+  const usable = usableConcepts(orderedConcepts(catalog), settings.appLang, settings.targetLang, settings.viRegion)
+  const now = new Date()
+  const due = dueConcepts(usable, snapshot.cards, direction, now).length
+  const fresh = buildSession(usable, snapshot.cards, direction, now, 'new').length
+  const skipped = catalog.concepts.length - usable.length
 
   return (
-    <div className="stack">
-      <p className="banner">{copy.uncheckedBanner}</p>
-      <section>
-        <h1>{copy.pairTitle}</h1>
-        <p>{copy.pairLead}</p>
-        <div className="pair-list" data-testid="pair-list">
-          {PAIRS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="pair-button"
-              data-testid={`pair-${item.id}`}
-              aria-pressed={settings.pairId === item.id}
-              onClick={() => void saveSettings({ ...settings, pairId: item.id })}
-            >
-              {LANG_LABEL[item.source][ui]} → {LANG_LABEL[item.target][ui]}
-            </button>
-          ))}
-        </div>
-      </section>
-      {pair ? (
-        <section className="stack">
-          <p>{copy.due(due)}</p>
-          <div className="row">
-            <Link className="button" to="/practice">
-              {copy.practiceNow}
-            </Link>
-            <Link className="button clay" to="/show">
-              {copy.showEmergency}
-            </Link>
-          </div>
-          <h2>{copy.situations}</h2>
-          <ul className="cards">
-            {catalog.situations
-              .slice()
-              .sort((a, b) => a.order - b.order)
-              .map((situation) => {
-                const count = conceptsForSituation(catalog, situation.id).length
-                return (
-                  <li key={situation.id} className={situation.id === 'emergency' ? 'card emergency' : 'card'}>
-                    <Link to={`/situation/${situation.id}`} data-testid={situation.id === 'emergency' ? 'situation-emergency' : undefined}>
-                      <span className="depth">{copy.depth[situation.depth]}</span>
-                      <strong>{situation.title[ui as Lang]}</strong>
-                      <span>{situation.summary[ui as Lang]}</span>
-                      <span className="count">{copy.phrases(count)}</span>
-                    </Link>
-                  </li>
-                )
-              })}
-          </ul>
-        </section>
-      ) : null}
+    <div className="stack" data-testid="start">
+      <h1>{copy.learnToday}</h1>
+      <p>{copy.startLead(fresh, due)}</p>
+      <Link className="button primary" to="/practice">
+        {copy.learnToday}
+      </Link>
+      <p className="hint">{copy.sessionLength}</p>
+      <Link className="menu-card" to="/practice?kind=review">
+        <strong>{copy.reviewTitle}</strong>
+        <span>{due === 0 ? copy.reviewNone : copy.reviewCard(due)}</span>
+      </Link>
+      <Link className="menu-card" to="/practice?kind=new">
+        <strong>{copy.learnNew}</strong>
+        <span>{fresh === 0 ? copy.noNewToday : copy.learnNewHint}</span>
+      </Link>
+      <Link className="menu-card" to="/lookup">
+        <strong>{copy.lookupCard}</strong>
+        <span>{copy.lookupHint}</span>
+      </Link>
+      <Link className="menu-card" to="/show">
+        <strong>{copy.showCard}</strong>
+        <span>{copy.showHint}</span>
+      </Link>
+      {skipped > 0 ? <p className="hint">{copy.missingLine}</p> : null}
+      <p className="hint">{copy.uncheckedCalm}</p>
     </div>
   )
 }

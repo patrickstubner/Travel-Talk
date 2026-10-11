@@ -10,7 +10,7 @@ describe('dexie repository', () => {
     const empty = await repo.load()
     expect(empty.settings).toEqual(defaultSettings)
     expect(empty.cards).toEqual([])
-    const settings = { ...defaultSettings, pairId: 'pt-vi' as const, personalNote: 'Nur lokal' }
+    const settings = { ...defaultSettings, appLang: 'pt-BR' as const, targetLang: 'vi' as const, personalNote: 'Nur lokal' }
     await repo.saveSettings(settings)
     await repo.saveCard({
       cardId: 'pt-vi:meet.hello',
@@ -26,7 +26,9 @@ describe('dexie repository', () => {
       last_review: null,
     })
     const loaded = await repo.load()
-    expect(loaded.settings.pairId).toBe('pt-vi')
+    expect(loaded.settings.appLang).toBe('pt-BR')
+    expect(loaded.settings.targetLang).toBe('vi')
+    expect(loaded.settings).not.toHaveProperty('pairId')
     expect(loaded.cards).toHaveLength(1)
     await repo.replaceAll({ settings: defaultSettings, cards: [] })
     const cleared = await repo.load()
@@ -47,6 +49,11 @@ describe('dexie repository', () => {
     const missing = { id: 'app', ...rest }
     await raw.table('settings').put(missing)
     expect((await repo.load()).settings.speed).toBe('auto')
+    await raw.table('settings').put({ id: 'app', ...rest, pairId: 'pt-en', uiLang: 'de' })
+    const migrated = (await repo.load()).settings
+    expect(migrated.appLang).toBe('pt-BR')
+    expect(migrated.targetLang).toBe('en')
+    expect(migrated).not.toHaveProperty('pairId')
     raw.close()
   })
 })

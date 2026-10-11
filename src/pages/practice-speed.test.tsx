@@ -2,7 +2,7 @@
 import 'fake-indexeddb/auto'
 import { IDBFactory } from 'fake-indexeddb'
 import { useEffect, type ReactNode } from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { playClip } from '../audio/player'
@@ -16,11 +16,11 @@ vi.mock('../audio/player', () => ({
 function ReadyPractice({ children }: { children: ReactNode }) {
   const { snapshot, saveSettings } = useApp()
   useEffect(() => {
-    if (snapshot && snapshot.settings.pairId !== 'de-vi') {
-      void saveSettings({ ...snapshot.settings, pairId: 'de-vi', speed: 'auto' })
+    if (snapshot && (snapshot.settings.appLang !== 'de' || snapshot.settings.targetLang !== 'vi')) {
+      void saveSettings({ ...snapshot.settings, appLang: 'de', targetLang: 'vi', speed: 'auto' })
     }
   }, [snapshot, saveSettings])
-  if (snapshot?.settings.pairId !== 'de-vi' || snapshot.settings.speed !== 'auto') return null
+  if (snapshot?.settings.appLang !== 'de' || snapshot?.settings.targetLang !== 'vi' || snapshot.settings.speed !== 'auto') return null
   return children
 }
 
@@ -46,8 +46,7 @@ describe('listening practice speed', () => {
         </ReadyPractice>
       </AppProvider>,
     )
-    expect((await screen.findByTestId('speed-now')).textContent).toBe('Tempo 70 %')
-    fireEvent.click(screen.getByRole('button', { name: 'Anhören' }))
+    expect(await screen.findByTestId('target-line')).toBeTruthy()
     expect(vi.mocked(playClip).mock.calls[0]?.[0]).toMatch(/\.r70\.m4a$/)
     expect(vi.mocked(playClip).mock.calls[0]?.[3]).toBe(0.7)
   })
