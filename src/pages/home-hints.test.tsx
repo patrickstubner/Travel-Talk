@@ -53,6 +53,8 @@ describe('home hints', () => {
 
     page()
     expect(await screen.findByText('2 Karten zurückgesetzt.')).toBeTruthy()
+    expect(screen.getByText('Vietnamesisch')).toBeTruthy()
+    expect(screen.queryByText('Deutsch')).toBeNull()
     expect(screen.getByText(/Männerstimmen/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Verstanden' }))
     expect(screen.queryByText(/Männerstimmen/)).toBeNull()

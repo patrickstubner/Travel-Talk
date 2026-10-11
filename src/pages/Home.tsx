@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { Lang } from '../../content/phrase'
 import { selectedVoice, withDefaultVoices } from '../audio/voices'
 import { LANG_LABEL } from '../app/labels'
 import { LanguageChoice } from '../components/LanguageChoice'
@@ -10,10 +9,6 @@ import { useCopy, useSettings } from '../app/use-copy'
 import { buildSession, currentDirection, dueConcepts, orderedConcepts, usableConcepts } from '../srs/session'
 import type { Dictionary } from '../i18n/dictionary'
 import type { Settings } from '../storage/types'
-
-function languagesInUse(settings: Settings): Lang[] {
-  return [settings.targetLang, settings.appLang].filter((lang, index, all): lang is Lang => lang != null && all.indexOf(lang) === index)
-}
 
 export function HomePage() {
   const { catalog, snapshot, saveSettings } = useApp()
@@ -87,17 +82,13 @@ export function HomePage() {
 }
 
 function OfflineOffer({ settings, copy }: { settings: Settings; copy: Dictionary }) {
+  const lang = settings.targetLang
+  if (!lang) return null
   const ui = settings.appLang ?? 'de'
-  const langs = languagesInUse(settings)
-  if (langs.length === 0) return null
   return (
     <section className="stack" aria-label={copy.offlineLoad}>
-      {langs.map((lang) => (
-        <div key={lang}>
-          <p className="hint">{LANG_LABEL[lang][ui]}</p>
-          <VoiceOfflineButton lang={lang} voice={selectedVoice(settings, lang)} copy={copy} dropOnSuccess />
-        </div>
-      ))}
+      <p className="hint">{LANG_LABEL[lang][ui]}</p>
+      <VoiceOfflineButton lang={lang} voice={selectedVoice(settings, lang)} copy={copy} dropOnSuccess />
     </section>
   )
 }

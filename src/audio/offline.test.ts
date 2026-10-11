@@ -14,7 +14,7 @@ const FILES = [
 
 type Store = Map<string, string>
 
-function installCaches(options?: { failPut?: boolean; failFetchAfter?: number }): Map<string, Store> {
+function installCaches(options?: { failPut?: boolean; failFetchAfter?: number; notFound?: string }): Map<string, Store> {
   const stores = new Map<string, Store>()
   let fetches = 0
   vi.stubGlobal(
@@ -25,6 +25,7 @@ function installCaches(options?: { failPut?: boolean; failFetchAfter?: number })
       }
       fetches += 1
       if (options?.failFetchAfter != null && fetches > options.failFetchAfter) throw new TypeError('network')
+      if (options?.notFound && String(url).includes(options.notFound)) return new Response('missing', { status: 404 })
       return new Response('audio')
     }),
   )
@@ -79,7 +80,8 @@ describe('offline voice loading', () => {
     const outcome = await loadVoiceOffline('vi', voice('vivos-22'), (have, total) => {
       seen.push(`${have}/${total}`)
     }, { dropOthers: () => true })
-    expect(outcome).toBe('ready')
+    expect(outcome.status).toBe('ready')
+    expect(outcome.missing).toBe(0)
     expect(seen).toContain('1/2')
     expect(seen.at(-1)).toBe('2/2')
     const runtime = [...(stores.get(AUDIO_CACHE)?.keys() ?? [])]
@@ -93,14 +95,14 @@ describe('offline voice loading', () => {
     const stores = installCaches({ failFetchAfter: 0 })
     stores.set(AUDIO_CACHE, new Map([['/audio/vi/emergency.help__any__base.m4a', 'old']]))
     const outcome = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, { dropOthers: () => true })
-    expect(outcome).toBe('error')
+    expect(outcome.status).toBe('error')
     expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/emergency.help__any__base.m4a')).toBe(true)
 
     vi.unstubAllGlobals()
     const full = installCaches({ failPut: true })
     full.set(AUDIO_CACHE, new Map([['/audio/vi/emergency.help__any__base.m4a', 'old']]))
     const blocked = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, { dropOthers: () => true })
-    expect(blocked).toBe('full')
+    expect(blocked.status).toBe('full')
     expect(full.get(AUDIO_CACHE)?.has('/audio/vi/emergency.help__any__base.m4a')).toBe(true)
     expect([...(full.get(AUDIO_CACHE)?.keys() ?? [])].some((url) => url.includes('vivos-22'))).toBe(false)
   })
@@ -122,5 +124,16 @@ describe('offline voice loading', () => {
     expect(text).not.toContain('[0, 200]')
     expect(text).toMatch(/maxEntries:\s*4000/)
     expect(text).toContain('cleanupOutdatedCaches: false')
+    expect(text).toContain('importScripts: [`${BASE}sw-migrate.js`]')
+  })
+
+  it('skips a missing file and still finishes the voice', async () => {
+    const stores = installCaches({ notFound: '.r70.m4a' })
+    stores.set(AUDIO_CACHE, new Map([['/audio/vi/emergency.help__any__base.m4a', 'old']]))
+    const outcome = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, { dropOthers: () => true })
+    expect(outcome.status).toBe('ready')
+    expect(outcome.missing).toBe(1)
+    expect([...(stores.get(AUDIO_CACHE)?.keys() ?? [])].some((url) => url.includes('vivos-22') && !url.includes('.r70.'))).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/emergency.help__any__base.m4a')).toBe(true)
   })
 })

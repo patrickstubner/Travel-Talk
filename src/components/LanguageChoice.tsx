@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import type { Lang } from '../../content/phrase'
 import { dropOtherVoicesIfCached } from '../audio/offline'
 import { playClip } from '../audio/player'
@@ -48,6 +49,12 @@ export function LanguageChoice({
   const options = target ? voicesFor(target) : []
   const current = target ? selectedVoice(settings, target).id : ''
   const shown = target && mode === 'onboarding' && !settings.voices?.[target] ? options.find((voice) => voice.defaultNew)?.id ?? current : current
+  const previousVoice = useRef(shown)
+  const seenLang = useRef(target)
+  if (seenLang.current !== target) {
+    seenLang.current = target
+    previousVoice.current = shown
+  }
 
   function emit(patch: Partial<LanguagePatch>): void {
     onChange({
@@ -71,6 +78,16 @@ export function LanguageChoice({
 
   function pickVoice(id: string): void {
     if (!target) return
+    if (id !== shown) previousVoice.current = shown
+    emit({ voices: { ...settings.voices, [target]: id } })
+    const voice = options.find((item) => item.id === id)
+    if (voice) void dropOtherVoicesIfCached(target, voice)
+  }
+
+  function keepPreviousVoice(failedId: string): void {
+    if (!target) return
+    const id = previousVoice.current
+    if (!id || id === failedId) return
     emit({ voices: { ...settings.voices, [target]: id } })
     const voice = options.find((item) => item.id === id)
     if (voice) void dropOtherVoicesIfCached(target, voice)
@@ -136,7 +153,13 @@ export function LanguageChoice({
                   >
                     {copy.voicePreview}
                   </button>
-                  <VoiceOfflineButton lang={target} voice={voice} copy={copy} dropOnSuccess={shown === voice.id} />
+                  <VoiceOfflineButton
+                    lang={target}
+                    voice={voice}
+                    copy={copy}
+                    dropOnSuccess={shown === voice.id}
+                    onKeepPrevious={() => keepPreviousVoice(voice.id)}
+                  />
                 </div>
               )
             })}

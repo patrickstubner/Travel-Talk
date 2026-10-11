@@ -7,7 +7,13 @@ import { filesForVoice, selectedVoice, type CatalogVoice } from './voices'
 /** Runtime cache filled by the service worker and by «Für offline laden». */
 export const AUDIO_CACHE = 'travel-talk-audio'
 
-export type LoadOutcome = 'ready' | 'error' | 'full'
+export type LoadResult = {
+  status: 'ready' | 'error' | 'full'
+  /** Files that answered 404. They do not block the rest of the voice. */
+  missing: number
+  /** URLs stored during this attempt. Reverting deletes only these. */
+  added: string[]
+}
 
 export function audioRequest(file: string): string {
   return publicUrl(`audio/${file}`)
@@ -62,55 +68,71 @@ export async function loadVoiceOffline(
   voice: CatalogVoice,
   onProgress: (have: number, total: number) => void,
   options: { dropOthers: () => boolean },
-): Promise<LoadOutcome> {
+): Promise<LoadResult> {
+  const empty: LoadResult = { status: 'error', missing: 0, added: [] }
   let files: string[]
   try {
     files = await listedFiles(lang, voice)
   } catch {
     onProgress(0, 0)
-    return 'error'
+    return empty
   }
   const total = files.length
   if (total === 0 || !('caches' in globalThis)) {
     onProgress(0, total)
-    return 'error'
+    return empty
   }
   const cache = await caches.open(AUDIO_CACHE)
   let have = 0
-  const missing: string[] = []
+  const pending: string[] = []
   for (const file of files) {
     if (await cache.match(audioRequest(file))) have += 1
-    else missing.push(file)
+    else pending.push(file)
   }
   onProgress(have, total)
-  for (const file of missing) {
+  let missing = 0
+  const added: string[] = []
+  for (const file of pending) {
     const url = audioRequest(file)
     let response: Response
     try {
       response = await fetch(url)
     } catch {
       onProgress(have, total)
-      return 'error'
+      return { status: 'error', missing, added }
+    }
+    if (response.status === 404) {
+      missing += 1
+      onProgress(have, total)
+      continue
     }
     if (!response.ok) {
       onProgress(have, total)
-      return 'error'
+      return { status: 'error', missing, added }
     }
     try {
       await cache.put(url, response)
     } catch (error) {
       if (isQuota(error)) {
         onProgress(have, total)
-        return 'full'
+        return { status: 'full', missing, added }
       }
       onProgress(have, total)
-      return 'error'
+      return { status: 'error', missing, added }
     }
+    added.push(url)
     have += 1
     onProgress(have, total)
   }
-  if (options.dropOthers()) await dropOtherVoices(lang, voice)
-  return 'ready'
+  if (missing === 0 && options.dropOthers()) await dropOtherVoices(lang, voice)
+  return { status: 'ready', missing, added }
+}
+
+/** Drops only the files added by a failed attempt, so a complete older voice stays. */
+export async function discardAdded(urls: readonly string[]): Promise<void> {
+  if (!('caches' in globalThis) || urls.length === 0) return
+  const cache = await caches.open(AUDIO_CACHE)
+  for (const url of urls) await cache.delete(url)
 }
 
 /** Removes every other voice of this language, including copies in an older cache. */

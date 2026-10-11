@@ -2,7 +2,7 @@
 
 **Live:** [patrickstubner.github.io/Travel-Talk](https://patrickstubner.github.io/Travel-Talk/)
 
-Reise-Sprachhilfe für eine Familie. Version 0.4.0. Offline, ohne Konto, ohne Tracking.
+Reise-Sprachhilfe für eine Familie. Version 0.4.0. Ohne Konto, ohne Tracking. Lernstand und Sätze bleiben auf dem Gerät. Eine Stimme ist lokal, nachdem sie geladen wurde.
 
 Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Sprache der App und die Lernsprache sind zwei getrennte Wahlen. Hören, Verstehen und Sprechen kommen zuerst. Lesen stützt das Hören. Schreiben ist nicht der Weg durch die Sitzung. Höchstens 15 neue Sätze am Tag, über alle Richtungen zusammen.
 
@@ -35,7 +35,7 @@ npm ci
 npm run dev
 ```
 
-Die App liegt unter `http://127.0.0.1:5173/Travel-Talk/`. Der Build ist Rsbuild. Der Service Worker entsteht nach dem Build mit `workbox-build`: er liest das fertige `dist/` und nimmt damit auch die kopierten Audiodateien in den Cache. Ein Rspack-Plugin sähe nur die kompilierten Assets. Die Tests laufen mit Vitest, getrennt vom Build. Weitere Befehle:
+Die App liegt unter `http://127.0.0.1:5173/Travel-Talk/`. Der Build ist Rsbuild. Der Service Worker entsteht nach dem Build mit `workbox-build`. Er speichert die Oberfläche, nicht die Audiodateien im Voraus. Beim Installieren kopiert er vorhandene `.m4a`-Einträge in den Audio-Cache, bevor die Aktivierung alte Precache-Einträge entfernt. Eine Stimme wird mit «Für offline laden» geholt. Ein Rspack-Plugin sähe nur die kompilierten Assets. Die Tests laufen mit Vitest, getrennt vom Build. Weitere Befehle:
 
 ```bash
 npm test

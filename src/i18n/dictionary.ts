@@ -119,6 +119,8 @@ export type Dictionary = {
   offlineReady: string
   offlineRetry: string
   offlineFull: string
+  offlineKeep: string
+  offlineMissing: (count: number) => string
   offlineProgress: (have: number, total: number) => string
   voicesSlow: string
   voicesNotice: string
@@ -354,6 +356,8 @@ export const de: Dictionary = {
   offlineReady: 'offline bereit',
   offlineRetry: 'Erneut versuchen',
   offlineFull: 'Der Speicher ist voll. Die Stimme ist nicht vollständig geladen.',
+  offlineKeep: 'Bisherige Stimme behalten',
+  offlineMissing: (count) => (count === 1 ? '1 Datei fehlt' : `${count} Dateien fehlen`),
   offlineProgress: (have, total) => `${have}/${total}`,
   voicesSlow: '70 % und 85 % sind eigene Dateien (ffmpeg atempo). Die Tonhöhe bleibt erhalten. 100 % ist die normale Datei.',
   voicesNotice: 'NOTICE.txt',
@@ -587,6 +591,8 @@ export const en: Dictionary = {
   offlineReady: 'ready offline',
   offlineRetry: 'Try again',
   offlineFull: 'Storage is full. The voice is not fully loaded.',
+  offlineKeep: 'Keep the previous voice',
+  offlineMissing: (count) => (count === 1 ? '1 file is missing' : `${count} files are missing`),
   offlineProgress: (have, total) => `${have}/${total}`,
   voicesSlow: '70 % and 85 % are their own files (ffmpeg atempo). The pitch stays the same. 100 % is the normal file.',
   voicesNotice: 'NOTICE.txt',
@@ -820,6 +826,8 @@ export const pt: Dictionary = {
   offlineReady: 'pronto offline',
   offlineRetry: 'Tentar de novo',
   offlineFull: 'O armazenamento está cheio. A voz não foi carregada por completo.',
+  offlineKeep: 'Manter a voz anterior',
+  offlineMissing: (count) => (count === 1 ? '1 arquivo falta' : `${count} arquivos faltam`),
   offlineProgress: (have, total) => `${have}/${total}`,
   voicesSlow: '70 % e 85 % são arquivos próprios (ffmpeg atempo). O tom fica igual. 100 % é o arquivo normal.',
   voicesNotice: 'NOTICE.txt',
@@ -1051,6 +1059,8 @@ export const vi: Dictionary = {
   offlineReady: 'sẵn sàng offline',
   offlineRetry: 'Thử lại',
   offlineFull: 'Bộ nhớ đã đầy. Giọng chưa được tải đủ.',
+  offlineKeep: 'Giữ giọng trước',
+  offlineMissing: (count) => (count === 1 ? 'Thiếu 1 tệp' : `Thiếu ${count} tệp`),
   offlineProgress: (have, total) => `${have}/${total}`,
   voicesSlow: '70 % và 85 % là tệp riêng (ffmpeg atempo). Độ cao giọng giữ nguyên. 100 % là tệp bình thường.',
   voicesNotice: 'NOTICE.txt',

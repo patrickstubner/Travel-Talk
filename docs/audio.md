@@ -59,7 +59,7 @@ Fehlt die Datei, oder ist sie offline nicht geladen, spielt die App sie nicht. D
 
 ## Offline laden
 
-Jede Stimme hat «Für offline laden». Der Fortschritt zählt die Dateien dieser Stimme, bei Vietnamesisch 597. «offline bereit» heisst, alle Dateien liegen im Cache `travel-talk-audio`. Ein Netzfehler behält den bisherigen Stand und bietet «Erneut versuchen». Ist der Speicher voll, bleibt die bisherige Stimme. Der Service Worker löscht alte Caches nicht von selbst. Die App kopiert die Stimmen, die in Gebrauch sind, zuerst in diesen Cache. Andere Stimmen derselben Sprache fallen erst weg, wenn die neue vollständig geladen ist. Gespeichert wird nur HTTP 200. Der Cache fasst 4000 Einträge, mehr als die 3891 Dateien.
+Jede Stimme hat «Für offline laden». Der Fortschritt zählt die Dateien dieser Stimme, bei Vietnamesisch 597, und bleibt nach einem Neuladen stehen. «offline bereit» heisst, alle Dateien liegen im Cache `travel-talk-audio`. Ein Netzfehler behält den bisherigen Stand und bietet «Erneut versuchen». Eine fehlende Datei (404) hält die übrige Stimme nicht auf. Danach steht da, wie viele Dateien fehlen. Ist der Speicher voll, bleiben «Erneut versuchen» und «Bisherige Stimme behalten». Der zweite Knopf entfernt nur die Dateien dieses Versuchs. Beim Installieren kopiert der Service Worker vorhandene `.m4a` in `travel-talk-audio`, bevor die Aktivierung alte Precache-Einträge löscht. Andere Stimmen derselben Sprache fallen erst weg, wenn die neue vollständig geladen ist. Gespeichert wird nur HTTP 200. Der Cache fasst 4000 Einträge, mehr als die 3891 Dateien. Die Startseite bietet das Laden nur für die Lernsprache an.
 
 ## Stimmen und Lizenzen
 
