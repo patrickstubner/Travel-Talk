@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { conceptsForSituation, resolvePlayback } from '../content/resolve'
 import { directionId } from '../domain/direction'
@@ -25,6 +25,7 @@ export function ShowPage() {
   const [gloss, setGloss] = useState(false)
   const [note, setNote] = useState(false)
   const [playing, setPlaying] = useState(false)
+  const lockedFile = useRef('')
   const [seconds, setSeconds] = useState<number | null>(null)
   const [times, setTimes] = useState<WordTime[] | null>(null)
   const [clipDuration, setClipDuration] = useState<number | null>(null)
@@ -46,23 +47,24 @@ export function ShowPage() {
   const followWords = settings.highlightWords !== false
   const targetSpeech = target?.speech ?? ''
   const targetFile = target && targetLang ? tempoFile(spokenFile(settings, targetLang, target.file), step) : ''
+  const timingFile = playing && lockedFile.current ? lockedFile.current : targetFile
   const links = useMemo(() => {
     if (!followWords || !concept || !target || !source || !app || !targetLang) return []
     return linksFor(concept.id, targetLang, app, target.speech, source.speech, settings)
   }, [app, concept, followWords, settings, source, target, targetLang])
   useEffect(() => {
-    if (!followWords || !targetFile || !targetSpeech) {
+    if (!followWords || !timingFile || !targetSpeech) {
       setTimes(null)
       return
     }
     let live = true
-    void loadAlignment(targetFile, targetSpeech).then((value) => {
+    void loadAlignment(timingFile, targetSpeech).then((value) => {
       if (live) setTimes(value)
     })
     return () => {
       live = false
     }
-  }, [followWords, targetFile, targetSpeech])
+  }, [followWords, targetSpeech, timingFile])
   if (!catalog) return null
   if (!direction || !app || !targetLang) return <p>{copy.needPair}</p>
   if (!concept) return <p>{copy.noResults}</p>
@@ -83,7 +85,7 @@ export function ShowPage() {
           speech={target.speech}
           gloss={gloss && source ? source.speech : null}
           links={gloss ? links : []}
-          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration, alignmentScale(targetFile))) ? times : null}
+          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration, alignmentScale(timingFile))) ? times : null}
           seconds={playing ? seconds : null}
           note={gloss ? copy.glossUnchecked : undefined}
           template={target.text}
@@ -114,16 +116,19 @@ export function ShowPage() {
           aria-pressed={playing}
           onClick={() => {
             if (!target) return
+            const file = tempoFile(spokenFile(settings, targetLang, target.file), step)
+            lockedFile.current = file
             setPlaying(true)
             setSeconds(0)
             setClipDuration(null)
             setOfflineAudio(false)
             void playClip(
-              tempoFile(spokenFile(settings, targetLang, target.file), step),
+              file,
               target.speech,
               targetLang,
               step,
               () => {
+                lockedFile.current = ''
                 setPlaying(false)
                 setSeconds(null)
               },
@@ -131,6 +136,7 @@ export function ShowPage() {
               (duration) => setClipDuration(duration),
             ).then((result) => {
               if (result === 'offline') {
+                lockedFile.current = ''
                 setPlaying(false)
                 setSeconds(null)
                 setOfflineAudio(true)

@@ -15,6 +15,8 @@ from piper import PiperVoice
 from piper.config import SynthesisConfig
 
 PIPER_VERSION = "1.8.0"
+# Alignment reads phoneme lengths through Piper. Synthesis itself does not import onnx.
+ONNX_VERSION = "1.17.0"
 # onnx weights. The four 0.4.0 models, plus the four voices shipped before that.
 MODEL_SHA256 = {
     "de_DE-thorsten-high": "9df1c43c61149ef9b39e618e2b861fbe41e1fcea9390b2dac62e8761573ea4f1",
@@ -62,6 +64,15 @@ def require_piper() -> None:
     found = importlib.metadata.version("piper-tts")
     if found != PIPER_VERSION:
         raise SystemExit(f"piper-tts {found} is not the pinned {PIPER_VERSION}")
+
+
+def require_onnx() -> None:
+    """Pin used by align_clips.py. generate_audio.py does not call this."""
+    import importlib.metadata
+
+    found = importlib.metadata.version("onnx")
+    if found != ONNX_VERSION:
+        raise SystemExit(f"onnx {found} is not the pinned {ONNX_VERSION}")
 
 
 def require_model(model_dir: Path, model: str) -> None:

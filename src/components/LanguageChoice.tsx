@@ -1,6 +1,6 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Lang } from '../../content/phrase'
-import { dropOtherVoicesIfCached } from '../audio/offline'
+import { dropOtherVoicesIfCached, voiceProgress } from '../audio/offline'
 import { playClip } from '../audio/player'
 import { previewFile, selectedVoice, voicesFor } from '../audio/voices'
 import { LANG_LABEL } from '../app/labels'
@@ -35,6 +35,7 @@ export function LanguageChoice({
   mode,
   onChange,
   onContinue,
+  retainIds = [],
 }: {
   settings: Settings
   copy: Dictionary
@@ -42,9 +43,10 @@ export function LanguageChoice({
   mode: 'onboarding' | 'settings'
   onChange: (patch: LanguagePatch) => void
   onContinue?: () => void
+  /** Voices other people still use. This person's previous voice can go. */
+  retainIds?: readonly string[]
 }) {
   const ready = settings.appLang != null && settings.targetLang != null && settings.appLang !== settings.targetLang
-  const showRegion = settings.appLang === 'vi' || settings.targetLang === 'vi'
   const target = settings.targetLang
   const options = target ? voicesFor(target) : []
   const current = target ? selectedVoice(settings, target).id : ''
@@ -71,18 +73,31 @@ export function LanguageChoice({
     else emit({ appLang: lang })
   }
 
-  function pickTarget(lang: Lang): void {
-    if (lang === settings.appLang && settings.targetLang) emit({ appLang: settings.targetLang, targetLang: lang })
-    else emit({ targetLang: lang })
-  }
-
   function pickVoice(id: string): void {
     if (!target) return
     if (id !== shown) previousVoice.current = shown
     emit({ voices: { ...settings.voices, [target]: id } })
     const voice = options.find((item) => item.id === id)
-    if (voice) void dropOtherVoicesIfCached(target, voice)
+    if (voice) void dropOtherVoicesIfCached(target, voice, retainIds)
   }
+
+  const [previousReady, setPreviousReady] = useState(false)
+  useEffect(() => {
+    const id = previousVoice.current
+    if (!target || !id || id === shown) {
+      setPreviousReady(false)
+      return
+    }
+    const voice = voicesFor(target).find((item) => item.id === id)
+    if (!voice) return
+    let live = true
+    void voiceProgress(target, voice).then((progress) => {
+      if (live) setPreviousReady(progress.total > 0 && progress.have === progress.total)
+    })
+    return () => {
+      live = false
+    }
+  }, [shown, target])
 
   function keepPreviousVoice(failedId: string): void {
     if (!target) return
@@ -90,7 +105,7 @@ export function LanguageChoice({
     if (!id || id === failedId) return
     emit({ voices: { ...settings.voices, [target]: id } })
     const voice = options.find((item) => item.id === id)
-    if (voice) void dropOtherVoicesIfCached(target, voice)
+    if (voice) void dropOtherVoicesIfCached(target, voice, retainIds)
   }
 
   return (
@@ -109,32 +124,7 @@ export function LanguageChoice({
           ))}
         </div>
       </section>
-      <section className="card pad">
-        <h2>{copy.targetLangTitle}</h2>
-        <p className="hint">{copy.targetLangHint}</p>
-        <div className="choice-grid" role="group" aria-label={copy.targetLangTitle}>
-          {APP_LANGS.map((lang) => (
-            <button key={lang} type="button" aria-pressed={settings.targetLang === lang} onClick={() => pickTarget(lang)}>
-              {LANG_LABEL[lang][ui]}
-            </button>
-          ))}
-        </div>
-        <p className="hint">{copy.everyPair}</p>
-        {showRegion ? (
-          <div className="stack">
-            <h2>{copy.scriptTitle}</h2>
-            <p className="hint">{copy.scriptHint}</p>
-            <div className="choice-grid" role="group" aria-label={copy.scriptTitle}>
-              <button type="button" aria-pressed={settings.viRegion === 'south'} onClick={() => emit({ viRegion: 'south' })}>
-                {copy.regionSouth}
-              </button>
-              <button type="button" aria-pressed={settings.viRegion === 'north'} onClick={() => emit({ viRegion: 'north' })}>
-                {copy.regionNorth}
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </section>
+      <p className="hint">{copy.targetLangHint}</p>
       {target ? (
         <section className="card pad">
           <h2>{copy.voiceTitle}</h2>
@@ -158,7 +148,8 @@ export function LanguageChoice({
                     voice={voice}
                     copy={copy}
                     dropOnSuccess={shown === voice.id}
-                    onKeepPrevious={() => keepPreviousVoice(voice.id)}
+                    retainIds={retainIds}
+                    onKeepPrevious={previousReady ? () => keepPreviousVoice(voice.id) : undefined}
                   />
                 </div>
               )

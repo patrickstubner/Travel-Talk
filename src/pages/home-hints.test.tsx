@@ -1,17 +1,16 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto'
 import Dexie from 'dexie'
-import { IDBFactory } from 'fake-indexeddb'
+import { freshIndexedDb } from '../test-idb'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { AppProvider } from '../app/state'
-import { DexieProgressRepository } from '../storage/dexie-repository'
 import { defaultSettings } from '../storage/types'
 import { HomePage } from './Home'
 
 beforeEach(() => {
-  globalThis.indexedDB = new IDBFactory()
+  freshIndexedDb()
 })
 
 afterEach(() => {
@@ -20,8 +19,6 @@ afterEach(() => {
 
 describe('home hints', () => {
   it('shows the reset count and the voice hint once, and keeps the dismissal', async () => {
-    const repo = new DexieProgressRepository('travel-talk')
-    await repo.load()
     const raw = new Dexie('travel-talk')
     raw.version(1).stores({ settings: 'id', cards: 'cardId' })
     const base = {

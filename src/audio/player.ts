@@ -6,6 +6,12 @@ import type { SpeedStep } from './speed'
 let known: Set<string> | null = null
 let loading: Promise<Set<string>> | null = null
 let current: HTMLAudioElement | null = null
+let clock = 0
+
+function stopClock(): void {
+  if (clock !== 0 && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(clock)
+  clock = 0
+}
 
 /** Tests start from an empty list. The page keeps the list for the session. */
 export function clearManifestCache(): void {
@@ -74,20 +80,35 @@ export async function playClip(
   if (!AUDIO_FILE.test(file) || !files.has(file)) return 'offline'
   const cached = await clipIsCached(file)
   if (!cached && typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline'
+  stopClock()
   current?.pause()
   const audio = new Audio(publicUrl(`audio/${file}`))
   audio.playbackRate = 1
   audio.onloadedmetadata = () => {
     if (Number.isFinite(audio.duration) && audio.duration > 0) onDuration?.(audio.duration)
   }
-  audio.onended = () => onEnd?.()
-  audio.ontimeupdate = () => onTime?.(audio.currentTime)
+  audio.onended = () => {
+    if (current === audio) stopClock()
+    onEnd?.()
+  }
   current = audio
   try {
     await audio.play()
   } catch {
     if (!cached) return 'offline'
     onEnd?.()
+    return 'file'
+  }
+  if (onTime && typeof requestAnimationFrame === 'function') {
+    const tick = (): void => {
+      if (current !== audio || audio.paused || audio.ended) {
+        clock = 0
+        return
+      }
+      onTime(audio.currentTime)
+      clock = requestAnimationFrame(tick)
+    }
+    clock = requestAnimationFrame(tick)
   }
   return 'file'
 }

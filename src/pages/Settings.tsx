@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
 import { DE_ADDRESS, PT_ADDRESS, PT_SPEAKER, VI_ADDRESS } from '../../content/address'
+import { voicesKeptByOthers } from '../audio/voices'
 import { LanguageChoice } from '../components/LanguageChoice'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { publicUrl } from '../public-url'
 import { IMPORT_FUTURE, IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport, type ImportPreview } from '../storage/import'
-import { cleanPersonalNote, usesLang, type ProgressSnapshot, type Settings } from '../storage/types'
+import { cleanPersonName, cleanPersonalNote, usesLang, type ImportedPerson, type ProgressSnapshot, type Settings } from '../storage/types'
 
 function cleanNote(value: string): string {
   return cleanPersonalNote(value)
@@ -17,10 +18,12 @@ type PendingImport = {
   skipped: number
   preview: ImportPreview
   uiNotRelabeled: boolean
+  scope: 'person' | 'all'
+  people: ImportedPerson[]
 }
 
 export function SettingsPage() {
-  const { catalog, snapshot, saveSettings, replaceAll } = useApp()
+  const { catalog, snapshot, saveSettings, replaceAll, importPerson, importAll, everyone } = useApp()
   const settings = useSettings()
   const copy = useCopy()
   const ui = interfaceLang(settings)
@@ -31,17 +34,21 @@ export function SettingsPage() {
   const [pending, setPending] = useState<PendingImport | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
   const [includeNote, setIncludeNote] = useState(false)
+  const [addName, setAddName] = useState('')
   const [persistState, setPersistState] = useState<'ok' | 'no' | null>(null)
   if (!snapshot) return null
   const current = snapshot
-  const canExport = settings.appLang != null && settings.targetLang != null
+  const activeName = cleanPersonName(current.people?.find((person) => person.id === current.activePersonId)?.name ?? '')
+  const canExport = activeName != null && settings.appLang != null && settings.targetLang != null
+  const canExportAll = canExport && (current.people ?? []).every((person) => cleanPersonName(person.name) && person.settings.appLang && person.settings.targetLang)
 
   function update(patch: Partial<Settings>): void {
     void saveSettings({ ...settings, ...patch })
   }
 
-  function downloadSnapshot(include: boolean, name: string): void {
-    const blob = new Blob([toExport(current, new Date(), include)], { type: 'application/json' })
+  async function downloadSnapshot(include: boolean, name: string, scope: 'person' | 'all'): Promise<void> {
+    const pack = scope === 'all' ? { scope, people: await everyone() } : undefined
+    const blob = new Blob([toExport(current, new Date(), include, pack)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -67,6 +74,8 @@ export function SettingsPage() {
         skipped: outcome.skipped,
         preview: previewImport(outcome.snapshot),
         uiNotRelabeled: outcome.uiNotRelabeled,
+        scope: outcome.scope,
+        people: outcome.people,
       })
     } catch (error) {
       if (error instanceof Error && error.message === IMPORT_NEWER) setImportState('newer')
@@ -86,7 +95,14 @@ export function SettingsPage() {
 
   return (
     <section className="stack" data-testid="settings">
-      <LanguageChoice settings={settings} copy={copy} ui={ui} mode="settings" onChange={(patch) => update(patch)} />
+      <LanguageChoice
+        settings={settings}
+        copy={copy}
+        ui={ui}
+        mode="settings"
+        retainIds={settings.targetLang ? voicesKeptByOthers(current.people ?? [], current.activePersonId, settings.targetLang) : []}
+        onChange={(patch) => update(patch)}
+      />
       <label className="choice">
         <input
           type="checkbox"
@@ -185,8 +201,11 @@ export function SettingsPage() {
       </label>
       <p className="hint">{copy.exportNoteHint}</p>
       <div className="row">
-        <button type="button" disabled={!canExport} onClick={() => downloadSnapshot(includeNote, 'travel-talk.json')}>
+        <button type="button" disabled={!canExport} onClick={() => void downloadSnapshot(includeNote, 'travel-talk.json', 'person')}>
           {copy.exportLabel}
+        </button>
+        <button type="button" disabled={!canExportAll} onClick={() => void downloadSnapshot(includeNote, 'travel-talk-alle.json', 'all')}>
+          {copy.exportAll}
         </button>
         <label className="button">
           {copy.importLabel}
@@ -209,38 +228,83 @@ export function SettingsPage() {
           <p>{copy.importSummary(pending.preview.cards, pending.preview.earliest, pending.preview.latest, pending.preview.hasNote)}</p>
           <p>{importKeepsLocalNote(pending.snapshot.settings.personalNote) ? copy.importNoteKept : copy.importNoteReplaced}</p>
           <p className="hint">{copy.importBackup}</p>
+          {pending.scope === 'all' ? <p>{copy.importAllAsk}</p> : null}
+          {pending.scope === 'all' ? <p>{copy.importPeople(pending.people.length)}</p> : null}
+          {pending.scope === 'person' && !cleanPersonName(pending.people[0]?.name) ? (
+            <label>
+              {copy.importAddName}
+              <input value={addName} maxLength={40} onChange={(event) => setAddName(event.target.value)} />
+            </label>
+          ) : null}
           {pending.skipped > 0 ? <p>{copy.importSkipped(pending.skipped)}</p> : null}
           <div className="row">
-            <button type="button" disabled={!canExport} onClick={() => downloadSnapshot(includeNote, 'travel-talk-sicherung.json')}>
+            <button type="button" disabled={!canExport} onClick={() => void downloadSnapshot(includeNote, 'travel-talk-sicherung.json', 'person')}>
               {copy.backupDownload}
             </button>
-            <button
-              type="button"
-              className="button"
-              onClick={() => {
-                const next = pending.snapshot
-                const leftOut = pending.skipped
-                const merged = {
-                  ...next,
-                  settings: {
-                    ...next.settings,
-                    personalNote: retainLocalNote(current.settings.personalNote, next.settings.personalNote),
-                    voices: next.settings.voices ?? current.settings.voices,
-                    ...(current.settings.voiceHintSeen ? { voiceHintSeen: true } : {}),
-                    ...(current.settings.highlightWords === false ? { highlightWords: false } : {}),
-                  },
-                }
-                const relabeled = pending.uiNotRelabeled
-                setPending(null)
-                void replaceAll(merged).then(() => {
-                  setSkipped(leftOut)
-                  setKeptDirection(relabeled)
-                  setImportState('ok')
-                })
-              }}
-            >
-              {copy.confirmImport}
-            </button>
+            {pending.scope === 'all' ? (
+              <button
+                type="button"
+                className="button"
+                onClick={() => {
+                  const people = pending.people
+                  const leftOut = pending.skipped
+                  setPending(null)
+                  void importAll(people).then(() => {
+                    setSkipped(leftOut)
+                    setImportState('ok')
+                  })
+                }}
+              >
+                {copy.importReplaceAll}
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => {
+                    const person = pending.people[0]
+                    if (!person) return
+                    const leftOut = pending.skipped
+                    const relabeled = pending.uiNotRelabeled
+                    setPending(null)
+                    void importPerson('replace', {
+                      ...person,
+                      name: person.name || activeName || '',
+                      settings: {
+                        ...person.settings,
+                        personalNote: retainLocalNote(current.settings.personalNote, person.settings.personalNote),
+                      },
+                    }).then(() => {
+                      setSkipped(leftOut)
+                      setKeptDirection(relabeled)
+                      setImportState('ok')
+                    })
+                  }}
+                >
+                  {copy.importReplace}
+                </button>
+                <button
+                  type="button"
+                  disabled={(current.people?.length ?? 0) >= 10 || !cleanPersonName(pending.people[0]?.name || addName)}
+                  onClick={() => {
+                    const person = pending.people[0]
+                    const name = cleanPersonName(person?.name || addName)
+                    if (!person || !name) return
+                    const leftOut = pending.skipped
+                    setPending(null)
+                    void importPerson('add', { ...person, name }).then((result) => {
+                      if (result === 'ok') {
+                        setSkipped(leftOut)
+                        setImportState('ok')
+                      } else setImportState('bad')
+                    })
+                  }}
+                >
+                  {copy.importAdd}
+                </button>
+              </>
+            )}
             <button type="button" onClick={() => setPending(null)}>
               {copy.cancel}
             </button>
@@ -254,15 +318,15 @@ export function SettingsPage() {
       {importState === 'future' ? <p role="alert">{copy.importFuture}</p> : null}
       {importState === 'bad' ? <p role="alert">{copy.importBad}</p> : null}
       <button type="button" onClick={() => setConfirmReset(true)}>
-        {copy.reset}
+        {copy.resetPerson}
       </button>
       {confirmReset ? (
         <div className="card dialog" role="dialog" aria-modal="true" aria-labelledby="reset-title">
           <h2 id="reset-title">{copy.confirmReset}</h2>
-          <p>{copy.resetAsk}</p>
+          <p>{copy.resetPersonAsk}</p>
           <p className="hint">{copy.importBackup}</p>
           <div className="row">
-            <button type="button" disabled={!canExport} onClick={() => downloadSnapshot(includeNote, 'travel-talk-sicherung.json')}>
+            <button type="button" disabled={!canExport} onClick={() => void downloadSnapshot(includeNote, 'travel-talk-sicherung.json', 'person')}>
               {copy.backupDownload}
             </button>
             <button

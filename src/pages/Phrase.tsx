@@ -75,6 +75,8 @@ export function PhrasePage() {
     : undefined
   const step = effectiveSpeed(settings.speed, stored)
   const alignFile = targetFile ? tempoFile(targetFile, step) : ''
+  const lockedFile = useRef('')
+  const timingFile = playing && lockedFile.current ? lockedFile.current : alignFile
   const links = useMemo(() => {
     if (!concept || !target || !source || !app || !targetLang || !followWords) return []
     return linksFor(concept.id, targetLang, app, target.speech, source.speech, settings)
@@ -102,17 +104,17 @@ export function PhrasePage() {
   const targetSpeech = target?.speech ?? ''
   useEffect(() => {
     let live = true
-    if (!followWords || !alignFile || !targetSpeech) {
+    if (!followWords || !timingFile || !targetSpeech) {
       setTimes(null)
       return
     }
-    void loadAlignment(alignFile, targetSpeech).then((value) => {
+    void loadAlignment(timingFile, targetSpeech).then((value) => {
       if (live) setTimes(value)
     })
     return () => {
       live = false
     }
-  }, [alignFile, followWords, targetSpeech])
+  }, [followWords, targetSpeech, timingFile])
 
   useEffect(() => {
     let active = true
@@ -142,6 +144,7 @@ export function PhrasePage() {
   const percent = speedPercent(step)
 
   async function onPlay(file: string, rate: SpeedStep): Promise<void> {
+    lockedFile.current = file
     setPlaying(true)
     setSeconds(0)
     setClipDuration(null)
@@ -152,6 +155,7 @@ export function PhrasePage() {
       rate,
       () => {
         if (!aliveRef.current) return
+        lockedFile.current = ''
         setPlaying(false)
         setSeconds(null)
       },
@@ -164,6 +168,7 @@ export function PhrasePage() {
     )
     if (!aliveRef.current) return
     if (result === 'offline') {
+      lockedFile.current = ''
       setPlaying(false)
       setSeconds(null)
     }
@@ -215,7 +220,7 @@ export function PhrasePage() {
           speech={target.speech}
           gloss={source.speech}
           links={links}
-          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration, alignmentScale(alignFile))) ? times : null}
+          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration, alignmentScale(timingFile))) ? times : null}
           seconds={playing ? seconds : null}
           note={copy.glossUnchecked}
           template={target.text}

@@ -15,9 +15,16 @@ const FILES = [
 
 type Store = Map<string, string>
 
-function installCaches(options?: { failPut?: boolean; failFetchAfter?: number; notFound?: string }): Map<string, Store> {
+function installCaches(options?: {
+  failPut?: boolean
+  failPutAfter?: number
+  failFetchAfter?: number
+  notFound?: string
+  httpStatus?: number
+}): Map<string, Store> {
   const stores = new Map<string, Store>()
   let fetches = 0
+  let puts = 0
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
@@ -26,6 +33,7 @@ function installCaches(options?: { failPut?: boolean; failFetchAfter?: number; n
       }
       fetches += 1
       if (options?.failFetchAfter != null && fetches > options.failFetchAfter) throw new TypeError('network')
+      if (options?.httpStatus) return new Response('no', { status: options.httpStatus })
       if (options?.notFound && String(url).includes(options.notFound)) return new Response('missing', { status: 404 })
       return new Response('audio')
     }),
@@ -41,7 +49,10 @@ function installCaches(options?: { failPut?: boolean; failFetchAfter?: number; n
           return body == null ? undefined : new Response(body)
         },
         async put(input: RequestInfo, response: Response) {
-          if (options?.failPut) throw new DOMException('full', 'QuotaExceededError')
+          puts += 1
+          if (options?.failPut || (options?.failPutAfter != null && puts > options.failPutAfter)) {
+            throw new DOMException('full', 'QuotaExceededError')
+          }
           const url = typeof input === 'string' ? input : input.url
           store.set(url, await response.text())
         },
@@ -209,5 +220,84 @@ describe('offline voice loading', () => {
     expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/emergency.help__any__base.m4a')).toBe(true)
     expect(stores.get(AUDIO_CACHE)?.has(otherAlign)).toBe(false)
     expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/vivos-22/emergency.help__any__base.m4a')).toBe(false)
+  })
+
+  it('stops on an HTTP error other than 404 and keeps the other voice', async () => {
+    const stores = installCaches({ httpStatus: 500 })
+    const legacy = '/audio/vi/emergency.help__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([[legacy, 'old']]))
+    const outcome = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, { dropOthers: () => true })
+    expect(outcome.status).toBe('error')
+    expect(outcome.added).toEqual([])
+    expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(true)
+  })
+
+  it('lists the urls stored before quota stops the attempt', async () => {
+    const stores = installCaches({ failPutAfter: 1 })
+    const legacy = '/audio/vi/emergency.help__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([[legacy, 'old']]))
+    const blocked = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, { dropOthers: () => true })
+    expect(blocked.status).toBe('full')
+    expect(blocked.added).toHaveLength(1)
+    expect(blocked.added[0]).toContain('/vivos-22/')
+    expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has(blocked.added[0] ?? '')).toBe(true)
+  })
+
+  it('does not delete another voice when dropOthers is false', async () => {
+    const stores = installCaches()
+    const legacy = '/audio/vi/emergency.help__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([[legacy, 'old']]))
+    const outcome = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, { dropOthers: () => false })
+    expect(outcome.status).toBe('ready')
+    expect(outcome.missing).toBe(0)
+    expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(true)
+    expect([...(stores.get(AUDIO_CACHE)?.keys() ?? [])].some((url) => url.includes('/vivos-22/'))).toBe(true)
+  })
+
+  it('keeps a voice only when the folder matches the id, and leaves other languages', async () => {
+    const stores = installCaches()
+    const kept = '/audio/vi/vivos-22/emergency.help__any__base.m4a'
+    const longer = '/audio/vi/vivos-220/emergency.help__any__base.m4a'
+    const german = '/audio/de/thorsten-high/emergency.help__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([[kept, 'a'], [longer, 'b'], [german, 'c'], ['/audio/vi/vivos-32/emergency.help__any__base.m4a', 'd']]))
+    await dropOtherVoices('vi', voice('vivos-22'), ['vivos-32'])
+    expect(stores.get(AUDIO_CACHE)?.has(kept)).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/vivos-32/emergency.help__any__base.m4a')).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has(longer)).toBe(false)
+    expect(stores.get(AUDIO_CACHE)?.has(german)).toBe(true)
+  })
+
+  it('deletes only the listed urls, and an empty list deletes nothing', async () => {
+    const stores = installCaches()
+    const kept = '/audio/vi/emergency.help__any__base.m4a'
+    const added = '/audio/vi/vivos-22/emergency.help__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([[kept, 'old'], [added, 'new']]))
+    await discardAdded([])
+    expect(stores.get(AUDIO_CACHE)?.has(kept)).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has(added)).toBe(true)
+    await discardAdded([added])
+    expect(stores.get(AUDIO_CACHE)?.has(kept)).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has(added)).toBe(false)
+  })
+
+  it('keeps another person voice when this person finishes a download', async () => {
+    const stores = installCaches()
+    const other = '/audio/vi/vivos-32/emergency.help__any__base.m4a'
+    const legacy = '/audio/vi/emergency.help__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([
+      [other, 'other'],
+      [other.replace('.m4a', '.r70.m4a'), 'other'],
+      [other.replace('.m4a', '.align.json'), 'other'],
+      [legacy, 'old'],
+    ]))
+    const outcome = await loadVoiceOffline('vi', voice('vivos-22'), () => undefined, {
+      dropOthers: () => true,
+      retainIds: ['vivos-32'],
+    })
+    expect(outcome.status).toBe('ready')
+    expect(outcome.missing).toBe(0)
+    expect(stores.get(AUDIO_CACHE)?.has(other)).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(false)
   })
 })

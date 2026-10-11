@@ -60,6 +60,7 @@ export function PracticePage() {
   const [readyFor, setReadyFor] = useState('')
   const [micStarting, setMicStarting] = useState(false)
   const sessionRef = useRef<CaptureSession | null>(null)
+  const lockedFile = useRef('')
   const urlRef = useRef<string | null>(null)
   const aliveRef = useRef(true)
   const micToken = useRef(0)
@@ -122,6 +123,7 @@ export function PracticePage() {
     if (!line) return
     let live = true
     const rate = step === 'slow' ? 0.7 : 1
+    lockedFile.current = tempoFile(spokenFile(settings, settings.targetLang, line.file), rate)
     setPlaying(true)
     setSeconds(0)
     setClipDuration(null)
@@ -133,6 +135,7 @@ export function PracticePage() {
       rate,
       () => {
         if (live && aliveRef.current) {
+          lockedFile.current = ''
           setPlaying(false)
           setSeconds(null)
         }
@@ -146,6 +149,7 @@ export function PracticePage() {
     ).then((result) => {
       if (!live || !aliveRef.current) return
       if (result === 'offline') {
+        lockedFile.current = ''
         setPlaying(false)
         setSeconds(null)
         setOfflineAudio(true)
@@ -165,14 +169,15 @@ export function PracticePage() {
     if (!line) return
     const rate = step === 'slow' ? 0.7 : 1
     const file = tempoFile(spokenFile(settings, settings.targetLang, line.file), rate)
+    const timing = playing && lockedFile.current ? lockedFile.current : file
     let live = true
-    void loadAlignment(file, line.speech).then((value) => {
+    void loadAlignment(timing, line.speech).then((value) => {
       if (live) setTimes(value)
     })
     return () => {
       live = false
     }
-  }, [concept, settings, step])
+  }, [concept, playing, settings, step])
 
   useEffect(() => {
     if (!catalog || !concept || step !== 'understand') return
@@ -219,17 +224,20 @@ export function PracticePage() {
 
   async function hear(file: string, speech: string, rate: 0.7 | 1): Promise<void> {
     if (!targetLang) return
+    const played = tempoFile(spokenFile(settings, targetLang, file), rate)
+    lockedFile.current = played
     setPlaying(true)
     setOfflineAudio(false)
     setSeconds(0)
     setClipDuration(null)
     const result = await playClip(
-      tempoFile(spokenFile(settings, targetLang, file), rate),
+      played,
       speech,
       targetLang,
       rate,
       () => {
         if (!aliveRef.current) return
+        lockedFile.current = ''
         setPlaying(false)
         setSeconds(null)
       },
@@ -241,6 +249,7 @@ export function PracticePage() {
       },
     )
     if (aliveRef.current && result === 'offline') {
+      lockedFile.current = ''
       setPlaying(false)
       setSeconds(null)
       setOfflineAudio(true)
@@ -308,10 +317,11 @@ export function PracticePage() {
   const revealGloss = step !== 'understand' || answered
   const links = followWords && revealGloss ? linksFor(concept.id, targetLang, app, target.speech, source.speech, settings) : []
   const playRate = step === 'slow' ? 0.7 : 1
+  const heardFile = tempoFile(spokenFile(settings, targetLang, target.file), playRate)
+  const timingFile = playing && lockedFile.current ? lockedFile.current : heardFile
   const markTimes =
     times &&
-    (clipDuration == null ||
-      alignmentFitsDuration(times, clipDuration, alignmentScale(tempoFile(spokenFile(settings, targetLang, target.file), playRate))))
+    (clipDuration == null || alignmentFitsDuration(times, clipDuration, alignmentScale(timingFile)))
       ? times
       : null
   const spoken = followWords ? (

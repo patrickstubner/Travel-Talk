@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { voiceProgress } from '../audio/offline'
-import { selectedVoice, voicesFor, withDefaultVoices } from '../audio/voices'
+import { selectedVoice, voicesFor, voicesKeptByOthers, withDefaultVoices } from '../audio/voices'
 import { LANG_LABEL } from '../app/labels'
 import { LanguageChoice } from '../components/LanguageChoice'
 import { VoiceOfflineButton } from '../components/VoiceOffline'
@@ -57,6 +57,7 @@ export function HomePage() {
       <OfflineOffer
         settings={settings}
         copy={copy}
+        retainIds={voicesKeptByOthers(snapshot.people ?? [], snapshot.activePersonId, settings.targetLang)}
         onKeepVoice={(id) => {
           if (!settings.targetLang) return
           void saveSettings({ ...settings, voices: { ...settings.voices, [settings.targetLang]: id } })
@@ -92,10 +93,12 @@ export function HomePage() {
 function OfflineOffer({
   settings,
   copy,
+  retainIds,
   onKeepVoice,
 }: {
   settings: Settings
   copy: Dictionary
+  retainIds: readonly string[]
   onKeepVoice: (id: string) => void
 }) {
   const lang = settings.targetLang
@@ -132,6 +135,7 @@ function OfflineOffer({
         copy={copy}
         dropOnSuccess
         pendingNote={copy.offlineReload}
+        retainIds={retainIds}
         onKeepPrevious={previousId ? () => onKeepVoice(previousId) : undefined}
       />
     </section>

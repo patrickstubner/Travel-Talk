@@ -88,7 +88,9 @@ export async function loadAlignment(file: string, speech: string): Promise<WordT
   const name = alignmentName(file)
   if (!name) return null
   if (!cache.has(name)) {
-    cache.set(name, await fetchAlignment(name, splitWords(speech).length))
+    const fetched = await fetchAlignment(name, splitWords(speech).length)
+    if (!fetched) return null
+    cache.set(name, fetched)
   }
   const raw = cache.get(name)
   if (!raw) return null

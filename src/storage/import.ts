@@ -3,12 +3,15 @@ import { z } from 'zod'
 import { PAIRS } from '../domain/pairs'
 import { directionLangs, legacyDirection } from '../domain/direction'
 import { capDueIso } from '../srs/scheduler'
-import { VOICE_ID, cleanVoices, defaultSettings, normalizeSpeed, type ProgressSnapshot, type Settings, type StoredCard } from './types'
+import { LEVEL_PLACEHOLDER, VOICE_ID, cleanPersonName, cleanVoices, defaultSettings, normalizeSpeed, type ImportedPerson, type ProgressSnapshot, type Settings, type StoredCard } from './types'
 
-export const IMPORT_LIMIT = 2_000_000
+/** Ten people with several directions. Still capped, so a file cannot fill the database. */
+export const IMPORT_LIMIT = 4_000_000
+
+export const IMPORT_CARD_LIMIT = 8_000
 
 /** Current export. Bump this whenever the exported shape changes. */
-export const EXPORT_FORMAT = 3
+export const EXPORT_FORMAT = 4
 
 export const IMPORT_NEWER = 'IMPORT_NEWER'
 
@@ -69,6 +72,22 @@ const settingsSchemaV3 = z.strictObject({
   voices: voicesSchema,
 })
 
+/** Format 4 adds other learning languages. Highlighting stays off the file. */
+const settingsSchemaV4 = z.strictObject({
+  appLang: lang,
+  targetLang: lang,
+  ...sharedFields,
+  speed: speedChoice,
+  voices: voicesSchema,
+  moreTargets: z.array(lang).max(3).optional(),
+})
+
+const personName = z
+  .string()
+  .min(1)
+  .max(40)
+  .refine((value) => value === value.trim() && !/[^\P{C}]/u.test(value))
+
 const stamp = z.iso.datetime().max(40)
 
 export const storedCardSchema = z.strictObject({
@@ -83,6 +102,13 @@ export const storedCardSchema = z.strictObject({
   lapses: z.number().int().min(0).max(100000),
   state: z.number().int().min(0).max(3),
   last_review: stamp.nullable(),
+})
+
+const personSchema = z.strictObject({
+  name: personName,
+  level: z.literal(LEVEL_PLACEHOLDER),
+  settings: settingsSchemaV4,
+  cards: z.array(storedCardSchema).max(IMPORT_CARD_LIMIT),
 })
 
 const bundleEnvelope = {
@@ -107,6 +133,13 @@ const bundleSchema = z.discriminatedUnion('format', [
     format: z.literal(3),
     settings: settingsSchemaV3,
   }),
+  z.strictObject({
+    app: z.literal('travel-talk'),
+    format: z.literal(4),
+    exportedAt: z.iso.datetime().max(40),
+    scope: z.enum(['person', 'all']),
+    people: z.array(personSchema).min(1).max(10),
+  }),
 ])
 
 export type ImportOutcome = {
@@ -114,6 +147,9 @@ export type ImportOutcome = {
   skipped: number
   /** Format 1 or 2 kept the old source language when the interface was German. */
   uiNotRelabeled: boolean
+  /** `person` never deletes the others. `all` replaces every person, after a separate confirmation. */
+  scope: 'person' | 'all'
+  people: ImportedPerson[]
 }
 
 export type ImportPreview = {
@@ -171,11 +207,12 @@ export function parseImport(text: string, conceptIds: ReadonlySet<string>): Impo
   if (isNewerExport(raw)) throw new Error(IMPORT_NEWER)
   const parsed = bundleSchema.safeParse(raw)
   if (!parsed.success) throw new Error('IMPORT_REJECTED')
-  if (parsed.data.format === 3 && parsed.data.settings.appLang === parsed.data.settings.targetLang) throw new Error('IMPORT_REJECTED')
   const exportedAt = Date.parse(parsed.data.exportedAt)
   if (!Number.isFinite(exportedAt)) throw new Error('IMPORT_REJECTED')
   const now = Date.now()
   if (exportedAt > now + DAY_MS) throw new Error(IMPORT_FUTURE)
+  if (parsed.data.format === 4) return parsePeople(parsed.data, conceptIds, exportedAt, now)
+  if (parsed.data.format === 3 && parsed.data.settings.appLang === parsed.data.settings.targetLang) throw new Error('IMPORT_REJECTED')
   const capped = parsed.data.cards.map((card) => {
     const lastReview = capLastReview(card.last_review, exportedAt, now)
     return {
@@ -196,6 +233,7 @@ export function parseImport(text: string, conceptIds: ReadonlySet<string>): Impo
     cards.push(card)
   }
   const migrated = settingsFromBundle(parsed.data)
+  const person: ImportedPerson = { name: '', settings: migrated.settings, cards }
   return {
     snapshot: {
       settings: migrated.settings,
@@ -203,10 +241,70 @@ export function parseImport(text: string, conceptIds: ReadonlySet<string>): Impo
     },
     skipped,
     uiNotRelabeled: migrated.uiNotRelabeled,
+    scope: 'person',
+    people: [person],
   }
 }
 
-function settingsFromBundle(data: z.infer<typeof bundleSchema>): { settings: Settings; uiNotRelabeled: boolean } {
+function parsePeople(
+  data: Extract<z.infer<typeof bundleSchema>, { format: 4 }>,
+  conceptIds: ReadonlySet<string>,
+  exportedAt: number,
+  now: number,
+): ImportOutcome {
+  if (data.scope === 'person' && data.people.length !== 1) throw new Error('IMPORT_REJECTED')
+  const people: ImportedPerson[] = []
+  let skipped = 0
+  let total = 0
+  for (const person of data.people) {
+    const settings = settingsFromV4(person.settings)
+    const capped = person.cards.map((card) => {
+      const lastReview = capLastReview(card.last_review, exportedAt, now)
+      return { ...card, last_review: lastReview, due: capDueIso(card.due, lastReview, now) }
+    })
+    const ids = capped.map((card) => card.cardId)
+    if (new Set(ids).size !== ids.length) throw new Error('IMPORT_REJECTED')
+    const cards: StoredCard[] = []
+    for (const card of capped) {
+      total += 1
+      if (total > IMPORT_CARD_LIMIT) throw new Error('IMPORT_REJECTED')
+      if (!knownCard(card.cardId, conceptIds)) {
+        skipped += 1
+        continue
+      }
+      cards.push(card)
+    }
+    people.push({ name: person.name, settings, cards })
+  }
+  const first = people[0]
+  if (!first) throw new Error('IMPORT_REJECTED')
+  return {
+    snapshot: {
+      settings: first.settings,
+      cards: people.flatMap((person) => person.cards),
+    },
+    skipped,
+    uiNotRelabeled: false,
+    scope: data.scope,
+    people,
+  }
+}
+
+function settingsFromV4(settings: z.infer<typeof settingsSchemaV4>): Settings {
+  if (settings.appLang === settings.targetLang) throw new Error('IMPORT_REJECTED')
+  const more = settings.moreTargets ?? []
+  if (new Set(more).size !== more.length) throw new Error('IMPORT_REJECTED')
+  if (more.some((entry) => entry === settings.appLang || entry === settings.targetLang)) throw new Error('IMPORT_REJECTED')
+  const voices = cleanVoices(settings.voices)
+  const { voices: _voices, moreTargets: _more, ...rest } = settings
+  return {
+    ...rest,
+    ...(voices ? { voices } : {}),
+    ...(more.length > 0 ? { moreTargets: more } : {}),
+  }
+}
+
+function settingsFromBundle(data: Exclude<z.infer<typeof bundleSchema>, { format: 4 }>): { settings: Settings; uiNotRelabeled: boolean } {
   if (data.format === 3) {
     const voices = cleanVoices(data.settings.voices)
     const { voices: _voices, ...rest } = data.settings
@@ -256,30 +354,51 @@ export function importKeepsLocalNote(incoming: string): boolean {
   return incoming.trim().length === 0
 }
 
-export function toExport(snapshot: ProgressSnapshot, now: Date, includeNote = false): string {
-  const current = includeNote ? snapshot.settings : { ...snapshot.settings, personalNote: '' }
-  const voices = cleanVoices(current.voices)
-  const settings = {
-    appLang: current.appLang,
-    targetLang: current.targetLang,
-    viRegion: current.viRegion,
-    addressVi: current.addressVi,
-    addressPt: current.addressPt,
-    addressDe: current.addressDe,
-    ptSpeaker: current.ptSpeaker,
-    viContact: current.viContact,
-    retention: current.retention,
-    personalNote: current.personalNote,
-    speed: current.speed,
+function exportSettings(settings: Settings, includeNote: boolean): Record<string, unknown> {
+  const voices = cleanVoices(settings.voices)
+  const more = settings.moreTargets ?? []
+  return {
+    appLang: settings.appLang,
+    targetLang: settings.targetLang,
+    viRegion: settings.viRegion,
+    addressVi: settings.addressVi,
+    addressPt: settings.addressPt,
+    addressDe: settings.addressDe,
+    ptSpeaker: settings.ptSpeaker,
+    viContact: settings.viContact,
+    retention: settings.retention,
+    personalNote: includeNote ? settings.personalNote : '',
+    speed: settings.speed,
     ...(voices ? { voices } : {}),
+    ...(more.length > 0 ? { moreTargets: more } : {}),
   }
+}
+
+function exportName(snapshot: ProgressSnapshot): string {
+  const people = snapshot.people ?? []
+  const active = people.find((person) => person.id === snapshot.activePersonId) ?? people[0]
+  return cleanPersonName(active?.name) ?? 'A'
+}
+
+export function toExport(
+  snapshot: ProgressSnapshot,
+  now: Date,
+  includeNote = false,
+  pack?: { scope: 'person' | 'all'; people: readonly ImportedPerson[] },
+): string {
+  const people = pack?.people ?? [{ name: exportName(snapshot), settings: snapshot.settings, cards: snapshot.cards }]
   return JSON.stringify(
     {
       app: 'travel-talk',
       format: EXPORT_FORMAT,
       exportedAt: now.toISOString(),
-      settings,
-      cards: snapshot.cards,
+      scope: pack?.scope ?? 'person',
+      people: people.map((person) => ({
+        name: cleanPersonName(person.name) ?? exportName(snapshot),
+        level: LEVEL_PLACEHOLDER,
+        settings: exportSettings(person.settings, includeNote),
+        cards: person.cards,
+      })),
     },
     null,
     2,

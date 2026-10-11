@@ -61,6 +61,17 @@ export function defaultVoice(lang: Lang): CatalogVoice {
   return voice
 }
 
+/** Voice ids other people still learn with. The active person's own choice is not included. */
+export function voicesKeptByOthers(people: readonly { id: string; settings: Settings }[], activeId: string | undefined, lang: Lang): string[] {
+  const ids = new Set<string>()
+  for (const person of people) {
+    if (person.id === activeId) continue
+    if (person.settings.appLang !== lang && person.settings.targetLang !== lang && !(person.settings.moreTargets ?? []).includes(lang)) continue
+    ids.add(selectedVoice(person.settings, lang).id)
+  }
+  return [...ids]
+}
+
 /** A stored id wins when this build can play it. Otherwise the pre-0.4.0 voice stays. */
 export function selectedVoice(settings: Settings, lang: Lang): CatalogVoice {
   const id = settings.voices?.[lang]

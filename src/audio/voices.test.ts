@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { AUDIO_FILE, voiceFile } from '../content/resolve'
 import { defaultSettings } from '../storage/types'
-import { filesForVoice, selectedVoice, voicesFor, withDefaultVoices } from './voices'
+import { filesForVoice, selectedVoice, voicesFor, voicesKeptByOthers, withDefaultVoices } from './voices'
 
 describe('voices', () => {
   it('keeps the old files when no voice is stored and writes a male voice for a new user', () => {
@@ -43,5 +43,14 @@ describe('voices', () => {
       'de/emergency.help__any__base.m4a',
       'de/emergency.help__any__base.align.json',
     ])
+  })
+
+  it('keeps another person voice and not the active person own voice', () => {
+    const people = [
+      { id: 'a', settings: { ...defaultSettings, appLang: 'de' as const, targetLang: 'vi' as const, voices: { vi: 'vivos-22' } } },
+      { id: 'b', settings: { ...defaultSettings, appLang: 'pt-BR' as const, targetLang: 'vi' as const, voices: { vi: 'vivos-32' } } },
+    ]
+    expect(voicesKeptByOthers(people, 'a', 'vi')).toEqual(['vivos-32'])
+    expect(voicesKeptByOthers(people, 'b', 'vi')).toEqual(['vivos-22'])
   })
 })

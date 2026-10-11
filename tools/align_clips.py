@@ -26,7 +26,7 @@ from piper.const import BOS, EOS, PAD
 from piper.voice import PhonemeAlignment
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from generate_audio import LINES, require_model, require_piper  # noqa: E402
+from generate_audio import LINES, require_model, require_onnx, require_piper  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 AUDIO = ROOT / "public" / "audio"
@@ -291,6 +291,7 @@ def align_row(voice: PiperVoice, text: str, speaker: int | None, audio_path: Pat
 def main() -> None:
     logging.getLogger("piper").setLevel(logging.ERROR)
     require_piper()
+    require_onnx()
     dirs = [Path(arg) for arg in sys.argv[1:] if not arg.startswith("--")]
     limit = 0
     if "--limit" in sys.argv:

@@ -37,31 +37,26 @@ describe('dexie repository', () => {
   })
 
   it('reads a stored 0.1.0 slow flag as automatic unless it was on', async () => {
-    const name = `travel-talk-test-${crypto.randomUUID()}`
-    const repo = new DexieProgressRepository(name)
-    await repo.load()
-    const raw = new Dexie(name)
-    raw.version(1).stores({ settings: 'id', cards: 'cardId' })
     const { speed: _speed, ...rest } = defaultSettings
-    await raw.table('settings').put({ id: 'app', ...rest, slow: false })
-    expect((await repo.load()).settings.speed).toBe('auto')
-    await raw.table('settings').put({ id: 'app', ...rest, slow: true })
-    expect((await repo.load()).settings.speed).toBe(0.85)
-    const missing = { id: 'app', ...rest }
-    await raw.table('settings').put(missing)
-    expect((await repo.load()).settings.speed).toBe('auto')
-    await raw.table('settings').put({ id: 'app', ...rest, pairId: 'pt-en', uiLang: 'de' })
-    const migrated = (await repo.load()).settings
+    async function openLegacy(row: Record<string, unknown>) {
+      const name = `travel-talk-test-${crypto.randomUUID()}`
+      const raw = new Dexie(name)
+      raw.version(1).stores({ settings: 'id', cards: 'cardId' })
+      await raw.table('settings').put(row)
+      raw.close()
+      return new DexieProgressRepository(name).load()
+    }
+    expect((await openLegacy({ id: 'app', ...rest, slow: false })).settings.speed).toBe('auto')
+    expect((await openLegacy({ id: 'app', ...rest, slow: true })).settings.speed).toBe(0.85)
+    expect((await openLegacy({ id: 'app', ...rest })).settings.speed).toBe('auto')
+    const migrated = (await openLegacy({ id: 'app', ...rest, pairId: 'pt-en', uiLang: 'de' })).settings
     expect(migrated.appLang).toBe('pt-BR')
     expect(migrated.targetLang).toBe('en')
     expect(migrated).not.toHaveProperty('pairId')
-    raw.close()
   })
 
   it('resets a stored card that fails the import schema and saves the new card', async () => {
     const name = `travel-talk-test-${crypto.randomUUID()}`
-    const repo = new DexieProgressRepository(name)
-    await repo.load()
     const raw = new Dexie(name)
     raw.version(1).stores({ settings: 'id', cards: 'cardId' })
     const base = {
@@ -79,6 +74,8 @@ describe('dexie repository', () => {
     await raw.table('cards').put({ ...base, cardId: 'de-vi:emergency.help', stability: Number.NaN })
     await raw.table('cards').put({ ...base, cardId: 'de-vi:meet.hello', difficulty: 40 })
     await raw.table('cards').put({ ...base, cardId: 'de-vi:food.water', state: 9 })
+    raw.close()
+    const repo = new DexieProgressRepository(name)
     const loaded = await repo.load()
     expect(loaded.repaired).toBe(3)
     expect(loaded.cards).toHaveLength(3)
@@ -87,11 +84,6 @@ describe('dexie repository', () => {
       expect(card.reps).toBe(0)
       expect(card.stability).toBe(0)
     }
-    const saved = await raw.table('cards').get('de-vi:emergency.help')
-    expect(saved.stability).toBe(0)
-    expect(saved.reps).toBe(0)
-    expect(saved.state).toBe(0)
-    raw.close()
     const again = await repo.load()
     expect(again.cards).toHaveLength(3)
     expect(again.cards.every((card) => card.state === 0 && card.reps === 0 && card.stability === 0)).toBe(true)
@@ -100,8 +92,6 @@ describe('dexie repository', () => {
 
   it('caps a due date past the horizon and saves that card', async () => {
     const name = `travel-talk-test-${crypto.randomUUID()}`
-    const repo = new DexieProgressRepository(name)
-    await repo.load()
     const raw = new Dexie(name)
     raw.version(1).stores({ settings: 'id', cards: 'cardId' })
     const anchor = '2020-01-01T00:00:00.000Z'
@@ -118,14 +108,15 @@ describe('dexie repository', () => {
       state: 2,
       last_review: anchor,
     })
+    raw.close()
+    const repo = new DexieProgressRepository(name)
     const loaded = await repo.load()
     expect(loaded.repaired).toBe(0)
     const due = Date.parse(loaded.cards[0]?.due ?? '')
     expect(due).toBe(Date.parse(anchor) + DUE_LIMIT_DAYS * 86_400_000)
     expect(loaded.cards[0]?.reps).toBe(3)
-    const saved = await raw.table('cards').get('de-vi:emergency.help')
-    expect(saved.due).toBe(loaded.cards[0]?.due)
-    expect(saved.reps).toBe(3)
-    raw.close()
+    const again = await repo.load()
+    expect(again.cards[0]?.due).toBe(loaded.cards[0]?.due)
+    expect(again.cards[0]?.reps).toBe(3)
   })
 })

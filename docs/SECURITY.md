@@ -166,12 +166,12 @@ Eine unbekannte Stimmen-ID, die dem Muster `^[a-z0-9_-]{1,40}$` entspricht, wird
 
 ## Nachprüfung von Pull Request 14, zweiter Durchgang
 
-Geprüft am 11. Oktober 2026 am Stand `19535e2`. N14b-03 und N14b-04 sind geschlossen. N14b-01 ist danach bewusst akzeptiert, siehe den dritten Durchgang. N14b-05 ist in 0.5.0 geschlossen. N14b-02 bleibt offen, siehe 0.5.0. Kein neues Paket. `npm audit` bleibt bei 0 Schwachstellen.
+Geprüft am 11. Oktober 2026 am Stand `19535e2`. N14b-03 und N14b-04 sind geschlossen. N14b-01 ist danach bewusst akzeptiert, siehe den dritten Durchgang. N14b-05 ist in 0.5.0 geschlossen. N14b-02 ist in 0.6.0 geschlossen. Kein neues Paket. `npm audit` bleibt bei 0 Schwachstellen.
 
 | ID | Schwere | Status | Auflösung |
 | --- | --- | --- | --- |
 | N14b-01 | Mittel | bewusst akzeptiert | Die Aktivierung löscht Precache-Einträge, die nicht mehr im Manifest stehen, darunter die alten Audiodateien. Eine Kopie beim Installieren hält sie nicht: die gespeicherte Adresse behält `?__WB_REVISION__` und trifft nie, wenig Speicher lässt das Installieren dauerhaft scheitern, der Speicher verdoppelt sich, und jeder Cache der gemeinsamen Origin wird gelesen. Die Migration ist entfernt. Nach dem Update, das online läuft, sagt die Startseite «Offline-Audio nach dem Update neu laden», solange die Lernsprache nicht vollständig im Cache liegt. Ein Tippen auf «Für offline laden» holt sie. |
-| N14b-02 | Niedrig | Offen | Die Mutationen M1, M2, N4 und N15–N17 bestehen weiter. Die Tests zu «Speicher voll» und `notifyAudioChanged` schliessen sie nicht. Nächster Pull Request. |
+| N14b-02 | Niedrig | Geschlossen | Die Tests in `src/audio/offline.test.ts` sperren die Verhaltensweisen, die M1, M2, N4 und N15–N17 beschreiben. Die ursprünglichen Mutanten-Diffs lagen nicht im Repo. |
 | N14b-03 | Niedrig | Geschlossen | Eine 404 wird übersprungen. Der Rest der Stimme wird geladen. Die Oberfläche sagt «n Dateien fehlen». Die anderen Stimmen dieser Sprache bleiben, solange Dateien fehlen. Test: `src/audio/offline.test.ts`. |
 | N14b-04 | Niedrig | Geschlossen | «Speicher voll» zeigt den Fortschritt, «Erneut versuchen» und «Bisherige Stimme behalten». Der zweite Knopf entfernt nur die Dateien dieses Versuchs. Nach einem Neuladen bleibt `n/597` sichtbar, wenn Dateien im Cache liegen. Test: `src/components/voice-offline.test.tsx`. |
 | N14b-05 | Niedrig | Geschlossen | `tools/generate_audio.py` prüft SHA-256 der `.onnx`-Datei und der `.onnx.json` daneben, für die vier Modelle von 0.4.0 und für `thorsten-medium`, `ljspeech`, `faber` und `vais1000`. `pt_BR-jeff` bleibt draussen. |
@@ -197,7 +197,7 @@ Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit und keine neue np
 
 **Wortzeiten.** `tools/align_clips.py` liest Phonemlängen aus Piper 1.8.0. Dafür lädt Piper das Modell mit `include_alignments`, und das braucht das Python-Paket `onnx` 1.17.0 nur auf der Maschine, die die Dateien erzeugt. `onnx` steht nicht in `package.json` und nicht im Service Worker. `numpy` ist dort schon vorhanden. Montreal Forced Aligner ist nicht installiert und wird nicht aufgerufen. Die JSON-Dateien liegen unter `public/audio/` neben der normalen `m4a`. `manifest.json` listet sie. `loadManifest` nimmt einen Namen nur, wenn er `ALIGN_FILE` trifft: dieselbe Sprache, derselbe optionale Stimmordner, derselbe Clip, Endung `.align.json`, ohne `.r70` oder `.r85`. «Für offline laden» speichert sie im Cache `travel-talk-audio`, zusammen mit der Stimme. Der Fortschritt zählt sie mit. Eine 404 zählt als fehlende Datei und hält das Löschen der anderen Stimme auf, wie bei Audio. Eine Zeitdatei, die nie geschrieben wurde, steht nicht in der Liste und zählt nicht als fehlend. `dropOtherVoices` löscht die Zeitdateien der anderen Stimme mit. Die Dateien stehen in `globIgnores` und kommen nicht in den Precache. Die CacheFirst-Regel nimmt `.m4a` und `.align.json`, nur Status 200. `maxEntries` ist 5500 und deckt die 5145 Dateien, 3891 Audio und 1254 Zeiten. Die App liest eine gespeicherte Zeitdatei aus dem Cache, bevor sie das Netz fragt. Die Zod-Prüfung gilt für diese Antwort genauso.
 
-**Prüfung der JSON.** `src/audio/align.ts` liest die Datei mit Zod, `strictObject`, ohne zusätzliche Felder. Erlaubt sind 1 bis 64 Wörter, jede Zeit eine endliche Zahl von 0 bis 60 Sekunden, Ende nach Anfang, und die Folge steigt. Die Anzahl muss die Wörter der gesprochenen Zeile treffen, sonst wird die Datei verworfen. Vor `JSON.parse` gilt eine Grenze von 16 KB, am `Content-Length` und an der gelesenen Länge. Der Name muss in `manifest.json` stehen und `ALIGN_FILE` treffen. Liegt die Dauer der Audiodatei vor, darf das letzte Wort höchstens 0,1 Sekunden danach enden, multipliziert mit dem Tempfaktor. Bei 100 % sind das 0,1 s, bei 70 % etwa 0,14 s. Sonst keine Markierung. Eine 404, ein Parsefehler oder eine ungültige Datei ergibt keine Markierung. 70 % und 85 % skalieren die Zeiten der normalen Datei. Nachschlagen lädt die Zeiten der Datei, die gerade spielt.
+**Prüfung der JSON.** `src/audio/align.ts` liest die Datei mit Zod, `strictObject`, ohne zusätzliche Felder. Erlaubt sind 1 bis 64 Wörter, jede Zeit eine endliche Zahl von 0 bis 60 Sekunden, Ende nach Anfang, und die Folge steigt. Die Anzahl muss die Wörter der gesprochenen Zeile treffen, sonst wird die Datei verworfen. Vor `JSON.parse` gilt eine Grenze von 16 KB, am `Content-Length` und an der gelesenen Länge. Der Name muss in `manifest.json` stehen und `ALIGN_FILE` treffen. Liegt die Dauer der Audiodatei vor, darf das letzte Wort höchstens 0,1 Sekunden danach enden, multipliziert mit dem Tempofaktor. Bei 100 % sind das 0,1 s, bei 70 % etwa 0,14 s. Sonst keine Markierung. Eine 404, ein Parsefehler oder eine ungültige Datei ergibt keine Markierung. 70 % und 85 % skalieren die Zeiten der normalen Datei. Nachschlagen lädt die Zeiten der Datei, die gerade spielt.
 
 **Wortzuordnung.** `content/gloss.ts` verbindet Wörter der vorhandenen Sätze. `GLOSS_CHECKED` ist falsch. Die Oberfläche sagt «Die Wortzuordnung ist nicht geprüft.» Eine Gruppe, deren Wörter in der Zeile nicht vorkommen, wird ausgelassen. Nichts davon ist eine neue Übersetzung.
 
@@ -205,10 +205,28 @@ Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit und keine neue np
 
 **N14d-02.** In den Einstellungen wählen «Speicher voll» und «Bisherige Stimme behalten» die vorige Stimme wieder. `dropOtherVoices` sendet `travel-talk-audio-changed`. Tests: `src/components/language-choice-offline.test.tsx`, `src/audio/offline.test.ts`. Das schliesst N14b-02 nicht.
 
-**N14b-02.** Offen für den nächsten Pull Request. Die Mutationen M1, M2, N4 und N15–N17 bestehen weiter.
+**N14b-02.** In 0.6.0 geschlossen. Die Verhaltensweisen stehen dort.
 
 **N15.** Im Schritt Hören bleibt die Wortzuordnung verborgen, bis die Bedeutung gewählt ist. Eine Zeile mit Platzhalter, etwa `[tên]`, bleibt neben der gesprochenen Zeile sichtbar. Auf der Startseite erscheint «Bisherige Stimme behalten» nur, wenn eine andere Stimme dieser Sprache vollständig im Cache liegt, und der Knopf wählt diese Stimme.
 
 **N14b-05.** Vor der Synthese und vor den Wortzeiten prüft `require_model` die SHA-256 der `.onnx`-Datei und der `.onnx.json`. Das gilt für die vier Modelle von 0.4.0 und für die vier älteren Modelle.
 
 Von 1297 Clips haben 1254 eine Zeitdatei. 43 nicht: meist Englisch, wo espeak mehrere Wörter zu einer Phonemgruppe macht, etwa «I am». Die bleiben ohne Markierung. Der Median des Abstands einer inneren Grenze zum nächsten Energie-Dip in ±80 ms ist 0,040 s, das 90.-Perzentil 0,070 s. Die stille Referenz ist im Median etwa 7 % kürzer als die ausgelieferte Datei.
+
+## 0.6.0
+
+Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit. `onnx` 1.17.0 bleibt nur im Erzeugungspfad der Wortzeiten. `require_onnx` prüft die Version mit `importlib.metadata`, bevor `align_clips.py` das Modell mit `include_alignments` lädt. `generate_audio.py` ruft das nicht auf.
+
+**Namen.** `cleanPersonName` entfernt Steuerzeichen, schneidet Leerzeichen ab und behält 1 bis 40 Zeichen. Alles andere wird abgelehnt. Die Oberfläche setzt den Namen als React-Text. Namen stehen nicht im Repo und nicht in den Logs. Zehn Personen sind das Maximum. Die elfte wird nicht angelegt, und der Knopf zum Hinzufügen ist dann weg.
+
+**Import.** Format 4 ist eine Person oder alle Personen, höchstens 4 MB und 8000 Karten. Eine Person ersetzen lässt die anderen stehen. Als neue Person geht nur unter zehn und mit einem gültigen Namen. Alle Personen ersetzen läuft erst nach der eigenen Bestätigung und löscht vorher den bisherigen Stand. Formate 1 bis 3 bleiben eine Person mit leerem Namen. Eine Datei, die das Schema nicht trifft, wirft `IMPORT_REJECTED`. Die Meldung enthält den Dateiinhalt nicht. `level` ist 0. Eine andere Stufe wird abgelehnt, bis der Einstufungstest kommt.
+
+**Isolation und Löschen.** Karten hängen an `personId`. Der Lernstand einer Person ist für die andere unsichtbar. `replaceAll` schreibt nur die aktive Person. Löschen entfernt die Karten dieser Person. Die letzte Person wird durch eine neue ohne Namen ersetzt, damit die App wieder starten kann. Der Audio-Cache bleibt.
+
+**Stimmen.** `dropOtherVoices` behält die Stimmen-IDs, die andere Personen dieser Sprache noch benutzen. Die eigene vorige Stimme gehört nicht dazu. Ein Ordner zählt nur, wenn er genau die ID ist: `vivos-220/` bleibt nicht, wenn `vivos-22` behalten wird. Dateien einer anderen Sprache bleiben. `discardAdded([])` löscht nichts.
+
+**N14b-02.** Geschlossen durch Tests in `src/audio/offline.test.ts`. Die ursprünglichen Mutanten-Diffs waren nicht auffindbar. Die Tests sperren diese Verhaltensweisen: ein HTTP-Status ausser 404 bricht den Download ab und behält die andere Stimme (M1). Bei vollem Speicher listet `added` die Adressen, die dieser Versuch schon geschrieben hat (M2). `dropOthers: () => false` löscht nach einem vollständigen Laden nichts (N4). Eine Stimmen-ID trifft nur den Ordner plus Schrägstrich (N15). Dateien einer anderen Sprache bleiben (N16). `discardAdded` löscht nur die genannten Adressen, eine leere Liste nichts (N17).
+
+**Lernsprache.** Die Lernsprache und die vietnamesische Variante stehen nur in der oberen Leiste. Die Einstellungen behalten die App-Sprache und die Stimme. «Bisherige Stimme behalten» erscheint dort nur, wenn die vorige Stimme vollständig im Cache liegt.
+
+**Wortzeiten.** Eine fehlgeschlagene Zeitdatei wird nicht gecacht. Der nächste Versuch liest sie neu. Während eine Datei spielt, bleiben die Zeiten dieser Datei, auch wenn das Tempo wechselt. `playClip` meldet die Zeit über `requestAnimationFrame`, nicht über `ontimeupdate`.

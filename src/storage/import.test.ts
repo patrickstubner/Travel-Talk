@@ -222,31 +222,33 @@ describe('import', () => {
     expect(outcome.snapshot.settings).not.toHaveProperty('pairId')
     const again = JSON.parse(toExport(outcome.snapshot, new Date('2026-10-11T00:00:00.000Z'), true)) as {
       format: number
-      settings: Record<string, unknown>
+      people: { settings: Record<string, unknown> }[]
     }
-    expect(again.format).toBe(3)
-    expect(again.settings.appLang).toBe('pt-BR')
-    expect(again.settings.pairId).toBeUndefined()
+    expect(again.format).toBe(EXPORT_FORMAT)
+    expect(again.people[0]?.settings.appLang).toBe('pt-BR')
+    expect(again.people[0]?.settings.pairId).toBeUndefined()
   })
 
   it('rejects format 3 when the languages match, or when an old field remains', () => {
     const file = JSON.parse(toExport({ settings: current, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))) as {
-      settings: Record<string, unknown>
+      people: { settings: Record<string, unknown> }[]
     }
-    file.settings.targetLang = 'de'
+    const settings = file.people[0]?.settings
+    if (!settings) throw new Error('missing person')
+    settings.targetLang = 'de'
     expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
-    file.settings.targetLang = 'vi'
-    file.settings.pairId = 'de-vi'
+    settings.targetLang = 'vi'
+    settings.pairId = 'de-vi'
     expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
-    delete file.settings.pairId
-    file.settings.uiLang = 'de'
+    delete settings.pairId
+    settings.uiLang = 'de'
     expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
-    delete file.settings.uiLang
-    file.settings.voices = { vi: 'vais1000', extra: 'no' }
+    delete settings.uiLang
+    settings.voices = { vi: 'vais1000', extra: 'no' }
     expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
-    file.settings.voices = { vi: 'vais1000' }
+    settings.voices = { vi: 'vais1000' }
     expect(parseImport(JSON.stringify(file), concepts).snapshot.settings.voices).toEqual({ vi: 'vais1000' })
-    file.settings.voices = { vi: 'not a voice' }
+    settings.voices = { vi: 'not a voice' }
     expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
   })
 
@@ -293,13 +295,15 @@ describe('import', () => {
 
   it('drops an unknown voice id and keeps a known one', () => {
     const file = JSON.parse(toExport({ settings: current, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))) as {
-      settings: { voices?: Record<string, string> }
+      people: { settings: { voices?: Record<string, string> } }[]
     }
-    file.settings.voices = { vi: 'not-a-bundled-voice', de: 'thorsten-high' }
+    const settings = file.people[0]?.settings
+    if (!settings) throw new Error('missing person')
+    settings.voices = { vi: 'not-a-bundled-voice', de: 'thorsten-high' }
     expect(parseImport(JSON.stringify(file), concepts).snapshot.settings.voices).toEqual({ de: 'thorsten-high' })
-    file.settings.voices = { vi: 'not-a-bundled-voice' }
+    settings.voices = { vi: 'not-a-bundled-voice' }
     expect(parseImport(JSON.stringify(file), concepts).snapshot.settings.voices).toBeUndefined()
-    file.settings.voices = { vi: 'not a voice' }
+    settings.voices = { vi: 'not a voice' }
     expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
   })
 
