@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 — 2026-10-11
+
+- Ein `last_review` kurz nach dem Export bleibt in der Datei. Er wird auf den früheren Zeitpunkt von Lernzeit, Export und jetzt gekürzt. Liegt `exportedAt` mehr als einen Tag in der Zukunft, gibt es einen eigenen Satz, die Datei wird nicht importiert.
+- Eine Bewertung einer Karte mit `last_review` in der Zukunft speichert den Lernzeitpunkt als jetzt. Die Karte verschwindet nicht für Jahre.
+- Karten aus IndexedDB laufen durch dasselbe Schema wie der Import. Eine ungültige Karte, etwa `stability` NaN oder ein kaputter `difficulty`- oder `state`-Wert, wird eine neue Karte und in derselben Fehlerbehandlung gespeichert. Der Planer setzt eine unleserliche Karte auf neu, nicht einen Tag weiter.
+
 ## 0.3.0 — 2026-10-11
 
 - Sprache der App und Lernsprache sind getrennt. Dieselbe Wahl steht zu Beginn und in den Einstellungen. Die feste Paarliste und der Schalter für die Oberflächensprache sind weg. Alle zwölf Richtungen laufen aus den vorhandenen Sätzen. Fehlt eine Zeile, wird sie ausgelassen.

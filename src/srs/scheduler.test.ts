@@ -12,17 +12,38 @@ describe('fsrs', () => {
     expect(next.difficulty).toBeLessThanOrEqual(10)
   })
 
-  it('keeps scheduling when the last review is dated after now', () => {
+  it('caps a future last review to now when the card is rated', () => {
     const now = new Date('2026-10-11T08:00:00.000Z')
     const reviewed = reviewCard(emptyCard(now), Rating.Good, now, 0.9, false)
+    const far = new Date(now.getTime() + 400 * 86_400_000)
     const future = fromStored({
       ...toStored('de-vi:future', reviewed),
-      last_review: new Date(now.getTime() + 86_400_000).toISOString(),
+      last_review: far.toISOString(),
     })
-    expect(() => previewDue(future, now, 0.9)).not.toThrow()
+    const dues = previewDue(future, now, 0.9)
+    expect(dues[Rating.Good].getTime()).toBeLessThan(now.getTime() + 60 * 86_400_000)
     const next = reviewCard(future, Rating.Good, now, 0.9, false)
-    expect(next.due.getTime()).toBeGreaterThanOrEqual(future.last_review?.getTime() ?? 0)
-    expect(Number.isNaN(next.due.getTime())).toBe(false)
+    expect(next.last_review?.getTime()).toBe(now.getTime())
+    expect(next.due.getTime()).toBeGreaterThan(now.getTime())
+    expect(next.due.getTime()).toBeLessThan(far.getTime())
+  })
+
+  it('resets a card the planner cannot read, instead of postponing it', () => {
+    const now = new Date('2026-10-11T08:00:00.000Z')
+    const broken = fromStored({
+      ...toStored('de-vi:broken', emptyCard(now)),
+      stability: Number.NaN,
+      difficulty: 40,
+      state: 9,
+    })
+    const next = reviewCard(broken, Rating.Good, now, 0.9, false)
+    expect(next.state).toBe(0)
+    expect(next.reps).toBe(0)
+    expect(next.stability).toBe(0)
+    expect(next.last_review).toBeUndefined()
+    const dues = previewDue(broken, now, 0.9)
+    expect(dues[Rating.Good].getTime()).toBeGreaterThan(now.getTime())
+    expect(dues[Rating.Good].getTime()).toBeLessThan(now.getTime() + 30 * 86_400_000)
   })
 
   it('keeps a short session of reviews and new cards', () => {

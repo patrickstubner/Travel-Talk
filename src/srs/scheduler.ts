@@ -5,50 +5,49 @@ export function emptyCard(now: Date): Card {
   return createEmptyCard(now)
 }
 
-/** A clock set back, or a last review dated after the import, must not reach FSRS as a negative gap. */
-export function schedulingNow(card: Card, now: Date): Date {
+/** A last review dated after this clock would schedule the card years ahead. Pin it to now. */
+export function capReviewedCard(card: Card, now: Date): Card {
   const reviewed = card.last_review
-  if (reviewed && reviewed.getTime() > now.getTime()) return new Date(reviewed.getTime())
-  return now
+  if (reviewed && reviewed.getTime() > now.getTime()) return { ...card, last_review: new Date(now.getTime()) }
+  return card
 }
 
-function later(when: Date): Date {
-  return new Date(when.getTime() + 86_400_000)
-}
-
-function fallbackCard(card: Card, when: Date): Card {
-  return { ...card, due: later(when), last_review: when }
+function duesOf(card: Card, now: Date, retention: number): Record<Grade, Date> {
+  const scheduler = fsrs(generatorParameters({ request_retention: retention, enable_fuzz: false }))
+  const preview = scheduler.repeat(card, now)
+  return {
+    [Rating.Again]: preview[Rating.Again].card.due,
+    [Rating.Hard]: preview[Rating.Hard].card.due,
+    [Rating.Good]: preview[Rating.Good].card.due,
+    [Rating.Easy]: preview[Rating.Easy].card.due,
+  }
 }
 
 export function reviewCard(card: Card, grade: Grade, now: Date, retention: number, fuzz: boolean): Card {
-  const when = schedulingNow(card, now)
+  const ready = capReviewedCard(card, now)
   try {
     const scheduler = fsrs(generatorParameters({ request_retention: retention, enable_fuzz: fuzz }))
-    return scheduler.next(card, when, grade).card
+    return scheduler.next(ready, now, grade).card
   } catch {
-    return fallbackCard(card, when)
+    return emptyCard(now)
   }
 }
 
 /** Next due date for each button. Fuzz is off so the label matches the stored card. */
 export function previewDue(card: Card, now: Date, retention: number): Record<Grade, Date> {
-  const when = schedulingNow(card, now)
+  const ready = capReviewedCard(card, now)
   try {
-    const scheduler = fsrs(generatorParameters({ request_retention: retention, enable_fuzz: false }))
-    const preview = scheduler.repeat(card, when)
-    return {
-      [Rating.Again]: preview[Rating.Again].card.due,
-      [Rating.Hard]: preview[Rating.Hard].card.due,
-      [Rating.Good]: preview[Rating.Good].card.due,
-      [Rating.Easy]: preview[Rating.Easy].card.due,
-    }
+    return duesOf(ready, now, retention)
   } catch {
-    const due = later(when)
-    return {
-      [Rating.Again]: due,
-      [Rating.Hard]: due,
-      [Rating.Good]: due,
-      [Rating.Easy]: due,
+    try {
+      return duesOf(emptyCard(now), now, retention)
+    } catch {
+      return {
+        [Rating.Again]: now,
+        [Rating.Hard]: now,
+        [Rating.Good]: now,
+        [Rating.Easy]: now,
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Rating, emptyCard, reviewCard, toStored } from '../srs/scheduler'
-import { EXPORT_FORMAT, IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport } from './import'
+import { EXPORT_FORMAT, IMPORT_FUTURE, IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport } from './import'
 import { cleanPersonalNote, coerceSettings, defaultSettings } from './types'
 
 const current = { ...defaultSettings, appLang: 'de' as const, targetLang: 'vi' as const, personalNote: 'Erdnüsse' }
@@ -253,13 +253,24 @@ describe('import', () => {
     expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
   })
 
-  it('rejects a last review dated after the export', () => {
+  it('caps a last review a few seconds after the export and keeps the file', () => {
+    const exportedAt = Date.now() - 60_000
     const raw = JSON.parse(bundle([card()])) as { exportedAt: string; cards: { last_review: string }[] }
-    raw.exportedAt = '2026-10-10T00:00:00.000Z'
-    raw.cards[0]!.last_review = '2026-10-11T00:00:00.000Z'
-    expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow('IMPORT_REJECTED')
-    raw.cards[0]!.last_review = '2026-10-10T00:00:00.000Z'
-    expect(parseImport(JSON.stringify(raw), concepts).snapshot.cards).toHaveLength(1)
+    raw.exportedAt = new Date(exportedAt).toISOString()
+    raw.cards[0]!.last_review = new Date(exportedAt + 5_000).toISOString()
+    const outcome = parseImport(JSON.stringify(raw), concepts)
+    expect(outcome.snapshot.cards).toHaveLength(1)
+    expect(outcome.snapshot.cards[0]?.last_review).toBe(new Date(exportedAt).toISOString())
+  })
+
+  it('rejects an export dated more than a day in the future', () => {
+    const raw = JSON.parse(bundle()) as { exportedAt: string }
+    raw.exportedAt = '2031-01-01T00:00:00.000Z'
+    expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow(IMPORT_FUTURE)
+    raw.exportedAt = new Date(Date.now() + 86_400_000 + 60_000).toISOString()
+    expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow(IMPORT_FUTURE)
+    raw.exportedAt = new Date(Date.now() + 86_400_000).toISOString()
+    expect(parseImport(JSON.stringify(raw), concepts).snapshot.cards).toEqual([])
   })
 
   it('maps every old pair, including pt-vi, onto the two languages', () => {

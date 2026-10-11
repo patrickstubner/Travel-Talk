@@ -93,6 +93,7 @@ export type Dictionary = {
   importOk: string
   importBad: string
   importNewer: string
+  importFuture: string
   importSkipped: (count: number) => string
   importSummary: (cards: number, from: string | null, to: string | null, hasNote: boolean) => string
   importBackup: string
@@ -298,6 +299,7 @@ export const de: Dictionary = {
   importOk: 'Import gespeichert.',
   importBad: 'Die Datei ist kein gültiger Travel-Talk-Export.',
   importNewer: 'Datei aus neuerer Version – bitte App aktualisieren (Seite neu laden)',
+  importFuture: 'Die Datei stammt mehr als einen Tag aus der Zukunft. Bitte die Uhr prüfen.',
   importSkipped: (count) =>
     count === 1
       ? '1 Karte gehört nicht zu dieser Version und wurde nicht übernommen.'
@@ -332,7 +334,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.3.0',
+  version: 'Version 0.3.1',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
@@ -512,6 +514,7 @@ export const en: Dictionary = {
   importOk: 'Import saved.',
   importBad: 'This file is not a valid Travel Talk export.',
   importNewer: 'File from a newer version – please update the app (reload the page)',
+  importFuture: 'This file was exported more than a day in the future. Please check the clock.',
   importSkipped: (count) =>
     count === 1 ? '1 card is not part of this version and was left out.' : `${count} cards are not part of this version and were left out.`,
   importSummary: (cards, from, to, hasNote) => {
@@ -722,6 +725,7 @@ export const pt: Dictionary = {
   importOk: 'Importação salva.',
   importBad: 'O arquivo não é uma exportação válida do Travel Talk.',
   importNewer: 'Arquivo de uma versão mais nova – atualize o aplicativo (recarregue a página)',
+  importFuture: 'O arquivo foi exportado mais de um dia no futuro. Verifique o relógio.',
   importSkipped: (count) =>
     count === 1
       ? '1 cartão não faz parte desta versão e ficou de fora.'
@@ -934,6 +938,7 @@ export const vi: Dictionary = {
   importOk: 'Đã lưu bản nhập.',
   importBad: 'Tệp này không phải bản xuất hợp lệ của Travel Talk.',
   importNewer: 'Tệp từ phiên bản mới hơn – hãy cập nhật ứng dụng (tải lại trang)',
+  importFuture: 'Tệp được xuất hơn một ngày trong tương lai. Hãy kiểm tra đồng hồ.',
   importSkipped: (count) =>
     count === 1 ? '1 thẻ không thuộc phiên bản này và không được lấy.' : `${count} thẻ không thuộc phiên bản này và không được lấy.`,
   importSummary: (cards, from, to, hasNote) => {
