@@ -128,4 +128,55 @@ describe('playClip', () => {
     await expect(pending).resolves.toBe('file')
     expect(created).toHaveLength(0)
   })
+
+  it('pauses again when stopClip wins while play() is still starting', async () => {
+    clearManifestCache()
+    const created: Array<FakeAudio & { pauses: number; paused: boolean }> = []
+    let releasePlay: () => void = () => undefined
+    const frame = vi.fn()
+    vi.stubGlobal('requestAnimationFrame', frame)
+    vi.stubGlobal(
+      'Audio',
+      class extends FakeAudio {
+        pauses = 0
+        paused = true
+        constructor(src: string) {
+          super(src)
+          created.push(this)
+        }
+        override pause(): void {
+          this.paused = true
+          this.pauses += 1
+        }
+        override play(): Promise<void> {
+          return new Promise((resolve) => {
+            releasePlay = () => {
+              this.paused = false
+              resolve()
+            }
+          })
+        }
+      },
+    )
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ['vi/emergency.help__any__base.m4a'],
+      })),
+    )
+    const onEnd = vi.fn()
+    const onTime = vi.fn()
+    const pending = playClip('vi/emergency.help__any__base.m4a', 'Hilfe', 'vi', 1, onEnd, onTime)
+    for (let step = 0; step < 12 && created.length === 0; step += 1) await Promise.resolve()
+    expect(created).toHaveLength(1)
+    stopClip()
+    releasePlay()
+    await expect(pending).resolves.toBe('file')
+    expect(created[0]?.pauses).toBe(2)
+    expect(created[0]?.paused).toBe(true)
+    expect(onEnd).not.toHaveBeenCalled()
+    expect(onTime).not.toHaveBeenCalled()
+    expect(frame).not.toHaveBeenCalled()
+  })
 })

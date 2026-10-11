@@ -87,7 +87,7 @@ export class MemoryProgressRepository implements ProgressRepository {
     const next: Held[] = []
     for (const person of people.slice(0, PERSON_LIMIT)) {
       const name = cleanPersonName(person.name)
-      if (!name) continue
+      if (!name) throw new Error('IMPORT_REJECTED')
       next.push({
         id: crypto.randomUUID(),
         name,

@@ -156,13 +156,85 @@ describe('people on one device', () => {
     expect(JSON.parse(packed).people[0].level).toBe(0)
   })
 
-  it('rejects an invisible name and stores a composed character', () => {
+  it('rejects an invisible name and keeps a joiner between emoji', () => {
+    const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}'
+    const withSelector = '\u{1F468}\uFE0F\u200D\u{1F469}\uFE0F'
     expect(cleanPersonName('\u3164')).toBeNull()
     expect(cleanPersonName('\u2800')).toBeNull()
     expect(cleanPersonName('\u0301')).toBeNull()
     expect(cleanPersonName(' \u3164 ')).toBeNull()
+    expect(cleanPersonName('\u200D')).toBeNull()
+    expect(cleanPersonName('A\u200DB')).toBe('AB')
     expect(cleanPersonName('a\u0301')).toBe('\u00e1')
     expect(cleanPersonName('Anna')).toBe('Anna')
+    expect(cleanPersonName(family)).toBe(family)
+    expect(cleanPersonName(withSelector)).toBe(withSelector)
+  })
+
+  it('does not switch to an unknown person or create one', async () => {
+    const name = `travel-talk-test-${crypto.randomUUID()}`
+    const repo = new DexieProgressRepository(name)
+    const first = await repo.load()
+    const id = first.activePersonId ?? ''
+    await repo.switchPerson('missing')
+    const raw = new Dexie(name)
+    raw.version(3).stores({ people: 'id', device: 'id', personCards: '[personId+cardId], personId' })
+    const device = await raw.table('device').get('device')
+    expect(device?.activePersonId).toBe(id)
+    expect(await raw.table('people').count()).toBe(1)
+    raw.close()
+  })
+
+  it('keeps the local note when the imported note is empty', async () => {
+    const repo = new DexieProgressRepository(`travel-talk-test-${crypto.randomUUID()}`)
+    const first = await repo.load()
+    const id = first.activePersonId ?? ''
+    await repo.renamePerson(id, 'A')
+    const local: Settings = { ...learning('de', 'vi'), personalNote: 'Nur lokal', voiceHintSeen: true, highlightWords: false, voices: { vi: 'vais1000' } }
+    await repo.saveSettings(id, local)
+    await repo.importPerson('replace', { name: 'C', settings: { ...learning('de', 'en'), personalNote: '   ' }, cards: [] }, local, id)
+    const kept = await repo.load()
+    expect(kept.settings.personalNote).toBe('Nur lokal')
+    expect(kept.settings.voiceHintSeen).toBe(true)
+    expect(kept.settings.highlightWords).toBe(false)
+    expect(kept.settings.voices?.vi).toBe('vais1000')
+    expect(kept.people?.find((person) => person.id === id)?.name).toBe('A')
+    await repo.importPerson('replace', { name: 'C', settings: { ...learning('de', 'en'), personalNote: 'Neu' }, cards: [] }, kept.settings, id)
+    expect((await repo.load()).settings.personalNote).toBe('Neu')
+  })
+
+  it('does not drop a person with an invisible name while replacing everyone', async () => {
+    const repo = new DexieProgressRepository(`travel-talk-test-${crypto.randomUUID()}`)
+    const first = await repo.load()
+    await repo.renamePerson(first.activePersonId ?? '', 'A')
+    await expect(
+      repo.importAll([
+        { name: 'B', settings: learning('de', 'vi'), cards: [card('de-vi:emergency.water')] },
+        { name: '\u3164', settings: learning('de', 'en'), cards: [card('de-en:meet.hello')] },
+      ]),
+    ).rejects.toThrow('IMPORT_REJECTED')
+    const kept = await repo.load()
+    expect(kept.people?.map((person) => person.name)).toEqual(['A'])
+    expect(kept.cards).toEqual([])
+  })
+
+  it('does not write a row for a person who was just deleted', async () => {
+    const name = `travel-talk-test-${crypto.randomUUID()}`
+    const repo = new DexieProgressRepository(name)
+    const first = await repo.load()
+    const id = first.activePersonId ?? ''
+    await repo.deletePerson(id)
+    await repo.saveCard(id, card('de-vi:emergency.water'))
+    await repo.saveSettings(id, learning('de', 'vi'))
+    await repo.replaceAll(id, { settings: learning('de', 'en'), cards: [card('de-en:meet.hello')] })
+    const raw = new Dexie(name)
+    raw.version(3).stores({ people: 'id', device: 'id', personCards: '[personId+cardId], personId' })
+    const rows = await raw.table('personCards').toArray()
+    raw.close()
+    expect(rows.some((row: { personId: string }) => row.personId === id)).toBe(false)
+    const loaded = await repo.load()
+    expect(loaded.people?.some((person) => person.id === id)).toBe(false)
+    expect(loaded.cards).toEqual([])
   })
 
   it('writes a late save to the person it names, not whoever is active', async () => {

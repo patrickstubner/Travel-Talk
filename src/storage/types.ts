@@ -126,13 +126,37 @@ export function cleanVoices(value: unknown): VoiceMap | undefined {
 /** Hangul fillers and the blank braille cell look empty but are not whitespace. */
 const INVISIBLE_NAME = /[\p{Z}\p{Mn}\p{Me}\u115F\u1160\u3164\uFFA0\u2800]/gu
 
+const ZWJ = '\u200D'
+
+function isPictograph(char: string): boolean {
+  return /\p{Extended_Pictographic}/u.test(char)
+}
+
+/** A variation selector or skin tone may sit between the pictograph and the joiner. */
+function isEmojiGap(char: string): boolean {
+  return char === '\uFE0F' || /\p{Emoji_Modifier}/u.test(char)
+}
+
+function emojiBeside(chars: readonly string[], index: number, step: number): boolean {
+  let cursor = index + step
+  while (cursor >= 0 && cursor < chars.length && isEmojiGap(chars[cursor] ?? '')) cursor += step
+  return cursor >= 0 && cursor < chars.length && isPictograph(chars[cursor] ?? '')
+}
+
 /**
- * NFC, then no control characters.
+ * NFC, then no control characters, except a ZWJ that joins two emoji.
  * A name needs 1 to 40 characters and at least one that is actually visible.
  */
 export function cleanPersonName(value: unknown): string | null {
   if (typeof value !== 'string') return null
-  const stripped = value.normalize('NFC').replace(/[^\P{C}]/gu, '').trim()
+  const chars = [...value.normalize('NFC').replace(/[^\P{C}\u200D]/gu, '')]
+  const kept: string[] = []
+  for (let index = 0; index < chars.length; index += 1) {
+    const char = chars[index] ?? ''
+    if (char === ZWJ && !(emojiBeside(chars, index, -1) && emojiBeside(chars, index, 1))) continue
+    kept.push(char)
+  }
+  const stripped = kept.join('').trim()
   if (stripped.length < 1 || stripped.length > NAME_LIMIT) return null
   if (stripped.replace(INVISIBLE_NAME, '').length < 1) return null
   return stripped

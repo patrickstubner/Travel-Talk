@@ -4,6 +4,7 @@ import { freshIndexedDb } from '../test-idb'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import * as offline from '../audio/offline'
 import { Shell } from '../app/shell'
 import { AppContext, AppProvider } from '../app/state'
 import { DexieProgressRepository } from '../storage/dexie-repository'
@@ -76,7 +77,9 @@ describe('top bar', () => {
     const second = await screen.findByRole('button', { name: 'Wer lernt?: B' })
     expect(screen.getByRole('button', { name: /^Sprache, die du lernst: Sprache, die du lernst/ })).toBeTruthy()
     fireEvent.click(second)
-    fireEvent.click(screen.getByRole('button', { name: (value) => value === 'A' }))
+    const listed = screen.getByRole('button', { name: (value) => value === 'A' })
+    expect(listed.querySelector('bdi')?.textContent).toBe('A')
+    fireEvent.click(listed)
     await screen.findByRole('button', { name: 'Wer lernt?: A' })
     expect(screen.getByRole('button', { name: /Vietnamesisch, Nord, Variante/ }).textContent).toBe('Vietnamesisch · Nord, Variante')
     fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: A' }))
@@ -99,6 +102,7 @@ describe('top bar', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Wer lernt?: A' }))
     fireEvent.change(screen.getByLabelText('Person hinzufügen'), { target: { value: 'B' } })
     fireEvent.click(screen.getByRole('button', { name: 'Person hinzufügen' }))
+    const forget = vi.spyOn(offline, 'forgetVoiceIfUnused').mockResolvedValue(undefined)
     fireEvent.click(await screen.findByRole('button', { name: 'Wer lernt?: B' }))
     fireEvent.click(screen.getByRole('button', { name: 'Person löschen' }))
     expect(
@@ -109,6 +113,8 @@ describe('top bar', () => {
     expect(screen.getByRole('button', { name: 'Wer lernt?: B' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Person löschen' }))
     await screen.findByRole('button', { name: 'Wer lernt?: A' })
+    await waitFor(() => expect(forget).toHaveBeenCalled())
+    forget.mockRestore()
 
     const people = Array.from({ length: 10 }, (_, index) => person(`p${index}`, String.fromCharCode(65 + index)))
     cleanup()

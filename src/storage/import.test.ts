@@ -330,6 +330,10 @@ describe('import', () => {
     expect(due).toBe(Date.parse('2020-01-01T00:00:00.000Z') + DUE_LIMIT_DAYS * 86_400_000)
   })
 
+  it('rejects a person whose name is only an invisible character', () => {
+    expect(() => parseImport(personBundle([v4Person('\u3164', [card()]), v4Person('B', [])], 'all'), concepts)).toThrow('IMPORT_REJECTED')
+  })
+
   it('rejects duplicate cards, a one-person file with several people, and more than 8000 cards', () => {
     expect(() => parseImport(personBundle([v4Person('A', [card(), card()])]), concepts)).toThrow('IMPORT_REJECTED')
     expect(() => parseImport(personBundle([v4Person('A', []), v4Person('B', [])]), concepts)).toThrow('IMPORT_REJECTED')

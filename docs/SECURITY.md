@@ -171,7 +171,7 @@ Geprüft am 11. Oktober 2026 am Stand `19535e2`. N14b-03 und N14b-04 sind geschl
 | ID | Schwere | Status | Auflösung |
 | --- | --- | --- | --- |
 | N14b-01 | Mittel | bewusst akzeptiert | Die Aktivierung löscht Precache-Einträge, die nicht mehr im Manifest stehen, darunter die alten Audiodateien. Eine Kopie beim Installieren hält sie nicht: die gespeicherte Adresse behält `?__WB_REVISION__` und trifft nie, wenig Speicher lässt das Installieren dauerhaft scheitern, der Speicher verdoppelt sich, und jeder Cache der gemeinsamen Origin wird gelesen. Die Migration ist entfernt. Nach dem Update, das online läuft, sagt die Startseite «Offline-Audio nach dem Update neu laden», solange die Lernsprache nicht vollständig im Cache liegt. Ein Tippen auf «Für offline laden» holt sie. |
-| N14b-02 | Niedrig | Offen | Nicht geschlossen. Die Tests in `src/audio/offline.test.ts` beschreiben die Verhaltensweisen von M1, M2, N4 und N15–N17. Sie schliessen den Befund nicht, weil die ursprünglichen Mutanten-Diffs nicht im Repo lagen. |
+| N14b-02 | Niedrig | Offen | Nicht geschlossen. Die Mutationen M1, M2, N4 und N15–N17 bestehen weiter. Die Tests zu «Speicher voll» und `notifyAudioChanged` schliessen sie nicht. |
 | N14b-03 | Niedrig | Geschlossen | Eine 404 wird übersprungen. Der Rest der Stimme wird geladen. Die Oberfläche sagt «n Dateien fehlen». Die anderen Stimmen dieser Sprache bleiben, solange Dateien fehlen. Test: `src/audio/offline.test.ts`. |
 | N14b-04 | Niedrig | Geschlossen | «Speicher voll» zeigt den Fortschritt, «Erneut versuchen» und «Bisherige Stimme behalten». Der zweite Knopf entfernt nur die Dateien dieses Versuchs. Nach einem Neuladen bleibt `n/597` sichtbar, wenn Dateien im Cache liegen. Test: `src/components/voice-offline.test.tsx`. |
 | N14b-05 | Niedrig | Geschlossen | `tools/generate_audio.py` prüft SHA-256 der `.onnx`-Datei und der `.onnx.json` daneben, für die vier Modelle von 0.4.0 und für `thorsten-medium`, `ljspeech`, `faber` und `vais1000`. `pt_BR-jeff` bleibt draussen. |
@@ -205,7 +205,7 @@ Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit und keine neue np
 
 **N14d-02.** In den Einstellungen wählen «Speicher voll» und «Bisherige Stimme behalten» die vorige Stimme wieder. `dropOtherVoices` sendet `travel-talk-audio-changed`. Tests: `src/components/language-choice-offline.test.tsx`, `src/audio/offline.test.ts`. Das schliesst N14b-02 nicht.
 
-**N14b-02.** Nicht geschlossen. Die Verhaltensweisen stehen unter 0.6.0. Die Tests schliessen den Befund nicht, weil die ursprünglichen Mutanten-Diffs nicht im Repo lagen.
+**N14b-02.** Nicht geschlossen. Die Mutationen M1, M2, N4 und N15–N17 bestehen weiter. Die Tests zu «Speicher voll» und `notifyAudioChanged` schliessen sie nicht.
 
 **N15.** Im Schritt Hören bleibt die Wortzuordnung verborgen, bis die Bedeutung gewählt ist. Eine Zeile mit Platzhalter, etwa `[tên]`, bleibt neben der gesprochenen Zeile sichtbar. Auf der Startseite erscheint «Bisherige Stimme behalten» nur, wenn eine andere Stimme dieser Sprache vollständig im Cache liegt, und der Knopf wählt diese Stimme.
 
@@ -225,7 +225,7 @@ Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit. `onnx` 1.17.0 bl
 
 **Stimmen.** `dropOtherVoices` behält die Stimmen-IDs, die andere Personen dieser Sprache noch benutzen. Die eigene vorige Stimme gehört nicht dazu. Ein Ordner zählt nur, wenn er genau die ID ist: `vivos-220/` bleibt nicht, wenn `vivos-22` behalten wird. Dateien einer anderen Sprache bleiben. `discardAdded([])` löscht nichts.
 
-**N14b-02.** Nicht geschlossen. Tests in `src/audio/offline.test.ts` beschreiben diese Verhaltensweisen und schliessen den Befund nicht, weil die ursprünglichen Mutanten-Diffs nicht im Repo lagen: ein HTTP-Status ausser 404 bricht den Download ab und behält die andere Stimme (M1). Bei vollem Speicher listet `added` die Adressen, die dieser Versuch schon geschrieben hat (M2). `dropOthers: () => false` löscht nach einem vollständigen Laden nichts (N4). Eine Stimmen-ID trifft nur den Ordner plus Schrägstrich (N15). Dateien einer anderen Sprache bleiben (N16). `discardAdded` löscht nur die genannten Adressen, eine leere Liste nichts (N17).
+**N14b-02.** Nicht geschlossen. Die Mutationen M1, M2, N4 und N15–N17 bestehen weiter. Die Tests zu «Speicher voll» und `notifyAudioChanged` schliessen sie nicht. Die Tests zu einem HTTP-Status, zum vollen Speicher, zum Ordnernamen und zu `discardAdded` sperren das Verhalten des Codes. Sie beschreiben diese Mutationen nicht.
 
 **Lernsprache.** Die Lernsprache und die vietnamesische Variante stehen nur in der oberen Leiste. Die Einstellungen behalten die App-Sprache und die Stimme. «Bisherige Stimme behalten» erscheint dort nur, wenn die vorige Stimme vollständig im Cache liegt.
 
@@ -243,7 +243,7 @@ Geprüft am 11. Oktober 2026 am Branch `cursor/people-v060-d07c`. Kein neues Pak
 | P16-02 | Mittel | Geschlossen | `<Outlet key={activePersonId}>` setzt die Seite neu. Der Sitzungsschlüssel enthält die Personen-ID. `stopClip` stoppt Audio beim Wechsel. Jedes Speichern übergibt die Personen-ID. Tests: `src/pages/person-switch.test.tsx`, `src/storage/people.test.ts`, `src/audio/player.test.ts`. |
 | P16-03 | Mittel | Geschlossen | «Sicherung herunterladen» im Dialog «Alle Personen ersetzen» sichert alle Personen. Eine leere Notiz sagt, dass alle Notizen überschrieben werden. Die Ersetzung braucht einen zweiten Dialog. Test: `src/pages/settings-import.test.tsx`. |
 | P16-04 | Niedrig | Geschlossen | Zählen und Anlegen laufen in einer Transaktion. Der Knopf ist während des Speicherns aus. Test: `src/storage/people.test.ts`, `src/components/top-bar.test.tsx`. |
-| P16-05 | Pflicht | Geschlossen | N14b-02 ist nicht geschlossen. Die Zeilen zum zweiten Durchgang, zu 0.5.0 und zu 0.6.0 sagen das. |
+| P16-05 | Niedrig | Geschlossen | N14b-02 ist nicht geschlossen. Die Zeilen zum zweiten Durchgang, zu 0.5.0 und zu 0.6.0 sagen das. |
 | P16-06 | Niedrig | Geschlossen | Tests für die Kürzung von `last_review` und `due` in Format 4, doppelte Karten, die Grenze von 8000 Karten, eine Personen-Datei mit mehreren Personen, die Grenze beim Import als neue Person, die Kürzung von `importAll`, die gemerkte Datei in Üben und Zeigen, und N15c-01 in Üben und Zeigen. `src/storage/import.test.ts`, `src/storage/people.test.ts`, `src/pages/practice-show-gap.test.tsx`. |
 | P16-07 | Niedrig | Geschlossen | NFC, mindestens ein sichtbares Zeichen, Anzeige in `<bdi>`. Test: `src/storage/people.test.ts`, `src/components/top-bar.test.tsx`. |
 | P16-08 | Niedrig | Geschlossen | Ersetzen mit einer Format-4-Datei benennt die aktive Person nicht um. Test: `src/storage/people.test.ts`. |
@@ -259,3 +259,15 @@ Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit, kein neues Paket
 **Was der Text behauptet.** Jede konkrete Angabe hat eine Quelle und das Lesedatum 2026-10-11. Was nicht belegt ist, steht im Hinweis als «noch nicht geprüft»: der Preis für ein xe ôm am Strassenrand, ein ausländischer Pass in der App der Hà Nội Metro, der Taxameter ausserhalb der Stadt São Paulo, der Taxameter in der Deutschschweiz, Taxi und Fahr-Apps ausserhalb Londons. Notrufnummern stehen in dieser Situation nicht. Die bestehenden Nummern im Notfall-Hinweis sind hier nicht erneut gelesen. Philippinen, Paraguay, Thailand und Portugal als Land haben keinen Code in `CultureNote.regions` und keinen eigenen Hinweis.
 
 **Audio.** Dieselben acht Modelle, `piper-tts` 1.8.0, `onnx` 1.17.0 nur für die Wortzeiten. Neue Dateien nur für die neuen Zeilen: 540 Audiodateien und 178 Zeitdateien, zusammen 5'283'087 Bytes. Zwei englische Clips der App-Bestellung haben keine Zeitdatei, weil die Wortzahl nicht zur Phonemgruppe passt, wie die älteren englischen Ausfälle. Sie stehen nicht in `manifest.json` und zählen nicht als fehlend. `manifest.json` hat danach 5863 Einträge, 4431 Audio und 1432 Zeiten. `maxEntries` ist 6500 und deckt das. Die Cache-Regel bleibt Status 200. Nichts davon kommt in den Precache.
+
+## Nachprüfung von Pull Request 16, zweiter Durchgang
+
+Geprüft am 11. Oktober 2026. Die Korrekturen liegen in 0.7.0. Kein neues Paket. `npm audit` bleibt bei 0 Schwachstellen. N14b-02 bleibt offen.
+
+| ID | Schwere | Status | Auflösung |
+| --- | --- | --- | --- |
+| P16b-01 | Niedrig | Geschlossen | Sobald beide Sprachen gespeichert sind, setzt die Startseite die Standardstimmen und `voiceHintSeen`. Ein Verlassen oder Neuladen ohne «Weiter» lässt die Einführung aus, behält aber die Männerstimme und zeigt den Hinweis auf Männerstimmen nicht. Test: `src/pages/home-onboarding.test.tsx`. |
+| P16b-02 | Niedrig | Geschlossen | `personName` gilt nur, wenn `cleanPersonName` denselben Text zurückgibt. U+3164 lehnt die Datei ab. `importAll` wirft `IMPORT_REJECTED` und lässt die bisherigen Personen stehen, statt eine Person samt Karten auszulassen. Test: `src/storage/import.test.ts`, `src/storage/people.test.ts`. |
+| P16b-03 | Niedrig | Geschlossen | Die Zeilen zu N14b-02 nennen M1, M2, N4 und N15–N17, ohne ihnen das Verhalten der Download-Tests zuzuschreiben und ohne zu behaupten, die Mutanten-Diffs fehlten im Repo. P16-05 steht als Niedrig. Ein ZWJ zwischen zwei Emoji bleibt im Namen. Ein einzelner ZWJ nicht. Test: `src/storage/people.test.ts`. |
+
+Ein Speichern für eine Person, die gerade gelöscht wurde, schreibt keine Karte und keine Einstellungen. Ein unbekannter Personen-Wechsel ändert die aktive Person nicht. Eine leere Notiz im Import behält die Notiz auf dem Gerät. Die Personenliste setzt den Namen in `<bdi>`. Löschen ruft `forgetVoiceIfUnused` auf. `playClip` hält an, wenn `stopClip` während `play()` gewinnt.
