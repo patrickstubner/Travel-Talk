@@ -1,10 +1,22 @@
-import { readFileSync, existsSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { hasAddressToken } from '../../content/address'
 import { requireCatalog } from './load'
 import { tempoFile } from '../audio/speed'
 import { VOICES } from '../audio/voices'
-import { AUDIO_FILE, allSpeechLines, conceptsForSituation, isStale, resolvePlayback, voiceFile } from './resolve'
+import { ALIGN_FILE, AUDIO_FILE, allSpeechLines, conceptsForSituation, isStale, resolvePlayback, voiceFile } from './resolve'
+
+function alignFiles(dir: string, prefix = ''): string[] {
+  const found: string[] = []
+  for (const entry of readdirSync(dir)) {
+    const rel = prefix ? `${prefix}/${entry}` : entry
+    const full = join(dir, entry)
+    if (statSync(full).isDirectory()) found.push(...alignFiles(full, rel))
+    else if (entry.endsWith('.align.json')) found.push(rel)
+  }
+  return found
+}
 
 const catalog = requireCatalog()
 const banned = new RegExp(
@@ -108,7 +120,15 @@ describe('catalog', () => {
         expect(listed.has(tempoFile(file, 0.85))).toBe(true)
       }
     }
-    for (const file of listed) expect(file).toMatch(AUDIO_FILE)
+    for (const file of listed) expect(AUDIO_FILE.test(file) || ALIGN_FILE.test(file), file).toBe(true)
+    const onDisk = alignFiles('public/audio')
+    expect(onDisk.length).toBeGreaterThan(0)
+    for (const file of onDisk) {
+      expect(listed.has(file), file).toBe(true)
+      expect(file).toMatch(ALIGN_FILE)
+      expect(listed.has(file.replace(/\.align\.json$/, '.m4a')), file).toBe(true)
+    }
+    expect([...listed].filter((file) => file.endsWith('.align.json'))).toHaveLength(onDisk.length)
   })
 
   it('ages info cards after six months', () => {

@@ -27,12 +27,21 @@ describe('voices', () => {
   it('lists only the files of one voice', () => {
     const listed = [
       'de/emergency.help__any__base.m4a',
+      'de/emergency.help__any__base.align.json',
       'de/thorsten-high/emergency.help__any__base.m4a',
+      'de/thorsten-high/emergency.help__any__base.align.json',
       'en/joe/emergency.help__any__base.m4a',
+      'en/joe/emergency.help__any__base.align.json',
     ]
     const high = voicesFor('de').find((voice) => voice.id === 'thorsten-high')
     const legacy = voicesFor('de').find((voice) => voice.legacy)
-    expect(filesForVoice(listed, 'de', high!)).toEqual(['de/thorsten-high/emergency.help__any__base.m4a'])
-    expect(filesForVoice(listed, 'de', legacy!)).toEqual(['de/emergency.help__any__base.m4a'])
+    expect(filesForVoice(listed, 'de', high!)).toEqual([
+      'de/thorsten-high/emergency.help__any__base.m4a',
+      'de/thorsten-high/emergency.help__any__base.align.json',
+    ])
+    expect(filesForVoice(listed, 'de', legacy!)).toEqual([
+      'de/emergency.help__any__base.m4a',
+      'de/emergency.help__any__base.align.json',
+    ])
   })
 })

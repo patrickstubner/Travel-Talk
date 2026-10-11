@@ -87,6 +87,20 @@ export function SettingsPage() {
   return (
     <section className="stack" data-testid="settings">
       <LanguageChoice settings={settings} copy={copy} ui={ui} mode="settings" onChange={(patch) => update(patch)} />
+      <label className="choice">
+        <input
+          type="checkbox"
+          checked={settings.highlightWords !== false}
+          onChange={(event) => {
+            const next = { ...settings }
+            if (event.target.checked) delete next.highlightWords
+            else next.highlightWords = false
+            void saveSettings(next)
+          }}
+        />
+        {copy.highlightTitle}
+      </label>
+      <p className="hint">{copy.highlightHint}</p>
       {usesLang(settings, 'vi') ? (
         <fieldset>
           <legend>{copy.addressTitle}</legend>
@@ -213,6 +227,7 @@ export function SettingsPage() {
                     personalNote: retainLocalNote(current.settings.personalNote, next.settings.personalNote),
                     voices: next.settings.voices ?? current.settings.voices,
                     ...(current.settings.voiceHintSeen ? { voiceHintSeen: true } : {}),
+                    ...(current.settings.highlightWords === false ? { highlightWords: false } : {}),
                   },
                 }
                 const relabeled = pending.uiNotRelabeled

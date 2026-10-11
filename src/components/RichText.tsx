@@ -1,3 +1,7 @@
+export function hasPlaceholder(text: string): boolean {
+  return /\[[^[\]]+\]/.test(text)
+}
+
 export function RichText({ text }: { text: string }) {
   const parts = text.split(/(\[[^[\]]+\])/)
   return (

@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { selectedVoice, spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { directionId } from '../domain/direction'
+import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
 import { decodeContourFile, playClip } from '../audio/player'
+import { linksFor } from '../content/word-links'
 import { SPEED_STEPS, effectiveSpeed, speedPercent, tempoFile, type SpeedStep } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { PitchPanel } from '../components/PitchPanel'
+import { KaraokeLine } from '../components/KaraokeLine'
 import { RichText } from '../components/RichText'
 import { contourFromSamples, type Contour } from '../pitch/contour'
 import { cardIdFor } from '../srs/session'
@@ -37,6 +40,9 @@ export function PhrasePage() {
   const ui = interfaceLang(settings)
   const [heard, setHeard] = useState<'file' | 'offline' | null>(null)
   const [playing, setPlaying] = useState(false)
+  const [seconds, setSeconds] = useState<number | null>(null)
+  const [times, setTimes] = useState<WordTime[] | null>(null)
+  const [clipDuration, setClipDuration] = useState<number | null>(null)
   const [recording, setRecording] = useState(false)
   const [mineUrl, setMineUrl] = useState<string | null>(null)
   const sessionRef = useRef<CaptureSession | null>(null)
@@ -63,6 +69,16 @@ export function PhrasePage() {
   const target = concept && targetLang ? resolvePlayback(concept, targetLang, settings.viRegion, prefsFromSettings(targetLang, settings)) : undefined
   const source = concept && app ? resolvePlayback(concept, app, settings.viRegion, prefsFromSettings(app, settings)) : undefined
   const targetFile = target && targetLang ? spokenFile(settings, targetLang, target.file) : ''
+  const followWords = settings.highlightWords !== false
+  const stored = direction && concept && snapshot
+    ? snapshot.cards.find((card) => card.cardId === cardIdFor(direction, concept.id))
+    : undefined
+  const step = effectiveSpeed(settings.speed, stored)
+  const alignFile = targetFile ? tempoFile(targetFile, step) : ''
+  const links = useMemo(() => {
+    if (!concept || !target || !source || !app || !targetLang || !followWords) return []
+    return linksFor(concept.id, targetLang, app, target.speech, source.speech, settings)
+  }, [app, concept, followWords, settings, source, target, targetLang])
 
   useEffect(() => {
     aliveRef.current = true
@@ -82,6 +98,21 @@ export function PhrasePage() {
       setMineUrl(null)
     }
   }, [conceptId])
+
+  const targetSpeech = target?.speech ?? ''
+  useEffect(() => {
+    let live = true
+    if (!followWords || !alignFile || !targetSpeech) {
+      setTimes(null)
+      return
+    }
+    void loadAlignment(alignFile, targetSpeech).then((value) => {
+      if (live) setTimes(value)
+    })
+    return () => {
+      live = false
+    }
+  }, [alignFile, followWords, targetSpeech])
 
   useEffect(() => {
     let active = true
@@ -108,17 +139,34 @@ export function PhrasePage() {
   const pairNotes = catalog.pairNotes.filter(
     (note) => note.sourceLang === app && note.targetLang === targetLang && (!note.conceptId || note.conceptId === concept.id),
   )
-  const stored = snapshot?.cards.find((card) => card.cardId === cardIdFor(direction, concept.id))
-  const step = effectiveSpeed(settings.speed, stored)
   const percent = speedPercent(step)
 
   async function onPlay(file: string, rate: SpeedStep): Promise<void> {
     setPlaying(true)
-    const result = await playClip(file, target?.speech ?? '', targetLang ?? 'de', rate, () => {
-      if (aliveRef.current) setPlaying(false)
-    })
+    setSeconds(0)
+    setClipDuration(null)
+    const result = await playClip(
+      file,
+      target?.speech ?? '',
+      targetLang ?? 'de',
+      rate,
+      () => {
+        if (!aliveRef.current) return
+        setPlaying(false)
+        setSeconds(null)
+      },
+      (time) => {
+        if (aliveRef.current) setSeconds(time)
+      },
+      (duration) => {
+        if (aliveRef.current) setClipDuration(duration)
+      },
+    )
     if (!aliveRef.current) return
-    if (result === 'offline') setPlaying(false)
+    if (result === 'offline') {
+      setPlaying(false)
+      setSeconds(null)
+    }
     setHeard(result)
   }
 
@@ -160,12 +208,28 @@ export function PhrasePage() {
       <p>
         <Link to={`/situation/${concept.situationIds[0] ?? ''}`}>{copy.back}</Link>
       </p>
-      <h1>
-        <RichText text={target.text} />
-      </h1>
-      <p className="gloss">
-        <RichText text={source.text} />
-      </p>
+      {followWords ? (
+        <KaraokeLine
+          heading
+          lang={targetLang}
+          speech={target.speech}
+          gloss={source.speech}
+          links={links}
+          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration, alignmentScale(alignFile))) ? times : null}
+          seconds={playing ? seconds : null}
+          note={copy.glossUnchecked}
+          template={target.text}
+        />
+      ) : (
+        <>
+          <h1>
+            <RichText text={target.text} />
+          </h1>
+          <p className="gloss">
+            <RichText text={source.text} />
+          </p>
+        </>
+      )}
       <p className="hint">{copy.exampleAudio}</p>
       <p>
         {copy.context}: {concept.context[ui]}

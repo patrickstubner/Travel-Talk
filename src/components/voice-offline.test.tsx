@@ -42,7 +42,7 @@ describe('offline load control', () => {
     unmount()
 
     vi.mocked(voiceProgress).mockResolvedValue({ have: 0, total: 597 })
-    const full = render(<VoiceOfflineButton lang="vi" voice={voice} copy={copy} dropOnSuccess />)
+    const full = render(<VoiceOfflineButton lang="vi" voice={voice} copy={copy} dropOnSuccess onKeepPrevious={() => undefined} />)
     fireEvent.click(await screen.findByRole('button', { name: 'Für offline laden' }))
     expect(await screen.findByText('4/597')).toBeTruthy()
     finish({ status: 'full', missing: 0, added: ['/audio/vi/vivos-22/emergency.help__any__base.m4a'] })
@@ -114,5 +114,21 @@ describe('offline load control', () => {
     expect(await screen.findByText('12/597')).toBeTruthy()
     expect(keep).toHaveBeenCalledTimes(1)
     expect(notifyAudioChanged).toHaveBeenCalled()
+  })
+
+  it('hides keep-previous when nothing would switch the voice', async () => {
+    let finish: (outcome: { status: 'full'; missing: number; added: string[] }) => void = () => undefined
+    vi.mocked(loadVoiceOffline).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+    )
+    render(<VoiceOfflineButton lang="vi" voice={voice} copy={copy} dropOnSuccess />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Für offline laden' }))
+    finish({ status: 'full', missing: 0, added: ['/audio/vi/vivos-22/a.m4a'] })
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Bisherige Stimme behalten' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Erneut versuchen' })).toBeTruthy()
   })
 })

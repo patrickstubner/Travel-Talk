@@ -17,6 +17,8 @@ export type Settings = {
   voices?: VoiceMap
   /** Local only. Not exported, so format 3 stays strict. */
   voiceHintSeen?: boolean
+  /** Local only. Missing means the word mark is on. `false` turns it off. */
+  highlightWords?: boolean
   addressVi: string
   addressPt: string
   addressDe: string
@@ -113,6 +115,7 @@ export function coerceSettings(raw: Partial<Settings> & { slow?: boolean; pairId
     viRegion: raw.viRegion === 'north' ? 'north' : 'south',
     ...(cleanVoices(raw.voices) ? { voices: cleanVoices(raw.voices) } : {}),
     ...(raw.voiceHintSeen === true ? { voiceHintSeen: true } : {}),
+    ...(raw.highlightWords === false ? { highlightWords: false } : {}),
     addressVi: typeof raw.addressVi === 'string' && ADDRESS_VI.has(raw.addressVi) ? raw.addressVi : defaultSettings.addressVi,
     addressPt: typeof raw.addressPt === 'string' && ADDRESS_PT.has(raw.addressPt) ? raw.addressPt : defaultSettings.addressPt,
     addressDe: typeof raw.addressDe === 'string' && ADDRESS_DE.has(raw.addressDe) ? raw.addressDe : defaultSettings.addressDe,

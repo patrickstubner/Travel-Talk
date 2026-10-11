@@ -1,4 +1,4 @@
-import { AUDIO_FILE } from '../content/resolve'
+import { ALIGN_FILE, AUDIO_FILE } from '../content/resolve'
 import { mixToMono } from '../pitch/contour'
 import { publicUrl } from '../public-url'
 import type { SpeedStep } from './speed'
@@ -6,6 +6,12 @@ import type { SpeedStep } from './speed'
 let known: Set<string> | null = null
 let loading: Promise<Set<string>> | null = null
 let current: HTMLAudioElement | null = null
+
+/** Tests start from an empty list. The page keeps the list for the session. */
+export function clearManifestCache(): void {
+  known = null
+  loading = null
+}
 
 export function loadManifest(): Promise<Set<string>> {
   if (known) return Promise.resolve(known)
@@ -16,7 +22,7 @@ export function loadManifest(): Promise<Set<string>> {
         const files = new Set<string>()
         if (Array.isArray(data)) {
           for (const item of data) {
-            if (typeof item === 'string' && AUDIO_FILE.test(item)) files.add(item)
+            if (typeof item === 'string' && (AUDIO_FILE.test(item) || ALIGN_FILE.test(item))) files.add(item)
           }
         }
         known = files
@@ -56,6 +62,8 @@ export async function playClip(
   _lang: string,
   _rate: SpeedStep = 1,
   onEnd?: () => void,
+  onTime?: (seconds: number) => void,
+  onDuration?: (seconds: number) => void,
 ): Promise<'file' | 'offline'> {
   let files: Set<string>
   try {
@@ -69,7 +77,11 @@ export async function playClip(
   current?.pause()
   const audio = new Audio(publicUrl(`audio/${file}`))
   audio.playbackRate = 1
+  audio.onloadedmetadata = () => {
+    if (Number.isFinite(audio.duration) && audio.duration > 0) onDuration?.(audio.duration)
+  }
   audio.onended = () => onEnd?.()
+  audio.ontimeupdate = () => onTime?.(audio.currentTime)
   current = audio
   try {
     await audio.play()

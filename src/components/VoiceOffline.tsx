@@ -125,7 +125,7 @@ export function VoiceOfflineButton({
           {phase.kind === 'error' || phase.kind === 'full' || phase.kind === 'missing' ? copy.offlineRetry : copy.offlineLoad}
         </button>
       )}
-      {phase.kind === 'full' ? (
+      {phase.kind === 'full' && onKeepPrevious ? (
         <button type="button" onClick={() => void keepPrevious()}>
           {copy.offlineKeep}
         </button>
