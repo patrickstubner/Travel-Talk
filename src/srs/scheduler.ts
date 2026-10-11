@@ -5,20 +5,51 @@ export function emptyCard(now: Date): Card {
   return createEmptyCard(now)
 }
 
+/** A clock set back, or a last review dated after the import, must not reach FSRS as a negative gap. */
+export function schedulingNow(card: Card, now: Date): Date {
+  const reviewed = card.last_review
+  if (reviewed && reviewed.getTime() > now.getTime()) return new Date(reviewed.getTime())
+  return now
+}
+
+function later(when: Date): Date {
+  return new Date(when.getTime() + 86_400_000)
+}
+
+function fallbackCard(card: Card, when: Date): Card {
+  return { ...card, due: later(when), last_review: when }
+}
+
 export function reviewCard(card: Card, grade: Grade, now: Date, retention: number, fuzz: boolean): Card {
-  const scheduler = fsrs(generatorParameters({ request_retention: retention, enable_fuzz: fuzz }))
-  return scheduler.next(card, now, grade).card
+  const when = schedulingNow(card, now)
+  try {
+    const scheduler = fsrs(generatorParameters({ request_retention: retention, enable_fuzz: fuzz }))
+    return scheduler.next(card, when, grade).card
+  } catch {
+    return fallbackCard(card, when)
+  }
 }
 
 /** Next due date for each button. Fuzz is off so the label matches the stored card. */
 export function previewDue(card: Card, now: Date, retention: number): Record<Grade, Date> {
-  const scheduler = fsrs(generatorParameters({ request_retention: retention, enable_fuzz: false }))
-  const preview = scheduler.repeat(card, now)
-  return {
-    [Rating.Again]: preview[Rating.Again].card.due,
-    [Rating.Hard]: preview[Rating.Hard].card.due,
-    [Rating.Good]: preview[Rating.Good].card.due,
-    [Rating.Easy]: preview[Rating.Easy].card.due,
+  const when = schedulingNow(card, now)
+  try {
+    const scheduler = fsrs(generatorParameters({ request_retention: retention, enable_fuzz: false }))
+    const preview = scheduler.repeat(card, when)
+    return {
+      [Rating.Again]: preview[Rating.Again].card.due,
+      [Rating.Hard]: preview[Rating.Hard].card.due,
+      [Rating.Good]: preview[Rating.Good].card.due,
+      [Rating.Easy]: preview[Rating.Easy].card.due,
+    }
+  } catch {
+    const due = later(when)
+    return {
+      [Rating.Again]: due,
+      [Rating.Hard]: due,
+      [Rating.Good]: due,
+      [Rating.Easy]: due,
+    }
   }
 }
 

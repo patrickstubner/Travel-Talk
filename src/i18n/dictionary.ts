@@ -55,7 +55,6 @@ export type Dictionary = {
     similar: string
     apart: string
   }
-  schemaTitle: string
   listen: string
   recall: string
   listenPrompt: string
@@ -261,7 +260,6 @@ export const de: Dictionary = {
     similar: 'Die Kurven liegen nahe beieinander. Das ist ein Hinweis, keine Bewertung.',
     apart: 'Die Kurven weichen ab. Das ist ein Hinweis, keine Bewertung.',
   },
-  schemaTitle: 'Schema der fünf südlichen Töne, keine Aufnahme. hỏi und ngã fallen im Süden häufig zusammen.',
   listen: 'Hören',
   recall: 'Abrufen',
   listenPrompt: 'Höre den Satz und wähle die Bedeutung.',
@@ -476,7 +474,6 @@ export const en: Dictionary = {
     similar: 'The curves sit close. That is a hint, not a grade.',
     apart: 'The curves differ. That is a hint, not a grade.',
   },
-  schemaTitle: 'A schema of the five southern tones, not a recording. hỏi and ngã often fall together in the south.',
   listen: 'Listen',
   recall: 'Recall',
   listenPrompt: 'Listen, then choose the meaning.',
@@ -687,7 +684,6 @@ export const pt: Dictionary = {
     similar: 'As curvas ficam perto. É um indício, não uma nota.',
     apart: 'As curvas divergem. É um indício, não uma nota.',
   },
-  schemaTitle: 'Um esquema dos cinco tons do sul, não uma gravação. hỏi e ngã muitas vezes se juntam no sul.',
   listen: 'Ouvir',
   recall: 'Lembrar',
   listenPrompt: 'Ouça e escolha o sentido.',
@@ -900,7 +896,6 @@ export const vi: Dictionary = {
     similar: 'Hai đường gần nhau. Đây là gợi ý, không phải điểm.',
     apart: 'Hai đường lệch. Đây là gợi ý, không phải điểm.',
   },
-  schemaTitle: 'Sơ đồ năm thanh miền Nam, không phải bản thu. hỏi và ngã ở miền Nam thường nhập làm một.',
   listen: 'Nghe',
   recall: 'Nhớ lại',
   listenPrompt: 'Nghe rồi chọn nghĩa.',

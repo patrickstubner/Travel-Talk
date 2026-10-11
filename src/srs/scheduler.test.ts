@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { requireCatalog } from '../content/load'
-import { Rating, emptyCard, reviewCard } from './scheduler'
+import { Rating, emptyCard, previewDue, reviewCard, toStored, fromStored } from './scheduler'
 import { buildSession, dueConcepts } from './session'
 
 describe('fsrs', () => {
@@ -10,6 +10,19 @@ describe('fsrs', () => {
     expect(next.due.getTime()).toBeGreaterThan(now.getTime())
     expect(next.reps).toBeGreaterThan(0)
     expect(next.difficulty).toBeLessThanOrEqual(10)
+  })
+
+  it('keeps scheduling when the last review is dated after now', () => {
+    const now = new Date('2026-10-11T08:00:00.000Z')
+    const reviewed = reviewCard(emptyCard(now), Rating.Good, now, 0.9, false)
+    const future = fromStored({
+      ...toStored('de-vi:future', reviewed),
+      last_review: new Date(now.getTime() + 86_400_000).toISOString(),
+    })
+    expect(() => previewDue(future, now, 0.9)).not.toThrow()
+    const next = reviewCard(future, Rating.Good, now, 0.9, false)
+    expect(next.due.getTime()).toBeGreaterThanOrEqual(future.last_review?.getTime() ?? 0)
+    expect(Number.isNaN(next.due.getTime())).toBe(false)
   })
 
   it('keeps a short session of reviews and new cards', () => {

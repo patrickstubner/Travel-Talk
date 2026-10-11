@@ -38,6 +38,19 @@ export function PhrasePage() {
   const sessionRef = useRef<CaptureSession | null>(null)
   const urlRef = useRef<string | null>(null)
   const aliveRef = useRef(true)
+  const micToken = useRef(0)
+  const releaseRef = useRef<() => void>(() => undefined)
+
+  function releaseCaptureNow(): void {
+    micToken.current += 1
+    sessionRef.current?.release(urlRef.current)
+    sessionRef.current = null
+    urlRef.current = null
+    if (!aliveRef.current) return
+    setRecording(false)
+  }
+
+  releaseRef.current = releaseCaptureNow
   const [micError, setMicError] = useState(false)
   const [userContour, setUserContour] = useState<Contour>([])
   const [modelContour, setModelContour] = useState<Contour>([])
@@ -49,13 +62,20 @@ export function PhrasePage() {
 
   useEffect(() => {
     aliveRef.current = true
+    function onHidden(): void {
+      if (document.visibilityState === 'hidden') releaseRef.current()
+    }
+    function onPageHide(): void {
+      releaseRef.current()
+    }
+    document.addEventListener('visibilitychange', onHidden)
+    window.addEventListener('pagehide', onPageHide)
     return () => {
       aliveRef.current = false
-      sessionRef.current?.release(urlRef.current)
-      sessionRef.current = null
-      urlRef.current = null
+      document.removeEventListener('visibilitychange', onHidden)
+      window.removeEventListener('pagehide', onPageHide)
+      releaseRef.current()
       setMineUrl(null)
-      setRecording(false)
     }
   }, [conceptId])
 
@@ -104,9 +124,11 @@ export function PhrasePage() {
 
   async function onRecord(): Promise<void> {
     setMicError(false)
+    const token = micToken.current + 1
+    micToken.current = token
     try {
       const next = await startMicrophone((taken) => {
-        if (!aliveRef.current) {
+        if (!aliveRef.current || token !== micToken.current) {
           if (taken.url) URL.revokeObjectURL(taken.url)
           return
         }
@@ -114,16 +136,16 @@ export function PhrasePage() {
         setUserContour(taken.samples && taken.sampleRate ? contourFromSamples(taken.samples, taken.sampleRate) : [])
         setRecording(false)
       })
-      if (!next || !aliveRef.current) {
+      if (!next || !aliveRef.current || token !== micToken.current) {
         next?.release(null)
-        if (!next) setMicError(true)
+        if (!next && aliveRef.current && token === micToken.current) setMicError(true)
         return
       }
       sessionRef.current?.release(null)
       sessionRef.current = next
       setRecording(true)
     } catch {
-      setMicError(true)
+      if (aliveRef.current && token === micToken.current) setMicError(true)
     }
   }
 

@@ -69,14 +69,23 @@ export function normalizeSpeed(speed: unknown, slow: unknown): SpeedChoice {
   return 'auto'
 }
 
+/** A voice id is a short token. Spaces and other characters never name a bundled voice. */
+export const VOICE_ID = /^[a-z0-9_-]{1,40}$/
+
 export function cleanVoices(value: unknown): VoiceMap | undefined {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) return undefined
   const voices: VoiceMap = {}
   for (const [key, entry] of Object.entries(value)) {
-    if (!isLang(key) || typeof entry !== 'string' || entry.length === 0 || entry.length > 40) continue
+    if (!isLang(key) || typeof entry !== 'string' || !VOICE_ID.test(entry)) continue
     voices[key] = entry
   }
   return Object.keys(voices).length > 0 ? voices : undefined
+}
+
+/** Same bound as the import: 500 characters, and no control characters except newline and tab. */
+export function cleanPersonalNote(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  return value.replace(/[^\P{C}\n\t]/gu, '').slice(0, 500)
 }
 
 /**
@@ -100,7 +109,7 @@ export function coerceSettings(raw: Partial<Settings> & { slow?: boolean; pairId
     ptSpeaker: raw.ptSpeaker === 'obrigada' ? 'obrigada' : 'obrigado',
     viContact: raw.viContact === 'zalo' ? 'zalo' : 'phone',
     retention: typeof raw.retention === 'number' && raw.retention >= 0.8 && raw.retention <= 0.97 ? raw.retention : defaultSettings.retention,
-    personalNote: typeof raw.personalNote === 'string' ? raw.personalNote.slice(0, 500) : '',
+    personalNote: cleanPersonalNote(raw.personalNote),
     speed: normalizeSpeed(raw.speed, raw.slow),
   }
 }

@@ -4,7 +4,7 @@
 
 Reise-Sprachhilfe für eine Familie. Version 0.3.0. Offline, ohne Konto, ohne Tracking.
 
-Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Sprache der App und die Lernsprache sind zwei getrennte Wahlen. Hören, Verstehen und Sprechen kommen zuerst. Lesen stützt das Hören. Schreiben ist nicht der Weg durch die Sitzung.
+Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Sprache der App und die Lernsprache sind zwei getrennte Wahlen. Hören, Verstehen und Sprechen kommen zuerst. Lesen stützt das Hören. Schreiben ist nicht der Weg durch die Sitzung. Höchstens 15 neue Sätze am Tag, über alle Richtungen zusammen.
 
 Die Sätze auf Vietnamesisch und Portugiesisch (Brasilien) sind noch nicht von einer muttersprachlichen Person geprüft. Dasselbe gilt für Deutsch und Englisch. Im UI steht das an den Sätzen.
 
@@ -46,7 +46,7 @@ npm run build
 
 Der Build schreibt die App nach `dist/` und kopiert `index.html` nach `404.html`, weil GitHub Pages kein SPA-Fallback hat. Die Navigation läuft über den Hash. Die Basis ist `/Travel-Talk/`.
 
-Lernstand, Aufnahmen und die persönliche Notiz bleiben im Browser. Export und Import sind JSON. Die Notiz kommt nur in den Export, wenn der Haken gesetzt ist, weil sie Gesundheitsangaben enthalten kann. Der Import prüft die Datei, zeigt eine Zusammenfassung und lehnt Unpassendes ab, ohne den Inhalt anzuzeigen.
+Lernstand, Aufnahmen und die persönliche Notiz bleiben im Browser. Export und Import sind JSON. Der Export wartet, bis beide Sprachen gewählt sind. Die Notiz kommt nur in den Export, wenn der Haken gesetzt ist, weil sie Gesundheitsangaben enthalten kann. Der Import prüft die Datei, zeigt eine Zusammenfassung und lehnt Unpassendes ab, ohne den Inhalt anzuzeigen. Eine Aufnahme stoppt, wenn der Tab versteckt wird oder die Seite zugeht.
 
 ## Inhalt ergänzen
 
@@ -58,7 +58,7 @@ Die Daten sind konzept-zentriert. Ein Konzept hat pro Sprache eine Realisierung.
 
 **Kulturhinweis.** Ein Eintrag in `content/culture.ts` mit Situationen, Regionen (`VN`, `BR`, `DE-CH`, `EN`), Text in vier Sprachen, mindestens einer `https`-Quelle und dem Lesedatum. Im Text «häufig» oder «vielerorts», keine Regel für alle Menschen. Die Quelle erscheint in der Oberfläche.
 
-**Sprache.** Eine weitere Sprache ist eine weitere Realisierung pro Konzept, kein neues Layout. In 0.2.0 ist die Liste der Sprachen in `content/phrase.ts` und im Schema geschlossen, weil nur diese vier vorkommen. Für eine fünfte Sprache kommt der Code dort dazu, plus ein Paar in `src/domain/pairs.ts` und, wenn Audio mitgeliefert wird, eine Stimme in `tools/generate_audio.py` und `docs/audio.md`. Die Seiten bleiben dieselben.
+**Sprache.** Eine weitere Sprache ist eine weitere Realisierung pro Konzept, kein neues Layout. Die Liste der Sprachen in `content/phrase.ts` und im Schema ist geschlossen, weil nur diese vier vorkommen. Sprache der App und Lernsprache sind zwei Wahlen. Die Richtung entsteht daraus, in `src/domain/direction.ts`. Für eine fünfte Sprache kommt der Code dort dazu und, wenn Audio mitgeliefert wird, eine Stimme in `tools/generate_audio.py` und `docs/audio.md`. Die Seiten bleiben dieselben.
 
 Audio neu bauen steht in [docs/audio.md](docs/audio.md). Die Prüfung der Abhängigkeiten und der Eingaben steht in [docs/SECURITY.md](docs/SECURITY.md).
 

@@ -50,17 +50,40 @@ export function PracticePage() {
   const [micNote, setMicNote] = useState(false)
   const [finished, setFinished] = useState(false)
   const [readyFor, setReadyFor] = useState('')
+  const [micStarting, setMicStarting] = useState(false)
   const sessionRef = useRef<CaptureSession | null>(null)
   const urlRef = useRef<string | null>(null)
   const aliveRef = useRef(true)
+  const micToken = useRef(0)
+  const releaseRef = useRef<() => void>(() => undefined)
+
+  function releaseMic(): void {
+    micToken.current += 1
+    sessionRef.current?.release(urlRef.current)
+    sessionRef.current = null
+    urlRef.current = null
+    if (!aliveRef.current) return
+    setRecording(false)
+    setMicStarting(false)
+  }
+
+  releaseRef.current = releaseMic
 
   useEffect(() => {
     aliveRef.current = true
+    function onHidden(): void {
+      if (document.visibilityState === 'hidden') releaseRef.current()
+    }
+    function onPageHide(): void {
+      releaseRef.current()
+    }
+    document.addEventListener('visibilitychange', onHidden)
+    window.addEventListener('pagehide', onPageHide)
     return () => {
       aliveRef.current = false
-      sessionRef.current?.release(urlRef.current)
-      sessionRef.current = null
-      urlRef.current = null
+      document.removeEventListener('visibilitychange', onHidden)
+      window.removeEventListener('pagehide', onPageHide)
+      releaseRef.current()
     }
   }, [])
 
@@ -123,13 +146,6 @@ export function PracticePage() {
   const app = settings.appLang
   const targetLang = settings.targetLang
   const activeDirection = direction
-
-  function releaseMic(): void {
-    sessionRef.current?.release(urlRef.current)
-    sessionRef.current = null
-    urlRef.current = null
-    setRecording(false)
-  }
 
   function goNext(): void {
     releaseMic()
@@ -294,24 +310,35 @@ export function PracticePage() {
             ) : (
               <button
                 type="button"
+                disabled={micStarting}
                 onClick={() => {
+                  const token = micToken.current + 1
+                  micToken.current = token
                   setMicNote(false)
+                  setMicStarting(true)
                   void startMicrophone(() => {
                     if (!aliveRef.current) return
                     setRecording(false)
                   })
                     .then((next) => {
-                      if (!next || !aliveRef.current) {
+                      if (!next || !aliveRef.current || token !== micToken.current) {
                         next?.release(null)
-                        setMicNote(true)
+                        if (aliveRef.current && token === micToken.current) {
+                          setMicNote(true)
+                          setMicStarting(false)
+                        }
                         return
                       }
                       sessionRef.current?.release(null)
                       sessionRef.current = next
                       setRecording(true)
+                      setMicStarting(false)
                     })
                     .catch(() => {
-                      if (aliveRef.current) setMicNote(true)
+                      if (aliveRef.current && token === micToken.current) {
+                        setMicNote(true)
+                        setMicStarting(false)
+                      }
                     })
                 }}
               >
@@ -319,7 +346,7 @@ export function PracticePage() {
               </button>
             )}
           </div>
-          <button type="button" className="button primary" onClick={goNext}>
+          <button type="button" className="button primary" disabled={micStarting} onClick={goNext}>
             {copy.next}
           </button>
         </>

@@ -2,7 +2,7 @@ import '../zod-setup'
 import { z } from 'zod'
 import { PAIRS } from '../domain/pairs'
 import { directionLangs, legacyDirection } from '../domain/direction'
-import { cleanVoices, defaultSettings, normalizeSpeed, type ProgressSnapshot, type Settings, type StoredCard } from './types'
+import { VOICE_ID, cleanVoices, defaultSettings, normalizeSpeed, type ProgressSnapshot, type Settings, type StoredCard } from './types'
 
 export const IMPORT_LIMIT = 2_000_000
 
@@ -47,10 +47,10 @@ const settingsSchemaV2 = z.strictObject({
 
 const voicesSchema = z
   .strictObject({
-    de: z.string().min(1).max(40).optional(),
-    en: z.string().min(1).max(40).optional(),
-    'pt-BR': z.string().min(1).max(40).optional(),
-    vi: z.string().min(1).max(40).optional(),
+    de: z.string().regex(VOICE_ID).optional(),
+    en: z.string().regex(VOICE_ID).optional(),
+    'pt-BR': z.string().regex(VOICE_ID).optional(),
+    vi: z.string().regex(VOICE_ID).optional(),
   })
   .optional()
 
@@ -157,6 +157,11 @@ export function parseImport(text: string, conceptIds: ReadonlySet<string>): Impo
   const parsed = bundleSchema.safeParse(raw)
   if (!parsed.success) throw new Error('IMPORT_REJECTED')
   if (parsed.data.format === 3 && parsed.data.settings.appLang === parsed.data.settings.targetLang) throw new Error('IMPORT_REJECTED')
+  const exportedAt = Date.parse(parsed.data.exportedAt)
+  if (!Number.isFinite(exportedAt)) throw new Error('IMPORT_REJECTED')
+  for (const card of parsed.data.cards) {
+    if (card.last_review && Date.parse(card.last_review) > exportedAt) throw new Error('IMPORT_REJECTED')
+  }
   const ids = parsed.data.cards.map((card) => card.cardId)
   if (new Set(ids).size !== ids.length) throw new Error('IMPORT_REJECTED')
   const cards: StoredCard[] = []

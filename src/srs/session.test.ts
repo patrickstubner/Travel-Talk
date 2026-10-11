@@ -75,6 +75,7 @@ describe('new and due', () => {
       due: new Date(2026, 9, 11, 8, 0, 0).toISOString(),
     })
     expect(introducedToday(introduced, now)).toBe(true)
+    expect(introducedToday({ ...introduced, reps: 0 }, now)).toBe(false)
     expect(introducedToday(older, now)).toBe(false)
     expect(dayKey(now)).toBe('2026-10-11')
     const concepts = [{ id: 'old' }, { id: 'fresh' }]
@@ -96,6 +97,20 @@ describe('new and due', () => {
     expect(mixed.filter((item) => item.isNew)).toHaveLength(2)
     expect(buildSession(concepts, reviews, 'de-vi', now, 'review').every((item) => !item.isNew)).toBe(true)
     expect(buildSession(concepts, reviews, 'de-vi', now, 'new').every((item) => item.isNew)).toBe(true)
+  })
+
+  it('counts new cards toward one daily cap across every direction', () => {
+    const introduced = Array.from({ length: DAILY_NEW_CAP }, (_, index) =>
+      card({
+        cardId: `pt-en:c${index}`,
+        elapsed_days: 0,
+        reps: 1,
+        last_review: now.toISOString(),
+      }),
+    )
+    const concepts = [{ id: 'fresh' }]
+    expect(buildSession(concepts, introduced, 'de-vi', now, 'new')).toEqual([])
+    expect(buildSession(concepts, introduced.slice(0, DAILY_NEW_CAP - 1), 'de-vi', now, 'new')).toEqual([{ id: 'fresh', isNew: true }])
   })
 })
 

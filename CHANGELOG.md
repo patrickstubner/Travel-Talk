@@ -3,11 +3,14 @@
 ## 0.3.0 — 2026-10-11
 
 - Sprache der App und Lernsprache sind getrennt. Dieselbe Wahl steht zu Beginn und in den Einstellungen. Die feste Paarliste und der Schalter für die Oberflächensprache sind weg. Alle zwölf Richtungen laufen aus den vorhandenen Sätzen. Fehlt eine Zeile, wird sie ausgelassen.
-- Heute lernen ist eine kurze Sitzung: fällige Wiederholungen und wenige neue Sätze. Unbekannte Sätze sind nicht fällig. Höchstens 15 neue Sätze am Tag, in der ersten Sitzung etwa vier.
+- Heute lernen ist eine kurze Sitzung: fällige Wiederholungen und wenige neue Sätze. Unbekannte Sätze sind nicht fällig. Höchstens 15 neue Sätze am Tag, über alle Richtungen zusammen. In einer Sitzung etwa vier, weniger wenn viele Wiederholungen warten.
 - Jeder neue Satz: langsam hören, normales Tempo, nachsprechen, Bedeutung wählen, selbst sagen, dann vier Abstände vom Planer. Die Schrift der Lernsprache bleibt bei einem neuen Satz sichtbar und kommt nach der Antwort wieder, wenn sie verdeckt war. Tippen ist nicht Teil des Wegs.
 - Am Ende stehen die Anzahl, ein Satz aus der Situation und was morgen kommt. Keine Punkte.
 - Die fünf festen Tonbögen sind von der Satzseite weg. Die Tonhöhenkurve kommt nur nach einer Aufnahme. Eine Stimme pro Sprache, ehrlich benannt. Ein optionales `voices`-Feld bleibt für eine spätere Wahl.
 - Exportformat 3 speichert `appLang` und `targetLang`. `pairId` und `uiLang` sind keine Felder mehr. Format 1 und 2 werden gelesen. Die App-Sprache wird die bisherige Ausgangssprache, die Lernsprache die bisherige Zielsprache. Karten und Lernstand bleiben. War die Oberfläche Deutsch und die Ausgangssprache eine andere, bleiben die Aufgaben bei dieser Ausgangssprache.
+- Das Mikrofon stoppt, wenn der Tab versteckt wird oder die Seite zugeht, in der Übung und auf der Satzseite. «Weiter» wartet, bis die Aufnahme steht. Ein Start, der erst nach dem Schrittwechsel ankommt, gibt die Tracks sofort frei.
+- Ein `last_review` in der Zukunft bringt «Heute lernen» nicht mehr zum Absturz. Der Import lehnt eine Karte ab, deren letzter Lernzeitpunkt nach dem Export liegt.
+- Export und Sicherung bleiben aus, bis beide Sprachen gewählt sind. Eine Stimmen-ID ist `^[a-z0-9_-]{1,40}$`. Eine Notiz aus IndexedDB verliert Steuerzeichen ausser Zeilenumbruch und Tabulator.
 
 ## 0.2.2 — 2026-10-10
 

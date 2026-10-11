@@ -1,6 +1,6 @@
-# Audio in Travel Talk 0.2.0
+# Audio in Travel Talk
 
-Stand: 10. Oktober 2026.
+Stand: 11. Oktober 2026. Dateien, Lizenzen und die drei Tempostufen sind die von 0.2.0. Ab 0.3.0 spielt die Sitzung 70 % und 100 % als zwei Schritte. Die fünf festen Tonbögen sind aus der Oberfläche.
 
 ## Entscheidung
 
@@ -47,7 +47,7 @@ Die Regel steht in `suggestedSpeed` (`src/audio/speed.ts`) und hat Tests. Eine K
 
 Mit dem Standard-Planer, Behaltensrate 0.9 und ohne Zufall erreicht eine neue Karte die 21 am vierten «Gut». Nach einem «Nochmal» ist der Zustand Wiederlernen, also wieder 70 %, auch wenn die Stabilität noch hoch ist.
 
-Die Hörübung benutzt dieselbe Funktion. Eine bekannte Karte wird bei «Automatisch» mit 100 % geprüft.
+Die Satzseite benutzt dieselbe Funktion. Eine bekannte Karte wird bei «Automatisch» mit 100 % abgespielt. Die Sitzung seit 0.3.0 spielt einen neuen Satz erst mit 70 % und dann mit 100 %, als zwei Schritte, nicht über diesen Regler.
 
 Die einzige Wahl sitzt am Player des Satzes: Automatisch, 70 %, 85 %, 100 %. Eine feste Stufe gilt für alles Audio, auch Üben und Zeigen, und bleibt in den lokalen Einstellungen, bis wieder «Automatisch» gewählt wird. Üben und Zeigen zeigen die Stufe als Text und haben keine zweite Schalterleiste. Die Tonhöhenkurve liest weiter die Datei mit 100 %, nicht eine gedehnte.
 
@@ -83,7 +83,9 @@ Nicht verwendet:
 
 Eine frei weitergebbare Piper-Stimme mit südlichem Akzent gibt es in dieser Auswahl nicht. Die App spricht vietnamesische Sätze deshalb mit der nördlichen Stimme, auch wenn der Text die südliche Variante ist (`đậu phộng`, `Dạ`, `ba`, `chén`). Die Oberfläche sagt das an der Stelle, nicht nur in dieser Datei.
 
-Die Tonhöhenkurve vergleicht die eigene Aufnahme mit genau dieser nördlichen Datei. Eine Abweichung kann an der Stimme liegen. Das Schema der fünf südlichen Töne in der Übung ist eine Zeichnung, keine Aufnahme.
+Die Tonhöhenkurve vergleicht die eigene Aufnahme mit genau dieser nördlichen Datei. Eine Abweichung kann an der Stimme liegen. Sie erscheint nur nach einer Aufnahme. Die fünf festen Tonbögen sind nicht mehr in der Oberfläche.
+
+Wird der Tab versteckt oder die Seite geschlossen, stoppt die Aufnahme und das Mikrofon wird freigegeben, auf der Satzseite und im Schritt Nachsprechen. «Weiter» ist gesperrt, solange das Mikrofon in der Sitzung noch startet. Ein Start, der erst danach fertig wird, gibt die Tracks sofort frei.
 
 ## Dateinamen
 

@@ -6,10 +6,10 @@ import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { publicUrl } from '../public-url'
 import { IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport, type ImportPreview } from '../storage/import'
-import { usesLang, type ProgressSnapshot, type Settings } from '../storage/types'
+import { cleanPersonalNote, usesLang, type ProgressSnapshot, type Settings } from '../storage/types'
 
 function cleanNote(value: string): string {
-  return value.replace(/[^\P{C}\n\t]/gu, '').slice(0, 500)
+  return cleanPersonalNote(value)
 }
 
 type PendingImport = {
@@ -34,6 +34,7 @@ export function SettingsPage() {
   const [persistState, setPersistState] = useState<'ok' | 'no' | null>(null)
   if (!snapshot) return null
   const current = snapshot
+  const canExport = settings.appLang != null && settings.targetLang != null
 
   function update(patch: Partial<Settings>): void {
     void saveSettings({ ...settings, ...patch })
@@ -168,7 +169,7 @@ export function SettingsPage() {
       </label>
       <p className="hint">{copy.exportNoteHint}</p>
       <div className="row">
-        <button type="button" onClick={() => downloadSnapshot(includeNote, 'travel-talk.json')}>
+        <button type="button" disabled={!canExport} onClick={() => downloadSnapshot(includeNote, 'travel-talk.json')}>
           {copy.exportLabel}
         </button>
         <label className="button">
@@ -194,7 +195,7 @@ export function SettingsPage() {
           <p className="hint">{copy.importBackup}</p>
           {pending.skipped > 0 ? <p>{copy.importSkipped(pending.skipped)}</p> : null}
           <div className="row">
-            <button type="button" onClick={() => downloadSnapshot(includeNote, 'travel-talk-sicherung.json')}>
+            <button type="button" disabled={!canExport} onClick={() => downloadSnapshot(includeNote, 'travel-talk-sicherung.json')}>
               {copy.backupDownload}
             </button>
             <button
@@ -241,7 +242,7 @@ export function SettingsPage() {
           <p>{copy.resetAsk}</p>
           <p className="hint">{copy.importBackup}</p>
           <div className="row">
-            <button type="button" onClick={() => downloadSnapshot(includeNote, 'travel-talk-sicherung.json')}>
+            <button type="button" disabled={!canExport} onClick={() => downloadSnapshot(includeNote, 'travel-talk-sicherung.json')}>
               {copy.backupDownload}
             </button>
             <button

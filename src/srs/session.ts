@@ -37,7 +37,7 @@ export function introducedToday(card: StoredCard, now: Date): boolean {
   return dayKey(new Date(card.last_review)) === dayKey(now)
 }
 
-/** At most four new phrases in a session, and at most 15 in a day. Fewer when reviews pile up. */
+/** At most four new phrases in a session, and at most 15 new cards in a day across every direction. Fewer when reviews pile up. */
 export function newCardBudget(dueCount: number, introduced: number): number {
   const room = Math.max(0, DAILY_NEW_CAP - introduced)
   let take = SESSION_NEW
@@ -102,7 +102,7 @@ export function buildSession(
   const reviews: SessionItem[] = []
   const fresh: SessionItem[] = []
   let introduced = 0
-  for (const card of byId.values()) {
+  for (const card of cards) {
     if (introducedToday(card, now)) introduced += 1
   }
   for (const concept of concepts) {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Rating, emptyCard, reviewCard, toStored } from '../srs/scheduler'
 import { EXPORT_FORMAT, IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport } from './import'
-import { coerceSettings, defaultSettings } from './types'
+import { cleanPersonalNote, coerceSettings, defaultSettings } from './types'
 
 const current = { ...defaultSettings, appLang: 'de' as const, targetLang: 'vi' as const, personalNote: 'Erdnüsse' }
 const legacySettings = {
@@ -131,6 +131,9 @@ describe('import', () => {
     expect(coerceSettings({ ...rest, slow: false }).speed).toBe('auto')
     expect(coerceSettings({ slow: true }).speed).toBe(0.85)
     expect(coerceSettings({}).speed).toBe('auto')
+    expect(cleanPersonalNote('Erd\u0000nüsse')).toBe('Erdnüsse')
+    expect(coerceSettings({ personalNote: 'Erd\u0007nüsse\nZeile' }).personalNote).toBe('Erdnüsse\nZeile')
+    expect(coerceSettings({ voices: { vi: 'not a voice', de: 'thorsten' } }).voices).toEqual({ de: 'thorsten' })
   })
 
   it('rejects a settings object that carries an unknown field', () => {
@@ -240,6 +243,45 @@ describe('import', () => {
     expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
     file.settings.voices = { vi: 'vais1000' }
     expect(parseImport(JSON.stringify(file), concepts).snapshot.settings.voices).toEqual({ vi: 'vais1000' })
+    file.settings.voices = { vi: 'not a voice' }
+    expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
+  })
+
+  it('rejects a format 3 file with an unknown top-level field', () => {
+    const file = JSON.parse(toExport({ settings: current, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))) as Record<string, unknown>
+    file.surprise = true
+    expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
+  })
+
+  it('rejects a last review dated after the export', () => {
+    const raw = JSON.parse(bundle([card()])) as { exportedAt: string; cards: { last_review: string }[] }
+    raw.exportedAt = '2026-10-10T00:00:00.000Z'
+    raw.cards[0]!.last_review = '2026-10-11T00:00:00.000Z'
+    expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow('IMPORT_REJECTED')
+    raw.cards[0]!.last_review = '2026-10-10T00:00:00.000Z'
+    expect(parseImport(JSON.stringify(raw), concepts).snapshot.cards).toHaveLength(1)
+  })
+
+  it('maps every old pair, including pt-vi, onto the two languages', () => {
+    const pairs: Array<[string, string, string]> = [
+      ['de-vi', 'de', 'vi'],
+      ['de-pt', 'de', 'pt-BR'],
+      ['pt-de', 'pt-BR', 'de'],
+      ['en-pt', 'en', 'pt-BR'],
+      ['pt-en', 'pt-BR', 'en'],
+      ['pt-vi', 'pt-BR', 'vi'],
+      ['vi-pt', 'vi', 'pt-BR'],
+    ]
+    for (const [pairId, appLang, targetLang] of pairs) {
+      const raw = JSON.parse(bundle()) as { format: number; settings: { pairId: string; uiLang: string } }
+      raw.format = 2
+      raw.settings.pairId = pairId
+      raw.settings.uiLang = 'source'
+      const settings = parseImport(JSON.stringify(raw), concepts).snapshot.settings
+      expect(settings.appLang).toBe(appLang)
+      expect(settings.targetLang).toBe(targetLang)
+      expect(settings).not.toHaveProperty('pairId')
+    }
   })
 })
 
