@@ -3,12 +3,21 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { de } from '../i18n/dictionary'
 import { playSequence, stopSlices } from '../audio/slice'
+import { scoreRepeat } from '../pitch/feedback'
 import { RepeatFeedback } from './RepeatFeedback'
 
 vi.mock('../audio/slice', () => ({
   playSequence: vi.fn(async () => undefined),
   stopSlices: vi.fn(),
 }))
+
+vi.mock('../pitch/feedback', async () => {
+  const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
+  return {
+    ...actual,
+    scoreRepeat: vi.fn((input: Parameters<typeof actual.scoreRepeat>[0]) => actual.scoreRepeat(input)),
+  }
+})
 
 function tone(startHz: number, endHz: number, seconds: number): Float32Array {
   const sampleRate = 16000
@@ -34,6 +43,7 @@ function renderFeedback(
   samples = tone(140, 280, 1.2),
   timed: typeof words | null = words,
   voiceId = 'vais1000',
+  timingsPending = false,
 ): void {
   render(
     <RepeatFeedback
@@ -48,6 +58,7 @@ function renderFeedback(
       userRate={16000}
       modelMissing={false}
       voiceId={voiceId}
+      timingsPending={timingsPending}
     />,
   )
 }
@@ -110,7 +121,28 @@ describe('repeat feedback view', () => {
     expect(screen.queryByText(/sechs Formen/)).toBeNull()
   })
 
-  it('keeps the curves and drops the colour buttons when the timing file is missing', () => {
+  it('keeps the stars for joe when the take matches the file', () => {
+    renderFeedback('en', tone(140, 280, 1.2), words, 'joe')
+    expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('green')
+    expect(screen.getByTestId('repeat-stars').textContent).toContain('Drei von drei')
+  })
+
+  it('passes the loudness of the model and the take into the score', () => {
+    renderFeedback()
+    const input = vi.mocked(scoreRepeat).mock.calls.at(-1)?.[0]
+    expect(input?.modelEnergy?.length ?? 0).toBeGreaterThan(8)
+    expect(input?.userEnergy?.length ?? 0).toBeGreaterThan(8)
+    expect(input?.modelEnergy?.some((value) => value > 0)).toBe(true)
+    expect(input?.userEnergy?.some((value) => value > 0)).toBe(true)
+  })
+
+  it('shows the missing-times line only once the timings are known to be absent', () => {
+    renderFeedback('de', tone(220, 220, 1.2), words)
+    expect(screen.queryByText('Keine Wortzeiten für diese Stimme.')).toBeNull()
+    cleanup()
+    renderFeedback('de', tone(220, 220, 1.2), null, 'thorsten-high', true)
+    expect(screen.queryByText('Keine Wortzeiten für diese Stimme.')).toBeNull()
+    cleanup()
     renderFeedback('de', tone(220, 220, 1.2), null)
     expect(screen.getByTestId('repeat-feedback').querySelector('canvas')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'qua' })).toBeNull()

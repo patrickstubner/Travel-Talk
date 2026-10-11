@@ -64,6 +64,7 @@ export function PracticePage() {
   const [modelTake, setModelTake] = useState<{ samples: Float32Array; sampleRate: number } | null>(null)
   const [modelMissing, setModelMissing] = useState(false)
   const [feedbackTimes, setFeedbackTimes] = useState<WordTime[] | null>(null)
+  const [timingsPending, setTimingsPending] = useState(false)
   const sessionRef = useRef<CaptureSession | null>(null)
   const takeRef = useRef<{ url: string; samples: Float32Array | null; sampleRate: number } | null>(null)
   const lockedFile = useRef('')
@@ -195,21 +196,24 @@ export function PracticePage() {
       setModelTake(null)
       setFeedbackTimes(null)
       setModelMissing(false)
+      setTimingsPending(false)
       return
     }
     const line = resolvePlayback(concept, settings.targetLang, settings.viRegion, prefsFromSettings(settings.targetLang, settings))
     if (!line) return
     const file = tempoFile(spokenFile(settings, settings.targetLang, line.file), 1)
     let live = true
+    setTimingsPending(true)
     void decodeContourFile(file).then(async (decoded) => {
       if (!live) return
-      setModelTake(decoded)
-      setModelMissing(!decoded)
       const aligned = await loadAlignment(file, line.speech)
       if (!live) return
       const duration = decoded ? decoded.samples.length / decoded.sampleRate : 0
+      setModelTake(decoded)
+      setModelMissing(!decoded)
       if (decoded && aligned && alignmentFitsDuration(aligned, duration, alignmentScale(file))) setFeedbackTimes(aligned)
       else setFeedbackTimes(null)
+      setTimingsPending(false)
     })
     return () => {
       live = false
@@ -471,6 +475,7 @@ export function PracticePage() {
               userSamples={take.samples}
               userRate={take.sampleRate}
               modelMissing={modelMissing}
+              timingsPending={timingsPending}
               voiceId={selectedVoice(settings, targetLang).id}
             />
           ) : null}

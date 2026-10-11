@@ -2,10 +2,13 @@
 import 'fake-indexeddb/auto'
 import { freshIndexedDb } from '../test-idb'
 import { useEffect, type ReactNode } from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppProvider, useApp } from '../app/state'
+import { splitWords } from '../../content/gloss'
+import { loadAlignment } from '../audio/align'
+import { decodeContourFile } from '../audio/player'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { reviewCard } from '../srs/scheduler'
 import { PracticePage } from './Practice'
@@ -14,6 +17,11 @@ vi.mock('../audio/player', () => ({
   playClip: vi.fn(async () => 'file'),
   decodeContourFile: vi.fn(async () => null),
 }))
+
+vi.mock('../audio/align', async () => {
+  const actual = await vi.importActual<typeof import('../audio/align')>('../audio/align')
+  return { ...actual, loadAlignment: vi.fn(async () => null) }
+})
 
 vi.mock('../audio/recorder', () => ({
   startMicrophone: vi.fn(),
@@ -62,6 +70,10 @@ beforeEach(() => {
   freshIndexedDb()
   vi.mocked(startMicrophone).mockReset()
   vi.mocked(reviewCard).mockClear()
+  vi.mocked(loadAlignment).mockReset()
+  vi.mocked(loadAlignment).mockResolvedValue(null)
+  vi.mocked(decodeContourFile).mockReset()
+  vi.mocked(decodeContourFile).mockResolvedValue(null)
 })
 
 afterEach(() => {
@@ -146,6 +158,39 @@ describe('practice repeat feedback', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
     await screen.findByTestId('repeat-feedback')
     expect(screen.getByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeTruthy()
+  })
+
+  it('does not say the timings are missing while they are still loading', async () => {
+    const samples = sine(1.2)
+    let release: (value: { start: number; end: number }[] | null) => void = () => undefined
+    vi.mocked(decodeContourFile).mockResolvedValue({ samples, sampleRate: 16000 })
+    vi.mocked(loadAlignment).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = resolve
+        }),
+    )
+    vi.mocked(startMicrophone).mockImplementation(async (onStop) => {
+      const session = {
+        recorder: {
+          stop: () => onStop({ url: 'blob:repeat-wait', samples, sampleRate: 16000 }),
+          state: 'recording',
+          stream: { getTracks: () => [] },
+        },
+        release: vi.fn(),
+      }
+      return session as unknown as CaptureSession
+    })
+    await openRepeat()
+    fireEvent.click(screen.getByRole('button', { name: 'Aufnehmen' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+    await screen.findByTestId('repeat-feedback')
+    await waitFor(() => expect(vi.mocked(loadAlignment).mock.calls.length).toBeGreaterThan(0))
+    expect(screen.queryByText('Keine Wortzeiten für diese Stimme.')).toBeNull()
+    const speech = String(vi.mocked(loadAlignment).mock.calls.at(-1)?.[1] ?? '')
+    const count = Math.max(1, splitWords(speech).length)
+    release(Array.from({ length: count }, (_, index) => ({ start: index * 0.02, end: index * 0.02 + 0.01 })))
+    await waitFor(() => expect(screen.queryByText('Keine Wortzeiten für diese Stimme.')).toBeNull())
   })
 
   it('hides the northern hint when the selected voice is vivos-22', async () => {

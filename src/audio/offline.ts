@@ -1,5 +1,6 @@
 import type { Lang } from '../../content/phrase'
 import { publicUrl } from '../public-url'
+import { replacedClipPaths } from './clip-revision'
 import { loadManifest } from './player'
 import type { Settings } from '../storage/types'
 import { filesForVoice, selectedVoice, voicesFor, voicesKeptByOthers, type CatalogVoice } from './voices'
@@ -139,6 +140,25 @@ export async function loadVoiceOffline(
   }
   if (missing === 0 && options.dropOthers()) await dropOtherVoices(lang, voice, options.retainIds ?? [])
   return { status: 'ready', missing, added }
+}
+
+/**
+ * Drops the 0.7.0 names of clips that were spoken again in 0.8.0.
+ * The page now asks for `.v2`. The old bytes would otherwise stay for a year.
+ */
+export async function dropReplacedClips(): Promise<void> {
+  if (!('caches' in globalThis)) return
+  const stale = replacedClipPaths()
+  const cache = await caches.open(AUDIO_CACHE)
+  let removed = 0
+  for (const request of await cache.keys()) {
+    const url = requestUrl(request)
+    if (stale.some((file) => url.endsWith(`/${file}`))) {
+      await cache.delete(request)
+      removed += 1
+    }
+  }
+  if (removed > 0) notifyAudioChanged()
 }
 
 /** Drops only the files added by a failed attempt, so a complete older voice stays. */

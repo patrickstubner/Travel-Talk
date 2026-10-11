@@ -65,6 +65,7 @@ export function PhrasePage() {
   const [modelAudio, setModelAudio] = useState<{ samples: Float32Array; sampleRate: number } | null>(null)
   const [modelMissing, setModelMissing] = useState(false)
   const [feedbackTimes, setFeedbackTimes] = useState<WordTime[] | null>(null)
+  const [timingsPending, setTimingsPending] = useState(false)
 
   const target = concept && targetLang ? resolvePlayback(concept, targetLang, settings.viRegion, prefsFromSettings(targetLang, settings)) : undefined
   const source = concept && app ? resolvePlayback(concept, app, settings.viRegion, prefsFromSettings(app, settings)) : undefined
@@ -123,17 +124,20 @@ export function PhrasePage() {
       setModelAudio(null)
       setModelMissing(false)
       setFeedbackTimes(null)
+      setTimingsPending(false)
       return
     }
+    setTimingsPending(true)
     void decodeContourFile(alignFile).then(async (decoded) => {
       if (!active) return
-      setModelAudio(decoded)
-      setModelMissing(!decoded)
       const aligned = await loadAlignment(alignFile, targetSpeech)
       if (!active) return
       const duration = decoded ? decoded.samples.length / decoded.sampleRate : 0
+      setModelAudio(decoded)
+      setModelMissing(!decoded)
       if (decoded && aligned && alignmentFitsDuration(aligned, duration, alignmentScale(alignFile))) setFeedbackTimes(aligned)
       else setFeedbackTimes(null)
+      setTimingsPending(false)
     })
     return () => {
       active = false
@@ -327,6 +331,7 @@ export function PhrasePage() {
           userSamples={userAudio.samples}
           userRate={userAudio.sampleRate}
           modelMissing={modelMissing}
+          timingsPending={timingsPending}
           voiceId={selectedVoice(settings, targetLang).id}
         />
       ) : null}

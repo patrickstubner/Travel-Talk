@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defaultSettings } from '../storage/types'
 import { voicesFor } from './voices'
-import { AUDIO_CACHE, discardAdded, dropOtherVoices, forgetVoiceIfUnused, loadVoiceOffline, voiceProgress } from './offline'
+import { AUDIO_CACHE, discardAdded, dropOtherVoices, dropReplacedClips, forgetVoiceIfUnused, loadVoiceOffline, voiceProgress } from './offline'
 
 const FILES = [
   'vi/vivos-22/emergency.help__any__base.m4a',
@@ -327,5 +327,21 @@ describe('offline voice loading', () => {
     expect(outcome.missing).toBe(0)
     expect(stores.get(AUDIO_CACHE)?.has(other)).toBe(true)
     expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(false)
+  })
+
+  it('drops the old names of clips that were spoken again', async () => {
+    const stores = installCaches()
+    const stale = '/Travel-Talk/audio/vi/vivos-22/transport.01.taxi__any__base.m4a'
+    const staleTimes = '/audio/de/transport.20.seasick__any__base.align.json'
+    const kept = '/audio/vi/vivos-22/emergency.help__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([
+      [stale, 'old-taxi'],
+      [staleTimes, 'old-times'],
+      [kept, 'kept'],
+    ]))
+    await dropReplacedClips()
+    expect(stores.get(AUDIO_CACHE)?.has(stale)).toBe(false)
+    expect(stores.get(AUDIO_CACHE)?.has(staleTimes)).toBe(false)
+    expect(stores.get(AUDIO_CACHE)?.has(kept)).toBe(true)
   })
 })

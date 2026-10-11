@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ANALYSIS_RATE, contourFromSamples, describeShape, dtwDistance, samplesForAnalysis, voicedValues } from './contour'
+import { ANALYSIS_RATE, contourFromSamples, describeShape, dtwDistance, repairHarmonics, samplesForAnalysis, voicedValues } from './contour'
 
 function tone(startHz: number, endHz: number, seconds = 1.6): Float32Array {
   const sampleRate = 16000
@@ -15,6 +15,21 @@ function tone(startHz: number, endHz: number, seconds = 1.6): Float32Array {
 }
 
 describe('pitch contour', () => {
+  it('folds a lone harmonic and leaves a mixed contour alone', () => {
+    const steady = Array.from({ length: 40 }, () => 110)
+    steady[10] = 220
+    steady[11] = 221
+    steady[12] = 330
+    const fixed = repairHarmonics(steady)
+    expect(fixed[10]).toBeCloseTo(110, 0)
+    expect(fixed[12]).toBeCloseTo(110, 0)
+    expect(fixed[0]).toBe(110)
+    const mixed = Array.from({ length: 20 }, (_, index) => (index < 10 ? 110 : 220))
+    expect(repairHarmonics(mixed)).toEqual(mixed)
+    const rise = Array.from({ length: 30 }, (_, index) => 100 + index * 3)
+    expect(repairHarmonics(rise)).toEqual(rise)
+  })
+
   it('reads a steady sine near its own median', () => {
     const contour = contourFromSamples(tone(220, 220), 16000)
     const voiced = voicedValues(contour)

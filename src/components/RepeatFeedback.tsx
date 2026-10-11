@@ -5,6 +5,7 @@ import type { WordTime } from '../audio/align'
 import { playSequence, stopSlices } from '../audio/slice'
 import type { Dictionary } from '../i18n/dictionary'
 import { analysisHop, contourFromSamples, frameEnergy, voicedValues, type Contour } from '../pitch/contour'
+import { bandShape, closestBands } from '../pitch/spectrum'
 import {
   MIN_VOICED,
   SHORT_SECONDS,
@@ -94,6 +95,7 @@ export function RepeatFeedback({
   userRate,
   modelMissing,
   voiceId,
+  timingsPending = false,
 }: {
   copy: Dictionary
   lang: Lang
@@ -106,6 +108,8 @@ export function RepeatFeedback({
   userRate: number
   modelMissing: boolean
   voiceId: string
+  /** True while the timing file is still loading. The missing-times line waits. */
+  timingsPending?: boolean
 }) {
   const [view, setView] = useState<'result' | 'word' | 'tones'>('result')
   const [selected, setSelected] = useState(0)
@@ -119,6 +123,14 @@ export function RepeatFeedback({
     [modelRate, modelSamples],
   )
   const userEnergy = useMemo(() => (userRate > 0 ? frameEnergy(userSamples, userRate) : null), [userRate, userSamples])
+  const modelBands = useMemo(
+    () => (modelSamples && modelRate > 0 ? bandShape(modelSamples, modelRate) : null),
+    [modelRate, modelSamples],
+  )
+  const userBands = useMemo(
+    () => (userRate > 0 ? closestBands(modelBands, userSamples, userRate) : null),
+    [modelBands, userRate, userSamples],
+  )
   const score = useMemo<RepeatScore | null>(() => {
     if (!modelContour || modelRate <= 0 || userRate <= 0) return null
     const labels = splitWords(speech)
@@ -134,8 +146,10 @@ export function RepeatFeedback({
       userDuration: userSamples.length / userRate,
       modelEnergy,
       userEnergy,
+      modelBands,
+      userBands,
     })
-  }, [lang, modelContour, modelEnergy, modelRate, region, speech, userContour, userEnergy, userRate, userSamples, words])
+  }, [lang, modelBands, modelContour, modelEnergy, modelRate, region, speech, userBands, userContour, userEnergy, userRate, userSamples, words])
 
   useEffect(() => {
     setView('result')
@@ -170,7 +184,7 @@ export function RepeatFeedback({
           score={score}
           modelMissing={modelMissing}
           tooShort={userDuration < SHORT_SECONDS || score?.tooShort === true}
-          timingMissing={words == null && !modelMissing && modelSamples != null}
+          timingMissing={!timingsPending && words == null && !modelMissing && modelSamples != null}
           tooQuiet={! (userDuration < SHORT_SECONDS) && (score?.tooLittleVoice === true || (modelMissing && userQuiet))}
           onWord={(index) => {
             setSelected(index)

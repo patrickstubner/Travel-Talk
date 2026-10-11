@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { contourFromSamples, dtwDistance, voicedValues, type Contour } from './contour'
-import { barFromColours, flatContour, matchesBetterBackwards, melodyBand, rhythmBand, scoreRepeat, starsFromBars, thin, toneSentence } from './feedback'
+import {
+  DRONE_ENERGY,
+  MELODY_GREEN,
+  contentMismatch,
+  barFromColours,
+  droneAgainstSpeech,
+  flatContour,
+  matchesBetterBackwards,
+  melodyBand,
+  rhythmBand,
+  scoreRepeat,
+  starsFromBars,
+  takeRunsBackwards,
+  thin,
+  toneSentence,
+} from './feedback'
 
 function flat(count: number, value: number | null): Contour {
   return Array.from({ length: count }, () => value)
@@ -651,5 +666,124 @@ describe('repeat alignment', () => {
     })
     expect(same.unclear).toBe(false)
     expect(same.stars).toBe(3)
+  })
+
+  it('calls the take unclear when every word runs the other way', () => {
+    const model = [...ramp(30, -1, 2), ...ramp(30, -2.5, 0.5), ...ramp(30, 0, 2.4)]
+    const user = [...ramp(30, 1.5, -1.2), ...ramp(30, 0.4, -2), ...ramp(30, 2.2, -0.4)]
+    const words = [0, 1, 2].map((index) => ({ text: 'qua', start: index * 0.3, end: (index + 1) * 0.3 }))
+    const opposed = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.9,
+    })
+    expect(matchesBetterBackwards(model, user, null)).toBe(false)
+    expect(takeRunsBackwards(['opposed', 'opposed', 'opposed'])).toBe(true)
+    expect(takeRunsBackwards(['opposed', 'same', 'opposed'])).toBe(false)
+    expect(takeRunsBackwards(['unknown'])).toBe(false)
+    expect(opposed.unclear).toBe(true)
+    expect(opposed.stars).toBe(0)
+    const last = [...user.slice(0, 60), ...model.slice(60)]
+    const partial = scoreRepeat({
+      model,
+      user: last,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.9,
+    })
+    expect(partial.unclear).toBe(false)
+  })
+
+  it('drops a close word from green to yellow when the direction only partly agrees', () => {
+    const count = 32
+    const model = Array.from({ length: count }, (_, index) => Math.sin((2 * Math.PI * index) / 8))
+    const user = Array.from({ length: count }, (_, index) => Math.sin((2 * Math.PI * index) / 8 + 1.5))
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.32 }],
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.4,
+    })
+    expect(score.words?.[0]?.melodyDistance ?? 9).toBeLessThan(MELODY_GREEN)
+    expect(score.words?.[0]?.melody).toBe('yellow')
+  })
+
+  it('treats a slightly moving tone as a drone until the loudness variation passes 0.12', () => {
+    expect(DRONE_ENERGY).toBe(0.12)
+    const level = flat(40, 0.1)
+    const speech = Array.from({ length: 40 }, (_, index) => (index % 2 === 0 ? 0.2 : 0.9))
+    const mild = Array.from({ length: 40 }, (_, index) => (index % 2 === 0 ? 1 : 1.173913))
+    expect(droneAgainstSpeech(mild, speech)).toBe(true)
+    const tone = scoreRepeat({
+      model: level,
+      user: level,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'Bitte.', start: 0, end: 0.4 }],
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.4,
+      modelEnergy: speech,
+      userEnergy: mild,
+    })
+    expect(tone.unclear).toBe(true)
+    expect(tone.stars).toBe(0)
+    const lively = Array.from({ length: 40 }, (_, index) => (index % 2 === 0 ? 1 : 1.5))
+    expect(droneAgainstSpeech(lively, speech)).toBe(false)
+  })
+
+  it('withholds stars when most moving words do not follow the melody', () => {
+    const wave = (phase: number) => Array.from({ length: 32 }, (_, index) => Math.sin((2 * Math.PI * index) / 8 + phase))
+    const model = [...wave(0), ...wave(0), ...wave(0)]
+    const user = [...wave(1.5), ...wave(1.5), ...wave(0)]
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [0, 1, 2].map((index) => ({ text: 'qua', start: index * 0.32, end: (index + 1) * 0.32 })),
+      lang: 'de',
+      region: 'south',
+      userDuration: 1,
+    })
+    expect(score.unclear).toBe(false)
+    expect(score.words?.[0]?.melody).toBe('yellow')
+    expect(score.words?.[2]?.melody).toBe('green')
+    expect(score.stars).toBe(0)
+  })
+
+  it('calls a hum unclear when the band shape does not move with the file', () => {
+    const speech = Array.from({ length: 48 }, (_, index) => Array.from({ length: 12 }, (_, band) => ((index + band) % 5 === 0 ? 6 : -4)))
+    const hum = Array.from({ length: 48 }, () => new Array<number>(12).fill(0.2))
+    expect(contentMismatch(speech, hum, 'de')).toBe(true)
+    expect(contentMismatch(speech, speech, 'de')).toBe(false)
+    const contour = ramp(48, -1, 2)
+    const score = scoreRepeat({
+      model: contour,
+      user: contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.48 }],
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.6,
+      modelBands: speech,
+      userBands: hum,
+    })
+    expect(score.unclear).toBe(true)
+    expect(score.stars).toBe(0)
+    expect(score.melodyBar).toBeNull()
   })
 })

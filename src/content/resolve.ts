@@ -1,5 +1,6 @@
 import { addressForms, applyAddress, hasAddressToken } from '../../content/address'
 import type { Concept, Lang, Realization } from '../../content/phrase'
+import { reviseClip } from '../audio/clip-revision'
 import type { Catalog } from '../domain/schema'
 
 export type Playback = {
@@ -9,12 +10,12 @@ export type Playback = {
   variantId: string
 }
 
-/** Optional voice folder, then the concept file. The voice id matches `^[a-z0-9_-]{1,40}$`. */
-export const AUDIO_FILE = /^(de|en|pt-BR|vi)\/(?:[a-z0-9_-]{1,40}\/)?[a-z0-9.-]+__(south|north|any)__[a-z0-9-]+(\.r70|\.r85)?\.m4a$/
+/** Optional voice folder, then the concept file. The voice id matches `^[a-z0-9_-]{1,40}$`. A respoken clip may insert `.v2` before the tempo suffix. */
+export const AUDIO_FILE = /^(de|en|pt-BR|vi)\/(?:[a-z0-9_-]{1,40}\/)?[a-z0-9.-]+__(south|north|any)__[a-z0-9-]+(\.v[0-9]+)?(\.r70|\.r85)?\.m4a$/
 
 /** Timings for the base clip. Slow and normal files share this name. */
 export const ALIGN_FILE =
-  /^(de|en|pt-BR|vi)\/(?:[a-z0-9_-]{1,40}\/)?[a-z0-9.-]+__(south|north|any)__[a-z0-9-]+\.align\.json$/
+  /^(de|en|pt-BR|vi)\/(?:[a-z0-9_-]{1,40}\/)?[a-z0-9.-]+__(south|north|any)__[a-z0-9-]+(\.v[0-9]+)?\.align\.json$/
 
 const VOICE_FOLDER = /^[a-z0-9_-]{1,40}$/
 
@@ -66,7 +67,7 @@ export function resolvePlayback(
     return {
       text: applyAddress(templateText, chosen.insert),
       speech: applyAddress(templateSpeech, chosen.insert),
-      file: `${fileStem}.m4a`,
+      file: reviseClip(`${fileStem}.m4a`),
       variantId: chosen.id,
     }
   }
@@ -78,7 +79,7 @@ export function resolvePlayback(
   return {
     text,
     speech,
-    file: `${fileStem}.m4a`,
+    file: reviseClip(`${fileStem}.m4a`),
     variantId,
   }
 }
@@ -94,7 +95,7 @@ export function allSpeechLines(concepts: Concept[]): SpeechLine[] {
       if (hasAddressToken(realization.text) || hasAddressToken(templateSpeech)) {
         for (const form of addressForms(realization.lang)) {
           lines.push({
-            file: `${stem(realization.lang, concept.id, region, form.id)}.m4a`,
+            file: reviseClip(`${stem(realization.lang, concept.id, region, form.id)}.m4a`),
             lang: realization.lang,
             text: applyAddress(templateSpeech, form.insert),
           })
@@ -102,7 +103,7 @@ export function allSpeechLines(concepts: Concept[]): SpeechLine[] {
         continue
       }
       lines.push({
-        file: `${stem(realization.lang, concept.id, region, 'base')}.m4a`,
+        file: reviseClip(`${stem(realization.lang, concept.id, region, 'base')}.m4a`),
         lang: realization.lang,
         text: templateSpeech,
       })
@@ -110,7 +111,7 @@ export function allSpeechLines(concepts: Concept[]): SpeechLine[] {
         const speech = variant.speech ?? variant.text
         if (speech === templateSpeech) continue
         lines.push({
-          file: `${stem(realization.lang, concept.id, region, variant.id)}.m4a`,
+          file: reviseClip(`${stem(realization.lang, concept.id, region, variant.id)}.m4a`),
           lang: realization.lang,
           text: speech,
         })

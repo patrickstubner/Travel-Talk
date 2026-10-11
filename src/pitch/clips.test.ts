@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync as readBytes } from 'fs'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -11,16 +11,28 @@ import { VOICES } from '../audio/voices'
 import { allSpeechLines, voiceFile } from '../content/resolve'
 import { contourFromSamples, frameEnergy } from './contour'
 import { scoreRepeat } from './feedback'
+import { bandShape, closestBands } from './spectrum'
 
 /**
  * Regression for the star score, outside `npm test`.
- * Reversed takes stay under 5 % with any stars. A few symmetric sentences
- * still reach 2 or 3, because pitch and loudness look the same forwards
- * and backwards. Cutting those also cuts ±3 semitones and ±10 % tempo
- * below 2 stars, so the cap stays at 5 %. A steady tone never gets stars.
+ * Reversed takes stay under 5 % with any stars. The ones that still reach
+ * stars are listed in SYMMETRIC_REVERSED. The band check currently leaves
+ * that list empty. Cutting a stricter pitch rule also cuts ±3 semitones
+ * and ±10 % tempo below 2 stars, so the old 5 % cap stays as the backstop.
+ * A steady tone never gets stars. Joe keeps the stars. The floors below
+ * stay, including 35 % at ±3 semitones, until a harmonic repair can do
+ * better without praising a tone or a reversed take. A hum on the syllable
+ * grid, other speech and another sentence stay under 5 % with any stars.
  * Joe stays under the 98 % self-score of the other voices: clarity 0.6
  * recovered most of that low voice, and the 70 Hz floor was not the cause.
  */
+
+/**
+ * File and star count. Sorted. A new reversed reward fails the clip test.
+ * The band check now keeps every reversed clip under the language limit,
+ * so the list is empty. It stays as the guard.
+ */
+const SYMMETRIC_REVERSED = [] as const
 
 const KNOWN_MISSING = new Set([
   'de/stay.noisy__any__base.m4a',
@@ -80,10 +92,36 @@ type Counts = {
   fast: number
   slow: number
   varied: number
+  reverb: number
+  noise: number
+  hum: number
+  hum3: number
+  background: number
+  background3: number
+  other: number
+  other3: number
 }
 
 function empty(): Counts {
-  return { timed: 0, self: 0, rev: 0, tone: 0, up: 0, down: 0, fast: 0, slow: 0, varied: 0 }
+  return {
+    timed: 0,
+    self: 0,
+    rev: 0,
+    tone: 0,
+    up: 0,
+    down: 0,
+    fast: 0,
+    slow: 0,
+    varied: 0,
+    reverb: 0,
+    noise: 0,
+    hum: 0,
+    hum3: 0,
+    background: 0,
+    background3: 0,
+    other: 0,
+    other3: 0,
+  }
 }
 
 function add(into: Counts, row: Counts): void {
@@ -96,6 +134,14 @@ function add(into: Counts, row: Counts): void {
   into.fast += row.fast
   into.slow += row.slow
   into.varied += row.varied
+  into.reverb += row.reverb
+  into.noise += row.noise
+  into.hum += row.hum
+  into.hum3 += row.hum3
+  into.background += row.background
+  into.background3 += row.background3
+  into.other += row.other
+  into.other3 += row.other3
 }
 
 function share(part: number, total: number): number {
@@ -130,9 +176,61 @@ function tone(hz: number, length: number): Float32Array {
   return out
 }
 
+function mixPink(signal: Float32Array, seed: number, snrDb = 10): Float32Array {
+  let state = seed
+  const next = () => {
+    state = (state + 0x6d2b79f5) | 0
+    let value = Math.imul(state ^ (state >>> 15), 1 | state)
+    value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+  }
+  const noise = new Float32Array(signal.length)
+  let b0 = 0
+  let b1 = 0
+  let b2 = 0
+  for (let index = 0; index < signal.length; index += 1) {
+    const white = next() * 2 - 1
+    b0 = 0.99765 * b0 + white * 0.099046
+    b1 = 0.963 * b1 + white * 0.2965164
+    b2 = 0.57 * b2 + white * 1.0526913
+    noise[index] = b0 + b1 + b2 + white * 0.1848
+  }
+  let signalPower = 0
+  let noisePower = 0
+  for (let index = 0; index < signal.length; index += 1) {
+    signalPower += (signal[index] ?? 0) * (signal[index] ?? 0)
+    noisePower += (noise[index] ?? 0) * (noise[index] ?? 0)
+  }
+  const scale = noisePower > 0 ? Math.sqrt(signalPower / (10 ** (snrDb / 10) * noisePower)) : 0
+  const mixed = new Float32Array(signal.length)
+  for (let index = 0; index < signal.length; index += 1) mixed[index] = (signal[index] ?? 0) + (noise[index] ?? 0) * scale
+  return mixed
+}
+
+/** A hum that falls two semitones and pulses at 4 Hz, not on the word grid. */
+function humRhythm(length: number): Float32Array {
+  const out = new Float32Array(length)
+  let phase = 0
+  for (let index = 0; index < length; index += 1) {
+    const hz = 160 * 2 ** ((-2 * index) / length / 12)
+    phase += (2 * Math.PI * hz) / 16000
+    const pulse = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin((2 * Math.PI * 4 * index) / 16000))
+    out[index] = Math.sin(phase) * pulse * 0.5
+  }
+  return out
+}
+
+function reverb(signal: Float32Array): Float32Array {
+  const out = Float32Array.from(signal)
+  const delay = 640
+  for (let index = delay; index < signal.length; index += 1) out[index] = (signal[index] ?? 0) + 0.3 * (out[index - delay] ?? 0)
+  return out
+}
+
+/** Pitch only. `asetrate` also changes the duration, and `atempo` puts that duration back. */
 function pitchFilter(semitones: number): string {
   const factor = 2 ** (semitones / 12)
-  return `asetrate=${(16000 * factor).toFixed(3)},aresample=16000,atempo=${factor.toFixed(6)}`
+  return `asetrate=${(16000 * factor).toFixed(3)},aresample=16000,atempo=${(1 / factor).toFixed(6)}`
 }
 
 const ready = ffmpegReady()
@@ -160,11 +258,20 @@ describe('shipped clips', () => {
       const byLang = new Map<string, Counts>()
       const missing: string[] = []
       const reversedStars: string[] = []
+      const joeNoise = { up: 0, down: 0, varied: 0 }
+      const backgroundOf: Record<string, Float32Array> = {
+        de: decode('public/audio/en/meet.hello__any__base.m4a'),
+        en: decode('public/audio/de/meet.hello__any__base.m4a'),
+        'pt-BR': decode('public/audio/vi/meet.hello__any__ong.m4a'),
+        vi: decode('public/audio/pt-BR/meet.hello__any__base.m4a'),
+      }
       try {
         const lines = allSpeechLines(rawCatalog.concepts)
         for (const voice of VOICES.filter((item) => item.bundled)) {
           const row = empty()
           byVoice.set(voice.id, row)
+          const heard: Float32Array[] = []
+          const scorers: Array<(userSamples: Float32Array) => number> = []
           for (const line of lines) {
             if (line.lang !== voice.lang) continue
             const file = voiceFile(line.file, voice.id, voice.legacy)
@@ -189,6 +296,7 @@ describe('shipped clips', () => {
             const words = times.map((word, index) => ({ ...word, text: splitWords(line.text)[index] ?? '' }))
             const model = contourFromSamples(samples, 16000)
             const modelEnergy = frameEnergy(samples, 16000)
+            const modelBands = bandShape(samples, 16000)
             const region: 'south' | 'north' = file.includes('__north__') ? 'north' : 'south'
             const base = {
               model,
@@ -198,29 +306,39 @@ describe('shipped clips', () => {
               lang: line.lang,
               region,
               modelEnergy,
+              modelBands,
             }
+            const take = (userSamples: Float32Array) =>
+              scoreRepeat({
+                ...base,
+                user: contourFromSamples(userSamples, 16000),
+                userEnergy: frameEnergy(userSamples, 16000),
+                userDuration: userSamples.length / 16000,
+                userBands: closestBands(modelBands, userSamples, 16000),
+              })
+            heard.push(samples)
+            scorers.push((userSamples) => take(userSamples).stars)
             row.timed += 1
-            const self = scoreRepeat({ ...base, user: model, userEnergy: modelEnergy, userDuration: duration })
+            const self = scoreRepeat({ ...base, user: model, userEnergy: modelEnergy, userDuration: duration, userBands: modelBands })
             if (self.stars > 0) row.self += 1
             const reversedSamples = Float32Array.from(samples).reverse()
-            const rev = scoreRepeat({
-              ...base,
-              user: contourFromSamples(reversedSamples, 16000),
-              userEnergy: frameEnergy(reversedSamples, 16000),
-              userDuration: duration,
-            })
+            const rev = take(reversedSamples)
             if (rev.stars > 0) {
               row.rev += 1
               reversedStars.push(`${file} ${rev.stars}`)
             }
             const toneSamples = tone(120, samples.length)
-            const drone = scoreRepeat({
-              ...base,
-              user: contourFromSamples(toneSamples, 16000),
-              userEnergy: frameEnergy(toneSamples, 16000),
-              userDuration: duration,
-            })
+            const drone = take(toneSamples)
             if (drone.stars > 0) row.tone += 1
+            const hummed = take(humRhythm(samples.length))
+            if (hummed.stars > 0) row.hum += 1
+            if (hummed.stars === 3) row.hum3 += 1
+            const foreign = backgroundOf[line.lang]
+            if (foreign) {
+              const babble = take(foreign)
+              if (babble.stars > 0) row.background += 1
+              if (babble.stars === 3) row.background3 += 1
+            }
             if (self.stars < 2) continue
             row.varied += 1
             execFileSync(
@@ -271,14 +389,26 @@ describe('shipped clips', () => {
             for (const [key, rawPath] of shifted) {
               const raw = readBytes(rawPath)
               const userSamples = pcm(raw)
-              const score = scoreRepeat({
-                ...base,
-                user: contourFromSamples(userSamples, 16000),
-                userEnergy: frameEnergy(userSamples, 16000),
-                userDuration: userSamples.length / 16000,
-              })
+              const score = take(userSamples)
               if (score.stars >= 2) row[key] += 1
+              if (voice.id === 'joe' && (key === 'up' || key === 'down')) {
+                const noisy = mixPink(userSamples, key === 'up' ? 3 : 5)
+                const withNoise = take(noisy)
+                if (key === 'up') joeNoise.varied += 1
+                if (withNoise.stars >= 2) joeNoise[key] += 1
+              }
             }
+            if (take(reverb(samples)).stars >= 2) row.reverb += 1
+            if (take(mixPink(samples, 11, 25)).stars >= 2) row.noise += 1
+          }
+          const otherShift = Math.max(1, Math.floor(scorers.length / 2))
+          for (let index = 0; index < scorers.length; index += 1) {
+            const other = heard[(index + otherShift) % heard.length]
+            const scorer = scorers[index]
+            if (!other || !scorer || scorers.length < 2) continue
+            const stars = scorer(other)
+            if (stars > 0) row.other += 1
+            if (stars === 3) row.other3 += 1
           }
           const lang = byLang.get(voice.lang) ?? empty()
           add(lang, row)
@@ -293,6 +423,14 @@ describe('shipped clips', () => {
           down: `${row.down}/${row.varied}`,
           fast: `${row.fast}/${row.varied}`,
           slow: `${row.slow}/${row.varied}`,
+          reverb: `${row.reverb}/${row.varied}`,
+          noise: `${row.noise}/${row.varied}`,
+          hum: `${row.hum}/${row.timed}`,
+          hum3: row.hum3,
+          background: `${row.background}/${row.timed}`,
+          background3: row.background3,
+          other: `${row.other}/${row.timed}`,
+          other3: row.other3,
         }))
         const languages = [...byLang.entries()].map(([id, row]) => ({
           id,
@@ -303,8 +441,18 @@ describe('shipped clips', () => {
           down: `${row.down}/${row.varied}`,
           fast: `${row.fast}/${row.varied}`,
           slow: `${row.slow}/${row.varied}`,
+          reverb: `${row.reverb}/${row.varied}`,
+          noise: `${row.noise}/${row.varied}`,
+          hum: `${row.hum}/${row.timed}`,
+          hum3: row.hum3,
+          background: `${row.background}/${row.timed}`,
+          background3: row.background3,
+          other: `${row.other}/${row.timed}`,
+          other3: row.other3,
         }))
-        console.error(JSON.stringify({ languages, voices: table, reversedStars }, null, 2))
+        const report = { languages, voices: table, reversedStars, joeNoise }
+        console.error(JSON.stringify(report, null, 2))
+        writeFileSync('/tmp/tt-clip-stats.json', JSON.stringify(report, null, 2))
         const pitchFloor: Record<string, number> = { joe: 0.35, cadu: 0.4 }
         const tempoFloor: Record<string, number> = { joe: 0.55 }
         for (const [id, row] of byVoice) {
@@ -318,6 +466,17 @@ describe('shipped clips', () => {
           expect(share(row.fast, row.varied), `${id} +10%`).toBeGreaterThanOrEqual(tempo)
           expect(share(row.slow, row.varied), `${id} -10%`).toBeGreaterThanOrEqual(tempo)
         }
+        for (const [id, row] of byLang) {
+          expect(share(row.hum, row.timed), `${id} hum`).toBeLessThanOrEqual(0.05)
+          expect(row.hum3, `${id} hum with three stars`).toBe(0)
+          expect(share(row.background, row.timed), `${id} background`).toBeLessThanOrEqual(0.05)
+          expect(row.background3, `${id} background with three stars`).toBe(0)
+          expect(share(row.other, row.timed), `${id} other sentence`).toBeLessThanOrEqual(0.05)
+          expect(row.other3, `${id} other sentence with three stars`).toBe(0)
+          expect(share(row.reverb, row.varied), `${id} reverb`).toBeGreaterThanOrEqual(0.6)
+          expect(share(row.noise, row.varied), `${id} light noise`).toBeGreaterThanOrEqual(0.6)
+        }
+        expect([...reversedStars].sort()).toEqual([...SYMMETRIC_REVERSED])
         for (const file of missing) expect(KNOWN_MISSING.has(file), file).toBe(true)
       } finally {
         rmSync(dir, { recursive: true, force: true })

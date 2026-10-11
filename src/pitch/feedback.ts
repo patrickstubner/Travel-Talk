@@ -1,5 +1,6 @@
 import type { Lang } from '../../content/phrase'
 import { describeShape, voicedValues, type Contour, type ShapeName } from './contour'
+import { bandDistance } from './spectrum'
 
 /**
  * Bands for the first version. They are a starting point set by the author,
@@ -20,8 +21,12 @@ import { describeShape, voicedValues, type Contour, type ShapeName } from './con
  * a partial score. A take that matches the file better backwards than
  * forwards is «unklar». A steady tone against a spoken file is «unklar»
  * when the file's loudness moves and the tone's does not. Stars need at least
- * COLOURED_SHARE of the words that have enough voice in the model. Local
- * stretch stays inside about 0.75–1.33.
+ * COLOURED_SHARE of the words that have enough voice in the model. A word
+ * whose model moves by MOVING_RANGE needs that movement in the same
+ * direction, otherwise it stays at most yellow. Stars also need a majority
+ * of those words to agree. The band shape has to follow the file: a hum,
+ * other speech, or another sentence does not. Local stretch stays inside
+ * about 0.75–1.33.
  */
 export const MELODY_GREEN = 1.5
 export const MELODY_YELLOW = 3
@@ -45,6 +50,22 @@ export const DRONE_ENERGY = 0.12
 export const SPEECH_ENERGY = 0.15
 /** A negative loudness correlation means the envelope runs the other way. */
 export const ENERGY_ALIGN_MIN = 0
+/** A model word that moves by this much needs the same movement in the take. */
+export const MOVING_RANGE = 1
+/** Share of those words that must run the same way before any star is given. */
+export const DIRECTION_MAJORITY = 0.5
+/**
+ * DTW cost of the MFCC trajectory, after sliding the take by a few
+ * semitones and keeping the closest. Above this the take is not the same
+ * sentence. Tuned per language on the shipped clips: a hum, other speech
+ * and another sentence sit above it, a small pitch shift sits below.
+ */
+export const SPECTRAL_DISTANCE_MAX: Record<Lang, number> = {
+  de: 2,
+  en: 2,
+  'pt-BR': 1.9,
+  vi: 1.7,
+}
 const MAX_FRAMES = 800
 
 export type Band = 'green' | 'yellow' | 'red'
@@ -481,6 +502,22 @@ export function envelopeMismatch(
   return aligned < ENERGY_ALIGN_MIN
 }
 
+/**
+ * The MFCC trajectory does not follow the file. Missing bands, as in the
+ * synthetic pitch fixtures, are left alone. A hum, other speech or another
+ * sentence sits above the language limit.
+ */
+export function contentMismatch(
+  modelBands: readonly (readonly number[])[] | null | undefined,
+  userBands: readonly (readonly number[])[] | null | undefined,
+  lang: Lang,
+): boolean {
+  if (!modelBands || !userBands) return false
+  const distance = bandDistance(modelBands, userBands)
+  if (distance == null) return false
+  return distance > SPECTRAL_DISTANCE_MAX[lang]
+}
+
 function thinEnergy(energy: readonly number[] | null | undefined, contourLength: number): number[] | null {
   if (!energy || energy.length !== contourLength) return null
   if (contourLength <= MAX_FRAMES) return [...energy]
@@ -605,6 +642,9 @@ export function scoreRepeat(input: {
   /** Loudness per contour frame. Absent in the synthetic fixtures. */
   modelEnergy?: readonly number[] | null
   userEnergy?: readonly number[] | null
+  /** Loudness-free band shape, one vector per contour frame. */
+  modelBands?: readonly (readonly number[])[] | null
+  userBands?: readonly (readonly number[])[] | null
 }): RepeatScore {
   const modelThin = thin(input.model, input.modelHop > 0 ? input.modelHop : 0.01)
   const userThin = thin(input.user, input.userHop > 0 ? input.userHop : 0.01)
@@ -647,6 +687,7 @@ export function scoreRepeat(input: {
   const forward = contourCorrelation(model, user, path)
   const envelope = envelopeMismatch(path, userEnergy, modelEnergy)
   const reversed = reversedTake(model, user, forward, path, modelEnergy, userEnergy)
+  const content = contentMismatch(input.modelBands, input.userBands, input.lang)
   if (meanDistance > UNCLEAR_SEMITONES || flatContour(user, model) || envelope || reversed) {
     return {
       ...empty,
@@ -669,6 +710,8 @@ export function scoreRepeat(input: {
     }
   }
   const directions: WordDirection[] = []
+  let movingWords = 0
+  let sameMoving = 0
   const words = input.words.map((word) => {
     const frame = Math.max(0, Math.min(model.length - 1, Math.floor(word.start / modelHop)))
     const frameEnd = Math.max(frame + 1, Math.min(model.length, Math.ceil(word.end / modelHop)))
@@ -706,11 +749,25 @@ export function scoreRepeat(input: {
     }
     const pitchCorr = wordCorrelation(model, user, path, frame, frameEnd)
     const modelShape = describeShape(model.slice(frame, frameEnd))
-    const userShape = describeShape(user.slice(Math.min(userFrame, user.length), Math.min(user.length, userFrameEnd)))
-    directions.push(wordDirection(pitchCorr, modelShape, userShape))
+    const userSlice = user.slice(Math.min(userFrame, user.length), Math.min(user.length, userFrameEnd))
+    const userShape = describeShape(userSlice)
+    const direction = wordDirection(pitchCorr, modelShape, userShape)
+    directions.push(direction)
+    const modelRange = voicedRange(model.slice(frame, frameEnd)) ?? 0
+    const userRange = voicedRange(userSlice) ?? 0
+    // A null correlation is too little movement to judge. It must not
+    // cancel the stars of a take that matches the file.
+    const follows = pitchCorr != null && pitchCorr >= DIRECTION_MIN && userRange >= MOVING_RANGE
+    if (scorable && modelRange >= MOVING_RANGE && pitchCorr != null) {
+      movingWords += 1
+      if (follows) sameMoving += 1
+    }
     let melody = melodyBand(matched.mean)
     if (pitchCorr != null && pitchCorr < DIRECTION_OPPOSED) melody = 'red'
     else if (pitchCorr != null && pitchCorr < DIRECTION_MIN && melody === 'green') melody = 'yellow'
+    if (scorable && modelRange >= MOVING_RANGE && pitchCorr != null && !follows && melody === 'green') {
+      melody = 'yellow'
+    }
     const rawRatio = (globalRatio * matched.scale * (frameEnd - frame) * modelHop) / (word.end - word.start)
     const relative = matched.scale
     const rhythm = rhythmBand(relative)
@@ -742,7 +799,9 @@ export function scoreRepeat(input: {
   const scorable = words.filter((word) => word.scorable)
   const coloured = scorable.filter((word) => word.color != null).length
   const allowed = scorable.length > 0 && coloured / scorable.length >= COLOURED_SHARE
-  const stars = allowed ? starsFromBars(melodyBar, rhythmBar) : 0
+  let stars = allowed ? starsFromBars(melodyBar, rhythmBar) : 0
+  if (stars > 0 && movingWords >= 2 && sameMoving / movingWords < DIRECTION_MAJORITY) stars = 0
+  if (content) stars = 0
   const fewWords = !allowed
   return {
     model,
@@ -753,11 +812,11 @@ export function scoreRepeat(input: {
     path,
     meanDistance,
     words,
-    melodyBar: fewWords ? null : melodyBar,
-    rhythmBar: fewWords ? null : rhythmBar,
+    melodyBar: fewWords || content ? null : melodyBar,
+    rhythmBar: fewWords || content ? null : rhythmBar,
     stars,
     fewWords,
-    unclear: false,
+    unclear: content,
     tooLittleVoice: false,
     tooShort: false,
     globalRatio,

@@ -61,11 +61,46 @@ export function contourFromSamples(input: Float32Array, rate: number): Contour {
     if (clarity >= CLARITY_MIN && hz >= PITCH_HZ_MIN && hz <= PITCH_HZ_MAX) pitches.push(hz)
     else pitches.push(null)
   }
-  const voiced = pitches.filter((value): value is number => value != null).sort((a, b) => a - b)
-  if (voiced.length < 5) return pitches.map(() => null)
+  const repaired = repairHarmonics(pitches)
+  const voiced = repaired.filter((value): value is number => value != null).sort((a, b) => a - b)
+  if (voiced.length < 5) return repaired.map(() => null)
   const median = voiced[Math.floor(voiced.length / 2)] ?? 1
-  const semis = pitches.map((value) => (value == null ? null : 12 * Math.log2(value / median)))
+  const semis = repaired.map((value) => (value == null ? null : 12 * Math.log2(value / median)))
   return medianFilter(semis, 5)
+}
+
+/**
+ * A lone frame on the 2nd, 3rd or 4th harmonic is folded back to the median.
+ * A rise that is not that harmonic stays. If more than about a third of the
+ * voiced frames would move, the median itself is mixed and the contour stays.
+ */
+export function repairHarmonics(hz: Contour): Contour {
+  const voiced = hz.filter((value): value is number => value != null && value > 0).sort((a, b) => a - b)
+  if (voiced.length < 5) return hz
+  const median = voiced[Math.floor(voiced.length / 2)] ?? 0
+  if (median <= 0) return hz
+  let changes = 0
+  const folded = hz.map((value) => {
+    if (value == null || value <= 0) return value
+    const original = Math.abs(12 * Math.log2(value / median))
+    let best = value
+    let bestDist = original
+    for (const factor of [1 / 3, 0.5, 2, 3, 4]) {
+      const cand = value * factor
+      if (cand < PITCH_HZ_MIN || cand > PITCH_HZ_MAX) continue
+      const moved = Math.abs(12 * Math.log2(factor))
+      if (Math.abs(original - moved) > 1.8) continue
+      const dist = Math.abs(12 * Math.log2(cand / median))
+      if (dist + 6 < bestDist) {
+        best = cand
+        bestDist = dist
+      }
+    }
+    if (best !== value) changes += 1
+    return best
+  })
+  if (changes / voiced.length > 0.35) return hz
+  return folded
 }
 
 function medianFilter(values: Contour, width: number): Contour {

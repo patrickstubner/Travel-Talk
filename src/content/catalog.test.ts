@@ -5,6 +5,7 @@ import { hasAddressToken } from '../../content/address'
 import { requireCatalog } from './load'
 import { tempoFile } from '../audio/speed'
 import { VOICES } from '../audio/voices'
+import { replacedClipPaths } from '../audio/clip-revision'
 import { ALIGN_FILE, AUDIO_FILE, allSpeechLines, conceptsForSituation, isStale, resolvePlayback, voiceFile } from './resolve'
 
 function alignFiles(dir: string, prefix = ''): string[] {
@@ -131,6 +132,21 @@ describe('catalog', () => {
       expect(listed.has(file.replace(/\.align\.json$/, '.m4a')), file).toBe(true)
     }
     expect([...listed].filter((file) => file.endsWith('.align.json'))).toHaveLength(onDisk.length)
+  })
+
+  it('gives the respoken transport lines a new file name', () => {
+    const taxi = catalog.concepts.find((concept) => concept.id === 'transport.01.taxi')
+    const ferry = catalog.concepts.find((concept) => concept.id === 'transport.19.ferry')
+    const seasick = catalog.concepts.find((concept) => concept.id === 'transport.20.seasick')
+    expect(taxi && resolvePlayback(taxi, 'vi', 'south', [])?.file).toBe('vi/transport.01.taxi__any__base.v2.m4a')
+    expect(ferry && resolvePlayback(ferry, 'vi', 'south', [])?.file).toBe('vi/transport.19.ferry__any__base.v2.m4a')
+    expect(seasick && resolvePlayback(seasick, 'de', 'south', [])?.file).toBe('de/transport.20.seasick__any__base.v2.m4a')
+    expect(taxi && resolvePlayback(taxi, 'en', 'south', [])?.file).toBe('en/transport.01.taxi__any__base.m4a')
+    expect(seasick && resolvePlayback(seasick, 'en', 'south', [])?.file).toBe('en/transport.20.seasick__any__base.m4a')
+    const stale = replacedClipPaths()
+    expect(stale).toHaveLength(32)
+    const manifest = JSON.parse(readFileSync('public/audio/manifest.json', 'utf8')) as string[]
+    for (const file of stale) expect(manifest.includes(file), file).toBe(false)
   })
 
   it('ages info cards after six months', () => {
