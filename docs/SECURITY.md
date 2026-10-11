@@ -249,3 +249,13 @@ Geprüft am 11. Oktober 2026 am Branch `cursor/people-v060-d07c`. Kein neues Pak
 | P16-08 | Niedrig | Geschlossen | Ersetzen mit einer Format-4-Datei benennt die aktive Person nicht um. Test: `src/storage/people.test.ts`. |
 
 Eine gelöschte Stimme verlässt den Cache, wenn keine verbleibende Person sie benutzt. Im Zeigen-Modus ist der Name verborgen. «Alle Personen exportieren» nennt den Grund, solange der Knopf aus ist. `require_onnx` endet mit einem Satz, wenn das Paket fehlt.
+
+## 0.7.0
+
+Geprüft am 11. Oktober 2026. Keine neue Laufzeitabhängigkeit, kein neues Paket, kein neues Netz aus der App. `npm audit` bleibt bei 0 Schwachstellen. Die Sätze, der Gloss und die Kulturhinweise sind statische Daten im Katalog. `phrase()` setzt `geprueft` auf `false`. Die Oberfläche sagt weiter, dass die Zeilen und die Wortzuordnung nicht geprüft sind.
+
+**Darstellung.** Titel, Sätze, Hinweise und Quellen stehen als React-Text. Ein Kulturhinweis setzt keinen HTML-String. Die Quellenlinks sind `https`, mit `rel="noreferrer noopener"`, wie bisher. Die App lädt diese Seiten nicht selbst. Ein Hinweis enthält keine Personen-Namen.
+
+**Was der Text behauptet.** Jede konkrete Angabe hat eine Quelle und das Lesedatum 2026-10-11. Was nicht belegt ist, steht im Hinweis als «noch nicht geprüft»: der Preis für ein xe ôm am Strassenrand, ein ausländischer Pass in der App der Hà Nội Metro, der Taxameter ausserhalb der Stadt São Paulo, der Taxameter in der Deutschschweiz, Taxi und Fahr-Apps ausserhalb Londons. Notrufnummern stehen in dieser Situation nicht. Die bestehenden Nummern im Notfall-Hinweis sind hier nicht erneut gelesen. Philippinen, Paraguay, Thailand und Portugal als Land haben keinen Code in `CultureNote.regions` und keinen eigenen Hinweis.
+
+**Audio.** Dieselben acht Modelle, `piper-tts` 1.8.0, `onnx` 1.17.0 nur für die Wortzeiten. Neue Dateien nur für die neuen Zeilen: 540 Audiodateien und 178 Zeitdateien, zusammen 5'283'087 Bytes. Zwei englische Clips der App-Bestellung haben keine Zeitdatei, weil die Wortzahl nicht zur Phonemgruppe passt, wie die älteren englischen Ausfälle. Sie stehen nicht in `manifest.json` und zählen nicht als fehlend. `manifest.json` hat danach 5863 Einträge, 4431 Audio und 1432 Zeiten. `maxEntries` ist 6500 und deckt das. Die Cache-Regel bleibt Status 200. Nichts davon kommt in den Precache.

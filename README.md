@@ -2,15 +2,15 @@
 
 **Live:** [patrickstubner.github.io/Travel-Talk](https://patrickstubner.github.io/Travel-Talk/)
 
-Reise-Sprachhilfe für eine Familie. Version 0.6.0. Ohne Konto, ohne Tracking. Mehrere Personen können auf einem Gerät lernen. Lernstand und Sätze bleiben auf dem Gerät. Eine Stimme ist lokal, nachdem sie geladen wurde. Stimmen und Audiodateien sind gemeinsam.
+Reise-Sprachhilfe für eine Familie. Version 0.7.0. Ohne Konto, ohne Tracking. Mehrere Personen können auf einem Gerät lernen. Lernstand und Sätze bleiben auf dem Gerät. Eine Stimme ist lokal, nachdem sie geladen wurde. Stimmen und Audiodateien sind gemeinsam.
 
-Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Sprache der App und die Lernsprache sind zwei getrennte Wahlen. Hören, Verstehen und Sprechen kommen zuerst. Lesen stützt das Hören. Schreiben ist nicht der Weg durch die Sitzung. Höchstens 15 neue Sätze am Tag, über alle Richtungen zusammen.
+Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant, Transport und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Sprache der App und die Lernsprache sind zwei getrennte Wahlen. Hören, Verstehen und Sprechen kommen zuerst. Lesen stützt das Hören. Schreiben ist nicht der Weg durch die Sitzung. Höchstens 15 neue Sätze am Tag, über alle Richtungen zusammen.
 
 Die Sätze auf Vietnamesisch und Portugiesisch (Brasilien) sind noch nicht von einer muttersprachlichen Person geprüft. Dasselbe gilt für Deutsch und Englisch. Im UI steht das an den Sätzen.
 
 ## Zwei Sprachen
 
-Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Jede Richtung aus zwei verschiedenen Sprachen läuft aus denselben 103 Konzepten. Eine fehlende Zeile wird ausgelassen, und der Start sagt das. Die Zahlen pro Situation stehen unten. Ein Konzept kann in zwei Situationen hängen, zum Beispiel die Allergie im Notfall und im Restaurant. Deshalb ist die Summe der Situationen grösser als 103.
+Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Jede Richtung aus zwei verschiedenen Sprachen läuft aus denselben 123 Konzepten. Eine fehlende Zeile wird ausgelassen, und der Start sagt das. Die Zahlen pro Situation stehen unten. Ein Konzept kann in zwei Situationen hängen, zum Beispiel die Allergie im Notfall und im Restaurant. Deshalb ist die Summe der Situationen grösser als 123.
 
 | Situation | Stand | Konzepte |
 | --- | --- | --- |
@@ -23,6 +23,7 @@ Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Jede Richtung au
 | Alltag | Anfang | 8 |
 | Einkaufen | Anfang | 7 |
 | Sehenswürdigkeiten | Anfang | 6 |
+| Transport | kleiner Satz | 20 |
 
 Vietnamesisch ist im Text südlich voreingestellt. Nord ist eine Variante, zum Beispiel `đậu phộng` und `lạc`. Eine neue Installation spricht mit einer Männerstimme. Die nördliche Frauenstimme bleibt wählbar. Der Akzent der Männerstimmen ist nicht dokumentiert. Das Tempo hat drei Stufen, 70 %, 85 % und 100 %, als eigene Dateien, damit die Tonhöhe gleich bleibt. Die Wahl sitzt nur am Player. Details in [docs/audio.md](docs/audio.md).
 

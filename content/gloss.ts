@@ -1,3 +1,4 @@
+import { transportGloss } from './gloss-transport'
 import type { Lang } from './phrase'
 
 /**
@@ -338,6 +339,7 @@ export const GLOSS: Record<string, readonly GlossSide[]> = {
     { de: ['neun,'], en: ['nine,'], pt: ['nove,'], vi: ['chín,'] },
     { de: ['zehn'], en: ['ten'], pt: ['dez'], vi: ['mười'] },
   ],
+  ...transportGloss,
 }
 
 type SideKey = 'de' | 'en' | 'pt' | 'vi' | 'viN'

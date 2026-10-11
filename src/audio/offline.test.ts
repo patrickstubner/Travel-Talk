@@ -179,7 +179,7 @@ describe('offline voice loading', () => {
     const text = readFileSync(fileURLToPath(new URL('../../rsbuild.config.ts', import.meta.url)), 'utf8')
     expect(text).toContain('statuses: [200]')
     expect(text).not.toContain('[0, 200]')
-    expect(text).toMatch(/maxEntries:\s*5500/)
+    expect(text).toMatch(/maxEntries:\s*6500/)
     expect(text).toContain('**/*.align.json')
     expect(text).toContain('align\\.json')
     expect(text).toContain('cleanupOutdatedCaches: false')

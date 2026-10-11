@@ -41,7 +41,9 @@ function walk(value: unknown, visit: (text: string) => void): void {
 
 describe('catalog', () => {
   it('covers the journey and keeps counts for the first situations', () => {
-    expect(catalog.situations).toHaveLength(9)
+    expect(catalog.situations).toHaveLength(10)
+    expect(conceptsForSituation(catalog, 'transport').length).toBeGreaterThanOrEqual(15)
+    expect(conceptsForSituation(catalog, 'transport').length).toBeLessThanOrEqual(25)
     expect(conceptsForSituation(catalog, 'emergency').length).toBeGreaterThanOrEqual(18)
     expect(conceptsForSituation(catalog, 'meeting').length).toBeGreaterThanOrEqual(18)
     expect(conceptsForSituation(catalog, 'arrival').length).toBeGreaterThanOrEqual(8)
