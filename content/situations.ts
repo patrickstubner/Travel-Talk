@@ -17,6 +17,13 @@ export const situations: Situation[] = [
       'pt-BR': 'Perguntas no balcão e um cartão com fontes. Não é orientação jurídica.',
       vi: 'Câu hỏi ở quầy và một thẻ có nguồn. Không phải tư vấn pháp lý.',
     },
+  
+    canDo: {
+      de: 'Du kannst am Schalter nach dem Visum fragen.',
+      en: 'You can ask about the visa at the counter.',
+      'pt-BR': 'Você pode perguntar do visto no balcão.',
+      vi: 'Bạn có thể hỏi visa ở quầy.',
+    },
   },
   {
     id: 'arrival',
@@ -33,6 +40,13 @@ export const situations: Situation[] = [
       en: 'Short lines for passport control, luggage and the way out.',
       'pt-BR': 'Frases curtas para o controle, a bagagem e a saída.',
       vi: 'Câu ngắn cho kiểm tra hộ chiếu, hành lý và lối ra.',
+    },
+  
+    canDo: {
+      de: 'Du kannst sagen, warum du hier bist.',
+      en: 'You can say why you are here.',
+      'pt-BR': 'Você pode dizer por que está aqui.',
+      vi: 'Bạn có thể nói vì sao bạn ở đây.',
     },
   },
   {
@@ -51,6 +65,13 @@ export const situations: Situation[] = [
       'pt-BR': 'Hotel, casa ou aluguel: chegada, wi-fi, um problema.',
       vi: 'Khách sạn, nhà riêng hoặc thuê: đến, wifi, sự cố.',
     },
+  
+    canDo: {
+      de: 'Du kannst in der Unterkunft ankommen.',
+      en: 'You can arrive at the place you are staying.',
+      'pt-BR': 'Você pode chegar na hospedagem.',
+      vi: 'Bạn có thể nhận phòng.',
+    },
   },
   {
     id: 'shop',
@@ -67,6 +88,13 @@ export const situations: Situation[] = [
       en: 'Price, card, receipt. Bargaining can grow later.',
       'pt-BR': 'Preço, cartão, recibo. Pechincha fica para depois.',
       vi: 'Giá, thẻ, hoá đơn. Mặc cả có thể thêm sau.',
+    },
+  
+    canDo: {
+      de: 'Du kannst nach dem Preis fragen.',
+      en: 'You can ask the price.',
+      'pt-BR': 'Você pode perguntar o preço.',
+      vi: 'Bạn có thể hỏi giá.',
     },
   },
   {
@@ -85,6 +113,13 @@ export const situations: Situation[] = [
       'pt-BR': 'Ingresso, horário, foto, caminho.',
       vi: 'Vé, giờ mở cửa, chụp ảnh, đường đi.',
     },
+  
+    canDo: {
+      de: 'Du kannst nach einem Ticket fragen.',
+      en: 'You can ask for a ticket.',
+      'pt-BR': 'Você pode pedir um ingresso.',
+      vi: 'Bạn có thể hỏi vé.',
+    },
   },
   {
     id: 'food',
@@ -101,6 +136,13 @@ export const situations: Situation[] = [
       en: 'Order, allergy, the bill. A small fixed set, not a full menu.',
       'pt-BR': 'Pedir, alergia, a conta. Um conjunto pequeno, não um cardápio inteiro.',
       vi: 'Gọi món, dị ứng, tính tiền. Một nhóm nhỏ, chưa phải cả thực đơn.',
+    },
+  
+    canDo: {
+      de: 'Du kannst etwas bestellen.',
+      en: 'You can order something.',
+      'pt-BR': 'Você pode pedir alguma coisa.',
+      vi: 'Bạn có thể gọi món.',
     },
   },
   {
@@ -119,6 +161,13 @@ export const situations: Situation[] = [
       'pt-BR': 'Cumprimento, por favor, números, hoje e amanhã.',
       vi: 'Chào, làm ơn, số, hôm nay và ngày mai.',
     },
+  
+    canDo: {
+      de: 'Du kannst grüssen und bitten.',
+      en: 'You can greet someone and ask for something.',
+      'pt-BR': 'Você pode cumprimentar e pedir.',
+      vi: 'Bạn có thể chào và nhờ.',
+    },
   },
   {
     id: 'emergency',
@@ -136,6 +185,13 @@ export const situations: Situation[] = [
       'pt-BR': 'Ajuda, médico, alergia, passaporte perdido. Modo mostrar, offline.',
       vi: 'Cứu, bác sĩ, dị ứng, mất hộ chiếu. Chế độ đưa màn hình, dùng offline.',
     },
+  
+    canDo: {
+      de: 'Du kannst um Hilfe bitten.',
+      en: 'You can ask for help.',
+      'pt-BR': 'Você pode pedir ajuda.',
+      vi: 'Bạn có thể gọi giúp.',
+    },
   },
   {
     id: 'meeting',
@@ -152,6 +208,13 @@ export const situations: Situation[] = [
       en: 'Introduce yourself, follow up, small talk, goodbye, contact. Address forms you can choose.',
       'pt-BR': 'Apresentar-se, perguntar, conversa fiada, despedida, contato. Tratamento à escolha.',
       vi: 'Giới thiệu, hỏi lại, chuyện phiếm, tạm biệt, số điện thoại. Chọn cách xưng hô.',
+    },
+  
+    canDo: {
+      de: 'Du kannst dich vorstellen.',
+      en: 'You can introduce yourself.',
+      'pt-BR': 'Você pode se apresentar.',
+      vi: 'Bạn có thể giới thiệu bản thân.',
     },
   },
 ]

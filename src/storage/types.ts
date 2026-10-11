@@ -1,10 +1,15 @@
+import type { Lang } from '../../content/phrase'
 import type { SpeedChoice } from '../audio/speed'
-import type { PairId } from '../domain/pairs'
+import { isLang, legacyDirection } from '../domain/direction'
+
+export type VoiceMap = Partial<Record<Lang, string>>
 
 export type Settings = {
-  pairId: PairId | null
-  uiLang: 'de' | 'source'
+  appLang: Lang | null
+  targetLang: Lang | null
   viRegion: 'south' | 'north'
+  /** Optional voice id per language. Missing means the one bundled voice. */
+  voices?: VoiceMap
   addressVi: string
   addressPt: string
   addressDe: string
@@ -12,7 +17,7 @@ export type Settings = {
   viContact: 'phone' | 'zalo'
   retention: number
   personalNote: string
-  /** `auto` follows the card. A number is kept until the learner chooses automatic again. */
+  /** `auto` follows the card on the phrase page. A number is kept until automatic is chosen again. */
   speed: SpeedChoice
 }
 
@@ -36,8 +41,8 @@ export type ProgressSnapshot = {
 }
 
 export const defaultSettings: Settings = {
-  pairId: null,
-  uiLang: 'de',
+  appLang: null,
+  targetLang: null,
   viRegion: 'south',
   addressVi: 'anh',
   addressPt: 'voce',
@@ -49,11 +54,14 @@ export const defaultSettings: Settings = {
   speed: 'auto',
 }
 
+const ADDRESS_VI = new Set(['anh', 'chi', 'em', 'co', 'chu', 'bac', 'ong', 'ba'])
+const ADDRESS_PT = new Set(['voce', 'senhor', 'senhora'])
+const ADDRESS_DE = new Set(['sie', 'du'])
+
 /**
  * A stored `speed` is a deliberate choice and wins.
  * Version 0.1.0 had only `slow`. `true` becomes fixed 85 %.
- * `false` or a missing flag is the old default and becomes automatic,
- * so the progression stays on and can still be told apart from a chosen 100 %.
+ * `false` or a missing flag is the old default and becomes automatic.
  */
 export function normalizeSpeed(speed: unknown, slow: unknown): SpeedChoice {
   if (speed === 'auto' || speed === 0.7 || speed === 0.85 || speed === 1) return speed
@@ -61,14 +69,44 @@ export function normalizeSpeed(speed: unknown, slow: unknown): SpeedChoice {
   return 'auto'
 }
 
-/** Reads a stored settings row. Version 0.1.0 had `slow` and no `speed`. */
-export function coerceSettings(raw: Partial<Settings> & { slow?: boolean }): Settings {
-  const { slow, speed, ...rest } = raw
-  return {
-    ...defaultSettings,
-    ...rest,
-    speed: normalizeSpeed(speed, slow),
+export function cleanVoices(value: unknown): VoiceMap | undefined {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const voices: VoiceMap = {}
+  for (const [key, entry] of Object.entries(value)) {
+    if (!isLang(key) || typeof entry !== 'string' || entry.length === 0 || entry.length > 40) continue
+    voices[key] = entry
   }
+  return Object.keys(voices).length > 0 ? voices : undefined
+}
+
+/**
+ * Reads a stored settings row.
+ * Before 0.3.0 the row had `pairId` and `uiLang`. The app language becomes the
+ * old source language, not a German interface laid over another source.
+ */
+export function coerceSettings(raw: Partial<Settings> & { slow?: boolean; pairId?: string | null; uiLang?: string }): Settings {
+  const legacy = legacyDirection(raw.pairId)
+  const appLang = isLang(raw.appLang) ? raw.appLang : (legacy?.app ?? null)
+  let targetLang = isLang(raw.targetLang) ? raw.targetLang : (legacy?.target ?? null)
+  if (targetLang === appLang) targetLang = null
+  return {
+    appLang,
+    targetLang,
+    viRegion: raw.viRegion === 'north' ? 'north' : 'south',
+    ...(cleanVoices(raw.voices) ? { voices: cleanVoices(raw.voices) } : {}),
+    addressVi: typeof raw.addressVi === 'string' && ADDRESS_VI.has(raw.addressVi) ? raw.addressVi : defaultSettings.addressVi,
+    addressPt: typeof raw.addressPt === 'string' && ADDRESS_PT.has(raw.addressPt) ? raw.addressPt : defaultSettings.addressPt,
+    addressDe: typeof raw.addressDe === 'string' && ADDRESS_DE.has(raw.addressDe) ? raw.addressDe : defaultSettings.addressDe,
+    ptSpeaker: raw.ptSpeaker === 'obrigada' ? 'obrigada' : 'obrigado',
+    viContact: raw.viContact === 'zalo' ? 'zalo' : 'phone',
+    retention: typeof raw.retention === 'number' && raw.retention >= 0.8 && raw.retention <= 0.97 ? raw.retention : defaultSettings.retention,
+    personalNote: typeof raw.personalNote === 'string' ? raw.personalNote.slice(0, 500) : '',
+    speed: normalizeSpeed(raw.speed, raw.slow),
+  }
+}
+
+export function usesLang(settings: Settings, lang: Lang): boolean {
+  return settings.appLang === lang || settings.targetLang === lang
 }
 
 export interface ProgressRepository {

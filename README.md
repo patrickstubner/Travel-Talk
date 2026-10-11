@@ -2,15 +2,15 @@
 
 **Live:** [patrickstubner.github.io/Travel-Talk](https://patrickstubner.github.io/Travel-Talk/)
 
-Reise-Sprachhilfe für eine Familie. Version 0.2.2. Offline, ohne Konto, ohne Tracking.
+Reise-Sprachhilfe für eine Familie. Version 0.3.0. Offline, ohne Konto, ohne Tracking.
 
-Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Oberfläche ist auf Deutsch (Schweizer Schreibung) und lässt sich auf die Ausgangssprache des gewählten Paars umstellen.
+Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Sprache der App und die Lernsprache sind zwei getrennte Wahlen. Hören, Verstehen und Sprechen kommen zuerst. Lesen stützt das Hören. Schreiben ist nicht der Weg durch die Sitzung.
 
 Die Sätze auf Vietnamesisch und Portugiesisch (Brasilien) sind noch nicht von einer muttersprachlichen Person geprüft. Dasselbe gilt für Deutsch und Englisch. Im UI steht das an den Sätzen.
 
-## Sprachpaare in 0.2.0
+## Zwei Sprachen
 
-Deutsch nach Vietnamesisch. Portugiesisch (Brasilien) in beide Richtungen mit Deutsch, Englisch und Vietnamesisch. Weitere Paare kommen später. Jedes Paar nutzt dieselben 103 Konzepte. Die Zahlen pro Situation stehen unten. Ein Konzept kann in zwei Situationen hängen, zum Beispiel die Allergie im Notfall und im Restaurant. Deshalb ist die Summe der Situationen grösser als 103.
+Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Jede Richtung aus zwei verschiedenen Sprachen läuft aus denselben 103 Konzepten. Eine fehlende Zeile wird ausgelassen, und der Start sagt das. Die Zahlen pro Situation stehen unten. Ein Konzept kann in zwei Situationen hängen, zum Beispiel die Allergie im Notfall und im Restaurant. Deshalb ist die Summe der Situationen grösser als 103.
 
 | Situation | Stand | Konzepte |
 | --- | --- | --- |

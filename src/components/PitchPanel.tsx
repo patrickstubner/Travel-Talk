@@ -88,15 +88,6 @@ export function PitchPanel({
       ) : null}
       {user.length > 0 && !userReady ? <p>{copy.pitchEmpty}</p> : null}
       {distance != null ? <p>{distance < 0.8 ? copy.shape.similar : copy.shape.apart}</p> : null}
-      <p className="hint">{copy.schemaTitle}</p>
-      <svg className="tones" viewBox="0 0 320 64" role="img" aria-label={copy.schemaTitle}>
-        <path className="tone" d="M8 32 H56" />
-        <path className="tone" d="M72 48 L120 16" />
-        <path className="tone" d="M136 16 L184 48" />
-        <path className="tone" d="M200 20 Q224 52 248 24" />
-        <path className="tone" d="M264 18 L312 46" />
-      </svg>
-      <p className="tone-names">ngang · sắc · huyền · hỏi/ngã · nặng</p>
     </section>
   )
 }

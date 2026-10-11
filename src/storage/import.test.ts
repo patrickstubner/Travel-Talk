@@ -3,10 +3,23 @@ import { Rating, emptyCard, reviewCard, toStored } from '../srs/scheduler'
 import { EXPORT_FORMAT, IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport } from './import'
 import { coerceSettings, defaultSettings } from './types'
 
-const settings = { ...defaultSettings, pairId: 'de-vi' as const, personalNote: 'Erdnüsse' }
+const current = { ...defaultSettings, appLang: 'de' as const, targetLang: 'vi' as const, personalNote: 'Erdnüsse' }
+const legacySettings = {
+  pairId: 'de-vi' as const,
+  uiLang: 'de' as const,
+  viRegion: 'south' as const,
+  addressVi: 'anh',
+  addressPt: 'voce',
+  addressDe: 'sie',
+  ptSpeaker: 'obrigado' as const,
+  viContact: 'phone' as const,
+  retention: 0.9,
+  personalNote: 'Erdnüsse',
+  speed: 'auto' as const,
+}
 const concepts = new Set(['emergency.help'])
 
-function bundle(cards: unknown[] = [], note = settings): string {
+function bundle(cards: unknown[] = [], note: object = legacySettings): string {
   return JSON.stringify({
     app: 'travel-talk',
     format: 1,
@@ -20,7 +33,7 @@ describe('import', () => {
   it('round-trips a reviewed card when the note is included', () => {
     const now = new Date('2026-10-10T12:00:00.000Z')
     const reviewed = reviewCard(emptyCard(now), Rating.Good, now, 0.9, false)
-    const snapshot = { settings, cards: [toStored('de-vi:emergency.help', reviewed)] }
+    const snapshot = { settings: current, cards: [toStored('de-vi:emergency.help', reviewed)] }
     const parsed = parseImport(toExport(snapshot, now, true), concepts)
     expect(parsed.snapshot.cards[0]?.cardId).toBe('de-vi:emergency.help')
     expect(parsed.snapshot.settings.personalNote).toBe('Erdnüsse')
@@ -30,9 +43,13 @@ describe('import', () => {
 
   it('leaves the note out of the export unless asked', () => {
     const now = new Date('2026-10-10T12:00:00.000Z')
-    const text = toExport({ settings, cards: [] }, now)
+    const text = toExport({ settings: current, cards: [] }, now)
     expect(text).not.toContain('Erdnüsse')
     expect(JSON.parse(text).format).toBe(EXPORT_FORMAT)
+    expect(text).toContain('"appLang"')
+    expect(text).toContain('"targetLang"')
+    expect(text).not.toContain('pairId')
+    expect(text).not.toContain('uiLang')
     expect(text).toContain('"speed"')
     expect(text).not.toContain('"slow"')
     expect(parseImport(text, concepts).snapshot.settings.personalNote).toBe('')
@@ -89,7 +106,7 @@ describe('import', () => {
   })
 
   it('maps a 0.1.0 slow flag and keeps an explicit speed', () => {
-    const { speed: _speed, ...rest } = settings
+    const { speed: _speed, ...rest } = legacySettings
     const legacy = (slow: boolean) =>
       JSON.stringify({
         app: 'travel-talk',
@@ -175,13 +192,60 @@ describe('import', () => {
 
   it('starts from an empty snapshot', () => {
     expect(emptySnapshot().cards).toEqual([])
-    expect(parseImport(bundle(), concepts).snapshot.settings.pairId).toBe('de-vi')
+    const migrated = parseImport(bundle(), concepts)
+    expect(migrated.snapshot.settings.appLang).toBe('de')
+    expect(migrated.snapshot.settings.targetLang).toBe('vi')
+    expect(migrated.uiNotRelabeled).toBe(false)
+    expect(migrated.snapshot.settings).not.toHaveProperty('pairId')
+    expect(migrated.snapshot.settings).not.toHaveProperty('uiLang')
+  })
+
+  it('migrates format 2 to app and target language and keeps the card id', () => {
+    const raw = JSON.parse(bundle([card('pt-en:emergency.help')])) as {
+      format: number
+      settings: { pairId: string; uiLang: string }
+    }
+    raw.format = 2
+    raw.settings.pairId = 'pt-en'
+    raw.settings.uiLang = 'de'
+    const outcome = parseImport(JSON.stringify(raw), concepts)
+    expect(outcome.snapshot.settings.appLang).toBe('pt-BR')
+    expect(outcome.snapshot.settings.targetLang).toBe('en')
+    expect(outcome.uiNotRelabeled).toBe(true)
+    expect(outcome.snapshot.cards[0]?.cardId).toBe('pt-en:emergency.help')
+    expect(outcome.snapshot.settings).not.toHaveProperty('pairId')
+    const again = JSON.parse(toExport(outcome.snapshot, new Date('2026-10-11T00:00:00.000Z'), true)) as {
+      format: number
+      settings: Record<string, unknown>
+    }
+    expect(again.format).toBe(3)
+    expect(again.settings.appLang).toBe('pt-BR')
+    expect(again.settings.pairId).toBeUndefined()
+  })
+
+  it('rejects format 3 when the languages match, or when an old field remains', () => {
+    const file = JSON.parse(toExport({ settings: current, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))) as {
+      settings: Record<string, unknown>
+    }
+    file.settings.targetLang = 'de'
+    expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
+    file.settings.targetLang = 'vi'
+    file.settings.pairId = 'de-vi'
+    expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
+    delete file.settings.pairId
+    file.settings.uiLang = 'de'
+    expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
+    delete file.settings.uiLang
+    file.settings.voices = { vi: 'vais1000', extra: 'no' }
+    expect(() => parseImport(JSON.stringify(file), concepts)).toThrow('IMPORT_REJECTED')
+    file.settings.voices = { vi: 'vais1000' }
+    expect(parseImport(JSON.stringify(file), concepts).snapshot.settings.voices).toEqual({ vi: 'vais1000' })
   })
 })
 
-function card() {
+function card(cardId = 'de-vi:emergency.help') {
   return {
-    cardId: 'de-vi:emergency.help',
+    cardId,
     due: '2026-10-11T00:00:00.000Z',
     stability: 1,
     difficulty: 5,

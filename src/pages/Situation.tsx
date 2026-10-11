@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { Lang } from '../../content/phrase'
 import { conceptsForSituation, isStale, resolvePlayback } from '../content/resolve'
-import { pairById } from '../domain/pairs'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
@@ -16,17 +15,18 @@ export function SituationPage() {
   const copy = useCopy()
   const [query, setQuery] = useState('')
   const ui = interfaceLang(settings)
-  const pair = pairById(settings.pairId)
+  const app = settings.appLang
+  const targetLang = settings.targetLang
   const situation = catalog?.situations.find((item) => item.id === situationId)
   const concepts = useMemo(() => (catalog ? conceptsForSituation(catalog, situationId) : []), [catalog, situationId])
   if (!catalog || !situation) return <p>{copy.noResults}</p>
-  if (!pair) return <p>{copy.needPair}</p>
+  if (!app || !targetLang) return <p>{copy.needPair}</p>
 
   const needle = query.trim().toLocaleLowerCase()
   const visible = concepts.filter((concept) => {
     if (!needle) return true
-    const source = resolvePlayback(concept, pair.source, settings.viRegion, prefsFromSettings(pair.source, settings))
-    const target = resolvePlayback(concept, pair.target, settings.viRegion, prefsFromSettings(pair.target, settings))
+    const source = resolvePlayback(concept, app, settings.viRegion, prefsFromSettings(app, settings))
+    const target = resolvePlayback(concept, targetLang, settings.viRegion, prefsFromSettings(targetLang, settings))
     const blob = `${source?.text ?? ''} ${target?.text ?? ''} ${concept.context[ui]}`.toLocaleLowerCase()
     return blob.includes(needle)
   })
@@ -36,7 +36,7 @@ export function SituationPage() {
   return (
     <div className="stack" data-testid={situationId === 'emergency' ? 'situation-emergency' : 'situation-page'}>
       <p>
-        <Link to="/">{copy.back}</Link>
+        <Link to="/lookup">{copy.back}</Link>
       </p>
       <h1>{situation.title[ui]}</h1>
       <p>{situation.summary[ui]}</p>
@@ -47,8 +47,8 @@ export function SituationPage() {
       {visible.length === 0 ? <p>{copy.noResults}</p> : null}
       <ul className="phrase-list">
         {visible.map((concept) => {
-          const target = resolvePlayback(concept, pair.target, settings.viRegion, prefsFromSettings(pair.target, settings))
-          const source = resolvePlayback(concept, pair.source, settings.viRegion, prefsFromSettings(pair.source, settings))
+          const target = resolvePlayback(concept, targetLang, settings.viRegion, prefsFromSettings(targetLang, settings))
+          const source = resolvePlayback(concept, app, settings.viRegion, prefsFromSettings(app, settings))
           return (
             <li key={concept.id}>
               <Link to={`/phrase/${concept.id}`}>

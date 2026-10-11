@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { addressForms, hasAddressToken } from '../../content/address'
-import type { Lang } from '../../content/phrase'
-import { pickRealization, resolvePlayback } from '../content/resolve'
-import { pairById } from '../domain/pairs'
+import { resolvePlayback } from '../content/resolve'
+import { directionId } from '../domain/direction'
 import { decodeContourFile, playClip } from '../audio/player'
 import { SPEED_STEPS, effectiveSpeed, speedPercent, tempoFile, type SpeedStep } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
@@ -14,7 +12,7 @@ import { PitchPanel } from '../components/PitchPanel'
 import { RichText } from '../components/RichText'
 import { contourFromSamples, type Contour } from '../pitch/contour'
 import { cardIdFor } from '../srs/session'
-import { prefsFromSettings, type Settings } from '../storage/types'
+import { prefsFromSettings } from '../storage/types'
 
 const AUDIO_COPY = {
   vi: 'audioVi',
@@ -23,24 +21,18 @@ const AUDIO_COPY = {
   en: 'audioEn',
 } as const
 
-function applyVariant(settings: Settings, lang: Lang, id: string): Settings {
-  if (lang === 'vi' && (id === 'phone' || id === 'zalo')) return { ...settings, viContact: id }
-  if (lang === 'vi') return { ...settings, addressVi: id }
-  if (lang === 'pt-BR' && (id === 'obrigado' || id === 'obrigada')) return { ...settings, ptSpeaker: id }
-  if (lang === 'pt-BR') return { ...settings, addressPt: id }
-  if (lang === 'de' && (id === 'sie' || id === 'du')) return { ...settings, addressDe: id }
-  return settings
-}
-
 export function PhrasePage() {
   const { conceptId = '' } = useParams()
   const { catalog, snapshot, saveSettings } = useApp()
   const settings = useSettings()
   const copy = useCopy()
-  const pair = pairById(settings.pairId)
+  const app = settings.appLang
+  const targetLang = settings.targetLang
+  const direction = app && targetLang ? directionId(app, targetLang) : null
   const concept = catalog?.concepts.find((item) => item.id === conceptId)
   const ui = interfaceLang(settings)
   const [heard, setHeard] = useState<'file' | 'synth' | null>(null)
+  const [playing, setPlaying] = useState(false)
   const [recording, setRecording] = useState(false)
   const [mineUrl, setMineUrl] = useState<string | null>(null)
   const sessionRef = useRef<CaptureSession | null>(null)
@@ -51,8 +43,8 @@ export function PhrasePage() {
   const [modelContour, setModelContour] = useState<Contour>([])
   const [modelMissing, setModelMissing] = useState(false)
 
-  const target = concept && pair ? resolvePlayback(concept, pair.target, settings.viRegion, prefsFromSettings(pair.target, settings)) : undefined
-  const source = concept && pair ? resolvePlayback(concept, pair.source, settings.viRegion, prefsFromSettings(pair.source, settings)) : undefined
+  const target = concept && targetLang ? resolvePlayback(concept, targetLang, settings.viRegion, prefsFromSettings(targetLang, settings)) : undefined
+  const source = concept && app ? resolvePlayback(concept, app, settings.viRegion, prefsFromSettings(app, settings)) : undefined
   const targetFile = target?.file ?? ''
 
   useEffect(() => {
@@ -69,7 +61,7 @@ export function PhrasePage() {
 
   useEffect(() => {
     let active = true
-    if (!targetFile || pair?.target !== 'vi') return
+    if (!targetFile || targetLang !== 'vi' || userContour.length === 0) return
     void decodeContourFile(targetFile).then((decoded) => {
       if (!active) return
       if (!decoded) {
@@ -83,26 +75,24 @@ export function PhrasePage() {
     return () => {
       active = false
     }
-  }, [targetFile, pair?.target])
+  }, [targetFile, targetLang, userContour.length])
 
-  if (!catalog || !concept || !pair || !target || !source) {
-    return <p>{pair ? copy.noResults : copy.needPair}</p>
+  if (!catalog || !concept || !direction || !app || !targetLang || !target || !source) {
+    return <p>{direction ? copy.noResults : copy.needPair}</p>
   }
 
-  const realization = pickRealization(concept, pair.target, settings.viRegion)
-  const address = realization && (hasAddressToken(realization.text) || hasAddressToken(realization.speech ?? ''))
-  const forms = address ? addressForms(pair.target) : []
-  const variants = !address ? (realization?.variants ?? []) : []
   const pairNotes = catalog.pairNotes.filter(
-    (note) => note.sourceLang === pair.source && note.targetLang === pair.target && (!note.conceptId || note.conceptId === concept.id),
+    (note) => note.sourceLang === app && note.targetLang === targetLang && (!note.conceptId || note.conceptId === concept.id),
   )
-
-  const stored = snapshot?.cards.find((card) => card.cardId === cardIdFor(pair.id, concept.id))
+  const stored = snapshot?.cards.find((card) => card.cardId === cardIdFor(direction, concept.id))
   const step = effectiveSpeed(settings.speed, stored)
   const percent = speedPercent(step)
 
   async function onPlay(file: string, rate: SpeedStep): Promise<void> {
-    const result = await playClip(file, target?.speech ?? '', pair?.target ?? 'de', rate)
+    setPlaying(true)
+    const result = await playClip(file, target?.speech ?? '', targetLang ?? 'de', rate, () => {
+      if (aliveRef.current) setPlaying(false)
+    })
     setHeard(result)
   }
 
@@ -142,7 +132,6 @@ export function PhrasePage() {
       <p>
         <Link to={`/situation/${concept.situationIds[0] ?? ''}`}>{copy.back}</Link>
       </p>
-      <p className="badge">{copy.unchecked}</p>
       <h1>
         <RichText text={target.text} />
       </h1>
@@ -150,8 +139,10 @@ export function PhrasePage() {
         <RichText text={source.text} />
       </p>
       <p className="hint">{copy.exampleAudio}</p>
-      <p>{copy.context}: {concept.context[ui]}</p>
-      {pair.target === 'vi' ? <p className="warn">{copy.audioVi}</p> : <p className="hint">{copy[AUDIO_COPY[pair.target]]}</p>}
+      <p>
+        {copy.context}: {concept.context[ui]}
+      </p>
+      {targetLang === 'vi' ? <p className="warn">{copy.audioVi}</p> : <p className="hint">{copy[AUDIO_COPY[targetLang]]}</p>}
       {heard === 'synth' ? <p className="warn">{copy.audioSynth}</p> : null}
       <p className="speed-now" data-testid="speed-now">
         {copy.speedShown(percent)}
@@ -176,59 +167,19 @@ export function PhrasePage() {
         <p className="hint">{settings.speed === 'auto' ? copy.speedAutoHint(percent) : copy.speedFixedHint(percent)}</p>
       </fieldset>
       <div className="row">
-        <button type="button" className="button" onClick={() => void onPlay(tempoFile(target.file, step), step)}>
-          {copy.play}
+        <button
+          type="button"
+          className="play-row"
+          aria-pressed={playing}
+          onClick={() => void onPlay(tempoFile(target.file, step), step)}
+        >
+          <span className="play-mark" aria-hidden="true" />
+          {playing ? copy.playing : copy.play}
         </button>
         <Link className="button" to={`/show/${concept.id}`}>
           {copy.showThis}
         </Link>
       </div>
-      {forms.length > 0 ? (
-        <fieldset>
-          <legend>{copy.addressTitle}</legend>
-          {forms.map((form) => (
-            <label key={form.id} className="choice">
-              <input
-                type="radio"
-                name="address"
-                checked={prefsFromSettings(pair.target, settings).includes(form.id)}
-                onChange={() => void saveSettings(applyVariant(settings, pair.target, form.id))}
-              />
-              {form.label}
-              <span className="hint">{form.note[ui]}</span>
-            </label>
-          ))}
-        </fieldset>
-      ) : null}
-      {variants.length > 0 ? (
-        <fieldset>
-          <legend>{copy.addressTitle}</legend>
-          {variants.map((variant) => (
-            <label key={variant.id} className="choice">
-              <input
-                type="radio"
-                name="variant"
-                checked={target.variantId === variant.id || (target.variantId === 'base' && variant.text === realization?.text)}
-                onChange={() => void saveSettings(applyVariant(settings, pair.target, variant.id))}
-              />
-              {variant.label}
-            </label>
-          ))}
-        </fieldset>
-      ) : null}
-      {pair.target === 'vi' && concept.realizations.some((row) => row.lang === 'vi' && row.region) ? (
-        <fieldset>
-          <legend>{copy.viRegion}</legend>
-          <label className="choice">
-            <input type="radio" name="region" checked={settings.viRegion === 'south'} onChange={() => void saveSettings({ ...settings, viRegion: 'south' })} />
-            {copy.regionSouth}
-          </label>
-          <label className="choice">
-            <input type="radio" name="region" checked={settings.viRegion === 'north'} onChange={() => void saveSettings({ ...settings, viRegion: 'north' })} />
-            {copy.regionNorth}
-          </label>
-        </fieldset>
-      ) : null}
       {pairNotes.map((note) => (
         <p key={note.id} className="hint">
           {copy.pairNote}: {note.text[ui]}
@@ -261,7 +212,10 @@ export function PhrasePage() {
           ) : null}
         </div>
       </section>
-      {pair.target === 'vi' ? <PitchPanel model={modelContour} user={userContour} copy={copy} modelMissing={modelMissing} /> : null}
+      {targetLang === 'vi' && userContour.length > 0 ? (
+        <PitchPanel model={modelContour} user={userContour} copy={copy} modelMissing={modelMissing} />
+      ) : null}
+      <p className="hint">{copy.uncheckedCalm}</p>
     </article>
   )
 }

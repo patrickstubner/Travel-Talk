@@ -15,7 +15,7 @@ export function CulturePage() {
   if (!noteId || !note) {
     return (
       <section className="stack" data-testid="culture">
-        <h1>{copy.nav.culture}</h1>
+        <h1>{copy.cultureTitle}</h1>
         <p>{copy.cultureLead}</p>
         <ul className="cards">
           {catalog.cultureNotes.map((item) => (
@@ -35,10 +35,10 @@ export function CulturePage() {
       <p>
         <Link to="/culture">{copy.back}</Link>
       </p>
-      <p className="badge">{copy.unchecked}</p>
       <h1>{note.title[ui]}</h1>
       <p className="hint">{note.regions.join(' · ')}</p>
       <p className="prose">{note.body[ui as Lang]}</p>
+      <p className="hint">{copy.uncheckedCalm}</p>
       <h2>{copy.sources}</h2>
       <ul>
         {note.sources.map((source) => (

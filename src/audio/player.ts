@@ -52,17 +52,37 @@ export function speak(text: string, lang: Lang, rate: SpeedStep = 1): void {
  * shift pitch, and that would bend Vietnamese tones. The tempo is the file.
  * The browser voice is only the fallback, and then `utterance.rate` is the chosen step.
  */
-export async function playClip(file: string, speech: string, lang: Lang, rate: SpeedStep = 1): Promise<'file' | 'synth'> {
+export async function playClip(
+  file: string,
+  speech: string,
+  lang: Lang,
+  rate: SpeedStep = 1,
+  onEnd?: () => void,
+): Promise<'file' | 'synth'> {
   const files = await loadManifest()
   if (AUDIO_FILE.test(file) && files.has(file)) {
     current?.pause()
     const audio = new Audio(publicUrl(`audio/${file}`))
     audio.playbackRate = 1
+    audio.onended = () => onEnd?.()
     current = audio
-    await audio.play()
+    try {
+      await audio.play()
+    } catch {
+      onEnd?.()
+    }
     return 'file'
   }
-  speak(speech, lang, rate)
+  if (typeof speechSynthesis === 'undefined') {
+    onEnd?.()
+    return 'synth'
+  }
+  speechSynthesis.cancel()
+  const utterance = new SpeechSynthesisUtterance(speech)
+  utterance.lang = SPEECH_LANG[lang]
+  utterance.rate = rate
+  utterance.onend = () => onEnd?.()
+  speechSynthesis.speak(utterance)
   return 'synth'
 }
 

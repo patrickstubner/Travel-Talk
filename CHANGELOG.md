@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 — 2026-10-11
+
+- Sprache der App und Lernsprache sind getrennt. Dieselbe Wahl steht zu Beginn und in den Einstellungen. Die feste Paarliste und der Schalter für die Oberflächensprache sind weg. Alle zwölf Richtungen laufen aus den vorhandenen Sätzen. Fehlt eine Zeile, wird sie ausgelassen.
+- Heute lernen ist eine kurze Sitzung: fällige Wiederholungen und wenige neue Sätze. Unbekannte Sätze sind nicht fällig. Höchstens 15 neue Sätze am Tag, in der ersten Sitzung etwa vier.
+- Jeder neue Satz: langsam hören, normales Tempo, nachsprechen, Bedeutung wählen, selbst sagen, dann vier Abstände vom Planer. Die Schrift der Lernsprache bleibt bei einem neuen Satz sichtbar und kommt nach der Antwort wieder, wenn sie verdeckt war. Tippen ist nicht Teil des Wegs.
+- Am Ende stehen die Anzahl, ein Satz aus der Situation und was morgen kommt. Keine Punkte.
+- Die fünf festen Tonbögen sind von der Satzseite weg. Die Tonhöhenkurve kommt nur nach einer Aufnahme. Eine Stimme pro Sprache, ehrlich benannt. Ein optionales `voices`-Feld bleibt für eine spätere Wahl.
+- Exportformat 3 speichert `appLang` und `targetLang`. `pairId` und `uiLang` sind keine Felder mehr. Format 1 und 2 werden gelesen. Die App-Sprache wird die bisherige Ausgangssprache, die Lernsprache die bisherige Zielsprache. Karten und Lernstand bleiben. War die Oberfläche Deutsch und die Ausgangssprache eine andere, bleiben die Aufgaben bei dieser Ausgangssprache.
+
 ## 0.2.2 — 2026-10-10
 
 - Der Hinweis auf eine neuere Datei erscheint nur, wenn `format` eine sichere ganze Zahl über 2 ist. 2.5, `1e308`, `1e400` und der Text `"3"` bleiben ein normaler Ablehnungsfehler.

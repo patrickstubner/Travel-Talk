@@ -31,11 +31,11 @@ class FakeRecorder extends EventTarget {
 function ReadyPhrase({ children }: { children: ReactNode }) {
   const { snapshot, saveSettings } = useApp()
   useEffect(() => {
-    if (snapshot && snapshot.settings.pairId !== 'de-vi') {
-      void saveSettings({ ...snapshot.settings, pairId: 'de-vi' })
+    if (snapshot && (snapshot.settings.appLang !== 'de' || snapshot.settings.targetLang !== 'vi')) {
+      void saveSettings({ ...snapshot.settings, appLang: 'de', targetLang: 'vi' })
     }
   }, [snapshot, saveSettings])
-  if (snapshot?.settings.pairId !== 'de-vi') return null
+  if (snapshot?.settings.appLang !== 'de' || snapshot?.settings.targetLang !== 'vi') return null
   return children
 }
 

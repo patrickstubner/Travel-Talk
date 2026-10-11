@@ -4,7 +4,7 @@ import { IDBFactory } from 'fake-indexeddb'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppContext, AppProvider } from '../app/state'
-import { defaultSettings, type ProgressSnapshot } from '../storage/types'
+import { defaultSettings } from '../storage/types'
 import { SettingsPage } from './Settings'
 
 type Saved = { name: string; body: Promise<string> }
@@ -24,9 +24,28 @@ function spyDownloads(): Saved[] {
   return saved
 }
 
+function legacySettings(note: string) {
+  return {
+    pairId: 'de-vi',
+    uiLang: 'de',
+    viRegion: 'south',
+    addressVi: 'anh',
+    addressPt: 'voce',
+    addressDe: 'sie',
+    ptSpeaker: 'obrigado',
+    viContact: 'phone',
+    retention: 0.9,
+    personalNote: note,
+    speed: 'auto',
+  }
+}
+
 function importFile(): File {
-  const snapshot: ProgressSnapshot = {
-    settings: { ...defaultSettings, pairId: 'de-vi', personalNote: '' },
+  const text = JSON.stringify({
+    app: 'travel-talk',
+    format: 1,
+    exportedAt: '2026-10-10T00:00:00.000Z',
+    settings: legacySettings(''),
     cards: [
       {
         cardId: 'de-vi:emergency.help',
@@ -42,13 +61,6 @@ function importFile(): File {
         last_review: '2026-10-10T00:00:00.000Z',
       },
     ],
-  }
-  const text = JSON.stringify({
-    app: 'travel-talk',
-    format: 1,
-    exportedAt: '2026-10-10T00:00:00.000Z',
-    settings: snapshot.settings,
-    cards: snapshot.cards,
   })
   return new File([text], 'in.json', { type: 'application/json' })
 }
@@ -106,7 +118,7 @@ describe('settings import', () => {
     const file = importFile()
     const text = JSON.stringify({
       ...JSON.parse(await file.text()),
-      settings: { ...defaultSettings, pairId: 'de-vi', personalNote: 'Pollen' },
+      settings: { ...legacySettings('Pollen') },
     })
     const withNote = new File([text], 'in.json', { type: 'application/json' })
     render(
@@ -125,7 +137,7 @@ describe('settings import', () => {
   })
 
   it('asks to reload when the file comes from a newer app', async () => {
-    const file = new File([JSON.stringify({ app: 'travel-talk', format: 3, surprise: true })], 'new.json', { type: 'application/json' })
+    const file = new File([JSON.stringify({ app: 'travel-talk', format: 4, surprise: true })], 'new.json', { type: 'application/json' })
     render(
       <AppProvider>
         <SettingsPage />

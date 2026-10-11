@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { DE_ADDRESS, PT_ADDRESS, PT_SPEAKER, VI_ADDRESS } from '../../content/address'
-import { pairById, pairUses } from '../domain/pairs'
+import { LanguageChoice } from '../components/LanguageChoice'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { publicUrl } from '../public-url'
 import { IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport, type ImportPreview } from '../storage/import'
-import type { ProgressSnapshot, Settings } from '../storage/types'
+import { usesLang, type ProgressSnapshot, type Settings } from '../storage/types'
 
 function cleanNote(value: string): string {
   return value.replace(/[^\P{C}\n\t]/gu, '').slice(0, 500)
@@ -16,6 +16,7 @@ type PendingImport = {
   snapshot: ProgressSnapshot
   skipped: number
   preview: ImportPreview
+  uiNotRelabeled: boolean
 }
 
 export function SettingsPage() {
@@ -23,9 +24,9 @@ export function SettingsPage() {
   const settings = useSettings()
   const copy = useCopy()
   const ui = interfaceLang(settings)
-  const pair = pairById(settings.pairId)
   const conceptIds = useMemo(() => new Set(catalog?.concepts.map((concept) => concept.id) ?? []), [catalog])
   const [importState, setImportState] = useState<'ok' | 'bad' | 'newer' | 'reset' | null>(null)
+  const [keptDirection, setKeptDirection] = useState(false)
   const [skipped, setSkipped] = useState(0)
   const [pending, setPending] = useState<PendingImport | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -60,7 +61,12 @@ export function SettingsPage() {
       if (!catalog) return
       const text = await file.text()
       const outcome = parseImport(text, conceptIds)
-      setPending({ snapshot: outcome.snapshot, skipped: outcome.skipped, preview: previewImport(outcome.snapshot) })
+      setPending({
+        snapshot: outcome.snapshot,
+        skipped: outcome.skipped,
+        preview: previewImport(outcome.snapshot),
+        uiNotRelabeled: outcome.uiNotRelabeled,
+      })
     } catch (error) {
       setImportState(error instanceof Error && error.message === IMPORT_NEWER ? 'newer' : 'bad')
     }
@@ -76,30 +82,11 @@ export function SettingsPage() {
   }
 
   return (
-    <section className="stack">
-      <h1>{copy.settingsTitle}</h1>
-      <fieldset>
-        <legend>{copy.uiLanguage}</legend>
-        <label className="choice">
-          <input type="radio" name="ui" checked={settings.uiLang === 'de'} onChange={() => update({ uiLang: 'de' })} />
-          {copy.uiGerman}
-        </label>
-        <label className="choice">
-          <input type="radio" name="ui" checked={settings.uiLang === 'source'} onChange={() => update({ uiLang: 'source' })} />
-          {copy.uiSource}
-        </label>
-      </fieldset>
-      {pairUses(settings.pairId, 'vi') ? (
+    <section className="stack" data-testid="settings">
+      <LanguageChoice settings={settings} copy={copy} ui={ui} mode="settings" onChange={(patch) => update(patch)} />
+      {usesLang(settings, 'vi') ? (
         <fieldset>
-          <legend>{copy.viRegion}</legend>
-          <label className="choice">
-            <input type="radio" name="region" checked={settings.viRegion === 'south'} onChange={() => update({ viRegion: 'south' })} />
-            {copy.regionSouth}
-          </label>
-          <label className="choice">
-            <input type="radio" name="region" checked={settings.viRegion === 'north'} onChange={() => update({ viRegion: 'north' })} />
-            {copy.regionNorth}
-          </label>
+          <legend>{copy.addressTitle}</legend>
           <label>
             {copy.addressTitle}
             <select value={settings.addressVi} onChange={(event) => update({ addressVi: event.target.value })}>
@@ -120,7 +107,7 @@ export function SettingsPage() {
           </label>
         </fieldset>
       ) : null}
-      {pairUses(settings.pairId, 'pt-BR') ? (
+      {usesLang(settings, 'pt-BR') ? (
         <fieldset>
           <legend>{copy.addressTitle}</legend>
           <label>
@@ -146,7 +133,7 @@ export function SettingsPage() {
           </label>
         </fieldset>
       ) : null}
-      {pairUses(settings.pairId, 'de') ? (
+      {usesLang(settings, 'de') ? (
         <fieldset>
           <legend>{copy.addressTitle}</legend>
           <label>
@@ -223,9 +210,11 @@ export function SettingsPage() {
                     personalNote: retainLocalNote(current.settings.personalNote, next.settings.personalNote),
                   },
                 }
+                const relabeled = pending.uiNotRelabeled
                 setPending(null)
                 void replaceAll(merged).then(() => {
                   setSkipped(leftOut)
+                  setKeptDirection(relabeled)
                   setImportState('ok')
                 })
               }}
@@ -239,6 +228,7 @@ export function SettingsPage() {
         </div>
       ) : null}
       {importState === 'ok' ? <p role="status">{copy.importOk}</p> : null}
+      {importState === 'ok' && keptDirection ? <p role="status">{copy.directionKept}</p> : null}
       {skipped > 0 && importState === 'ok' ? <p role="status">{copy.importSkipped(skipped)}</p> : null}
       {importState === 'newer' ? <p role="alert">{copy.importNewer}</p> : null}
       {importState === 'bad' ? <p role="alert">{copy.importBad}</p> : null}
@@ -290,7 +280,6 @@ export function SettingsPage() {
         </p>
       </section>
       <p className="hint">{copy.privacy}</p>
-      {pair ? null : <p>{copy.needPair}</p>}
     </section>
   )
 }

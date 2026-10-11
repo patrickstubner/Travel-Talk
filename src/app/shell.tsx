@@ -43,11 +43,10 @@ export function Shell() {
       <div className="layout">
         <nav className="nav" aria-label={copy.appName}>
           <NavLink to="/" end>
-            {copy.nav.home}
+            {copy.nav.today}
           </NavLink>
-          <NavLink to="/practice">{copy.nav.practice}</NavLink>
+          <NavLink to="/lookup">{copy.nav.lookup}</NavLink>
           <NavLink to="/show">{copy.nav.show}</NavLink>
-          <NavLink to="/culture">{copy.nav.culture}</NavLink>
           <NavLink to="/settings">{copy.nav.settings}</NavLink>
         </nav>
         <main id="inhalt">

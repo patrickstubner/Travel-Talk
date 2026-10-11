@@ -10,6 +10,18 @@ export function reviewCard(card: Card, grade: Grade, now: Date, retention: numbe
   return scheduler.next(card, now, grade).card
 }
 
+/** Next due date for each button. Fuzz is off so the label matches the stored card. */
+export function previewDue(card: Card, now: Date, retention: number): Record<Grade, Date> {
+  const scheduler = fsrs(generatorParameters({ request_retention: retention, enable_fuzz: false }))
+  const preview = scheduler.repeat(card, now)
+  return {
+    [Rating.Again]: preview[Rating.Again].card.due,
+    [Rating.Hard]: preview[Rating.Hard].card.due,
+    [Rating.Good]: preview[Rating.Good].card.due,
+    [Rating.Easy]: preview[Rating.Easy].card.due,
+  }
+}
+
 export function toStored(cardId: string, card: Card): StoredCard {
   return {
     cardId,
