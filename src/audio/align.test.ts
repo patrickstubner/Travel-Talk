@@ -108,4 +108,30 @@ describe('alignment files', () => {
     expect(alignmentFitsDuration([{ start: 0.1, end: 1.2 }], 1.05)).toBe(false)
     expect(alignmentFitsDuration([{ start: 0.1, end: 1.2 }], 1.09, 1 / 0.7)).toBe(true)
   })
+
+  it('fetches again after a timing file was missing', async () => {
+    let status = 404
+    let body = 'missing'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (String(url).includes('manifest.json')) {
+          return { ok: true, json: async () => ['vi/vivos-22/emergency.help__any__base.align.json'] }
+        }
+        return new Response(body, { status })
+      }),
+    )
+    vi.stubGlobal('caches', {
+      async keys() {
+        return []
+      },
+      async open() {
+        return { async match() { return undefined } }
+      },
+    })
+    await expect(loadAlignment('vi/vivos-22/emergency.help__any__base.m4a', 'Giúp')).resolves.toBeNull()
+    status = 200
+    body = JSON.stringify({ words: [{ start: 0.1, end: 0.4 }] })
+    await expect(loadAlignment('vi/vivos-22/emergency.help__any__base.m4a', 'Giúp')).resolves.toEqual([{ start: 0.1, end: 0.4 }])
+  })
 })

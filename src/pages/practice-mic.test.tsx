@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto'
-import { IDBFactory } from 'fake-indexeddb'
+import { freshIndexedDb } from '../test-idb'
 import { useEffect, type ReactNode } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -11,6 +11,7 @@ import { PracticePage } from './Practice'
 
 vi.mock('../audio/player', () => ({
   playClip: vi.fn(async () => 'file'),
+  stopClip: vi.fn(),
 }))
 
 vi.mock('../audio/recorder', () => ({
@@ -58,7 +59,7 @@ async function openRepeat(): Promise<void> {
 }
 
 beforeEach(() => {
-  globalThis.indexedDB = new IDBFactory()
+  freshIndexedDb()
   vi.mocked(startMicrophone).mockReset()
 })
 

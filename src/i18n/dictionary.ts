@@ -223,6 +223,38 @@ export type Dictionary = {
   noNewToday: string
   reviewTitle: string
   startLead: (fresh: number, due: number) => string
+  whoKicker: string
+  whoTitle: string
+  whoCount: (count: number) => string
+  whoShared: string
+  personAdd: string
+  personNameAsk: string
+  personNameHint: string
+  personSave: string
+  personRename: string
+  personDelete: string
+  personDeleteAsk: string
+  personLimit: string
+  personLevel: string
+  personLearns: (language: string) => string
+  personNoLang: string
+  exportAll: string
+  importReplace: string
+  importAdd: string
+  importAddName: string
+  importReplaceAll: string
+  importAllAsk: string
+  importAllNotesCleared: string
+  importAllNotesReplaced: string
+  importAllConfirmTitle: string
+  importAllConfirmBody: string
+  importAllConfirm: string
+  exportAllHint: string
+  importPeople: (count: number) => string
+  moreTarget: string
+  moreTargetHint: string
+  resetPerson: string
+  resetPersonAsk: string
 }
 
 export const de: Dictionary = {
@@ -378,7 +410,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.5.0',
+  version: 'Version 0.6.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
@@ -400,7 +432,7 @@ export const de: Dictionary = {
   appLangTitle: 'Sprache der App',
   appLangHint: 'Damit liest du. Damit sind auch die Übersetzungen geschrieben.',
   targetLangTitle: 'Sprache, die du lernst',
-  targetLangHint: 'Dazu gehören Stimme und, bei Vietnamesisch, die Variante der Wörter.',
+  targetLangHint: 'Die Lernsprache und die Variante stehen oben in der Mitte. Hier bleibt die Stimme.',
   scriptTitle: 'Schrift und Wörter',
   scriptHint: 'Nur weil die Lernsprache Vietnamesisch ist. Das ist nicht die Stimme.',
   voiceTitle: 'Stimme',
@@ -465,6 +497,38 @@ export const de: Dictionary = {
   noNewToday: 'Heute keine neuen Sätze mehr. Die Wiederholungen liegen unter Wiederholen.',
   reviewTitle: 'Wiederholen',
   startLead: (fresh, due) => `${fresh === 1 ? '1 neuer Satz' : `${fresh} neue Sätze`}. ${due === 0 ? 'Keine Wiederholung.' : due === 1 ? '1 Wiederholung.' : `${due} Wiederholungen.`}`,
+  whoKicker: 'Auf diesem Gerät',
+  whoTitle: 'Wer lernt?',
+  whoCount: (count) => `${count === 1 ? 'Eine' : count === 2 ? 'Zwei' : String(count)} von zehn. Der Name bleibt auf diesem Gerät. Stimmen und Audiodateien sind gemeinsam.`,
+  whoShared: 'Gemeinsam, nicht pro Person kopiert: geladene Stimmen, Audiodateien, die Sätze im Programm.',
+  personAdd: 'Person hinzufügen',
+  personNameAsk: 'Wie sollen wir dich nennen?',
+  personNameHint: 'Ein Kosename reicht. Der Name bleibt auf diesem Gerät.',
+  personSave: 'Weiter',
+  personRename: 'Umbenennen',
+  personDelete: 'Person löschen',
+  personDeleteAsk: 'Der Lernstand dieser Person wird gelöscht. Die anderen Personen bleiben. Eine Stimme, die niemand mehr benutzt, wird aus dem Offline-Speicher genommen.',
+  personLimit: 'Zehn Personen. Mehr geht auf diesem Gerät nicht.',
+  personLevel: 'Stufe 0',
+  personLearns: (language) => `lernt ${language}`,
+  personNoLang: 'Sprachen fehlen noch',
+  exportAll: 'Alle Personen exportieren',
+  importReplace: 'Diese Person ersetzen',
+  importAdd: 'Als neue Person',
+  importAddName: 'Name der neuen Person',
+  importReplaceAll: 'Alle Personen ersetzen',
+  importAllAsk: 'Das ersetzt alle Personen auf diesem Gerät. Die Datei wird erst nach dieser Bestätigung geschrieben.',
+  importAllNotesCleared: 'Die Datei enthält keine Notiz. Die Notizen aller Personen auf diesem Gerät werden überschrieben.',
+  importAllNotesReplaced: 'Die Notizen in der Datei ersetzen die Notizen aller Personen auf diesem Gerät.',
+  importAllConfirmTitle: 'Alle Personen ersetzen?',
+  importAllConfirmBody: 'Die Personen auf diesem Gerät werden gelöscht und durch die Datei ersetzt. Das lässt sich hier nicht rückgängig machen.',
+  importAllConfirm: 'Ja, alle ersetzen',
+  exportAllHint: 'Alle Personen exportieren bleibt aus, solange eine Person keinen Namen oder nicht beide Sprachen hat.',
+  importPeople: (count) => (count === 1 ? '1 Person.' : `${count} Personen.`),
+  moreTarget: 'Weitere Lernsprache',
+  moreTargetHint: 'Heute lernen übt eine Lernsprache. Die neuen Karten des Tages zählen alle Lernsprachen dieser Person zusammen.',
+  resetPerson: 'Lernstand dieser Person löschen',
+  resetPersonAsk: 'Der Lernstand dieser Person wird gelöscht. Die anderen Personen bleiben. Das kann hier nicht zurückgeholt werden.',
 }
 
 export const en: Dictionary = {
@@ -637,7 +701,7 @@ export const en: Dictionary = {
   appLangTitle: 'Language of the app',
   appLangHint: 'This is what you read. The translations are written in it too.',
   targetLangTitle: 'Language you are learning',
-  targetLangHint: 'The voice belongs here, and for Vietnamese the variant of the words.',
+  targetLangHint: 'The language you learn, and its variant, are at the top. The voice stays here.',
   scriptTitle: 'Script and words',
   scriptHint: 'Only because the language you learn is Vietnamese. This is not the voice.',
   voiceTitle: 'Voice',
@@ -702,6 +766,38 @@ export const en: Dictionary = {
   noNewToday: 'No new lines today. Reviews are under Review.',
   reviewTitle: 'Review',
   startLead: (fresh, due) => `${fresh === 1 ? '1 new line' : `${fresh} new lines`}. ${due === 0 ? 'No review.' : due === 1 ? '1 review.' : `${due} reviews.`}`,
+  whoKicker: 'On this device',
+  whoTitle: 'Who is learning?',
+  whoCount: (count) => `${count} of ten. The name stays on this device. Voices and audio are shared.`,
+  whoShared: 'Shared, not copied per person: downloaded voices, audio files, the sentences in the app.',
+  personAdd: 'Add a person',
+  personNameAsk: 'What should we call you?',
+  personNameHint: 'A short name is enough. It stays on this device.',
+  personSave: 'Continue',
+  personRename: 'Rename',
+  personDelete: 'Delete person',
+  personDeleteAsk: 'This person\'s progress is deleted. The others stay. A voice nobody still uses is removed from offline storage.',
+  personLimit: 'Ten people. This device cannot hold more.',
+  personLevel: 'Stage 0',
+  personLearns: (language) => `learning ${language}`,
+  personNoLang: 'Languages not chosen yet',
+  exportAll: 'Export every person',
+  importReplace: 'Replace this person',
+  importAdd: 'Add as a new person',
+  importAddName: 'Name of the new person',
+  importReplaceAll: 'Replace every person',
+  importAllAsk: 'This replaces every person on this device. Nothing is written until you confirm.',
+  importAllNotesCleared: 'The file has no note. The notes of every person on this device are overwritten.',
+  importAllNotesReplaced: 'The notes in the file replace the notes of every person on this device.',
+  importAllConfirmTitle: 'Replace every person?',
+  importAllConfirmBody: 'The people on this device are deleted and replaced by the file. This cannot be undone here.',
+  importAllConfirm: 'Yes, replace everyone',
+  exportAllHint: 'Export every person stays off while any person has no name or is missing either language.',
+  importPeople: (count) => (count === 1 ? '1 person.' : `${count} people.`),
+  moreTarget: 'Another language to learn',
+  moreTargetHint: 'Today practises one language. The day’s new cards count every language this person learns.',
+  resetPerson: 'Delete this person\'s progress',
+  resetPersonAsk: 'This person\'s progress is deleted. The others stay. This screen cannot bring it back.',
 }
 
 export const pt: Dictionary = {
@@ -876,7 +972,7 @@ export const pt: Dictionary = {
   appLangTitle: 'Língua do aplicativo',
   appLangHint: 'É com ela que você lê. As traduções também estão nela.',
   targetLangTitle: 'Língua que você aprende',
-  targetLangHint: 'A voz fica aqui e, no vietnamita, a variante das palavras.',
+  targetLangHint: 'A língua que você aprende, e a variante, ficam em cima. A voz fica aqui.',
   scriptTitle: 'Escrita e palavras',
   scriptHint: 'Só porque a língua que você aprende é o vietnamita. Isso não é a voz.',
   voiceTitle: 'Voz',
@@ -941,6 +1037,38 @@ export const pt: Dictionary = {
   noNewToday: 'Hoje não há frases novas. As revisões ficam em Revisar.',
   reviewTitle: 'Revisar',
   startLead: (fresh, due) => `${fresh === 1 ? '1 frase nova' : `${fresh} frases novas`}. ${due === 0 ? 'Nenhuma revisão.' : due === 1 ? '1 revisão.' : `${due} revisões.`}`,
+  whoKicker: 'Neste aparelho',
+  whoTitle: 'Quem aprende?',
+  whoCount: (count) => `${count} de dez. O nome fica neste aparelho. Vozes e áudios são compartilhados.`,
+  whoShared: 'Em comum, não copiado por pessoa: vozes baixadas, arquivos de áudio, as frases no programa.',
+  personAdd: 'Adicionar pessoa',
+  personNameAsk: 'Como devemos chamar você?',
+  personNameHint: 'Um nome curto basta. O nome fica neste aparelho.',
+  personSave: 'Continuar',
+  personRename: 'Mudar o nome',
+  personDelete: 'Apagar pessoa',
+  personDeleteAsk: 'O progresso desta pessoa é apagado. As outras ficam. Uma voz que ninguém mais usa sai do armazenamento offline.',
+  personLimit: 'Dez pessoas. Este aparelho não guarda mais.',
+  personLevel: 'Nível 0',
+  personLearns: (language) => `aprende ${language}`,
+  personNoLang: 'Línguas ainda não escolhidas',
+  exportAll: 'Exportar todas as pessoas',
+  importReplace: 'Substituir esta pessoa',
+  importAdd: 'Como pessoa nova',
+  importAddName: 'Nome da pessoa nova',
+  importReplaceAll: 'Substituir todas as pessoas',
+  importAllAsk: 'Isto substitui todas as pessoas neste aparelho. Nada é escrito antes desta confirmação.',
+  importAllNotesCleared: 'O arquivo não tem nota. As notas de todas as pessoas neste aparelho são substituídas.',
+  importAllNotesReplaced: 'As notas do arquivo substituem as notas de todas as pessoas neste aparelho.',
+  importAllConfirmTitle: 'Substituir todas as pessoas?',
+  importAllConfirmBody: 'As pessoas neste aparelho são apagadas e substituídas pelo arquivo. Isso não volta atrás aqui.',
+  importAllConfirm: 'Sim, substituir todas',
+  exportAllHint: 'Exportar todas as pessoas fica desligado enquanto uma pessoa não tem nome ou não tem as duas línguas.',
+  importPeople: (count) => (count === 1 ? '1 pessoa.' : `${count} pessoas.`),
+  moreTarget: 'Outra língua para aprender',
+  moreTargetHint: 'Hoje pratica uma língua. Os cartões novos do dia contam todas as línguas desta pessoa.',
+  resetPerson: 'Apagar o progresso desta pessoa',
+  resetPersonAsk: 'O progresso desta pessoa é apagado. As outras ficam. Esta tela não o traz de volta.',
 }
 
 export const vi: Dictionary = {
@@ -1113,7 +1241,7 @@ export const vi: Dictionary = {
   appLangTitle: 'Ngôn ngữ của ứng dụng',
   appLangHint: 'Bạn đọc bằng ngôn ngữ này. Bản dịch cũng viết bằng ngôn ngữ này.',
   targetLangTitle: 'Ngôn ngữ bạn học',
-  targetLangHint: 'Giọng nói nằm ở đây, và với tiếng Việt là dạng của từ.',
+  targetLangHint: 'Ngôn ngữ bạn học, và dạng của nó, ở trên. Giọng nói ở đây.',
   scriptTitle: 'Chữ và từ',
   scriptHint: 'Chỉ vì ngôn ngữ bạn học là tiếng Việt. Đây không phải giọng nói.',
   voiceTitle: 'Giọng',
@@ -1178,6 +1306,38 @@ export const vi: Dictionary = {
   noNewToday: 'Hôm nay không còn câu mới. Phần ôn nằm ở Ôn lại.',
   reviewTitle: 'Ôn lại',
   startLead: (fresh, due) => `${fresh === 1 ? '1 câu mới' : `${fresh} câu mới`}. ${due === 0 ? 'Không có ôn lại.' : `${due} câu ôn.`}`,
+  whoKicker: 'Trên máy này',
+  whoTitle: 'Ai đang học?',
+  whoCount: (count) => `${count} trong mười. Tên ở trên máy này. Giọng và tệp âm thanh dùng chung.`,
+  whoShared: 'Dùng chung, không sao chép theo người: giọng đã tải, tệp âm thanh, các câu trong chương trình.',
+  personAdd: 'Thêm người',
+  personNameAsk: 'Chúng tôi nên gọi bạn là gì?',
+  personNameHint: 'Một tên ngắn là đủ. Tên ở trên máy này.',
+  personSave: 'Tiếp',
+  personRename: 'Đổi tên',
+  personDelete: 'Xoá người',
+  personDeleteAsk: 'Tiến độ của người này bị xoá. Những người khác còn. Giọng không còn ai dùng thì bị lấy khỏi bộ nhớ ngoại tuyến.',
+  personLimit: 'Mười người. Máy này không thêm được nữa.',
+  personLevel: 'Bậc 0',
+  personLearns: (language) => `học ${language}`,
+  personNoLang: 'Chưa chọn ngôn ngữ',
+  exportAll: 'Xuất mọi người',
+  importReplace: 'Thay người này',
+  importAdd: 'Thêm như người mới',
+  importAddName: 'Tên người mới',
+  importReplaceAll: 'Thay mọi người',
+  importAllAsk: 'Việc này thay mọi người trên máy. Chưa ghi gì trước khi bạn xác nhận.',
+  importAllNotesCleared: 'Tệp không có ghi chú. Ghi chú của mọi người trên máy này bị ghi đè.',
+  importAllNotesReplaced: 'Ghi chú trong tệp thay ghi chú của mọi người trên máy này.',
+  importAllConfirmTitle: 'Thay mọi người?',
+  importAllConfirmBody: 'Mọi người trên máy này bị xoá và được thay bằng tệp. Không hoàn lại được ở đây.',
+  importAllConfirm: 'Có, thay mọi người',
+  exportAllHint: 'Xuất mọi người vẫn tắt khi còn người chưa có tên hoặc chưa có cả hai ngôn ngữ.',
+  importPeople: (count) => (count === 1 ? '1 người.' : `${count} người.`),
+  moreTarget: 'Thêm một ngôn ngữ để học',
+  moreTargetHint: 'Hôm nay luyện một ngôn ngữ. Thẻ mới trong ngày tính mọi ngôn ngữ của người này.',
+  resetPerson: 'Xoá tiến độ của người này',
+  resetPersonAsk: 'Tiến độ của người này bị xoá. Những người khác còn. Màn hình này không lấy lại được.',
 }
 
 export const dictionaries = { de, en, 'pt-BR': pt, vi } as const

@@ -1,7 +1,8 @@
 import type { Lang } from '../../content/phrase'
 import { publicUrl } from '../public-url'
 import { loadManifest } from './player'
-import { filesForVoice, type CatalogVoice } from './voices'
+import type { Settings } from '../storage/types'
+import { filesForVoice, selectedVoice, voicesFor, voicesKeptByOthers, type CatalogVoice } from './voices'
 
 /** Runtime cache filled by «Für offline laden». Install does not write it. */
 export const AUDIO_CACHE = 'travel-talk-audio'
@@ -36,14 +37,19 @@ function isQuota(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'QuotaExceededError'
 }
 
-function isOtherVoice(url: string, lang: Lang, keep: CatalogVoice): boolean {
+function isOtherVoice(url: string, lang: Lang, keepIds: ReadonlySet<string>): boolean {
   const marker = `/audio/${lang}/`
   const index = url.indexOf(marker)
   if (index < 0) return false
   const rest = url.slice(index + marker.length)
   if (!rest.includes('.m4a') && !rest.includes('.align.json')) return false
-  if (keep.legacy) return rest.includes('/')
-  return !rest.startsWith(`${keep.id}/`)
+  const slash = rest.indexOf('/')
+  const folder = slash < 0 ? '' : rest.slice(0, slash)
+  if (folder === '') {
+    const legacy = voicesFor(lang).find((voice) => voice.legacy)
+    return legacy != null && !keepIds.has(legacy.id)
+  }
+  return !keepIds.has(folder)
 }
 
 async function listedFiles(lang: Lang, voice: CatalogVoice): Promise<string[]> {
@@ -74,7 +80,7 @@ export async function loadVoiceOffline(
   lang: Lang,
   voice: CatalogVoice,
   onProgress: (have: number, total: number) => void,
-  options: { dropOthers: () => boolean },
+  options: { dropOthers: () => boolean; retainIds?: readonly string[] },
 ): Promise<LoadResult> {
   const empty: LoadResult = { status: 'error', missing: 0, added: [] }
   let files: string[]
@@ -131,7 +137,7 @@ export async function loadVoiceOffline(
     have += 1
     onProgress(have, total)
   }
-  if (missing === 0 && options.dropOthers()) await dropOtherVoices(lang, voice)
+  if (missing === 0 && options.dropOthers()) await dropOtherVoices(lang, voice, options.retainIds ?? [])
   return { status: 'ready', missing, added }
 }
 
@@ -146,8 +152,9 @@ export async function discardAdded(urls: readonly string[]): Promise<void> {
   notifyAudioChanged()
 }
 
-/** Removes every other voice of this language after the chosen voice is complete. */
-export async function dropOtherVoices(lang: Lang, keep: CatalogVoice): Promise<void> {
+/** Removes cached files of this language whose voice id is not in `keepIds`. */
+export async function dropVoicesExcept(lang: Lang, keepIds: readonly string[]): Promise<void> {
+  const keep = new Set(keepIds)
   if ('caches' in globalThis) {
     const names = await caches.keys()
     for (const name of names) {
@@ -160,8 +167,29 @@ export async function dropOtherVoices(lang: Lang, keep: CatalogVoice): Promise<v
   notifyAudioChanged()
 }
 
-/** After a switch to a voice that is already complete, the others of that language can go. */
-export async function dropOtherVoicesIfCached(lang: Lang, voice: CatalogVoice): Promise<void> {
+/** Removes voices of this language that nobody in `alsoKeep` still has selected. */
+export async function dropOtherVoices(lang: Lang, keep: CatalogVoice, alsoKeep: readonly string[] = []): Promise<void> {
+  await dropVoicesExcept(lang, [keep.id, ...alsoKeep])
+}
+
+/**
+ * After a person is deleted, drop their voice when no remaining person still uses it.
+ * An empty `remaining` list drops every voice of the languages that person learned.
+ */
+export async function forgetVoiceIfUnused(gone: Settings, remaining: readonly { id: string; settings: Settings }[]): Promise<void> {
+  const langs = new Set<Lang>()
+  if (gone.appLang) langs.add(gone.appLang)
+  if (gone.targetLang) langs.add(gone.targetLang)
+  for (const extra of gone.moreTargets ?? []) langs.add(extra)
+  for (const lang of langs) {
+    const used = voicesKeptByOthers(remaining, undefined, lang)
+    if (used.includes(selectedVoice(gone, lang).id)) continue
+    await dropVoicesExcept(lang, used)
+  }
+}
+
+/** After a switch to a voice that is already complete, unused voices of that language can go. */
+export async function dropOtherVoicesIfCached(lang: Lang, voice: CatalogVoice, alsoKeep: readonly string[] = []): Promise<void> {
   const progress = await voiceProgress(lang, voice)
-  if (progress.total > 0 && progress.have === progress.total) await dropOtherVoices(lang, voice)
+  if (progress.total > 0 && progress.have === progress.total) await dropOtherVoices(lang, voice, alsoKeep)
 }

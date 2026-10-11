@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto'
-import Dexie from 'dexie'
-import { IDBFactory } from 'fake-indexeddb'
+import { freshIndexedDb } from '../test-idb'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,10 +11,11 @@ import { PracticePage } from './Practice'
 
 vi.mock('../audio/player', () => ({
   playClip: vi.fn(async () => 'file'),
+  stopClip: vi.fn(),
 }))
 
 beforeEach(() => {
-  globalThis.indexedDB = new IDBFactory()
+  freshIndexedDb()
 })
 
 afterEach(() => {
@@ -27,8 +27,9 @@ describe('rating buttons', () => {
     const now = Date.now()
     const far = new Date(now + 400 * 86_400_000).toISOString()
     const repo = new DexieProgressRepository('travel-talk')
-    await repo.saveSettings({ ...defaultSettings, appLang: 'de', targetLang: 'vi' })
-    await repo.saveCard({
+    const personId = (await repo.load()).activePersonId ?? ''
+    await repo.saveSettings(personId, { ...defaultSettings, appLang: 'de', targetLang: 'vi' })
+    await repo.saveCard(personId, {
       cardId: 'de-vi:emergency.help',
       due: new Date(now - 86_400_000).toISOString(),
       stability: 2,
@@ -59,13 +60,10 @@ describe('rating buttons', () => {
     expect(later.textContent ?? '').not.toMatch(/\b\d{3,}\b/)
     expect(screen.getByRole('button', { name: /Viel später/ }).textContent ?? '').not.toMatch(/\b\d{3,}\b/)
     fireEvent.click(again)
-    const db = new Dexie('travel-talk')
-    db.version(1).stores({ settings: 'id', cards: 'cardId' })
     await waitFor(async () => {
-      const saved = await db.table('cards').get('de-vi:emergency.help')
-      expect(saved.last_review).not.toBe(far)
-      expect(Math.abs(Date.parse(saved.last_review) - Date.now())).toBeLessThan(15_000)
+      const saved = (await repo.load()).cards.find((card) => card.cardId === 'de-vi:emergency.help')
+      expect(saved?.last_review).not.toBe(far)
+      expect(Math.abs(Date.parse(saved?.last_review ?? '') - Date.now())).toBeLessThan(15_000)
     })
-    db.close()
   })
 })

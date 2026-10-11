@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto'
-import { IDBFactory } from 'fake-indexeddb'
+import { freshIndexedDb } from '../test-idb'
 import { useEffect, type ReactNode } from 'react'
 import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -10,6 +10,7 @@ import { PhrasePage } from './Phrase'
 
 vi.mock('../audio/player', () => ({
   playClip: vi.fn(async () => 'file'),
+  stopClip: vi.fn(),
   decodeContourFile: vi.fn(async () => null),
 }))
 
@@ -25,7 +26,7 @@ function ReadyPhrase({ children }: { children: ReactNode }) {
 }
 
 beforeEach(() => {
-  globalThis.indexedDB = new IDBFactory()
+  freshIndexedDb()
 })
 
 afterEach(() => {
