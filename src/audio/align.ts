@@ -3,6 +3,13 @@ import { z } from 'zod'
 import { splitWords } from '../../content/gloss'
 import { ALIGN_FILE } from '../content/resolve'
 import { publicUrl } from '../public-url'
+import { loadManifest } from './player'
+
+/** A larger file is refused before JSON.parse. */
+export const ALIGN_MAX_BYTES = 16 * 1024
+
+/** Last word may end this far after the clip. Trailing silence stays allowed. */
+export const ALIGN_DURATION_TOLERANCE = 0.05
 
 const wordSchema = z.strictObject({
   start: z.number().finite().min(0).max(60),
@@ -19,6 +26,11 @@ export { ALIGN_FILE }
 export type WordTime = { start: number; end: number }
 
 const cache = new Map<string, WordTime[] | null>()
+
+/** Tests drop a remembered file. The page keeps it for the session. */
+export function clearAlignmentCache(): void {
+  cache.clear()
+}
 
 export function alignmentName(file: string): string | null {
   const base = file.replace(/\.r70\.m4a$/, '.m4a').replace(/\.r85\.m4a$/, '.m4a')
@@ -49,6 +61,13 @@ export function parseAlignment(data: unknown, wordCount: number): WordTime[] | n
     previous = word.end
   }
   return words
+}
+
+/** True when every span ends by the clip length, plus a short tolerance. */
+export function alignmentFitsDuration(words: readonly WordTime[], duration: number): boolean {
+  if (!Number.isFinite(duration) || duration <= 0 || words.length === 0) return false
+  const last = words[words.length - 1]
+  return last != null && last.end <= duration + ALIGN_DURATION_TOLERANCE
 }
 
 export function scaleTimes(words: readonly WordTime[], scale: number): WordTime[] | null {
@@ -89,10 +108,16 @@ async function readCachedAudio(url: string): Promise<Response | null> {
 
 async function fetchAlignment(name: string, wordCount: number): Promise<WordTime[] | null> {
   try {
+    const listed = await loadManifest()
+    if (!listed.has(name)) return null
     const url = publicUrl(`audio/${name}`)
     const response = (await readCachedAudio(url)) ?? (await fetch(url))
     if (!response.ok) return null
-    return parseAlignment(await response.json(), wordCount)
+    const declared = Number(response.headers.get('content-length'))
+    if (Number.isFinite(declared) && declared > ALIGN_MAX_BYTES) return null
+    const text = await response.text()
+    if (text.length > ALIGN_MAX_BYTES) return null
+    return parseAlignment(JSON.parse(text) as unknown, wordCount)
   } catch {
     return null
   }

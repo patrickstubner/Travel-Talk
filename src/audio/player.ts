@@ -7,6 +7,12 @@ let known: Set<string> | null = null
 let loading: Promise<Set<string>> | null = null
 let current: HTMLAudioElement | null = null
 
+/** Tests start from an empty list. The page keeps the list for the session. */
+export function clearManifestCache(): void {
+  known = null
+  loading = null
+}
+
 export function loadManifest(): Promise<Set<string>> {
   if (known) return Promise.resolve(known)
   if (!loading) {
@@ -57,6 +63,7 @@ export async function playClip(
   _rate: SpeedStep = 1,
   onEnd?: () => void,
   onTime?: (seconds: number) => void,
+  onDuration?: (seconds: number) => void,
 ): Promise<'file' | 'offline'> {
   let files: Set<string>
   try {
@@ -70,6 +77,9 @@ export async function playClip(
   current?.pause()
   const audio = new Audio(publicUrl(`audio/${file}`))
   audio.playbackRate = 1
+  audio.onloadedmetadata = () => {
+    if (Number.isFinite(audio.duration) && audio.duration > 0) onDuration?.(audio.duration)
+  }
   audio.onended = () => onEnd?.()
   audio.ontimeupdate = () => onTime?.(audio.currentTime)
   current = audio

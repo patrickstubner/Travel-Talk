@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { conceptsForSituation, resolvePlayback } from '../content/resolve'
 import { directionId } from '../domain/direction'
-import { loadAlignment, type WordTime } from '../audio/align'
+import { alignmentFitsDuration, loadAlignment, type WordTime } from '../audio/align'
 import { playClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { spokenFile } from '../audio/voices'
@@ -27,6 +27,7 @@ export function ShowPage() {
   const [playing, setPlaying] = useState(false)
   const [seconds, setSeconds] = useState<number | null>(null)
   const [times, setTimes] = useState<WordTime[] | null>(null)
+  const [clipDuration, setClipDuration] = useState<number | null>(null)
   const [offlineAudio, setOfflineAudio] = useState(false)
   const list = useMemo(() => {
     if (!catalog) return []
@@ -82,9 +83,10 @@ export function ShowPage() {
           speech={target.speech}
           gloss={gloss && source ? source.speech : null}
           links={gloss ? links : []}
-          times={times}
+          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration)) ? times : null}
           seconds={playing ? seconds : null}
           note={gloss ? copy.glossUnchecked : undefined}
+          template={target.text}
         />
       ) : (
         <>
@@ -114,6 +116,7 @@ export function ShowPage() {
             if (!target) return
             setPlaying(true)
             setSeconds(0)
+            setClipDuration(null)
             setOfflineAudio(false)
             void playClip(
               tempoFile(spokenFile(settings, targetLang, target.file), step),
@@ -125,6 +128,7 @@ export function ShowPage() {
                 setSeconds(null)
               },
               (time) => setSeconds(time),
+              (duration) => setClipDuration(duration),
             ).then((result) => {
               if (result === 'offline') {
                 setPlaying(false)

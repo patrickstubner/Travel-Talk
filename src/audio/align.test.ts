@@ -1,8 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { alignmentName, alignmentScale, currentWordIndex, loadAlignment, parseAlignment, scaleTimes } from './align'
+import { clearManifestCache } from './player'
+import {
+  ALIGN_MAX_BYTES,
+  alignmentFitsDuration,
+  alignmentName,
+  alignmentScale,
+  clearAlignmentCache,
+  currentWordIndex,
+  loadAlignment,
+  parseAlignment,
+  scaleTimes,
+} from './align'
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  clearManifestCache()
+  clearAlignmentCache()
 })
 
 describe('alignment files', () => {
@@ -26,9 +39,21 @@ describe('alignment files', () => {
 
   it('uses a cached timing file when the network is down', async () => {
     const body = JSON.stringify({ words: [{ start: 0.1, end: 0.5 }] })
-    vi.stubGlobal('fetch', vi.fn(async () => {
-      throw new TypeError('offline')
-    }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (String(url).includes('manifest.json')) {
+          return {
+            ok: true,
+            json: async () => [
+              'vi/vivos-22/emergency.help__any__base.align.json',
+              'vi/vivos-22/emergency.look__any__base.align.json',
+            ],
+          }
+        }
+        throw new TypeError('offline')
+      }),
+    )
     vi.stubGlobal('caches', {
       async keys() {
         return ['travel-talk-audio']
@@ -45,6 +70,41 @@ describe('alignment files', () => {
     })
     await expect(loadAlignment('vi/vivos-22/emergency.help__any__base.m4a', 'Giúp')).resolves.toEqual([{ start: 0.1, end: 0.5 }])
     await expect(loadAlignment('vi/vivos-22/emergency.look__any__base.m4a', 'Nhìn')).resolves.toBeNull()
-    expect(fetch).not.toHaveBeenCalled()
+    expect(vi.mocked(fetch).mock.calls.every(([url]) => String(url).includes('manifest.json'))).toBe(true)
+  })
+
+  it('refuses a timing file that is not listed, too large, or longer than the clip', async () => {
+    const ok = JSON.stringify({ words: [{ start: 0.1, end: 0.4 }] })
+    const bulky = `${ok.slice(0, -1)}${' '.repeat(ALIGN_MAX_BYTES)}}`
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const name = String(url)
+        if (name.includes('manifest.json')) {
+          return {
+            ok: true,
+            json: async () => [
+              'vi/vivos-22/emergency.water__any__base.align.json',
+              'vi/vivos-22/emergency.fever__any__base.align.json',
+            ],
+          }
+        }
+        if (name.includes('emergency.fever')) return new Response(bulky)
+        return new Response(ok)
+      }),
+    )
+    vi.stubGlobal('caches', {
+      async keys() {
+        return []
+      },
+      async open() {
+        return { async match() { return undefined } }
+      },
+    })
+    await expect(loadAlignment('vi/vivos-22/emergency.dizzy__any__base.m4a', 'Schwindel.')).resolves.toBeNull()
+    await expect(loadAlignment('vi/vivos-22/emergency.water__any__base.m4a', 'Wasser.')).resolves.toEqual([{ start: 0.1, end: 0.4 }])
+    await expect(loadAlignment('vi/vivos-22/emergency.fever__any__base.m4a', 'Fieber.')).resolves.toBeNull()
+    expect(alignmentFitsDuration([{ start: 0.1, end: 1.2 }], 1.22)).toBe(true)
+    expect(alignmentFitsDuration([{ start: 0.1, end: 1.2 }], 1.1)).toBe(false)
   })
 })

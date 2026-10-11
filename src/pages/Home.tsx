@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { selectedVoice, withDefaultVoices } from '../audio/voices'
+import { voiceProgress } from '../audio/offline'
+import { selectedVoice, voicesFor, withDefaultVoices } from '../audio/voices'
 import { LANG_LABEL } from '../app/labels'
 import { LanguageChoice } from '../components/LanguageChoice'
 import { VoiceOfflineButton } from '../components/VoiceOffline'
@@ -53,7 +54,14 @@ export function HomePage() {
           </button>
         </p>
       ) : null}
-      <OfflineOffer settings={settings} copy={copy} />
+      <OfflineOffer
+        settings={settings}
+        copy={copy}
+        onKeepVoice={(id) => {
+          if (!settings.targetLang) return
+          void saveSettings({ ...settings, voices: { ...settings.voices, [settings.targetLang]: id } })
+        }}
+      />
       <p>{copy.startLead(fresh, due)}</p>
       <Link className="button primary" to="/practice">
         {copy.learnToday}
@@ -81,14 +89,51 @@ export function HomePage() {
   )
 }
 
-function OfflineOffer({ settings, copy }: { settings: Settings; copy: Dictionary }) {
+function OfflineOffer({
+  settings,
+  copy,
+  onKeepVoice,
+}: {
+  settings: Settings
+  copy: Dictionary
+  onKeepVoice: (id: string) => void
+}) {
   const lang = settings.targetLang
-  if (!lang) return null
+  const current = lang ? selectedVoice(settings, lang) : null
+  const [previousId, setPreviousId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!lang || !current) return
+    let live = true
+    const others = voicesFor(lang).filter((voice) => voice.id !== current.id)
+    void (async () => {
+      const ready: string[] = []
+      let legacy: string | null = null
+      for (const voice of others) {
+        const progress = await voiceProgress(lang, voice)
+        if (progress.total > 0 && progress.have === progress.total) {
+          ready.push(voice.id)
+          if (voice.legacy) legacy = voice.id
+        }
+      }
+      if (live) setPreviousId(legacy ?? ready[0] ?? null)
+    })()
+    return () => {
+      live = false
+    }
+  }, [lang, current])
+  if (!lang || !current) return null
   const ui = settings.appLang ?? 'de'
   return (
     <section className="stack" aria-label={copy.offlineLoad}>
       <p className="hint">{LANG_LABEL[lang][ui]}</p>
-      <VoiceOfflineButton lang={lang} voice={selectedVoice(settings, lang)} copy={copy} dropOnSuccess pendingNote={copy.offlineReload} />
+      <VoiceOfflineButton
+        lang={lang}
+        voice={current}
+        copy={copy}
+        dropOnSuccess
+        pendingNote={copy.offlineReload}
+        onKeepPrevious={previousId ? () => onKeepVoice(previousId) : undefined}
+      />
     </section>
   )
 }

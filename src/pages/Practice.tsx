@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import type { Concept } from '../../content/phrase'
 import { spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
-import { loadAlignment, type WordTime } from '../audio/align'
+import { alignmentFitsDuration, loadAlignment, type WordTime } from '../audio/align'
 import { playClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { tempoFile } from '../audio/speed'
@@ -52,6 +52,7 @@ export function PracticePage() {
   const [playing, setPlaying] = useState(false)
   const [seconds, setSeconds] = useState<number | null>(null)
   const [times, setTimes] = useState<WordTime[] | null>(null)
+  const [clipDuration, setClipDuration] = useState<number | null>(null)
   const [offlineAudio, setOfflineAudio] = useState(false)
   const [recording, setRecording] = useState(false)
   const [micNote, setMicNote] = useState(false)
@@ -123,6 +124,7 @@ export function PracticePage() {
     const rate = step === 'slow' ? 0.7 : 1
     setPlaying(true)
     setSeconds(0)
+    setClipDuration(null)
     setOfflineAudio(false)
     void playClip(
       tempoFile(spokenFile(settings, settings.targetLang, line.file), rate),
@@ -137,6 +139,9 @@ export function PracticePage() {
       },
       (time) => {
         if (live && aliveRef.current) setSeconds(time)
+      },
+      (duration) => {
+        if (live && aliveRef.current) setClipDuration(duration)
       },
     ).then((result) => {
       if (!live || !aliveRef.current) return
@@ -217,6 +222,7 @@ export function PracticePage() {
     setPlaying(true)
     setOfflineAudio(false)
     setSeconds(0)
+    setClipDuration(null)
     const result = await playClip(
       tempoFile(spokenFile(settings, targetLang, file), rate),
       speech,
@@ -229,6 +235,9 @@ export function PracticePage() {
       },
       (time) => {
         if (aliveRef.current) setSeconds(time)
+      },
+      (duration) => {
+        if (aliveRef.current) setClipDuration(duration)
       },
     )
     if (aliveRef.current && result === 'offline') {
@@ -296,16 +305,19 @@ export function PracticePage() {
 
   const showTarget = targetTextVisible(step, item.isNew, answered)
   const followWords = settings.highlightWords !== false
-  const links = followWords ? linksFor(concept.id, targetLang, app, target.speech, source.speech, settings) : []
+  const revealGloss = step !== 'understand' || answered
+  const links = followWords && revealGloss ? linksFor(concept.id, targetLang, app, target.speech, source.speech, settings) : []
+  const markTimes = times && (clipDuration == null || alignmentFitsDuration(times, clipDuration)) ? times : null
   const spoken = followWords ? (
     <KaraokeLine
       lang={targetLang}
       speech={target.speech}
-      gloss={source.speech}
+      gloss={revealGloss ? source.speech : null}
       links={links}
-      times={times}
+      times={markTimes}
       seconds={playing ? seconds : null}
-      note={copy.glossUnchecked}
+      note={revealGloss ? copy.glossUnchecked : undefined}
+      template={target.text}
     />
   ) : null
   const stored = snapshot.cards.find((card) => card.cardId === cardIdFor(activeDirection, concept.id))

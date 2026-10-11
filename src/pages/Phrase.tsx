@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { selectedVoice, spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { directionId } from '../domain/direction'
-import { loadAlignment, type WordTime } from '../audio/align'
+import { alignmentFitsDuration, loadAlignment, type WordTime } from '../audio/align'
 import { decodeContourFile, playClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { SPEED_STEPS, effectiveSpeed, speedPercent, tempoFile, type SpeedStep } from '../audio/speed'
@@ -42,6 +42,7 @@ export function PhrasePage() {
   const [playing, setPlaying] = useState(false)
   const [seconds, setSeconds] = useState<number | null>(null)
   const [times, setTimes] = useState<WordTime[] | null>(null)
+  const [clipDuration, setClipDuration] = useState<number | null>(null)
   const [recording, setRecording] = useState(false)
   const [mineUrl, setMineUrl] = useState<string | null>(null)
   const sessionRef = useRef<CaptureSession | null>(null)
@@ -140,6 +141,7 @@ export function PhrasePage() {
   async function onPlay(file: string, rate: SpeedStep): Promise<void> {
     setPlaying(true)
     setSeconds(0)
+    setClipDuration(null)
     const result = await playClip(
       file,
       target?.speech ?? '',
@@ -152,6 +154,9 @@ export function PhrasePage() {
       },
       (time) => {
         if (aliveRef.current) setSeconds(time)
+      },
+      (duration) => {
+        if (aliveRef.current) setClipDuration(duration)
       },
     )
     if (!aliveRef.current) return
@@ -207,9 +212,10 @@ export function PhrasePage() {
           speech={target.speech}
           gloss={source.speech}
           links={links}
-          times={times}
+          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration)) ? times : null}
           seconds={playing ? seconds : null}
           note={copy.glossUnchecked}
+          template={target.text}
         />
       ) : (
         <>

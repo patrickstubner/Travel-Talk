@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { WordLink } from '../../content/gloss'
 import { splitWords } from '../../content/gloss'
 import { currentWordIndex, type WordTime } from '../audio/align'
+import { hasPlaceholder, RichText } from './RichText'
 
 function indexesFor(links: readonly WordLink[], side: 'target' | 'gloss', index: number): number | null {
   const found = links.findIndex((link) => link[side].includes(index))
@@ -59,6 +60,7 @@ export function KaraokeLine({
   note,
   lang,
   heading = false,
+  template,
 }: {
   speech: string
   gloss: string | null
@@ -68,6 +70,8 @@ export function KaraokeLine({
   note?: string
   lang?: string
   heading?: boolean
+  /** Written line with a slot such as [tên]. The spoken line stays above it. */
+  template?: string
 }) {
   const [active, setActive] = useState<number | null>(null)
   const words = splitWords(speech)
@@ -94,6 +98,11 @@ export function KaraokeLine({
           {row}
         </p>
       )}
+      {template && hasPlaceholder(template) ? (
+        <p className="placeholder-line" data-testid="placeholder-line" lang={lang}>
+          <RichText text={template} />
+        </p>
+      ) : null}
       {glossWords.length > 0 ? (
         <p className="gloss word-gloss">
           <WordRow

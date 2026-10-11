@@ -6,6 +6,9 @@
 - Die Markierung lässt sich in den Einstellungen abstellen, an derselben Stelle wie die Sprachen. Sie geht nicht in den Export. Fehlt eine Zeitdatei oder passt sie nicht zur Zeile, bleibt die Markierung aus.
 - Die Zeiten kommen aus den Phonemlängen von Piper, mit `noise_scale` 0, und werden mit dynamischer Zeitverzerrung auf die vorhandene Datei gelegt. Montreal Forced Aligner ist hier nicht installiert. Eine Datei, deren Wörter nicht zur Aufnahme passen, bekommt keine Zeitdatei. 70 % und 85 % strecken dieselben Zeiten gleichmässig.
 - «Für offline laden» holt die Zeitdateien der Stimme mit. Der Fortschritt zählt sie mit, bei der vietnamesischen Standardstimme 796 Dateien, 597 Audio und 199 Zeiten. Eine 404 zählt wie bei einer Audiodatei. Wird eine andere Stimme gelöscht, gehen ihre Zeitdateien mit. Sie bleiben aus dem Precache.
+- Im Schritt Hören bleibt die Wortzuordnung verborgen, bis die Bedeutung gewählt ist. Eine Zeile mit einem Platzhalter, etwa `[tên]`, bleibt neben der gesprochenen Zeile sichtbar.
+- Auf der Startseite erscheint «Bisherige Stimme behalten» nur, wenn eine andere Stimme dieser Sprache vollständig im Cache liegt. Der Knopf wählt diese Stimme.
+- Eine Zeitdatei über 16 KB, ein Name ausserhalb von `manifest.json`, oder ein Ende mehr als 50 ms nach der Audiodauer ergibt keine Markierung.
 - Die Startseite sagt «Für offline noch nicht vollständig geladen», solange die Lernsprache nicht vollständig im Cache liegt. Der Satz nennt kein Update, weil er auch bei einer neuen Installation stimmt.
 - Die Prüfsummen gelten auch für die `.onnx.json`-Dateien und für die vier älteren Modelle.
 

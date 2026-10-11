@@ -230,6 +230,7 @@ a.menu-card span { color: var(--muted); }
 .show-mode .karaoke button.now,
 .show-mode .karaoke button.now[aria-pressed="true"] { background: #24574d; color: #f4efe6; }
 .word-gloss { margin: 0; }
+.placeholder-line { margin: 0.2rem 0 0.35rem; }
 .rate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .rate-grid button {
   display: grid;
