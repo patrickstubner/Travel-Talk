@@ -415,11 +415,23 @@ a.menu-card span { color: var(--muted); }
 }
 
 .repeat-plots, .repeat-words, .repeat-pair { display: flex; gap: 0.45rem; align-items: stretch; max-width: 100%; }
-.repeat-plots, .repeat-words { flex-wrap: wrap; }
-.repeat-plots > div, .repeat-words > button { min-width: 0; max-width: 100%; }
+.repeat-plots > div, .repeat-words > button { flex: var(--span, 1) 1 0%; min-width: 0; max-width: 100%; }
 .repeat-words { margin: 0.35rem 0 0.2rem; }
 .word-chip { width: auto; max-width: 100%; border-radius: 1rem; background: var(--card); display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.35rem 0.3rem; }
-.word-chip-text { max-width: 100%; font-weight: 650; overflow-wrap: anywhere; }
+.word-chip-text { max-width: 100%; font-weight: 650; }
+@media (max-width: 799px) {
+  .repeat-plots { flex-direction: column; align-items: stretch; }
+  .repeat-plots > div { flex: 0 0 auto; width: 100%; min-width: 0; max-width: 100%; }
+  .repeat-words { flex-wrap: wrap; }
+  .repeat-words > button {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: max-content;
+    max-width: 100%;
+    white-space: nowrap;
+  }
+  .word-chip-text, .word-marks, .word-chip .mark { white-space: nowrap; overflow-wrap: normal; }
+}
 .word-marks { display: flex; flex-direction: column; align-items: center; font-size: 0.72rem; line-height: 1.25; }
 .word-chip .mark.green { color: #1d7a46; }
 .word-chip .mark.yellow { color: #8a5a12; }

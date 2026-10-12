@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { splitWords } from '../../content/gloss'
 import type { Lang } from '../../content/phrase'
 import type { WordTime } from '../audio/align'
@@ -88,6 +88,11 @@ function Curve({ model, user, color }: { model: Contour; user: Contour; color: B
     if (canvas) drawPair(canvas, model, user, color)
   }, [color, model, user])
   return <canvas ref={ref} className="pitch-canvas" width={280} height={140} />
+}
+
+/** Wide screens share the row by duration. Narrow screens ignore this and wrap. */
+function spanStyle(start: number, end: number): CSSProperties {
+  return { '--span': Math.max(0.2, end - start) } as CSSProperties
 }
 
 function barWidth(state: BarState): string {
@@ -351,7 +356,7 @@ function Result({
         score.words && score.words.length > 0 ? (
           <div className="repeat-plots">
             {score.words.map((word) => (
-              <div key={`${word.text}-${word.start}`} style={{ flex: Math.max(0.2, word.end - word.start) }}>
+              <div key={`${word.text}-${word.start}`} style={spanStyle(word.start, word.end)}>
                 <Curve
                   model={score.model.slice(word.modelFrame, word.modelFrameEnd)}
                   user={score.userOnModel.slice(word.modelFrame, word.modelFrameEnd)}
@@ -375,7 +380,7 @@ function Result({
               data-color={word.color ?? 'none'}
               data-melody={word.melody ?? 'none'}
               data-rhythm={word.rhythm ?? 'none'}
-              style={{ flex: Math.max(0.2, word.end - word.start) }}
+              style={spanStyle(word.start, word.end)}
               onClick={() => {
                 if (scored?.[index]) onWord(index)
               }}

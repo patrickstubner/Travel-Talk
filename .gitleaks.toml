@@ -1,0 +1,12 @@
+title = "Travel Talk"
+
+[extend]
+useDefault = true
+
+# SHA-256 of help texts. The id ctx.stay.key matches generic-api-key and is not a secret.
+# A path allowlist survives a squash. A .gitleaksignore fingerprint does not.
+[[rules]]
+id = "generic-api-key"
+
+[rules.allowlist]
+paths = ['''(^|/)tools/help_text_hashes\.json$''']
