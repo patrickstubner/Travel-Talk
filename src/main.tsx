@@ -3,12 +3,12 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
 import { router } from './app/router'
 import { AppProvider } from './app/state'
-import { dropReplacedClips } from './audio/offline'
+import { startAudioMaintenance } from './audio/offline'
 import { startServiceWorker } from './register-sw'
 import './styles.css'
 
 startServiceWorker()
-void dropReplacedClips()
+void startAudioMaintenance()
 
 const root = document.getElementById('root')
 if (root) {

@@ -30,6 +30,22 @@ describe('pitch contour', () => {
     expect(repairHarmonics(rise)).toEqual(rise)
   })
 
+  it('folds a short second harmonic while the contour is built', () => {
+    const rate = 16000
+    const length = Math.floor(rate * 1.2)
+    const samples = new Float32Array(length)
+    let phase = 0
+    for (let index = 0; index < length; index += 1) {
+      const hz = index > rate * 0.45 && index < rate * 0.7 ? 220 : 110
+      phase += (2 * Math.PI * hz) / rate
+      samples[index] = Math.sin(phase) * 0.8
+    }
+    const contour = contourFromSamples(samples, rate)
+    const hop = Math.round(rate * 0.01)
+    const burst = Math.round((0.55 * rate) / hop)
+    expect(Math.abs(contour[burst] ?? 99)).toBeLessThan(3)
+  })
+
   it('reads a steady sine near its own median', () => {
     const contour = contourFromSamples(tone(220, 220), 16000)
     const voiced = voicedValues(contour)

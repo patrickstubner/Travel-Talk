@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defaultSettings } from '../storage/types'
 import { voicesFor } from './voices'
-import { AUDIO_CACHE, discardAdded, dropOtherVoices, dropReplacedClips, forgetVoiceIfUnused, loadVoiceOffline, voiceProgress } from './offline'
+import { AUDIO_CACHE, discardAdded, dropOtherVoices, dropReplacedClips, forgetVoiceIfUnused, loadVoiceOffline, startAudioMaintenance, voiceProgress } from './offline'
 
 const FILES = [
   'vi/vivos-22/emergency.help__any__base.m4a',
@@ -343,5 +343,29 @@ describe('offline voice loading', () => {
     expect(stores.get(AUDIO_CACHE)?.has(stale)).toBe(false)
     expect(stores.get(AUDIO_CACHE)?.has(staleTimes)).toBe(false)
     expect(stores.get(AUDIO_CACHE)?.has(kept)).toBe(true)
+  })
+
+  it('scans the replaced names once per revision, and the start hook does that scan', async () => {
+    const memory = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => memory.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        memory.set(key, value)
+      },
+      removeItem: (key: string) => {
+        memory.delete(key)
+      },
+    })
+    const stores = installCaches()
+    const stale = '/audio/vi/vivos-22/transport.01.taxi__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([[stale, 'old-taxi']]))
+    await startAudioMaintenance()
+    expect(stores.get(AUDIO_CACHE)?.has(stale)).toBe(false)
+    stores.get(AUDIO_CACHE)?.set(stale, 'came-back')
+    await startAudioMaintenance()
+    expect(stores.get(AUDIO_CACHE)?.has(stale)).toBe(true)
+    const source = readFileSync(fileURLToPath(new URL('../main.tsx', import.meta.url)), 'utf8')
+    expect(source).toContain('startAudioMaintenance()')
+    vi.unstubAllGlobals()
   })
 })

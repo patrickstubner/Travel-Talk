@@ -55,16 +55,19 @@ export const MOVING_RANGE = 1
 /** Share of those words that must run the same way before any star is given. */
 export const DIRECTION_MAJORITY = 0.5
 /**
- * DTW cost of the MFCC trajectory, after sliding the take by a few
- * semitones and keeping the closest. Above this the take is not the same
- * sentence. Tuned per language on the shipped clips: a hum, other speech
- * and another sentence sit above it, a small pitch shift sits below.
+ * DTW cost after per-coefficient mean and variance normalisation, and
+ * after a frequency warp of about ±20 %. Chosen on every fourth timed
+ * line: the same sentence by another bundled voice is the positive, a
+ * different sentence is the negative, and the full clip run is the check.
+ * German still separates the two. English, Portuguese and Vietnamese do
+ * not, so there the limit only keeps hum, a tone, reversed audio and
+ * background speech out. A different sentence can still earn stars.
  */
 export const SPECTRAL_DISTANCE_MAX: Record<Lang, number> = {
-  de: 2,
-  en: 2,
-  'pt-BR': 1.9,
-  vi: 1.7,
+  de: 0.5,
+  en: 0.5,
+  'pt-BR': 0.5,
+  vi: 0.44,
 }
 const MAX_FRAMES = 800
 
@@ -518,6 +521,24 @@ export function contentMismatch(
   return distance > SPECTRAL_DISTANCE_MAX[lang]
 }
 
+/**
+ * The band shape fits the file better when the file is flipped in time.
+ * A straight imitation, including another voice, fits forwards. A reversed
+ * recording fits backwards even when the pitch contour is almost the same.
+ */
+export function spectralReversed(
+  modelBands: readonly (readonly number[])[] | null | undefined,
+  userBands: readonly (readonly number[])[] | null | undefined,
+): boolean {
+  if (!modelBands || !userBands || modelBands.length < 8 || userBands.length < 8) return false
+  const forward = bandDistance(modelBands, userBands)
+  const backward = bandDistance([...modelBands].reverse(), userBands)
+  if (forward == null || backward == null) return false
+  // A short symmetric phrase is only a little closer backwards. 0.03 still
+  // leaves a forward imitation, whose backward cost is higher, alone.
+  return backward + 0.03 < forward
+}
+
 function thinEnergy(energy: readonly number[] | null | undefined, contourLength: number): number[] | null {
   if (!energy || energy.length !== contourLength) return null
   if (contourLength <= MAX_FRAMES) return [...energy]
@@ -588,6 +609,41 @@ export function takeRunsBackwards(directions: readonly WordDirection[]): boolean
   const known = directions.filter((direction) => direction !== 'unknown')
   if (known.length === 0) return false
   return known.every((direction) => direction === 'opposed')
+}
+
+const HARMONIC_SHIFTS = [12, -12, 19.02, -19.02, 24, -24]
+
+/**
+ * A frame sitting on a harmonic of the file is folded onto the file.
+ * Only a take whose band shape already matches may call this. A tone
+ * does not match, so it is not pulled onto the melody.
+ */
+function pullHarmonics(model: Contour, user: Contour, path: readonly PathPoint[]): Contour {
+  const next = user.slice()
+  let changed = false
+  for (const point of path) {
+    const target = model[point.model]
+    const value = next[point.user]
+    if (target == null || value == null) continue
+    let best = value
+    let bestDist = Math.abs(value - target)
+    if (bestDist < 6) continue
+    for (const shift of HARMONIC_SHIFTS) {
+      const candidate = value + shift
+      const dist = Math.abs(candidate - target)
+      // ±3 st on top of an octave lands about 9 or 15 st away. A residual
+      // under 4 st is that shift, not a new melody.
+      if (dist <= 3.5 && bestDist - dist >= 6) {
+        best = candidate
+        bestDist = dist
+      }
+    }
+    if (best !== value) {
+      next[point.user] = best
+      changed = true
+    }
+  }
+  return changed ? next : user
 }
 
 function voicedRange(contour: Contour): number | null {
@@ -678,17 +734,28 @@ export function scoreRepeat(input: {
   const userSpan = sustained(user)
   if (!modelSpan || !userSpan) return { ...empty, tooLittleVoice: true }
   const path = linearPath(modelSpan, userSpan)
-  const meanDistance = pathMean(model, user, path)
+  let heard = user
+  let meanDistance = pathMean(model, heard, path)
   if (meanDistance == null) return { ...empty, tooLittleVoice: true }
-  const userOnModel = warp(model, user, path)
+  const content = contentMismatch(input.modelBands, input.userBands, input.lang)
+  const flipped = spectralReversed(input.modelBands, input.userBands)
+  const bandsKnown = Boolean(input.modelBands && input.userBands && input.modelBands.length > 0 && input.userBands.length > 0)
+  if (bandsKnown && !content && !flipped && meanDistance > 4) {
+    const pulled = pullHarmonics(model, heard, path)
+    const pulledMean = pathMean(model, pulled, path)
+    if (pulledMean != null && pulledMean + 0.5 < meanDistance) {
+      heard = pulled
+      meanDistance = pulledMean
+    }
+  }
+  const userOnModel = warp(model, heard, path)
   const globalRatio = ((userSpan.end - userSpan.start) * userHop) / ((modelSpan.end - modelSpan.start) * modelHop)
   const modelEnergy = thinEnergy(input.modelEnergy, input.model.length)
   const userEnergy = thinEnergy(input.userEnergy, input.user.length)
-  const forward = contourCorrelation(model, user, path)
+  const forward = contourCorrelation(model, heard, path)
   const envelope = envelopeMismatch(path, userEnergy, modelEnergy)
-  const reversed = reversedTake(model, user, forward, path, modelEnergy, userEnergy)
-  const content = contentMismatch(input.modelBands, input.userBands, input.lang)
-  if (meanDistance > UNCLEAR_SEMITONES || flatContour(user, model) || envelope || reversed) {
+  const reversed = reversedTake(model, heard, forward, path, modelEnergy, userEnergy)
+  if (meanDistance > UNCLEAR_SEMITONES || flatContour(heard, model) || envelope || reversed) {
     return {
       ...empty,
       userOnModel,
@@ -718,11 +785,11 @@ export function scoreRepeat(input: {
     let modelVoiced = 0
     for (let index = frame; index < frameEnd; index += 1) if (model[index] != null) modelVoiced += 1
     const scorable = modelVoiced >= MIN_WORD_VOICED
-    const matched = scorable && word.end > word.start ? matchLocal(model, user, frame, frameEnd, modelSpan, userSpan) : null
+    const matched = scorable && word.end > word.start ? matchLocal(model, heard, frame, frameEnd, modelSpan, userSpan) : null
     const plainStart = mappedFrame(frame, modelSpan, userSpan)
     const plainEnd = mappedFrame(Math.max(frame, frameEnd - 1), modelSpan, userSpan)
     const userFrame = Math.max(0, Math.round(Math.min(plainStart, plainEnd)))
-    const userFrameEnd = Math.min(user.length, Math.max(userFrame + 1, Math.round(Math.max(plainStart, plainEnd)) + 1))
+    const userFrameEnd = Math.min(heard.length, Math.max(userFrame + 1, Math.round(Math.max(plainStart, plainEnd)) + 1))
     const base: FeedbackWord = {
       text: word.text,
       start: word.start,
@@ -747,9 +814,9 @@ export function scoreRepeat(input: {
       directions.push('unknown')
       return base
     }
-    const pitchCorr = wordCorrelation(model, user, path, frame, frameEnd)
+    const pitchCorr = wordCorrelation(model, heard, path, frame, frameEnd)
     const modelShape = describeShape(model.slice(frame, frameEnd))
-    const userSlice = user.slice(Math.min(userFrame, user.length), Math.min(user.length, userFrameEnd))
+    const userSlice = heard.slice(Math.min(userFrame, heard.length), Math.min(heard.length, userFrameEnd))
     const userShape = describeShape(userSlice)
     const direction = wordDirection(pitchCorr, modelShape, userShape)
     directions.push(direction)
@@ -801,22 +868,23 @@ export function scoreRepeat(input: {
   const allowed = scorable.length > 0 && coloured / scorable.length >= COLOURED_SHARE
   let stars = allowed ? starsFromBars(melodyBar, rhythmBar) : 0
   if (stars > 0 && movingWords >= 2 && sameMoving / movingWords < DIRECTION_MAJORITY) stars = 0
-  if (content) stars = 0
+  if (content || flipped) stars = 0
   const fewWords = !allowed
+  const rejected = content || flipped
   return {
     model,
-    user,
+    user: heard,
     userOnModel,
     modelHop,
     userHop,
     path,
     meanDistance,
     words,
-    melodyBar: fewWords || content ? null : melodyBar,
-    rhythmBar: fewWords || content ? null : rhythmBar,
+    melodyBar: fewWords || rejected ? null : melodyBar,
+    rhythmBar: fewWords || rejected ? null : rhythmBar,
     stars,
     fewWords,
-    unclear: content,
+    unclear: rejected,
     tooLittleVoice: false,
     tooShort: false,
     globalRatio,

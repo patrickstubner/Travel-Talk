@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { contourFromSamples, dtwDistance, voicedValues, type Contour } from './contour'
 import {
+  DIRECTION_MIN,
+  DIRECTION_OPPOSED,
   DRONE_ENERGY,
   MELODY_GREEN,
+  MOVING_RANGE,
+  SPECTRAL_DISTANCE_MAX,
   contentMismatch,
+  spectralReversed,
   barFromColours,
+  correlation,
   droneAgainstSpeech,
   flatContour,
   matchesBetterBackwards,
@@ -16,6 +22,7 @@ import {
   thin,
   toneSentence,
 } from './feedback'
+import { bandDistance } from './spectrum'
 
 function flat(count: number, value: number | null): Contour {
   return Array.from({ length: count }, () => value)
@@ -761,6 +768,127 @@ describe('repeat alignment', () => {
     expect(score.unclear).toBe(false)
     expect(score.words?.[0]?.melody).toBe('yellow')
     expect(score.words?.[2]?.melody).toBe('green')
+    expect(score.stars).toBe(0)
+  })
+
+  it('drops a close word from green to yellow when the correlation is only weak', () => {
+    const count = 40
+    const model = Array.from({ length: count }, (_, index) => (Math.floor(index / 5) % 2 === 0 ? 0.05 : 0.9))
+    const user = Array.from({ length: count }, (_, index) => 0.45 + 0.7 * Math.sin((2 * Math.PI * index) / 10 + 2))
+    const agreed = correlation(model, user)
+    expect(agreed).toBeGreaterThan(DIRECTION_OPPOSED)
+    expect(agreed ?? 1).toBeLessThan(DIRECTION_MIN)
+    const userRange = Math.max(...user) - Math.min(...user)
+    const modelRange = Math.max(...model) - Math.min(...model)
+    expect(userRange).toBeGreaterThanOrEqual(MOVING_RANGE)
+    expect(modelRange).toBeLessThan(MOVING_RANGE)
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.4 }],
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.5,
+    })
+    expect(score.unclear).toBe(false)
+    expect(score.words?.[0]?.melodyDistance ?? 9).toBeLessThan(MELODY_GREEN)
+    expect(score.words?.[0]?.melody).toBe('yellow')
+  })
+
+  it('drops a moving word to yellow when the take stays inside one semitone', () => {
+    const count = 40
+    const model = Array.from({ length: count }, (_, index) => (index % 2 === 0 ? -0.2 : 1))
+    const user = Array.from({ length: count }, (_, index) => (index % 2 === 0 ? -0.05 : 0.85))
+    expect(correlation(model, user) ?? 0).toBeGreaterThanOrEqual(DIRECTION_MIN)
+    expect(Math.max(...user) - Math.min(...user)).toBeLessThan(MOVING_RANGE)
+    expect(Math.max(...model) - Math.min(...model)).toBeGreaterThanOrEqual(MOVING_RANGE)
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.4 }],
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.5,
+    })
+    expect(score.unclear).toBe(false)
+    expect(score.words?.[0]?.melodyDistance ?? 9).toBeLessThan(MELODY_GREEN)
+    expect(score.words?.[0]?.melody).toBe('yellow')
+  })
+
+  it('paints one opposed word red without calling the whole take unclear', () => {
+    const wave = (sign: number) => Array.from({ length: 40 }, (_, index) => sign * Math.sin((2 * Math.PI * index) / 8))
+    const model = [...wave(1), ...wave(1)]
+    const user = [...wave(-0.7), ...wave(1)]
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [
+        { text: 'qua', start: 0, end: 0.4 },
+        { text: 'xin', start: 0.4, end: 0.8 },
+      ],
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.9,
+    })
+    expect(score.unclear).toBe(false)
+    expect(score.words?.[0]?.melodyDistance ?? 9).toBeLessThan(MELODY_GREEN)
+    expect(score.words?.[0]?.melody).toBe('red')
+    expect(score.words?.[1]?.melody).toBe('green')
+  })
+
+  it('keeps a band distance that sits just under the limit, so a stricter limit fails', () => {
+    const model = Array.from({ length: 36 }, (_, index) =>
+      Array.from({ length: 12 }, (_, band) => Math.sin((index + 1) * (band + 1) * 0.17) * (band + 1)),
+    )
+    const near = model.map((frame, index) =>
+      frame.map((value, band) => value * 0.75 + (3 + band) * Math.cos((index + 3) * (band + 2) * 0.09) * 0.25),
+    )
+    const distance = bandDistance(model, near)
+    expect(distance).not.toBeNull()
+    const limit = SPECTRAL_DISTANCE_MAX.de
+    expect(distance ?? 0).toBeGreaterThan(limit * 0.75)
+    expect(distance ?? 0).toBeLessThanOrEqual(limit)
+    expect(contentMismatch(model, near, 'de')).toBe(false)
+    const contour = ramp(36, -1, 2)
+    const kept = scoreRepeat({
+      model: contour,
+      user: contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.36 }],
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.5,
+      modelBands: model,
+      userBands: near,
+    })
+    expect(kept.stars).toBeGreaterThan(0)
+  })
+
+  it('rejects a band shape that fits the file better backwards', () => {
+    const rising = Array.from({ length: 24 }, (_, index) => Array.from({ length: 12 }, (_, band) => (index + 1) * (band + 1)))
+    expect(spectralReversed(rising, rising)).toBe(false)
+    expect(spectralReversed(rising, [...rising].reverse())).toBe(true)
+    const contour = ramp(24, -1, 2)
+    const score = scoreRepeat({
+      model: contour,
+      user: contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.24 }],
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.4,
+      modelBands: rising,
+      userBands: [...rising].reverse(),
+    })
+    expect(score.unclear).toBe(true)
     expect(score.stars).toBe(0)
   })
 

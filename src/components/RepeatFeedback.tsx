@@ -4,8 +4,9 @@ import type { Lang } from '../../content/phrase'
 import type { WordTime } from '../audio/align'
 import { playSequence, stopSlices } from '../audio/slice'
 import type { Dictionary } from '../i18n/dictionary'
-import { analysisHop, contourFromSamples, frameEnergy, voicedValues, type Contour } from '../pitch/contour'
-import { bandShape, closestBands } from '../pitch/spectrum'
+import { analyzeModelCached, analyzeUserOnce, pitchWorker } from '../pitch/analyze-client'
+import { analyzeModel, analyzeUser, type ClipFeatures } from '../pitch/analyze'
+import { analysisHop, voicedValues, type Contour } from '../pitch/contour'
 import {
   MIN_VOICED,
   SHORT_SECONDS,
@@ -113,43 +114,60 @@ export function RepeatFeedback({
 }) {
   const [view, setView] = useState<'result' | 'word' | 'tones'>('result')
   const [selected, setSelected] = useState(0)
-  const modelContour = useMemo(
-    () => (modelSamples && modelRate > 0 ? contourFromSamples(modelSamples, modelRate) : null),
-    [modelRate, modelSamples],
+  const offThread = pitchWorker() != null
+  const [remote, setRemote] = useState<{ model: ClipFeatures | null; user: ClipFeatures | null } | null>(null)
+  const syncModel = useMemo(
+    () => (!offThread && modelSamples && modelRate > 0 ? analyzeModel(modelSamples, modelRate) : null),
+    [modelRate, modelSamples, offThread],
   )
-  const userContour = useMemo(() => (userRate > 0 ? contourFromSamples(userSamples, userRate) : []), [userRate, userSamples])
-  const modelEnergy = useMemo(
-    () => (modelSamples && modelRate > 0 ? frameEnergy(modelSamples, modelRate) : null),
-    [modelRate, modelSamples],
+  const syncUser = useMemo(
+    () => (!offThread && userRate > 0 ? analyzeUser(userSamples, userRate, syncModel?.bands ?? null) : null),
+    [offThread, syncModel, userRate, userSamples],
   )
-  const userEnergy = useMemo(() => (userRate > 0 ? frameEnergy(userSamples, userRate) : null), [userRate, userSamples])
-  const modelBands = useMemo(
-    () => (modelSamples && modelRate > 0 ? bandShape(modelSamples, modelRate) : null),
-    [modelRate, modelSamples],
-  )
-  const userBands = useMemo(
-    () => (userRate > 0 ? closestBands(modelBands, userSamples, userRate) : null),
-    [modelBands, userRate, userSamples],
-  )
+  useEffect(() => {
+    if (!offThread) return undefined
+    let cancel = false
+    setRemote(null)
+    const run = async () => {
+      try {
+        const model = modelSamples && modelRate > 0 ? await analyzeModelCached(modelSamples, modelRate) : null
+        if (cancel) return
+        const user = userRate > 0 ? await analyzeUserOnce(userSamples, userRate, model?.bands ?? null) : null
+        if (cancel) return
+        setRemote({ model, user })
+      } catch {
+        if (cancel) return
+        const model = modelSamples && modelRate > 0 ? analyzeModel(modelSamples, modelRate) : null
+        const user = userRate > 0 ? analyzeUser(userSamples, userRate, model?.bands ?? null) : null
+        setRemote({ model, user })
+      }
+    }
+    void run()
+    return () => {
+      cancel = true
+    }
+  }, [modelRate, modelSamples, offThread, userRate, userSamples])
+  const modelFeatures = offThread ? (remote?.model ?? null) : syncModel
+  const userFeatures = offThread ? (remote?.user ?? null) : syncUser
   const score = useMemo<RepeatScore | null>(() => {
-    if (!modelContour || modelRate <= 0 || userRate <= 0) return null
+    if (!modelFeatures || !userFeatures || modelRate <= 0 || userRate <= 0) return null
     const labels = splitWords(speech)
     const timed = words && words.length === labels.length ? words.map((word, index) => ({ ...word, text: labels[index] ?? '' })) : null
     return scoreRepeat({
-      model: modelContour,
-      user: userContour,
+      model: modelFeatures.contour,
+      user: userFeatures.contour,
       modelHop: analysisHop(modelRate),
       userHop: analysisHop(userRate),
       words: timed,
       lang,
       region,
       userDuration: userSamples.length / userRate,
-      modelEnergy,
-      userEnergy,
-      modelBands,
-      userBands,
+      modelEnergy: modelFeatures.energy,
+      userEnergy: userFeatures.energy,
+      modelBands: modelFeatures.bands,
+      userBands: userFeatures.bands,
     })
-  }, [lang, modelBands, modelContour, modelEnergy, modelRate, region, speech, userBands, userContour, userEnergy, userRate, userSamples, words])
+  }, [lang, modelFeatures, modelRate, region, speech, userFeatures, userRate, userSamples, words])
 
   useEffect(() => {
     setView('result')
@@ -161,7 +179,7 @@ export function RepeatFeedback({
   const word = score?.words?.[selected] ?? null
   const feedback = copy.repeatFeedback
   const userDuration = userRate > 0 ? userSamples.length / userRate : 0
-  const userQuiet = voicedValues(userContour).length < MIN_VOICED
+  const userQuiet = userFeatures != null && voicedValues(userFeatures.contour).length < MIN_VOICED
 
   function playWord(item: FeedbackWord, which: 'both' | 'model' | 'user'): void {
     const parts = []
