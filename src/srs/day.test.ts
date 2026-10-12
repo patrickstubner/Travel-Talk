@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { FILLERS, WORDS, wordIds } from '../../content/words'
+import { FILLERS, WORDS, spokenCitation, wordIds } from '../../content/words'
 import { tryLoadCatalog } from '../content/load'
-import { orderedConcepts, usableConcepts } from './session'
+import { cardIdFor, orderedConcepts, usableConcepts } from './session'
 import { WORD_BLOCK, buildDay, meaningChoices, missingKeyword, newlyOpenSentences, wordBudget, wordPassed } from './day'
-import { reviewCard, toStored, Rating, emptyCard } from './scheduler'
+import { reviewCard, toStored, fromStored, Rating, emptyCard } from './scheduler'
+import type { Lang } from '../../content/phrase'
 import type { StoredCard } from '../storage/types'
 
 const now = new Date(2026, 9, 12, 9, 0, 0)
@@ -20,9 +21,12 @@ function passed(direction: string, id: string): StoredCard {
 }
 
 describe('daily word block', () => {
-  it('keeps fillers out and checks twenty words', () => {
-    expect(WORDS).toHaveLength(20)
-    expect(new Set(wordIds()).size).toBe(20)
+  it('keeps fillers out and checks nineteen words', () => {
+    expect(WORDS).toHaveLength(19)
+    expect(new Set(wordIds()).size).toBe(19)
+    expect(wordIds()).not.toContain('w.no')
+    expect(WORDS.find((word) => word.id === 'w.help')?.citation.de).toBe('Hilfe!')
+    expect(WORDS.find((word) => word.id === 'w.application')?.citation.de).toBe('Gesuch')
     for (const id of wordIds()) expect(id).toMatch(/^w\.[a-z0-9-]+$/)
     const citations = new Set(WORDS.flatMap((word) => [word.citation.de, word.citation.en, word.citation['pt-BR'], word.citation.vi].map((text) => text.toLowerCase())))
     for (const filler of [...FILLERS.de, ...FILLERS.en, ...FILLERS.pt, ...FILLERS.vi]) {
@@ -33,8 +37,20 @@ describe('daily word block', () => {
 
   it('puts the six visa words ahead of their sentences', () => {
     const day = buildDay(concepts(), [], 'de-vi', now, 'mix')
-    expect(day.items.map((item) => item.id)).toEqual(['w.days', 'w.stay', 'w.documents', 'w.evisa', 'w.extend', 'w.visa'])
-    expect(day.items.every((item) => item.kind === 'word' && item.isNew)).toBe(true)
+    expect(day.items.map((item) => item.id)).toEqual([
+      'w.days',
+      'w.stay',
+      'w.documents',
+      'w.evisa',
+      'w.extend',
+      'w.visa',
+      'arrival.days',
+      'arrival.declare',
+      'arrival.level',
+      'arrival.passport',
+    ])
+    expect(day.items.slice(0, 6).every((item) => item.kind === 'word' && item.isNew)).toBe(true)
+    expect(day.items.slice(6).every((item) => item.kind === 'sentence' && missingKeyword(item.id, [], 'de-vi', 'de', 'south') == null)).toBe(true)
     expect(day.sentenceSlots).toBe(4)
     expect(missingKeyword('visa.days', [], 'de-vi', 'de', 'south')).toBe('Tage')
   })
@@ -59,8 +75,9 @@ describe('daily word block', () => {
     const six = ['w.days', 'w.stay', 'w.documents', 'w.evisa', 'w.extend', 'w.visa']
     const cards = six.map((id) => passed('de-vi', id))
     const day = buildDay(concepts(), cards, 'de-vi', now, 'mix')
-    expect(day.items.filter((item) => item.kind === 'word')).toEqual([])
-    expect(day.items.map((item) => item.id)).toEqual(['visa.days', 'visa.documents', 'visa.evisa', 'visa.extend'])
+    expect(day.items.filter((item) => item.kind === 'word').map((item) => item.id)).toEqual(['w.i', 'w.where', 'w.current', 'w.rule', 'w.application', 'w.photo'])
+    expect(day.items.filter((item) => item.kind === 'sentence').map((item) => item.id)).toEqual(['visa.days', 'visa.documents', 'visa.evisa', 'visa.extend'])
+    expect(day.items.findIndex((item) => item.kind === 'sentence')).toBeGreaterThan(day.items.findIndex((item) => item.kind === 'word'))
     const queued = newlyOpenSentences(concepts(), cards, 'de-vi', [], day.sentenceSlots)
     expect(queued).toEqual(['visa.days', 'visa.documents', 'visa.evisa', 'visa.extend'])
   })
@@ -88,9 +105,60 @@ describe('daily word block', () => {
   })
 
   it('picks four meanings from the block', () => {
-    const choices = meaningChoices('w.days', ['w.days', 'w.stay', 'w.documents', 'w.evisa'])
+    const choices = meaningChoices('w.days', ['w.days', 'w.stay', 'w.documents', 'w.evisa'], 'de', 'south')
     expect(choices).toHaveLength(4)
     expect(choices).toContain('w.days')
     expect(new Set(choices).size).toBe(4)
+  })
+
+  it('keeps one spoken form per button in Portuguese and Vietnamese', () => {
+    const langs: Lang[] = ['pt-BR', 'vi']
+    for (const lang of langs) {
+      for (const region of ['south', 'north'] as const) {
+        for (const word of WORDS) {
+          const choices = meaningChoices(word.id, wordIds(), lang, region)
+          const forms = choices.map((id) => spokenCitation(WORDS.find((entry) => entry.id === id)!, lang, region).toLocaleLowerCase())
+          expect(new Set(forms).size).toBe(forms.length)
+        }
+      }
+    }
+  })
+
+  it('reaches every sentence and every word within sixty days', () => {
+    const loaded = tryLoadCatalog()
+    if (!loaded.ok) throw new Error('catalog')
+    const pairs: readonly [Lang, Lang, string][] = [
+      ['de', 'vi', 'de-vi'],
+      ['de', 'en', 'de-en'],
+      ['en', 'pt-BR', 'en-pt-BR'],
+      ['vi', 'de', 'vi-de'],
+    ]
+    for (const [app, target, direction] of pairs) {
+      const list = usableConcepts(orderedConcepts(loaded.catalog), app, target, 'south')
+      let cards: StoredCard[] = []
+      for (let day = 0; day < 60; day += 1) {
+        const clock = new Date(2026, 9, 12 + day, 9, 0, 0)
+        const plan = buildDay(list, cards, direction, clock, 'mix')
+        const queued = plan.items.filter((item) => item.kind === 'sentence').map((item) => item.id)
+        const grade = (id: string) => {
+          const cardId = cardIdFor(direction, id)
+          const stored = cards.find((card) => card.cardId === cardId)
+          const next = toStored(cardId, reviewCard(stored ? fromStored(stored) : emptyCard(clock), Rating.Good, clock, 0.9, false))
+          cards = [...cards.filter((card) => card.cardId !== cardId), next]
+        }
+        for (const item of plan.items) {
+          grade(item.id)
+          if (item.kind !== 'word' || !item.isNew) continue
+          const open = newlyOpenSentences(list, cards, direction, queued, plan.sentenceSlots)
+          for (const id of open) {
+            queued.push(id)
+            grade(id)
+          }
+        }
+      }
+      const learned = new Set(cards.map((card) => card.cardId.slice(direction.length + 1)))
+      expect(list.every((concept) => learned.has(concept.id))).toBe(true)
+      expect(wordIds().every((id) => learned.has(id))).toBe(true)
+    }
   })
 })

@@ -54,12 +54,6 @@ export const WORDS: readonly WordEntry[] = [
     sentences: ['meet.yes'],
   },
   {
-    id: 'w.no',
-    hand: true,
-    citation: { de: 'nein', en: 'no', 'pt-BR': 'não', vi: 'không' },
-    sentences: [],
-  },
-  {
     id: 'w.please',
     hand: true,
     citation: { de: 'bitte', en: 'please', 'pt-BR': 'por favor', vi: 'làm ơn' },
@@ -98,7 +92,7 @@ export const WORDS: readonly WordEntry[] = [
   {
     id: 'w.help',
     hand: true,
-    citation: { de: 'Hilfe', en: 'help', 'pt-BR': 'socorro', vi: 'cứu với' },
+    citation: { de: 'Hilfe!', en: 'help', 'pt-BR': 'socorro', vi: 'cứu với' },
     sentences: ['emergency.help'],
   },
   {

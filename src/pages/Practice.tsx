@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { Concept } from '../../content/phrase'
-import { selectedVoice, spokenFile } from '../audio/voices'
+import { selectedVoice, spokenFile, spokenWordFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
 import { decodeContourFile, playClip, stopClip } from '../audio/player'
@@ -232,7 +232,7 @@ export function PracticePage() {
     const word = wordById(item.id)
     if (!word) return
     let live = true
-    const file = tempoFile(spokenFile(settings, settings.targetLang, wordAudioFile(word, settings.targetLang, settings.viRegion)), 0.7)
+    const file = tempoFile(spokenWordFile(settings, settings.targetLang, wordAudioFile(word, settings.targetLang, settings.viRegion)), 0.7)
     const speech = spokenCitation(word, settings.targetLang, settings.viRegion)
     lockedFile.current = file
     setPlaying(true)
@@ -273,10 +273,11 @@ export function PracticePage() {
   useEffect(() => {
     if (item?.kind !== 'word') return
     const block = queueRef.current.filter((entry) => entry.kind === 'word' && entry.isNew).map((entry) => entry.id)
-    setWordOptions(meaningChoices(item.id, block))
+    if (!settings.appLang) return
+    setWordOptions(meaningChoices(item.id, block, settings.appLang, settings.viRegion))
     setPicked(null)
     setAnswered(false)
-  }, [item?.id, item?.kind])
+  }, [item?.id, item?.kind, settings.appLang, settings.viRegion])
 
   useEffect(() => {
     if (!catalog || !concept || step !== 'understand') return
@@ -323,7 +324,9 @@ export function PracticePage() {
 
   async function hear(file: string, speech: string, rate: 0.7 | 1): Promise<void> {
     if (!targetLang) return
-    const played = tempoFile(spokenFile(settings, targetLang, file), rate)
+    const bare = file.slice(file.lastIndexOf('/') + 1)
+    const resolved = bare.startsWith('w.') ? spokenWordFile(settings, targetLang, file) : spokenFile(settings, targetLang, file)
+    const played = tempoFile(resolved, rate)
     lockedFile.current = played
     setPlaying(true)
     setOfflineAudio(false)

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { AUDIO_FILE, voiceFile } from '../content/resolve'
 import { defaultSettings } from '../storage/types'
-import { filesForVoice, selectedVoice, voicesFor, voicesKeptByOthers, withDefaultVoices } from './voices'
+import { filesForVoice, selectedVoice, spokenFile, spokenWordFile, voicesFor, voicesKeptByOthers, withDefaultVoices } from './voices'
 
 describe('voices', () => {
   it('keeps the old files when no voice is stored and writes a male voice for a new user', () => {
@@ -12,6 +14,25 @@ describe('voices', () => {
     expect(next.voices).toEqual({ de: 'thorsten-high', vi: 'vivos-22' })
     expect(next.voiceHintSeen).toBe(true)
     expect(selectedVoice(next, 'vi').legacy).toBe(false)
+  })
+
+  it('plays a missing legacy word clip on the default voice and leaves the sentence file', () => {
+    const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../../public/audio/manifest.json', import.meta.url)), 'utf8')) as string[]
+    const cases = [
+      ['de', 'thorsten', 'thorsten-high'],
+      ['en', 'ljspeech', 'joe'],
+      ['pt-BR', 'faber', 'cadu'],
+      ['vi', 'vais1000', 'vivos-22'],
+    ] as const
+    for (const [lang, legacy, fallback] of cases) {
+      const settings = { ...defaultSettings, voices: { [lang]: legacy } }
+      const word = spokenWordFile(settings, lang, `${lang}/w.water__any__base.m4a`)
+      expect(word).toBe(`${lang}/${fallback}/w.water__any__base.m4a`)
+      expect(manifest).toContain(word)
+      expect(spokenFile(settings, lang, `${lang}/emergency.help__any__base.m4a`)).toBe(`${lang}/emergency.help__any__base.m4a`)
+    }
+    const north = { ...defaultSettings, voices: { vi: 'vivos-32' } }
+    expect(spokenWordFile(north, 'vi', 'vi/w.yes__north__base.m4a')).toBe('vi/vivos-32/w.yes__north__base.m4a')
   })
 
   it('puts a voice id in the path and leaves the legacy file alone', () => {

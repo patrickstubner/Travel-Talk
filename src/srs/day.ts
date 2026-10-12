@@ -30,14 +30,14 @@ function cardFor(cards: readonly StoredCard[], direction: string, id: string): S
   return cards.find((card) => card.cardId === cardId)
 }
 
-/** A sentence with no checked keyword stays shut. Unchecked gloss is not a key. */
+/** No checked keyword means the sentence is already open. A keyword still has to be passed. */
 export function sentenceOpen(conceptId: string, cards: readonly StoredCard[], direction: string): boolean {
   return keywordsOfPassed(conceptId, cards, direction)
 }
 
 function keywordsOfPassed(conceptId: string, cards: readonly StoredCard[], direction: string): boolean {
   const keys = keywords(conceptId)
-  if (keys.length === 0) return false
+  if (keys.length === 0) return true
   return keys.every((word) => wordPassed(cardFor(cards, direction, word.id)))
 }
 
@@ -76,6 +76,25 @@ export function wordBudget(dueCount: number, introduced: number): number {
   return Math.min(WORD_BLOCK, Math.max(0, DAILY_NEW_CAP - introduced))
 }
 
+/**
+ * The next sentences that still have a word with no card.
+ * A sentence with no keyword is not a source. A sentence whose words already
+ * have cards is not a source either, even while it stays shut.
+ */
+function wordSourceIds(concepts: readonly { id: string }[], cards: readonly StoredCard[], direction: string, limit: number): string[] {
+  if (limit <= 0) return []
+  const ids: string[] = []
+  for (const concept of concepts) {
+    if (cardFor(cards, direction, concept.id)) continue
+    const keys = keywords(concept.id)
+    if (keys.length === 0) continue
+    if (keys.every((word) => cardFor(cards, direction, word.id))) continue
+    ids.push(concept.id)
+    if (ids.length >= limit) break
+  }
+  return ids
+}
+
 function rankWindow(windowIds: readonly string[], cards: readonly StoredCard[], direction: string): WordEntry[] {
   const wanted = new Set(windowIds)
   const fresh = WORDS.filter((word) => word.sentences.some((id) => wanted.has(id)) && !cardFor(cards, direction, word.id))
@@ -92,8 +111,9 @@ function rankWindow(windowIds: readonly string[], cards: readonly StoredCard[], 
 }
 
 /**
- * Reviews, then at most six new words from the sentences this day would open,
- * then the sentences whose keywords were already «Gut» or «Leicht».
+ * Reviews, then at most six new words from the next sentences that still
+ * have a word with no card, then the sentences that are already open.
+ * A sentence with no keyword is open at once.
  */
 export function buildDay(
   concepts: readonly { id: string }[],
@@ -115,7 +135,7 @@ export function buildDay(
   const reviewSlice = reviews.slice(0, 8)
   const freshSentences = concepts.filter((concept) => !cardFor(cards, direction, concept.id))
   const lookAhead = newCardBudget(dueCount, introduced)
-  const windowIds = freshSentences.slice(0, Math.max(lookAhead, 0)).map((concept) => concept.id)
+  const windowIds = wordSourceIds(concepts, cards, direction, lookAhead)
   const ranked = rankWindow(windowIds, cards, direction)
   const wordsTaken = Math.min(wordBudget(dueCount, introduced), ranked.length)
   const sentenceSlots = newCardBudget(dueCount, introduced + wordsTaken)
@@ -144,12 +164,20 @@ export function newlyOpenSentences(
   return open.slice(0, Math.max(0, sentenceSlots - queuedSentenceIds.length)).map((concept) => concept.id)
 }
 
-/** Four meanings. The block first, then the other checked words, in a stable order. */
-export function meaningChoices(correctId: string, blockIds: readonly string[]): string[] {
+/**
+ * Four meanings. The block first, then the other checked words, in a stable order.
+ * A distractor with the same spoken form as the answer is skipped, so two buttons
+ * cannot both be right.
+ */
+export function meaningChoices(correctId: string, blockIds: readonly string[], lang: Lang, viRegion: 'south' | 'north'): string[] {
+  const correct = wordById(correctId)
+  const correctForm = correct ? spokenCitation(correct, lang, viRegion).toLocaleLowerCase() : ''
   const pool = [...blockIds, ...WORDS.map((word) => word.id)]
   const others: string[] = []
   for (const id of pool) {
-    if (id === correctId || others.includes(id) || !wordById(id)) continue
+    const word = wordById(id)
+    if (id === correctId || !word || others.includes(id)) continue
+    if (correctForm && spokenCitation(word, lang, viRegion).toLocaleLowerCase() === correctForm) continue
     others.push(id)
     if (others.length === 3) break
   }

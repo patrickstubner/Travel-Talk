@@ -20,14 +20,6 @@
     "voice": "thorsten-high",
     "model": "de_DE-thorsten-high",
     "speaker": null,
-    "text": "nein",
-    "file": "de/thorsten-high/w.no__any__base.m4a"
-  },
-  {
-    "lang": "de",
-    "voice": "thorsten-high",
-    "model": "de_DE-thorsten-high",
-    "speaker": null,
     "text": "bitte",
     "file": "de/thorsten-high/w.please__any__base.m4a"
   },
@@ -180,14 +172,6 @@
     "voice": "joe",
     "model": "en_US-joe-medium",
     "speaker": null,
-    "text": "no",
-    "file": "en/joe/w.no__any__base.m4a"
-  },
-  {
-    "lang": "en",
-    "voice": "joe",
-    "model": "en_US-joe-medium",
-    "speaker": null,
     "text": "please",
     "file": "en/joe/w.please__any__base.m4a"
   },
@@ -334,14 +318,6 @@
     "speaker": null,
     "text": "sim",
     "file": "pt-BR/cadu/w.yes__any__base.m4a"
-  },
-  {
-    "lang": "pt-BR",
-    "voice": "cadu",
-    "model": "pt_BR-cadu-medium",
-    "speaker": null,
-    "text": "não",
-    "file": "pt-BR/cadu/w.no__any__base.m4a"
   },
   {
     "lang": "pt-BR",
@@ -508,14 +484,6 @@
     "voice": "vivos-22",
     "model": "vi_VN-vivos-x_low",
     "speaker": 9,
-    "text": "không",
-    "file": "vi/vivos-22/w.no__any__base.m4a"
-  },
-  {
-    "lang": "vi",
-    "voice": "vivos-22",
-    "model": "vi_VN-vivos-x_low",
-    "speaker": 9,
     "text": "làm ơn",
     "file": "vi/vivos-22/w.please__any__base.m4a"
   },
@@ -670,14 +638,6 @@
     "speaker": 37,
     "text": "vâng",
     "file": "vi/vivos-32/w.yes__north__base.m4a"
-  },
-  {
-    "lang": "vi",
-    "voice": "vivos-32",
-    "model": "vi_VN-vivos-x_low",
-    "speaker": 37,
-    "text": "không",
-    "file": "vi/vivos-32/w.no__any__base.m4a"
   },
   {
     "lang": "vi",
