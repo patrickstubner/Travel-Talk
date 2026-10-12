@@ -39,7 +39,10 @@ const fixture = `
     </nav>
     <main id="inhalt">
       <section class="stack show">
-        <p class="for-other">Für die andere Person</p>
+        <div class="for-other-row">
+          <p class="for-other">Für die andere Person</p>
+          <button type="button" class="info-button" aria-label="Erklärungen">i</button>
+        </div>
         <p class="show-purpose">Zeigen stellt einen Satz gross auf den Bildschirm.</p>
         <p class="warn" role="status">Stimme offline nicht geladen</p>
         <p class="badge">Notfall</p>
@@ -215,6 +218,7 @@ describe('show mode contrast', () => {
       '.nav a:not([aria-current="page"])',
       '.nav a[aria-current="page"]',
       '.for-other',
+      '.info-button',
       '.show-purpose',
       '.warn',
       '.badge',
@@ -296,5 +300,40 @@ describe('show mode contrast', () => {
     expect(curveColors(false, 'red').wash).toBe('#f8e4df')
     expect(curveColors(false, 'yellow').wash).toBe('#f8efd8')
     expect(curveColors(false, 'green').wash).toBe('#e7f4ee')
+  })
+
+  it('keeps the info button, the sheet and the record button at WCAG AA on a light page', () => {
+    document.head.querySelectorAll('style').forEach((node) => node.remove())
+    document.body.replaceChildren()
+    const style = document.createElement('style')
+    style.textContent = css
+    document.head.appendChild(style)
+    const parsed = new DOMParser().parseFromString(
+      `<main>
+        <div class="learn-card">
+          <h1>Could you write that down, please?</h1>
+          <p class="gloss">Kannst du das aufschreiben?</p>
+          <button type="button" class="info-button">i</button>
+        </div>
+        <button type="button" class="button accent">Aufnehmen</button>
+        <div class="info-sheet">
+          <h2>Zum Satz</h2>
+          <p>Das Mikrofon bleibt auf diesem Gerät.</p>
+          <button type="button" class="button">Vorlesen</button>
+        </div>
+      </main>`,
+      'text/html',
+    )
+    document.body.replaceChildren(...parsed.body.childNodes)
+    for (const selector of ['.learn-card h1', '.learn-card .gloss', '.info-button', '.button.accent', '.info-sheet h2', '.info-sheet p', '.info-sheet .button']) {
+      const element = document.querySelector(selector)
+      expect(element, selector).toBeTruthy()
+      if (!element) continue
+      const parsed = parseColor(getComputedStyle(element).color)
+      expect(parsed, selector).toBeTruthy()
+      if (!parsed) continue
+      const ratio = contrast(parsed.rgb, effectiveBackground(element))
+      expect(ratio, `${selector} ${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(minimumRatio(element))
+    }
   })
 })

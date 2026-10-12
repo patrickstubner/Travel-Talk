@@ -2,7 +2,7 @@
 import 'fake-indexeddb/auto'
 import { freshIndexedDb } from '../test-idb'
 import { useEffect, type ReactNode } from 'react'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppProvider, useApp } from '../app/state'
@@ -58,10 +58,9 @@ describe('show purpose', () => {
       </AppProvider>,
     )
     const section = await screen.findByTestId('show')
-    const text = section.textContent ?? ''
-    const kicker = text.indexOf('Für die andere Person')
-    const purpose = text.indexOf(dictionaries.de.showPurpose)
-    expect(kicker).toBeGreaterThanOrEqual(0)
-    expect(purpose).toBeGreaterThan(kicker)
+    expect(section.textContent).toContain('Für die andere Person')
+    expect(section.textContent).not.toContain(dictionaries.de.showPurpose)
+    fireEvent.click(screen.getByRole('button', { name: dictionaries.de.infoOpen }))
+    expect(screen.getByRole('dialog').textContent).toContain(dictionaries.de.showPurpose)
   })
 })

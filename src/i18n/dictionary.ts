@@ -167,6 +167,10 @@ export type Dictionary = {
   version: string
   exampleAudio: string
   aboutLine: string
+  infoOpen: string
+  infoClose: string
+  readAloud: string
+  readAloudStop: string
   pairNote: string
   noResults: string
   phrases: (count: number) => string
@@ -494,6 +498,10 @@ export const de: Dictionary = {
   version: 'Version 0.9.4',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   aboutLine: 'Zum Satz',
+  infoOpen: 'Erklärungen zum Satz',
+  infoClose: 'Schliessen',
+  readAloud: 'Vorlesen',
+  readAloudStop: 'Stopp',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
   phrases: (count) => (count === 1 ? '1 Satz' : `${count} Sätze`),
@@ -818,6 +826,10 @@ export const en: Dictionary = {
   version: 'Version 0.9.4',
   exampleAudio: 'The audio speaks the example sentence.',
   aboutLine: 'About this line',
+  infoOpen: 'Notes about this line',
+  infoClose: 'Close',
+  readAloud: 'Read aloud',
+  readAloudStop: 'Stop',
   pairNote: 'Note for this pair',
   noResults: 'No matches.',
   phrases: (count) => (count === 1 ? '1 line' : `${count} lines`),
@@ -1144,6 +1156,10 @@ export const pt: Dictionary = {
   version: 'Version 0.9.4',
   exampleAudio: 'O áudio fala a frase de exemplo.',
   aboutLine: 'Sobre a frase',
+  infoOpen: 'Notas sobre a frase',
+  infoClose: 'Fechar',
+  readAloud: 'Ler em voz alta',
+  readAloudStop: 'Parar',
   pairNote: 'Nota deste par',
   noResults: 'Nenhum resultado.',
   phrases: (count) => (count === 1 ? '1 frase' : `${count} frases`),
@@ -1468,6 +1484,10 @@ export const vi: Dictionary = {
   version: 'Version 0.9.4',
   exampleAudio: 'Audio đọc câu ví dụ.',
   aboutLine: 'Về câu này',
+  infoOpen: 'Giải thích về câu này',
+  infoClose: 'Đóng',
+  readAloud: 'Đọc to',
+  readAloudStop: 'Dừng',
   pairNote: 'Ghi chú của cặp này',
   noResults: 'Không thấy.',
   phrases: (count) => (count === 1 ? '1 câu' : `${count} câu`),

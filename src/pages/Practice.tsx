@@ -11,8 +11,10 @@ import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { stopSlices } from '../audio/slice'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
+import type { ExplainPart } from '../audio/explain'
+import { fixedPart, lineContext } from '../audio/notes'
 import { KaraokeLine } from '../components/KaraokeLine'
-import { LearnNotes } from '../components/LearnNotes'
+import { LearnCard } from '../components/LearnCard'
 import { RepeatFeedback } from '../components/RepeatFeedback'
 import { RichText } from '../components/RichText'
 import { spokenCitation, wordAudioFile, wordById } from '../../content/words'
@@ -429,12 +431,12 @@ export function PracticePage() {
             {copy.audioOffline}
           </p>
         ) : null}
-        <div className="learn-head" data-testid="learn-head">
+        <LearnCard>
           <p className="target-line" data-testid="target-line" lang={targetLang}>
             {speech}
           </p>
           {answered ? <p className="gloss">{meaning}</p> : null}
-        </div>
+        </LearnCard>
         <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 0.7)}>
           <span className="play-mark" aria-hidden="true" />
           {playing ? copy.playingSlow : copy.replaySlow}
@@ -579,6 +581,18 @@ export function PracticePage() {
         <RichText text={source.text} />
       </p>
     ) : null
+  const contextNote = lineContext(copy, app, concept.id, concept.context[app])
+  const glossNote = followWords ? [fixedPart(app, 'ui.gloss', copy.glossUnchecked)] : []
+  const sentenceNotes: ExplainPart[] =
+    step === 'slow' || step === 'normal'
+      ? [contextNote, ...glossNote]
+      : step === 'repeat'
+        ? [contextNote, fixedPart(app, 'ui.mic', copy.micHint), ...glossNote]
+        : step === 'understand'
+          ? [contextNote, ...(item.isNew ? [fixedPart(app, 'ui.new', copy.newStays)] : []), ...(answered ? glossNote : [])]
+          : step === 'recall' && answered
+            ? [fixedPart(app, 'ui.rate', copy.rateHint), contextNote]
+            : []
 
   return (
     <section className="stack learn" data-testid="practice">
@@ -590,10 +604,10 @@ export function PracticePage() {
       ) : null}
       {step === 'slow' || step === 'normal' ? (
         <>
-          <div className="learn-head" data-testid="learn-head">
+          <LearnCard parts={sentenceNotes}>
             {sentence}
             {glossLine}
-          </div>
+          </LearnCard>
           <button
             type="button"
             className="play-row"
@@ -617,20 +631,14 @@ export function PracticePage() {
               {copy.next}
             </button>
           )}
-          <LearnNotes title={copy.aboutLine}>
-            <p>
-              {copy.context}: {concept.context[app]}
-            </p>
-            {followWords ? <p>{copy.glossUnchecked}</p> : null}
-          </LearnNotes>
         </>
       ) : null}
       {step === 'repeat' ? (
         <>
-          <div className="learn-head" data-testid="learn-head">
+          <LearnCard parts={sentenceNotes}>
             {sentence}
             {glossLine}
-          </div>
+          </LearnCard>
           <button
             type="button"
             className="play-row"
@@ -651,6 +659,7 @@ export function PracticePage() {
             ) : (
               <button
                 type="button"
+                className="button accent"
                 disabled={micStarting}
                 onClick={() => {
                   stopClip()
@@ -719,21 +728,14 @@ export function PracticePage() {
           <button type="button" className="button primary" disabled={micStarting} onClick={goNext}>
             {copy.next}
           </button>
-          <LearnNotes title={copy.aboutLine}>
-            <p>
-              {copy.context}: {concept.context[app]}
-            </p>
-            <p>{copy.micHint}</p>
-            {followWords ? <p>{copy.glossUnchecked}</p> : null}
-          </LearnNotes>
         </>
       ) : null}
       {step === 'understand' ? (
         <>
-          <div className="learn-head" data-testid="learn-head">
+          <LearnCard parts={sentenceNotes}>
             {sentence}
             {glossLine}
-          </div>
+          </LearnCard>
           <h2>{item.isNew ? copy.visibleTitle : copy.meaningPrompt}</h2>
           {item.isNew ? <p>{copy.meaningPrompt}</p> : null}
           <button
@@ -771,13 +773,6 @@ export function PracticePage() {
               {copy.next}
             </button>
           ) : null}
-          <LearnNotes title={copy.aboutLine}>
-            <p>
-              {copy.context}: {concept.context[app]}
-            </p>
-            {item.isNew ? <p>{copy.newStays}</p> : null}
-            {answered && followWords ? <p>{copy.glossUnchecked}</p> : null}
-          </LearnNotes>
         </>
       ) : null}
       {step === 'recall' ? (
@@ -801,10 +796,10 @@ export function PracticePage() {
             </>
           ) : (
             <>
-              <div className="learn-head" data-testid="learn-head">
+              <LearnCard parts={sentenceNotes}>
                 {sentence}
                 {glossLine}
-              </div>
+              </LearnCard>
               <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(target.file, target.speech, 1)}>
                 <span className="play-mark" aria-hidden="true" />
                 {playing ? copy.playingNormal : copy.play}
@@ -828,12 +823,6 @@ export function PracticePage() {
                   </button>
                 ))}
               </div>
-              <LearnNotes title={copy.aboutLine}>
-                <p>{copy.rateHint}</p>
-                <p>
-                  {copy.context}: {concept.context[app]}
-                </p>
-              </LearnNotes>
             </>
           ) : null}
         </>

@@ -57,6 +57,8 @@ describe('meaning step', () => {
     expect(choice).toBeTruthy()
     fireEvent.click(choice as HTMLButtonElement)
     expect(document.querySelector('.word-gloss')).toBeTruthy()
+    expect(screen.queryByText('Die Wortzuordnung ist nicht geprüft.')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Erklärungen zum Satz' }))
     expect(screen.getByText('Die Wortzuordnung ist nicht geprüft.')).toBeTruthy()
   })
 })

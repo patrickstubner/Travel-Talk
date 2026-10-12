@@ -12,22 +12,13 @@ import { stopSlices } from '../audio/slice'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
+import { fixedPart, lineContext, pairPart, speedPart, voiceCaption } from '../audio/notes'
 import { RepeatFeedback } from '../components/RepeatFeedback'
 import { KaraokeLine } from '../components/KaraokeLine'
-import { LearnNotes } from '../components/LearnNotes'
+import { LearnCard } from '../components/LearnCard'
 import { RichText } from '../components/RichText'
 import { cardIdFor } from '../srs/session'
-import type { Dictionary } from '../i18n/dictionary'
-import { prefsFromSettings, type Settings } from '../storage/types'
-import type { Lang } from '../../content/phrase'
-
-function audioCaption(copy: Dictionary, lang: Lang, settings: Settings): string {
-  const id = selectedVoice(settings, lang).id
-  if (lang === 'vi') return id === 'vais1000' ? copy.audioVi : copy.audioViMale
-  if (lang === 'de') return id === 'thorsten-high' ? copy.audioDeHigh : copy.audioDe
-  if (lang === 'en') return id === 'joe' ? copy.audioEnMale : copy.audioEn
-  return id === 'cadu' ? copy.audioPtMale : copy.audioPt
-}
+import { prefsFromSettings } from '../storage/types'
 
 export function PhrasePage() {
   const { conceptId = '' } = useParams()
@@ -254,7 +245,18 @@ export function PhrasePage() {
       <p className="back-row">
         <Link to={`/situation/${concept.situationIds[0] ?? ''}`}>{copy.back}</Link>
       </p>
-      <div className="learn-head" data-testid="learn-head">
+      <LearnCard
+        parts={[
+          fixedPart(ui, 'ui.example', copy.exampleAudio),
+          lineContext(copy, ui, concept.id, concept.context[ui]),
+          voiceCaption(copy, ui, targetLang, settings),
+          ...(followWords ? [fixedPart(ui, 'ui.gloss', copy.glossUnchecked)] : []),
+          speedPart(copy, ui, settings.speed, percent),
+          ...pairNotes.map((note) => pairPart(copy, ui, note.id, note.text[ui])),
+          fixedPart(ui, 'ui.mic', copy.micHint),
+          fixedPart(ui, 'ui.unchecked', copy.uncheckedCalm),
+        ]}
+      >
         {followWords ? (
           <KaraokeLine
             heading
@@ -276,7 +278,7 @@ export function PhrasePage() {
             </p>
           </>
         )}
-      </div>
+      </LearnCard>
       {heard === 'offline' ? (
         <p className="warn" role="status">
           {copy.audioOffline}
@@ -328,7 +330,7 @@ export function PhrasePage() {
               {copy.stop}
             </button>
           ) : (
-            <button type="button" disabled={micStarting} onClick={() => void onRecord()}>
+            <button type="button" className="button accent" disabled={micStarting} onClick={() => void onRecord()}>
               {userAudio ? copy.repeatFeedback.again : copy.record}
             </button>
           )}
@@ -365,22 +367,6 @@ export function PhrasePage() {
         ) : null}
         {!userAudio && mineUrl ? <p role="status">{copy.pitchEmpty}</p> : null}
       </div>
-      <LearnNotes title={copy.aboutLine}>
-        <p>{copy.exampleAudio}</p>
-        <p>
-          {copy.context}: {concept.context[ui]}
-        </p>
-        <p>{audioCaption(copy, targetLang, settings)}</p>
-        {followWords ? <p>{copy.glossUnchecked}</p> : null}
-        <p>{settings.speed === 'auto' ? copy.speedAutoHint(percent) : copy.speedFixedHint(percent)}</p>
-        {pairNotes.map((note) => (
-          <p key={note.id}>
-            {copy.pairNote}: {note.text[ui]}
-          </p>
-        ))}
-        <p>{copy.micHint}</p>
-        <p>{copy.uncheckedCalm}</p>
-      </LearnNotes>
     </article>
   )
 }

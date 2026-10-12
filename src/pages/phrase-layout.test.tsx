@@ -2,7 +2,7 @@
 import 'fake-indexeddb/auto'
 import { freshIndexedDb } from '../test-idb'
 import { useEffect, type ReactNode } from 'react'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppProvider, useApp } from '../app/state'
@@ -53,17 +53,21 @@ describe('phrase layout', () => {
     const head = await screen.findByTestId('learn-head')
     const actions = screen.getByTestId('learn-actions')
     const record = screen.getByTestId('learn-record')
-    const notes = screen.getByTestId('learn-notes')
+    const info = screen.getByRole('button', { name: 'Erklärungen zum Satz' })
     expect(head.querySelector('[data-testid="target-line"]')?.textContent).toMatch(/Could/)
     expect(head.querySelector('.gloss, .word-gloss')?.textContent).toMatch(/aufschreiben/)
     follows(head, actions)
     follows(actions, record)
-    follows(record, notes)
-    expect(notes.tagName).toBe('DETAILS')
-    expect(notes.hasAttribute('open')).toBe(false)
-    expect(notes.textContent).toMatch(/Beispielsatz/)
-    expect(notes.textContent).toMatch(/Wozu der Satz/)
+    expect(screen.queryByTestId('learn-notes')).toBeNull()
     expect(actions.textContent).not.toMatch(/Wozu der Satz/)
     expect(head.textContent).not.toMatch(/Beispielsatz/)
+    fireEvent.click(info)
+    const notes = screen.getByTestId('learn-notes')
+    expect(notes.getAttribute('role')).toBe('dialog')
+    expect(notes.textContent).toMatch(/Beispielsatz/)
+    expect(notes.textContent).toMatch(/Wozu der Satz/)
+    expect(screen.getByTestId('read-aloud').textContent).toMatch(/Vorlesen/)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByTestId('learn-notes')).toBeNull()
   })
 })

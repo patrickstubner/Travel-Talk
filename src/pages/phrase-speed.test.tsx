@@ -57,6 +57,8 @@ describe('phrase speed', () => {
     fireEvent.click(screen.getByRole('button', { name: '100 %' }))
     expect(await screen.findByRole('button', { name: '100 %', pressed: true })).toBeTruthy()
     expect(screen.getByTestId('speed-now').textContent).toBe('Tempo 100 %')
+    expect(screen.queryByText('Fest 100 % für alles Audio, bis du wieder Automatisch wählst.')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Erklärungen zum Satz' }))
     expect(screen.getByText('Fest 100 % für alles Audio, bis du wieder Automatisch wählst.')).toBeTruthy()
   })
 })
