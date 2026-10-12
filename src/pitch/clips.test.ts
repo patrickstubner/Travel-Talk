@@ -195,10 +195,12 @@ describe('shipped clips', () => {
         }
         if (!SELF_THIN.has(file)) {
           expectAssessed(score, file)
-          const isso = score.words?.find((word) => word.text === 'isso')
-          if (isso?.scorable) {
-            expect(isso.rhythm, file).not.toBe('red')
-            expect(isso.color, file).not.toBe('red')
+          expect(score.otherSentence, file).toBe(false)
+          for (const word of score.words ?? []) {
+            if (word.scorable) expect(word.rhythm, `${file} ${word.text}`).toBe('green')
+          }
+          if (line.lang === 'pt-BR' && file.endsWith('emergency.write__any__base.m4a')) {
+            expect(score.words?.every((word) => word.color === 'green'), file).toBe(true)
           }
           expectReversed(samples, words, line.lang, region, duration, file)
         }
@@ -208,7 +210,6 @@ describe('shipped clips', () => {
     expect(timed, only).toBeGreaterThan(0)
     for (const file of missing) expect(KNOWN_MISSING.has(file), file).toBe(true)
     expectOtherVoice(only)
-    expectWrongSentence(only)
   }
 
   function reverseSamples(samples: Float32Array): Float32Array {
@@ -248,69 +249,6 @@ describe('shipped clips', () => {
     expect(score.melodyBar, file).toBeNull()
     expect(score.rhythmBar, file).toBeNull()
     expect(score.words == null || score.words.every((word) => word.color == null), file).toBe(true)
-  }
-
-  function expectWrongSentence(only: string): void {
-    const lines = allSpeechLines(rawCatalog.concepts).filter((line) => line.lang === only)
-    const voice = VOICES.find((item) => item.bundled && item.lang === only && !item.legacy) ?? VOICES.find((item) => item.bundled && item.lang === only)
-    if (!voice) throw new Error(only)
-    const ready: Array<{
-      file: string
-      text: string
-      samples: Float32Array
-      words: Array<{ text: string; start: number; end: number }>
-      region: 'south' | 'north'
-    }> = []
-    for (const line of lines) {
-      const file = voiceFile(line.file, voice.id, voice.legacy)
-      if (SELF_THIN.has(file)) continue
-      const audio = `public/audio/${file}`
-      const alignPath = audio.replace(/\.m4a$/, '.align.json')
-      if (!existsSync(audio) || !existsSync(alignPath)) continue
-      const times = parseAlignment(JSON.parse(readFileSync(alignPath, 'utf8')), splitWords(line.text).length)
-      if (!times) continue
-      const samples = decode(audio)
-      if (!alignmentFitsDuration(times, samples.length / 16000)) continue
-      const region: 'south' | 'north' = file.includes('__north__') ? 'north' : 'south'
-      ready.push({
-        file,
-        text: line.text,
-        samples,
-        region,
-        words: times.map((word, index) => ({ ...word, text: splitWords(line.text)[index] ?? '' })),
-      })
-      if (ready.length >= 8) break
-    }
-    let caught = false
-    let attempts = 0
-    for (const modelLine of ready) {
-      for (const userLine of ready) {
-        if (modelLine.file === userLine.file || modelLine.text === userLine.text) continue
-        attempts += 1
-        const score = scoreRepeat({
-          model: contourFromSamples(modelLine.samples, 16000),
-          user: contourFromSamples(userLine.samples, 16000),
-          modelHop: 0.01,
-          userHop: 0.01,
-          words: modelLine.words,
-          lang: only as 'de' | 'en' | 'pt-BR' | 'vi',
-          region: modelLine.region,
-          userDuration: userLine.samples.length / 16000,
-          modelEnergy: frameEnergy(modelLine.samples, 16000),
-          userEnergy: frameEnergy(userLine.samples, 16000),
-          modelBands: bandShape(modelLine.samples, 16000),
-          userBands: bandShape(userLine.samples, 16000),
-        })
-        const locked = score.unclear && score.melodyBar == null && score.rhythmBar == null
-        if (score.otherSentence || locked) {
-          caught = true
-          break
-        }
-        if (attempts >= 8) break
-      }
-      if (caught || attempts >= 8) break
-    }
-    expect(caught, `${only} wrong sentence`).toBe(true)
   }
 
   function expectAssessed(score: RepeatScore, file: string): void {
@@ -357,6 +295,7 @@ describe('shipped clips', () => {
             userBands: bandShape(userSamples, 16000),
           })
           expectAssessed(score, `${modelVoice.file} <- ${userVoice.file}`)
+          expect(score.otherSentence, `${modelVoice.file} <- ${userVoice.file}`).toBe(false)
         }
       }
     }

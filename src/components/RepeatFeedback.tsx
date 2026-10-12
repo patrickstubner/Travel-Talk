@@ -336,11 +336,9 @@ function Result({
             ? feedback.unclear
             : score?.fewWords
               ? feedback.few
-              : showBars && score?.otherSentence
-                ? feedback.otherSentence
-                : gapWord
-                  ? feedback.modelGap(gapWord.text)
-                  : null
+              : gapWord
+                ? feedback.modelGap(gapWord.text)
+                : null
   return (
     <div className="stack">
       <p className="legend">

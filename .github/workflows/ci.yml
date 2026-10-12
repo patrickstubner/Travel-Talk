@@ -69,10 +69,16 @@ jobs:
           path: .cache/tt-clips
           key: tt-clips-${{ matrix.lang }}-${{ hashFiles('public/audio/**/*.m4a', 'src/pitch/clips.test.ts') }}
       - name: ffmpeg for the shipped-clip regression
+        timeout-minutes: 8
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg
-          ffmpeg -version
+          set -eu
+          # apt has hung for the whole job budget. Each try dies after
+          # three minutes, and one retry still fits in this step.
+          if ! timeout 180s bash -c 'sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg && ffmpeg -version'; then
+            echo "ffmpeg install failed or hung, retrying once"
+            sudo dpkg --configure -a || true
+            timeout 180s bash -c 'sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg && ffmpeg -version'
+          fi
       - run: npm run test:clips
         env:
           CLIP_LANG: ${{ matrix.lang }}

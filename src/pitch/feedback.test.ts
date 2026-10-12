@@ -933,7 +933,7 @@ describe('repeat alignment', () => {
       userBands: hum,
     })
     expect(score.unclear).toBe(false)
-    expect(score.otherSentence).toBe(true)
+    expect(score.otherSentence).toBe(false)
     expect(score.melodyBar).not.toBeNull()
     expect(score.rhythmBar).not.toBeNull()
   })

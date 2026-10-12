@@ -253,10 +253,9 @@ describe('repeat feedback view', () => {
     expect(chip.getAttribute('data-rhythm')).toBe('green')
     const marks = chip.querySelectorAll('.mark')
     expect(marks[0]?.textContent).toBe('Melodie')
-    expect(marks[0]?.classList.contains('green')).toBe(true)
+    expect(marks[0]?.className).toBe('mark green')
     expect(marks[1]?.textContent).toBe('Rhythmus')
-    expect(marks[1]?.classList.contains('green')).toBe(true)
-    expect(marks[1]?.classList.contains('plain')).toBe(false)
+    expect(marks[1]?.className).toBe('mark green')
   })
 
   it('draws no bars when every word stays grey', async () => {
@@ -354,14 +353,14 @@ describe('repeat feedback view', () => {
     expect(screen.queryByTestId('melody-bar')).toBeNull()
   })
 
-  it('asks when the take sounds like a different sentence and keeps the bars', async () => {
+  it('does not hint at another sentence while the bars are coloured', async () => {
     const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
     vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
       ...actual.scoreRepeat(input),
       otherSentence: true,
     }))
     renderFeedback('de')
-    expect(screen.getByRole('status').textContent).toBe('Das klingt nach einem anderen Satz. Hör die Datei noch einmal und sprich denselben.')
+    expect(screen.queryByText('Das klingt nach einem anderen Satz. Hör die Datei noch einmal und sprich denselben.')).toBeNull()
     expect(screen.getByTestId('melody-bar')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).not.toBe('none')
   })

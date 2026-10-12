@@ -8,11 +8,13 @@ import { bandDistance } from './spectrum'
  * to survive. A mean path distance above UNCLEAR_SEMITONES stays on the
  * curve as a colour. It no longer drops the words. That cutoff is a choice.
  *
- * Rhythm colour of a word uses the local tempo against the file: the
- * whole-span ratio, the local scale, and that word's frames against its
- * timed length. A uniform slow take is yellow, not red on every word. The
- * rhythm bar is the worse of that word bar and the band of the whole-span
- * ratio. Comparison is against the file that was heard.
+ * Rhythm colour of a word is the local tempo: the whole-span ratio times
+ * the local scale. The frame window is left out, so a word compared with
+ * its own file stays at 1 and inside the green band. That band is the
+ * self-comparison tolerance: the local search (about 0.75–1.33) fits in
+ * it when the take has the file's length. A uniform 0.7 take stays
+ * yellow. The rhythm bar is the worse of that word bar and the band of
+ * the whole-span ratio. Comparison is against the file that was heard.
  *
  * A take is «unklar» when its voiced range stays under FLAT_RANGE and the
  * reference moves by at least that much more, and the take is not itself
@@ -27,8 +29,8 @@ import { bandDistance } from './spectrum'
  * «unklar». A steady tone against a spoken file is «unklar» when the
  * file's loudness moves and the tone's pitch does not. A large pitch
  * offset and a loudness envelope that runs the other way do not hide the
- * bars. A band shape closer to another sentence leaves the bars and sets
- * the hint. «unklar» is set only when the bars are absent. A model file
+ * bars. This release does not hint that the sentence was a different one.
+ * «unklar» is set only when the bars are absent. A model file
  * with fewer than MIN_VOICED frames says the file is thin, not that the
  * take was quiet. The old 1–3 grade is in sentence-grade.ts, which the
  * app does not import. Bars stay when at least one word has a colour.
@@ -877,7 +879,9 @@ export function scoreRepeat(input: {
     if (scorable && modelRange >= MOVING_RANGE && pitchCorr != null && !follows && melody === 'green') {
       melody = 'yellow'
     }
-    const rawRatio = (globalRatio * matched.scale * (frameEnd - frame) * modelHop) / (word.end - word.start)
+    // Frame rounding made short words look fast or slow against their own
+    // file. The tempo is the span ratio times the local scale.
+    const rawRatio = globalRatio * matched.scale
     const rhythm = Number.isFinite(rawRatio) && rawRatio > 0 ? rhythmBand(rawRatio) : rhythmBand(matched.scale)
     return {
       ...base,
@@ -938,8 +942,9 @@ export function scoreRepeat(input: {
   const coloured = scorable.filter((word) => word.color != null).length
   const allowed = scorable.length > 0 && coloured / scorable.length >= COLOURED_SHARE
   const fewWords = !allowed
-  // A band shape closer to another sentence leaves the bars. The page asks
-  // whether it was a different sentence. It does not drop the colours.
+  // A far band shape does not take the bars, and this release does not
+  // turn it into a sentence hint. Another voice of the right sentence
+  // often sits past the old limit.
   return {
     model,
     user: heard,
@@ -956,7 +961,7 @@ export function scoreRepeat(input: {
     tooLittleVoice: false,
     tooShort: false,
     globalRatio,
-    otherSentence: content && hasColour,
+    otherSentence: false,
     reason: hasColour && !fewWords ? null : 'few',
   }
 }
