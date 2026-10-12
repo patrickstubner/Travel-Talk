@@ -250,6 +250,18 @@ Geprüft am 11. Oktober 2026 am Branch `cursor/people-v060-d07c`. Kein neues Pak
 
 Eine gelöschte Stimme verlässt den Cache, wenn keine verbleibende Person sie benutzt. Im Zeigen-Modus ist der Name verborgen. «Alle Personen exportieren» nennt den Grund, solange der Knopf aus ist. `require_onnx` endet mit einem Satz, wenn das Paket fehlt.
 
+## 0.9.3
+
+Geprüft am 12. Oktober 2026. Keine neue Laufzeitabhängigkeit und keine neue npm-Abhängigkeit. `npm audit` bleibt bei 0 Schwachstellen. Kein neues Netz, kein Backend, kein Konto, keine Spracherkennung. espeak-ng 1.51 hat die IPA nur beim Schreiben der Tabelle geliefert. Die App ruft espeak nicht auf, und die CI installiert es nicht. Die Umschrift ist statischer Text in `content/word-sounds.ts`. React setzt sie als Text. Es gibt kein neues `fetch` und keinen neuen Audio-Pfad.
+
+**Einführung.** Ein Wort ohne Karte zeigt dreimal Schrift, Umschrift und Bedeutung. «Weiter» schreibt keine Karte. Die Karte `Richtung:w.water` entsteht erst bei der Frage, mit «Gut» oder «Nochmal», wie in 0.9.0. Eine fällige Wortkarte überspringt die Einführung. Die drei Hören liegen nur im Speicher der Seite. Ein Abbruch lässt das Wort neu, und es zählt nicht zu den 15.
+
+**Tempo.** Ein Wort nimmt die Basisdatei `{sprache}/{stimme}/w.…__…__base.m4a`. `.r70` und `.r85` bleiben im Manifest für die Sätze und werden für Wörter nicht angehängt. `playbackRate` bleibt 1. Die Datei muss weiter dem festen Muster entsprechen und in `manifest.json` stehen.
+
+**Töne.** Die vietnamesische Umschrift nennt den Ton der Schreibung, Silbe für Silbe. Die IPA trägt die sechs Chao-Töne und zieht hỏi und ngã nicht zusammen. không, đâu und đây hatten in der Wortkarte keinen Ton. Die Schrift der Karte ist korrigiert. Die vorhandenen Clips dieser drei Wörter sind die alten Dateien. Neu sprechen braucht die Piper-Modelle ausserhalb des Repos. Die Sätze dieser Fassung bleiben unverändert.
+
+Tests: `src/content/word-sounds.test.ts`, `src/pages/practice-words.test.tsx`. Die Clip-Matrix bleibt die Satzzeilen.
+
 ## 0.9.0
 
 Geprüft am 12. Oktober 2026. Keine neue Laufzeitabhängigkeit und keine neue npm-Abhängigkeit. `npm audit` bleibt bei 0 Schwachstellen. Kein neues Netz, kein Backend, kein Konto, keine Spracherkennung. Die Wortclips liegen auf dem Gerät wie die Satzclips. Die Sterne bleiben aus. Sie kommen in 0.10.0 oder danach mit der Spracherkennung auf dem Gerät. Die Notenformel in `src/pitch/sentence-grade.ts` lädt die App nicht.

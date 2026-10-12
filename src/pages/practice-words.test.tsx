@@ -12,7 +12,14 @@ import { DexieProgressRepository } from '../storage/dexie-repository'
 import { defaultSettings, type StoredCard } from '../storage/types'
 import { orderedConcepts, usableConcepts } from '../srs/session'
 import { emptyCard, reviewCard, toStored, Rating } from '../srs/scheduler'
+import { playClip } from '../audio/player'
 import { PracticePage } from './Practice'
+
+async function throughIntro() {
+  for (let pass = 0; pass < 3; pass += 1) {
+    fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
+  }
+}
 
 vi.mock('../audio/player', () => ({
   playClip: vi.fn(async () => 'file'),
@@ -51,9 +58,24 @@ describe('word block', () => {
         </ReadyPractice>
       </AppProvider>,
     )
-    expect(await screen.findByText('Zuerst die Wörter von heute.')).toBeTruthy()
+    expect(await screen.findByTestId('word-intro')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Neues Wort' })).toBeTruthy()
     expect(screen.getByTestId('target-line').textContent).toBe('ngày')
+    expect(screen.getByTestId('word-read').textContent).toBe('ngai, fallend')
+    expect(screen.getByTestId('word-meaning').textContent).toBe('Tage')
+    expect(screen.queryByRole('heading', { name: 'Was bedeutet das Wort?' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Tage' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Aufnehmen' })).toBeNull()
+    await waitFor(() => {
+      const call = vi.mocked(playClip).mock.calls.at(-1)
+      expect(String(call?.[0])).toMatch(/\/w\.days__any__base\.m4a$/)
+      expect(String(call?.[0])).not.toMatch(/\.r70\.|\.r85\./)
+      expect(call?.[3]).toBe(1)
+    })
+    const repoBefore = new DexieProgressRepository('travel-talk')
+    expect((await repoBefore.load()).cards.find((card) => card.cardId === 'de-vi:w.days')).toBeUndefined()
+    await throughIntro()
+    expect(await screen.findByRole('heading', { name: 'Was bedeutet das Wort?' })).toBeTruthy()
     fireEvent.click(await screen.findByRole('button', { name: 'Tage' }))
     expect(await screen.findByText('Das stimmt.')).toBeTruthy()
     const repo = new DexieProgressRepository('travel-talk')
@@ -76,6 +98,7 @@ describe('word block', () => {
         </ReadyPractice>
       </AppProvider>,
     )
+    await throughIntro()
     fireEvent.click(await screen.findByRole('button', { name: 'bleiben' }))
     expect(await screen.findByText('Gemeint ist «Tage».')).toBeTruthy()
     const repo = new DexieProgressRepository('travel-talk')
@@ -124,6 +147,7 @@ describe('word block', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Ich habe es gesagt' }))
     fireEvent.click(await screen.findByRole('button', { name: /Später wieder/ }))
     expect(await screen.findByText('giấy tờ')).toBeTruthy()
+    await throughIntro()
     fireEvent.click(await screen.findByRole('button', { name: 'Dokumente' }))
     await waitFor(async () => {
       const saved = (await repo.load()).cards.find((card) => card.cardId === 'de-vi:w.documents')
@@ -132,6 +156,37 @@ describe('word block', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
     expect(await screen.findByRole('heading', { name: 'Welche Dokumente brauche ich?' })).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Wie viele Tage darf ich bleiben?' })).toBeNull()
+  })
+
+  it('asks for the meaning at once when the word is already a card', async () => {
+    const repo = new DexieProgressRepository('travel-talk')
+    const personId = (await repo.load()).activePersonId ?? ''
+    await repo.saveSettings(personId, { ...defaultSettings, appLang: 'de', targetLang: 'vi', voiceHintSeen: true })
+    await repo.saveCard(personId, {
+      cardId: 'de-vi:w.days',
+      due: new Date(Date.now() - 60_000).toISOString(),
+      stability: 5,
+      difficulty: 5,
+      elapsed_days: 1,
+      scheduled_days: 1,
+      learning_steps: 0,
+      reps: 2,
+      lapses: 0,
+      state: 2,
+      last_review: new Date(Date.now() - 86_400_000).toISOString(),
+    })
+    render(
+      <AppProvider>
+        <MemoryRouter initialEntries={['/practice?kind=review']}>
+          <Routes>
+            <Route path="/practice" element={<PracticePage />} />
+          </Routes>
+        </MemoryRouter>
+      </AppProvider>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Was bedeutet das Wort?' })).toBeTruthy()
+    expect(screen.queryByTestId('word-intro')).toBeNull()
+    expect(screen.getByTestId('word-read').textContent).toBe('ngai, fallend')
   })
 })
 

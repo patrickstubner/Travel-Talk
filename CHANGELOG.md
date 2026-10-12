@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.3 — 2026-10-12
+
+- Ein neues Wort kommt dreimal ohne Frage: Ton, Schrift, lesbare Umschrift in der App-Sprache, IPA und die Bedeutung. Danach erst «Was bedeutet das Wort?». Die FSRS-Karte entsteht bei der Antwort, nicht beim Hören. Eine Wiederholung überspringt die Einführung.
+- Jedes geprüfte Wort hat eine Umschrift für Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Am vietnamesischen Wort steht der Ton der Schreibung. không, đâu und đây tragen den Ton jetzt in der Schrift der Wortkarte. Die alten Clips dieser drei Wörter sind noch ohne diesen Ton.
+- Wortclips spielen die normale Datei. Die 70-%- und 85-%-Dateien bleiben für die Sätze. `playbackRate` bleibt 1.
+
 ## 0.9.0 — 2026-10-12
 
 - Vor den neuen Sätzen kommen höchstens sechs Wörter. Jedes Wort ist eine eigene Karte, zum Beispiel `de-vi:w.water`, pro Person. Wörter und Sätze teilen sich die 15 neuen Karten am Tag, über alle Richtungen. Wiederholungen bleiben vorn, höchstens acht. Ab 20 fälligen Karten gibt es keine neuen Wörter und keine neuen Sätze.

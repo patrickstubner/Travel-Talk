@@ -14,6 +14,7 @@ import { useCopy, useSettings } from '../app/use-copy'
 import { KaraokeLine } from '../components/KaraokeLine'
 import { RepeatFeedback } from '../components/RepeatFeedback'
 import { RichText } from '../components/RichText'
+import { wordSound } from '../../content/word-sounds'
 import { spokenCitation, wordAudioFile, wordById } from '../../content/words'
 import { Rating, emptyCard, fromStored, previewDue, reviewCard, toStored, type Grade } from '../srs/scheduler'
 import { buildDay, meaningChoices, newSentenceIds, newlyOpenSentences, type DayItem } from '../srs/day'
@@ -27,6 +28,7 @@ import {
   stepsFor,
   targetTextVisible,
   usableConcepts,
+  wordSteps,
   type LearnStep,
   type SessionKind,
 } from '../srs/session'
@@ -131,7 +133,7 @@ export function PracticePage() {
   }, [catalog, direction, kind, readyFor, run, settings.appLang, settings.targetLang, settings.viRegion, snapshot])
 
   const item = queue[index]
-  const steps: LearnStep[] = item ? (item.kind === 'word' ? ['word'] : stepsFor(item.isNew)) : []
+  const steps: LearnStep[] = item ? (item.kind === 'word' ? wordSteps(item.isNew) : stepsFor(item.isNew)) : []
   const step = steps[stepIndex]
   const concept = catalog?.concepts.find((entry) => entry.id === item?.id)
 
@@ -232,7 +234,7 @@ export function PracticePage() {
     const word = wordById(item.id)
     if (!word) return
     let live = true
-    const file = tempoFile(spokenWordFile(settings, settings.targetLang, wordAudioFile(word, settings.targetLang, settings.viRegion)), 0.7)
+    const file = spokenWordFile(settings, settings.targetLang, wordAudioFile(word, settings.targetLang, settings.viRegion))
     const speech = spokenCitation(word, settings.targetLang, settings.viRegion)
     lockedFile.current = file
     setPlaying(true)
@@ -242,7 +244,7 @@ export function PracticePage() {
       file,
       speech,
       settings.targetLang,
-      0.7,
+      1,
       () => {
         if (live && aliveRef.current) {
           lockedFile.current = ''
@@ -268,7 +270,7 @@ export function PracticePage() {
     return () => {
       live = false
     }
-  }, [item?.id, item?.kind, settings])
+  }, [item?.id, item?.kind, settings, step])
 
   useEffect(() => {
     if (item?.kind !== 'word') return
@@ -325,8 +327,10 @@ export function PracticePage() {
   async function hear(file: string, speech: string, rate: 0.7 | 1): Promise<void> {
     if (!targetLang) return
     const bare = file.slice(file.lastIndexOf('/') + 1)
-    const resolved = bare.startsWith('w.') ? spokenWordFile(settings, targetLang, file) : spokenFile(settings, targetLang, file)
-    const played = tempoFile(resolved, rate)
+    const wordClip = bare.startsWith('w.')
+    const resolved = wordClip ? spokenWordFile(settings, targetLang, file) : spokenFile(settings, targetLang, file)
+    const played = wordClip ? resolved : tempoFile(resolved, rate)
+    const clipRate = wordClip ? 1 : rate
     lockedFile.current = played
     setPlaying(true)
     setOfflineAudio(false)
@@ -336,7 +340,7 @@ export function PracticePage() {
       played,
       speech,
       targetLang,
-      rate,
+      clipRate,
       () => {
         if (!aliveRef.current) return
         lockedFile.current = ''
@@ -392,10 +396,13 @@ export function PracticePage() {
   }
 
   const word = item?.kind === 'word' ? wordById(item.id) : undefined
-  if (item?.kind === 'word' && word && step === 'word') {
+  if (item?.kind === 'word' && word && (step === 'word' || step === 'word-intro')) {
     const speech = spokenCitation(word, targetLang, settings.viRegion)
     const file = wordAudioFile(word, targetLang, settings.viRegion)
     const meaning = spokenCitation(word, app, settings.viRegion)
+    const sound = wordSound(word, targetLang, app, settings.viRegion)
+    const heard = steps.slice(0, stepIndex + 1).filter((entry) => entry === 'word-intro').length
+    const hearTotal = steps.filter((entry) => entry === 'word-intro').length
     const currentWord = word
     const book = catalog
     const cardsNow = snapshot.cards
@@ -420,6 +427,37 @@ export function PracticePage() {
         setQueue((current) => [...current, ...open.map((id) => ({ id, isNew: true, kind: 'sentence' as const }))])
       }
     }
+    if (step === 'word-intro') {
+      return (
+        <section className="stack" data-testid="word-intro">
+          <p className="eyebrow">{copy.wordIntroStep(heard, hearTotal)}</p>
+          {offlineAudio ? (
+            <p className="warn" role="status">
+              {copy.audioOffline}
+            </p>
+          ) : null}
+          <h1>{copy.wordIntro}</h1>
+          <p className="target-line" data-testid="target-line" lang={targetLang}>
+            {speech}
+          </p>
+          <p className="word-read" data-testid="word-read">
+            {sound.read}
+          </p>
+          <p className="hint" data-testid="word-ipa">
+            {copy.wordIpa} {sound.ipa}
+          </p>
+          <p className="hint">{copy.wordGloss}</p>
+          <p data-testid="word-meaning">{meaning}</p>
+          <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
+            <span className="play-mark" aria-hidden="true" />
+            {playing ? copy.playingNormal : copy.wordReplay}
+          </button>
+          <button type="button" className="button primary" onClick={goNext}>
+            {copy.next}
+          </button>
+        </section>
+      )
+    }
     return (
       <section className="stack" data-testid="practice-word">
         <p className="eyebrow">{copy.wordsFirst}</p>
@@ -431,9 +469,15 @@ export function PracticePage() {
         <p className="target-line" data-testid="target-line" lang={targetLang}>
           {speech}
         </p>
-        <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 0.7)}>
+        <p className="word-read" data-testid="word-read">
+          {sound.read}
+        </p>
+        <p className="hint" data-testid="word-ipa">
+          {copy.wordIpa} {sound.ipa}
+        </p>
+        <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
           <span className="play-mark" aria-hidden="true" />
-          {playing ? copy.playingSlow : copy.replaySlow}
+          {playing ? copy.playingNormal : copy.wordReplay}
         </button>
         <h1>{copy.wordPrompt}</h1>
         <ul className="choices">
@@ -558,6 +602,7 @@ export function PracticePage() {
     understand: copy.stepUnderstand(index + 1, queue.length),
     recall: copy.stepRecall(index + 1, queue.length),
     rate: copy.stepRecall(index + 1, queue.length),
+    'word-intro': copy.wordIntro,
     word: copy.wordsFirst,
   }
 

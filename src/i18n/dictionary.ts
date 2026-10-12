@@ -167,6 +167,11 @@ export type Dictionary = {
   learnToday: string
   wordsFirst: string
   wordPrompt: string
+  wordIntro: string
+  wordIntroStep: (index: number, total: number) => string
+  wordGloss: string
+  wordIpa: string
+  wordReplay: string
   wordRight: string
   wordWrong: (meaning: string) => string
   todayWords: (count: number) => string
@@ -480,7 +485,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.9.0',
+  version: 'Version 0.9.3',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
@@ -488,6 +493,11 @@ export const de: Dictionary = {
   learnToday: 'Heute lernen',
   wordsFirst: 'Zuerst die Wörter von heute.',
   wordPrompt: 'Was bedeutet das Wort?',
+  wordIntro: 'Neues Wort',
+  wordIntroStep: (index, total) => `Hören · ${index} von ${total}`,
+  wordGloss: 'Bedeutung',
+  wordIpa: 'IPA',
+  wordReplay: 'Noch einmal hören',
   wordRight: 'Das stimmt.',
   wordWrong: (meaning) => `Gemeint ist «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 neues Wort.' : `${count} neue Wörter.`),
@@ -798,7 +808,7 @@ export const en: Dictionary = {
   privacy: 'Progress, recordings and the note stay on this device. No account, no tracking, no font from the network.',
   loading: 'One moment.',
   storageError: 'Local storage is not available.',
-  version: 'Version 0.9.0',
+  version: 'Version 0.9.3',
   exampleAudio: 'The audio speaks the example sentence.',
   pairNote: 'Note for this pair',
   noResults: 'No matches.',
@@ -806,6 +816,11 @@ export const en: Dictionary = {
   learnToday: 'Learn today',
   wordsFirst: 'The words for today come first.',
   wordPrompt: 'What does the word mean?',
+  wordIntro: 'New word',
+  wordIntroStep: (index, total) => `Listen · ${index} of ${total}`,
+  wordGloss: 'Meaning',
+  wordIpa: 'IPA',
+  wordReplay: 'Hear it again',
   wordRight: 'That is the one.',
   wordWrong: (meaning) => `The meaning is «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 new word.' : `${count} new words.`),
@@ -1118,7 +1133,7 @@ export const pt: Dictionary = {
   privacy: 'Progresso, gravações e a nota ficam neste aparelho. Sem conta, sem rastreamento, sem fonte da rede.',
   loading: 'Um momento.',
   storageError: 'O armazenamento local não está disponível.',
-  version: 'Version 0.9.0',
+  version: 'Version 0.9.3',
   exampleAudio: 'O áudio fala a frase de exemplo.',
   pairNote: 'Nota deste par',
   noResults: 'Nenhum resultado.',
@@ -1126,6 +1141,11 @@ export const pt: Dictionary = {
   learnToday: 'Aprender hoje',
   wordsFirst: 'Primeiro as palavras de hoje.',
   wordPrompt: 'O que a palavra significa?',
+  wordIntro: 'Palavra nova',
+  wordIntroStep: (index, total) => `Ouvir · ${index} de ${total}`,
+  wordGloss: 'Sentido',
+  wordIpa: 'IPA',
+  wordReplay: 'Ouvir de novo',
   wordRight: 'É essa.',
   wordWrong: (meaning) => `O sentido é «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 palavra nova.' : `${count} palavras novas.`),
@@ -1436,7 +1456,7 @@ export const vi: Dictionary = {
   privacy: 'Tiến độ, bản ghi và ghi chú ở trên máy này. Không tài khoản, không theo dõi, không phông từ mạng.',
   loading: 'Một lát.',
   storageError: 'Bộ nhớ trên máy không dùng được.',
-  version: 'Version 0.9.0',
+  version: 'Version 0.9.3',
   exampleAudio: 'Audio đọc câu ví dụ.',
   pairNote: 'Ghi chú của cặp này',
   noResults: 'Không thấy.',
@@ -1444,6 +1464,11 @@ export const vi: Dictionary = {
   learnToday: 'Học hôm nay',
   wordsFirst: 'Trước hết là từ của hôm nay.',
   wordPrompt: 'Từ này nghĩa là gì?',
+  wordIntro: 'Từ mới',
+  wordIntroStep: (index, total) => `Nghe · ${index} / ${total}`,
+  wordGloss: 'Nghĩa',
+  wordIpa: 'IPA',
+  wordReplay: 'Nghe lại',
   wordRight: 'Đúng rồi.',
   wordWrong: (meaning) => `Nghĩa là «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 từ mới.' : `${count} từ mới.`),

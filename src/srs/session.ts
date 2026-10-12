@@ -10,7 +10,16 @@ export const SESSION_REVIEW_CAP = 8
 
 export type SessionKind = 'mix' | 'review' | 'new'
 export type SessionItem = { id: string; isNew: boolean }
-export type LearnStep = 'slow' | 'normal' | 'repeat' | 'understand' | 'recall' | 'rate' | 'word'
+export type LearnStep = 'slow' | 'normal' | 'repeat' | 'understand' | 'recall' | 'rate' | 'word-intro' | 'word'
+
+/** A new word is heard this many times, with the meaning visible, before the question. */
+export const WORD_INTRO_PASSES = 3
+
+export function wordSteps(isNew: boolean): LearnStep[] {
+  if (!isNew) return ['word']
+  const intro = Array.from({ length: WORD_INTRO_PASSES }, (): LearnStep => 'word-intro')
+  return [...intro, 'word']
+}
 
 export function cardIdFor(direction: string, conceptId: string): string {
   return `${direction}:${conceptId}`
