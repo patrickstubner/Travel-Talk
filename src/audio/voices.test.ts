@@ -69,9 +69,9 @@ describe('voices', () => {
   it('keeps cadu as the new Portuguese default and offers three XTTS women', () => {
     const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../../public/audio/manifest.json', import.meta.url)), 'utf8')) as string[]
     const voices = voicesFor('pt-BR')
-    expect(voices.map((voice) => voice.id)).toEqual(['cadu', 'faber', 'daisy-studious', 'gracie-wise', 'tammie-ema'])
+    expect(voices.map((voice) => voice.id)).toEqual(['cadu', 'faber', 'daisy-studious', 'gracie-wise', 'tammie-ema', 'claribel-dervla'])
     expect(voices.find((voice) => voice.defaultNew)?.id).toBe('cadu')
-    for (const id of ['daisy-studious', 'gracie-wise', 'tammie-ema']) {
+    for (const id of ['daisy-studious', 'gracie-wise', 'tammie-ema', 'claribel-dervla']) {
       const voice = voices.find((item) => item.id === id)
       expect(voice).toMatchObject({ gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false })
       expect(voiceFile('pt-BR/emergency.help__any__base.m4a', id, false)).toMatch(AUDIO_FILE)

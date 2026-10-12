@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+import shutil
 import subprocess
 import sys
 import wave
@@ -47,7 +49,18 @@ SPEAKERS = [
     {"speaker": "Daisy Studious", "voice": "daisy-studious"},
     {"speaker": "Gracie Wise", "voice": "gracie-wise"},
     {"speaker": "Tammie Ema", "voice": "tammie-ema"},
+    # Experimental. Dropped after the run when the length check still fails.
+    {"speaker": "Claribel Dervla", "voice": "claribel-dervla", "experimental": True},
 ]
+# Full-speed ceiling: words * 0.72 + 0.85. The same formula is in
+# src/pitch/clip-plausible.ts. A spoken "." / "?" / "!" pushes a short line over it.
+# No offline ASR is installed here, so the check is this length, not a transcript.
+WORD_SECONDS = 0.72
+LENGTH_SLACK = 0.85
+# Probe noise around the ceiling. 0.03 s keeps "Hoje." at 1.62 s over the limit.
+LENGTH_TOLERANCE = 0.03
+TRAILING_PUNCT = re.compile(r"[.!?…]+$")
+WORD_CHARS = re.compile(r"\w+", re.UNICODE)
 
 ROOT = Path(__file__).resolve().parents[1]
 LINES = json.loads((ROOT / "tools" / "lines.json").read_text(encoding="utf-8"))
@@ -107,30 +120,37 @@ def duration_seconds(path: Path) -> float:
     return float(result.stdout.strip())
 
 
-def synthesize_one(model, config, speaker: str, text: str, wav: Path) -> int:
+def synthesize_attempt(model, config, speaker: str, text: str, wav: Path, attempt: int) -> float | None:
     import torch
 
+    speed = 1.0 if attempt < 2 else 0.85
+    torch.manual_seed(clip_seed(speaker, text, attempt))
+    out = model.synthesize(
+        text,
+        config,
+        speaker=speaker,
+        language=LANGUAGE,
+        temperature=TEMPERATURE,
+        length_penalty=LENGTH_PENALTY,
+        repetition_penalty=REPETITION_PENALTY,
+        top_k=TOP_K,
+        top_p=TOP_P,
+        speed=speed,
+        enable_text_splitting=False,
+    )
+    audio = np.asarray(out["wav"], dtype=np.float32)
+    if audio.size < int(MIN_SECONDS * SAMPLE_RATE):
+        return None
+    write_wav(wav, audio)
+    heard = duration_seconds(wav)
+    if heard < MIN_SECONDS:
+        return None
+    return heard
+
+
+def synthesize_one(model, config, speaker: str, text: str, wav: Path) -> int:
     for attempt in range(ATTEMPTS):
-        speed = 1.0 if attempt < 2 else 0.85
-        torch.manual_seed(clip_seed(speaker, text, attempt))
-        out = model.synthesize(
-            text,
-            config,
-            speaker=speaker,
-            language=LANGUAGE,
-            temperature=TEMPERATURE,
-            length_penalty=LENGTH_PENALTY,
-            repetition_penalty=REPETITION_PENALTY,
-            top_k=TOP_K,
-            top_p=TOP_P,
-            speed=speed,
-            enable_text_splitting=False,
-        )
-        audio = np.asarray(out["wav"], dtype=np.float32)
-        if audio.size < int(MIN_SECONDS * SAMPLE_RATE):
-            continue
-        write_wav(wav, audio)
-        if duration_seconds(wav) >= MIN_SECONDS:
+        if synthesize_attempt(model, config, speaker, text, wav, attempt) is not None:
             return attempt
     raise SystemExit(f"too short after {ATTEMPTS} attempts: {speaker} {text}")
 
@@ -177,11 +197,91 @@ def write_tempos(model, config, speaker: str, text: str, target: Path) -> bool:
     return True
 
 
+def strip_trailing_punctuation(text: str) -> str:
+    stripped = TRAILING_PUNCT.sub("", text.strip()).strip()
+    return stripped or text.strip()
+
+
+def expected_seconds(text: str) -> float:
+    words = WORD_CHARS.findall(strip_trailing_punctuation(text))
+    return max(1, len(words)) * WORD_SECONDS + LENGTH_SLACK
+
+
 def expand_tempos(paths: list[Path]) -> list[Path]:
     slow: list[Path] = []
     for path in paths:
         slow.extend(dest for dest, _tempo in tempos_for(path))
     return slow
+
+
+def forget_align(target: Path) -> None:
+    align = target.with_suffix(".align.json")
+    align.unlink(missing_ok=True)
+
+
+def resynthesize(model, config, speaker: str, text: str, target: Path) -> float | None:
+    """Write a new take that fits the expected length. None when every attempt misses it."""
+    limit = expected_seconds(text) + LENGTH_TOLERANCE
+    wav = target.with_suffix(".wav")
+    chosen: float | None = None
+    for attempt in range(ATTEMPTS):
+        heard = synthesize_attempt(model, config, speaker, text, wav, attempt)
+        if heard is None:
+            continue
+        if heard <= limit:
+            chosen = heard
+            break
+        print(f"  attempt {attempt} {heard:.2f}s > {limit:.2f}s", flush=True)
+    if chosen is None:
+        wav.unlink(missing_ok=True)
+        return None
+    for path in expand_tempos([target]):
+        path.unlink(missing_ok=True)
+    forget_align(target)
+    for dest, tempo in tempos_for(target):
+        encode(wav, dest, tempo)
+    wav.unlink(missing_ok=True)
+    return chosen
+
+
+def repair_punctuation(model, config, speaker: str, voice: str, rows: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Re-render clips that are longer than the word-count ceiling, without trailing punctuation."""
+    replaced: list[dict] = []
+    failed: list[dict] = []
+    for row in rows:
+        target = ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name
+        if not target.exists():
+            failed.append({"file": target.name, "text": row["text"], "reason": "missing"})
+            continue
+        limit = expected_seconds(row["text"])
+        heard = duration_seconds(target)
+        if heard <= limit + LENGTH_TOLERANCE:
+            continue
+        bare = strip_trailing_punctuation(row["text"])
+        print(f"{voice} long {target.name} {heard:.2f}s > {limit:.2f}s", flush=True)
+        fresh = resynthesize(model, config, speaker, bare, target)
+        record = {"file": target.name, "text": row["text"], "spoken": bare, "limit": round(expected_seconds(bare), 3)}
+        if fresh is None:
+            record["seconds"] = round(heard, 3)
+            record["reason"] = (
+                "still over expected length after stripping trailing punctuation"
+                if bare != row["text"].strip()
+                else "over expected length and a new take missed the ceiling"
+            )
+            failed.append(record)
+            print(f"{voice} still long {target.name}", flush=True)
+        else:
+            record["seconds"] = round(fresh, 3)
+            replaced.append(record)
+            print(f"{voice} repaired {target.name} {fresh:.2f}s", flush=True)
+    return replaced, failed
+
+
+def drop_voice(voice: str) -> None:
+    folder = ROOT / "public" / "audio" / "pt-BR" / voice
+    if folder.exists():
+        shutil.rmtree(folder)
+    print(f"{voice} not shipped", flush=True)
 
 
 def render(model_dir: Path, words_only: bool = False) -> None:
@@ -200,10 +300,12 @@ def render(model_dir: Path, words_only: bool = False) -> None:
     rows = [row for row in LINES if row["lang"] == "pt-BR"]
     if not rows:
         raise SystemExit("no pt-BR lines in tools/lines.json")
+    rejected: set[str] = set()
     for job in SPEAKERS:
         if job["speaker"] not in names:
             raise SystemExit(f"speaker missing: {job['speaker']}")
         voice = job["voice"]
+        experimental = bool(job.get("experimental"))
         if not words_only:
             made = 0
             for index, row in enumerate(rows, start=1):
@@ -213,11 +315,34 @@ def render(model_dir: Path, words_only: bool = False) -> None:
                 made += 1
                 if index % 25 == 0 or made == 1:
                     print(f"{voice} {index}/{len(rows)}", flush=True)
-            paths = [ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name for row in rows]
-            bad = check_voice(expand_tempos(paths))
-            if bad:
-                print(json.dumps({"voice": voice, "bad": bad}, ensure_ascii=False), flush=True)
-                raise SystemExit(f"{voice} failed the duration or voicing check")
+            if made:
+                paths = [ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name for row in rows]
+                bad = check_voice(expand_tempos(paths))
+                if bad:
+                    print(json.dumps({"voice": voice, "bad": bad}, ensure_ascii=False), flush=True)
+                    if experimental:
+                        rejected.add(voice)
+                    else:
+                        raise SystemExit(f"{voice} failed the duration or voicing check")
+        if voice not in rejected:
+            replaced, failed = repair_punctuation(model, config, job["speaker"], voice, rows)
+            if replaced:
+                bad = check_voice(expand_tempos([ROOT / "public" / "audio" / "pt-BR" / voice / item["file"] for item in replaced]))
+                if bad:
+                    print(json.dumps({"voice": voice, "repaired": bad}, ensure_ascii=False), flush=True)
+                    if experimental:
+                        rejected.add(voice)
+                    else:
+                        raise SystemExit(f"{voice} failed the duration or voicing check after the punctuation repair")
+            if failed:
+                print(json.dumps({"voice": voice, "punctuation": failed}, ensure_ascii=False), flush=True)
+                if experimental:
+                    rejected.add(voice)
+                else:
+                    raise SystemExit(f"{voice} stayed over the expected length")
+        if voice in rejected:
+            print(f"{voice} sentences rejected", flush=True)
+            continue
         license_src = model_dir / "LICENSE.txt"
         notice = (
             "Travel Talk. Audio in this folder is synthesized offline with Coqui XTTS-v2.\n"
@@ -232,10 +357,12 @@ def render(model_dir: Path, words_only: bool = False) -> None:
             encoding="utf-8",
         )
         print(f"{voice} done {len(rows)}", flush=True)
-    render_words(model, config)
+    render_words(model, config, rejected)
+    for voice in rejected:
+        drop_voice(voice)
 
 
-def render_words(model, config) -> None:
+def render_words(model, config, rejected: set[str]) -> None:
     """Citation clips. Same tempos as Piper words, and no align.json, matching 0.9.0."""
     rows = json.loads((ROOT / "tools" / "word-lines.json").read_text(encoding="utf-8"))
     rows = [row for row in rows if row["lang"] == "pt-BR"]
@@ -243,6 +370,9 @@ def render_words(model, config) -> None:
         raise SystemExit(f"expected 19 pt-BR word lines, found {len(rows)}")
     for job in SPEAKERS:
         voice = job["voice"]
+        if voice in rejected:
+            continue
+        experimental = bool(job.get("experimental"))
         made = 0
         for index, row in enumerate(rows, start=1):
             target = ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name
@@ -251,10 +381,21 @@ def render_words(model, config) -> None:
             made += 1
             print(f"{voice} word {index}/{len(rows)} {row['text']}", flush=True)
         paths = [ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name for row in rows]
-        bad = check_voice(expand_tempos(paths))
-        if bad:
-            print(json.dumps({"voice": voice, "words": bad}, ensure_ascii=False), flush=True)
-            raise SystemExit(f"{voice} word clips failed the duration or voicing check")
+        if made or experimental:
+            bad = check_voice(expand_tempos(paths))
+            if bad:
+                print(json.dumps({"voice": voice, "words": bad}, ensure_ascii=False), flush=True)
+                if experimental:
+                    rejected.add(voice)
+                    continue
+                raise SystemExit(f"{voice} word clips failed the duration or voicing check")
+        _replaced, failed = repair_punctuation(model, config, job["speaker"], voice, rows)
+        if failed:
+            print(json.dumps({"voice": voice, "wordPunctuation": failed}, ensure_ascii=False), flush=True)
+            if experimental:
+                rejected.add(voice)
+                continue
+            raise SystemExit(f"{voice} word clips stayed over the expected length")
         print(f"{voice} words done {len(rows)} new {made}", flush=True)
 
 

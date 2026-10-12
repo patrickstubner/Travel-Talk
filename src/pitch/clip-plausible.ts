@@ -48,6 +48,27 @@ export function voicedFrameRatio(samples: Float32Array): number {
   return frames === 0 ? 0 : voiced / frames
 }
 
+/**
+ * Full-speed ceiling for an XTTS clip: one word may take 0.72 s, plus 0.85 s.
+ * The same numbers are in tools/generate_xtts.py. A spoken punctuation mark
+ * makes a short line longer than this. No offline speech recogniser is used.
+ */
+export function stripTrailingPunctuation(text: string): string {
+  const stripped = text.trim().replace(/[.!?…]+$/u, '').trim()
+  return stripped || text.trim()
+}
+
+export function expectedClipSeconds(text: string): number {
+  const words = stripTrailingPunctuation(text).match(/\p{L}[\p{L}\p{M}\p{N}_]*/gu) ?? []
+  return Math.max(1, words.length) * 0.72 + 0.85
+}
+
+export function lengthProblem(text: string, seconds: number): string | null {
+  const limit = expectedClipSeconds(text)
+  if (seconds > limit + 0.03) return `length ${seconds.toFixed(3)} > ${limit.toFixed(3)}`
+  return null
+}
+
 /** Null when the clip is long enough and, when it is short, voiced. */
 export function clipProblem(file: string, samples: Float32Array): string | null {
   const atFullSpeed = (samples.length / 16000) * playbackTempo(file)

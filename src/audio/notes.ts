@@ -55,6 +55,7 @@ export function voiceCaption(copy: Dictionary, app: Lang, target: Lang, settings
   if (id === 'daisy-studious') return { text: copy.audioPtDaisy, clip: null }
   if (id === 'gracie-wise') return { text: copy.audioPtGracie, clip: null }
   if (id === 'tammie-ema') return { text: copy.audioPtTammie, clip: null }
+  if (id === 'claribel-dervla') return { text: copy.audioPtClaribel, clip: null }
   return fixedPart(app, 'ui.voice-pt', copy.audioPt)
 }
 

@@ -7,7 +7,7 @@ Namensnennung: VIVOS, AILAB HCMUS / InfoRe. Dieselben Dateien liegen als m4a unt
 de-mann-erdnuss.mp3 und pt-mann-erdnuss.mp3: der Datensatz (Thorsten-Voice bzw. OHF-Voice) ist CC0. Die Stimme selbst ist kein CC0. Die Modelle sind von lessac feinjustiert, und lessac gilt nur für Forschung.
 https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html
 
-pt-frau-daisy-erdnuss.mp3, pt-frau-gracie-erdnuss.mp3 und pt-frau-tammie-erdnuss.mp3 sind mit Coqui XTTS-v2 erzeugt, Sprache pt, Sprecherinnen Daisy Studious, Gracie Wise und Tammie Ema. Revision 6c2b0d75eae4b7047358e3b6bd9325f857d43f77. Dieselben Dateien liegen als m4a unter public/audio/pt-BR/daisy-studious/, gracie-wise/ und tammie-ema/, jeweils mit einer LICENSE.txt.
+pt-frau-daisy-erdnuss.mp3, pt-frau-gracie-erdnuss.mp3, pt-frau-tammie-erdnuss.mp3 und pt-frau-claribel-erdnuss.mp3 sind mit Coqui XTTS-v2 erzeugt, Sprache pt, Sprecherinnen Daisy Studious, Gracie Wise, Tammie Ema und Claribel Dervla. Claribel ist ein Versuch. Revision 6c2b0d75eae4b7047358e3b6bd9325f857d43f77. Dieselben Dateien liegen als m4a unter public/audio/pt-BR/daisy-studious/, gracie-wise/, tammie-ema/ und claribel-dervla/, jeweils mit einer LICENSE.txt.
 
 Die Lizenz ist die Coqui Public Model License 1.0.0. Sie erlaubt nur nicht kommerzielle Nutzung des Modells und dieser Ausgabe. Kein kommerzieller Zweck, auch kein Training eines kommerziellen Modells mit dieser Ausgabe.
 https://coqui.ai/cpml.txt

@@ -15,7 +15,7 @@ import { VOICES } from '../audio/voices'
 import { allSpeechLines, voiceFile } from '../content/resolve'
 import { WORDS, wordAudioFile } from '../../content/words'
 import { analyzeModel, analyzeUser } from './analyze'
-import { clipProblem } from './clip-plausible'
+import { clipProblem, lengthProblem } from './clip-plausible'
 import { contourFromSamples, frameEnergy } from './contour'
 import { scoreRepeat, type RepeatScore } from './feedback'
 import { bandShape } from './spectrum'
@@ -125,7 +125,7 @@ const KNOWN_MISSING = new Set([
   'pt-BR/gracie-wise/meet.job-q__any__senhor.m4a',
   'pt-BR/gracie-wise/meet.job-q__any__voce.m4a',
   'pt-BR/gracie-wise/meet.job__any__base.m4a',
-  'pt-BR/gracie-wise/meet.thanks__any__base.m4a',
+  'pt-BR/gracie-wise/meet.thanks__any__obrigada.m4a',
   'pt-BR/gracie-wise/sight.price__any__base.m4a',
   'pt-BR/gracie-wise/sight.where__any__base.m4a',
   'pt-BR/gracie-wise/stay.name__any__base.m4a',
@@ -138,7 +138,6 @@ const KNOWN_MISSING = new Set([
   'pt-BR/gracie-wise/transport.15.long__any__base.m4a',
   'pt-BR/gracie-wise/transport.16.gate__any__base.m4a',
   'pt-BR/gracie-wise/transport.19.ferry__any__base.m4a',
-  'pt-BR/gracie-wise/transport.20.seasick__any__base.m4a',
   'pt-BR/tammie-ema/arrival.declare__any__base.m4a',
   'pt-BR/tammie-ema/day.morning__any__base.m4a',
   'pt-BR/tammie-ema/day.toilet__any__base.m4a',
@@ -171,6 +170,43 @@ const KNOWN_MISSING = new Set([
   'pt-BR/tammie-ema/transport.09.app__any__base.m4a',
   'pt-BR/tammie-ema/transport.19.ferry__any__base.m4a',
   'pt-BR/tammie-ema/transport.20.seasick__any__base.m4a',
+  'pt-BR/claribel-dervla/arrival.passport__any__base.m4a',
+  'pt-BR/claribel-dervla/day.excuse__any__base.m4a',
+  'pt-BR/claribel-dervla/day.morning__any__base.m4a',
+  'pt-BR/claribel-dervla/day.toilet__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.family__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.hospital__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.hurt__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.lost__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.understand__any__base.m4a',
+  'pt-BR/claribel-dervla/food.good__any__base.m4a',
+  'pt-BR/claribel-dervla/meet.address-ask__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.father__any__base.m4a',
+  'pt-BR/claribel-dervla/meet.hobby-q__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.hobby-q__any__voce.m4a',
+  'pt-BR/claribel-dervla/meet.job-q__any__senhor.m4a',
+  'pt-BR/claribel-dervla/meet.job-q__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.job-q__any__voce.m4a',
+  'pt-BR/claribel-dervla/meet.job__any__base.m4a',
+  'pt-BR/claribel-dervla/meet.repeat__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.where-from__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.your-name__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.your-name__any__voce.m4a',
+  'pt-BR/claribel-dervla/shop.have__any__base.m4a',
+  'pt-BR/claribel-dervla/shop.receipt__any__base.m4a',
+  'pt-BR/claribel-dervla/sight.photo__any__base.m4a',
+  'pt-BR/claribel-dervla/stay.checkout__any__base.m4a',
+  'pt-BR/claribel-dervla/stay.name__any__base.m4a',
+  'pt-BR/claribel-dervla/stay.problem__any__base.m4a',
+  'pt-BR/claribel-dervla/stay.reservation__any__base.m4a',
+  'pt-BR/claribel-dervla/transport.03.hotel__any__base.m4a',
+  'pt-BR/claribel-dervla/transport.04.airport__any__base.m4a',
+  'pt-BR/claribel-dervla/transport.08.plate__any__base.m4a',
+  'pt-BR/claribel-dervla/transport.13.line__any__base.m4a',
+  'pt-BR/claribel-dervla/transport.14.platform__any__base.m4a',
+  'pt-BR/claribel-dervla/transport.15.long__any__base.m4a',
+  'pt-BR/claribel-dervla/transport.16.gate__any__base.m4a',
+  'pt-BR/claribel-dervla/visa.where__any__base.m4a',
 ])
 
 function ffmpegReady(): boolean {
@@ -247,6 +283,7 @@ describe('shipped clips', () => {
         if (!existsSync(audio)) continue
         const samples = decode(audio)
         expect(clipProblem(file, samples), file).toBeNull()
+        if (voice.provider === 'xtts') expect(lengthProblem(line.text, samples.length / 16000), file).toBeNull()
         for (const step of [0.7, 0.85] as const) {
           const slow = tempoFile(file, step)
           const slowPath = `public/audio/${slow}`
@@ -313,7 +350,9 @@ describe('shipped clips', () => {
         const file = voiceFile(wordAudioFile(word, 'pt-BR', 'south'), voice.id, false)
         const audio = `public/audio/${file}`
         expect(existsSync(audio), file).toBe(true)
-        expect(clipProblem(file, decode(audio)), file).toBeNull()
+        const samples = decode(audio)
+        expect(clipProblem(file, samples), file).toBeNull()
+        expect(lengthProblem(word.citation['pt-BR'], samples.length / 16000), file).toBeNull()
         for (const step of [0.7, 0.85] as const) {
           const slow = tempoFile(file, step)
           const slowPath = `public/audio/${slow}`

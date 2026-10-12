@@ -42,6 +42,7 @@ JOBS = [
     {"lang": "pt-BR", "model": "pt_BR-cadu-medium", "speaker": None, "voice": "daisy-studious"},
     {"lang": "pt-BR", "model": "pt_BR-cadu-medium", "speaker": None, "voice": "gracie-wise"},
     {"lang": "pt-BR", "model": "pt_BR-cadu-medium", "speaker": None, "voice": "tammie-ema"},
+    {"lang": "pt-BR", "model": "pt_BR-cadu-medium", "speaker": None, "voice": "claribel-dervla"},
     {"lang": "vi", "model": "vi_VN-vais1000-medium", "speaker": None, "voice": None},
     {"lang": "vi", "model": "vi_VN-vivos-x_low", "speaker": 9, "voice": "vivos-22"},
     {"lang": "vi", "model": "vi_VN-vivos-x_low", "speaker": 37, "voice": "vivos-32"},

@@ -32,6 +32,7 @@ export const VOICES: readonly CatalogVoice[] = [
   { id: 'daisy-studious', lang: 'pt-BR', gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false, order: 3 },
   { id: 'gracie-wise', lang: 'pt-BR', gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false, order: 4 },
   { id: 'tammie-ema', lang: 'pt-BR', gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false, order: 5 },
+  { id: 'claribel-dervla', lang: 'pt-BR', gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false, order: 6 },
   { id: 'vivos-22', lang: 'vi', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
   { id: 'vivos-32', lang: 'vi', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: false, order: 2 },
   { id: 'vais1000', lang: 'vi', gender: 'female', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 3 },

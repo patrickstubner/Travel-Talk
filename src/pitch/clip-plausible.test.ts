@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clipProblem } from './clip-plausible'
+import { clipProblem, expectedClipSeconds, lengthProblem } from './clip-plausible'
 
 describe('clip plausibility', () => {
   it('rejects a short clip and a short burst of noise', () => {
@@ -26,5 +26,14 @@ describe('clip plausibility', () => {
     }
     expect(clipProblem('vi/meet.yes__south__base.m4a', syllable)).toBeNull()
     expect(clipProblem('vi/meet.yes__north__base.r70.m4a', syllable)).toBeNull()
+  })
+
+  it('flags a short line that is long enough to be reading the punctuation', () => {
+    expect(expectedClipSeconds('Hoje.')).toBeCloseTo(1.57, 2)
+    expect(lengthProblem('Hoje.', 1.62)).toMatch(/length/)
+    expect(lengthProblem('Hoje.', 0.7)).toBeNull()
+    expect(lengthProblem('atual', 1.58)).toBeNull()
+    expect(lengthProblem('Eu estou com enjoo.', 4.08)).toMatch(/length/)
+    expect(lengthProblem('um, dois, três, quatro, cinco, seis, sete, oito, nove, dez', 7.28)).toBeNull()
   })
 })
