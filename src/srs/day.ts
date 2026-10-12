@@ -12,6 +12,8 @@ export type DayPlan = {
   items: DayItem[]
   /** New sentences that may join after a word in this sitting, including ones already queued. */
   sentenceSlots: number
+  /** Sentences this sitting's new words will open, already limited to the free slots. */
+  waiting: number
 }
 
 /**
@@ -189,9 +191,10 @@ export function buildDay(
   const sentenceSlice = [...takenToday, ...earlier, ...keywordFree]
     .slice(0, sentenceSlots - reserved)
     .map((concept): DayItem => ({ id: concept.id, isNew: true, kind: 'sentence' }))
-  if (kind === 'review') return { items: reviewSlice, sentenceSlots: 0 }
-  if (kind === 'new') return { items: [...wordSlice, ...sentenceSlice], sentenceSlots }
-  return { items: [...reviewSlice, ...wordSlice, ...sentenceSlice], sentenceSlots }
+  const waiting = reserved
+  if (kind === 'review') return { items: reviewSlice, sentenceSlots: 0, waiting: 0 }
+  if (kind === 'new') return { items: [...wordSlice, ...sentenceSlice], sentenceSlots, waiting }
+  return { items: [...reviewSlice, ...wordSlice, ...sentenceSlice], sentenceSlots, waiting }
 }
 
 /** Due sentences are already in the queue. They do not spend the slots held for sentences this sitting opens. */

@@ -188,6 +188,38 @@ describe('daily word block', () => {
     expect(open).toEqual(['visa.documents'])
   })
 
+  it('counts a sentence still waiting on today\'s word with the ones already listed', () => {
+    const list = concepts()
+    const keywordIds = new Set(WORDS.flatMap((word) => [...word.sentences]))
+    const cards: StoredCard[] = []
+    for (const word of WORDS) {
+      if (word.id === 'w.documents') continue
+      cards.push(passed('de-vi', word.id))
+    }
+    for (const concept of list) {
+      if (concept.id === 'visa.documents' || !keywordIds.has(concept.id)) continue
+      cards.push(passed('de-vi', concept.id))
+    }
+    const day = buildDay(list, cards, 'de-vi', now, 'new')
+    const listed = day.items.filter((item) => item.kind === 'sentence').map((item) => item.id)
+    expect(listed).toHaveLength(3)
+    expect(day.waiting).toBe(1)
+    expect(listed.length + day.waiting).toBe(4)
+    const after = [...cards, introducedTodayCard('de-vi', 'w.documents')]
+    const open = newlyOpenSentences(list, after, 'de-vi', newSentenceIds(day.items), day.sentenceSlots, now)
+    expect(open).toEqual(['visa.documents'])
+    expect(listed.length + open.length).toBe(4)
+  })
+
+  it('promises no further sentence once every card exists', () => {
+    const list = concepts()
+    const cards = [...WORDS.map((word) => passed('de-vi', word.id)), ...list.map((concept) => passed('de-vi', concept.id))]
+    const day = buildDay(list, cards, 'de-vi', now, 'new')
+    expect(day.items).toEqual([])
+    expect(day.sentenceSlots).toBe(4)
+    expect(day.waiting).toBe(0)
+  })
+
   it('skips a synthetic distractor with the same spoken form', () => {
     const forms: Record<string, string> = {
       'w.not': 'não',
