@@ -42,6 +42,9 @@ describe('show purpose', () => {
     expect(dictionaries.en.showPurpose).toMatch(/pharmacy/)
     expect(dictionaries['pt-BR'].showPurpose).toMatch(/farmácia/)
     expect(dictionaries.vi.showPurpose).toMatch(/nhà thuốc/i)
+    expect(dictionaries.vi.showPurpose).toBe(
+      'Chế độ Đưa hiển thị một câu lớn trên màn hình để bạn đưa cho người khác xem, ví dụ khi cấp cứu hoặc ở nhà thuốc, và có thể phát âm thanh.',
+    )
     expect(new Set(Object.values(dictionaries).map((copy) => copy.showPurpose)).size).toBe(4)
   })
 

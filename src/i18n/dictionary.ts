@@ -1344,7 +1344,7 @@ export const vi: Dictionary = {
   progress: (index, total) => `${index} trên ${total}`,
   forOther: 'Cho người kia đọc',
   showPurpose:
-    'Đưa hiện một câu lớn trên màn hình để đưa cho người khác xem, ví dụ khi cấp cứu hoặc ở nhà thuốc, và có thể phát âm thanh.',
+    'Chế độ Đưa hiển thị một câu lớn trên màn hình để bạn đưa cho người khác xem, ví dụ khi cấp cứu hoặc ở nhà thuốc, và có thể phát âm thanh.',
   hideGloss: 'Ẩn nghĩa',
   showGloss: 'Hiện nghĩa',
   showNote: 'Hiện ghi chú cá nhân',
