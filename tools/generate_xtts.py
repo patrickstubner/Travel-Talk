@@ -1,11 +1,14 @@
 """Synthesize pt-BR clips with Coqui XTTS-v2. Weights stay outside the repo.
 
-Hugging Face model coqui/XTTS-v2, language pt, three built-in speakers.
-The revision and the SHA-256 of each file are pinned and checked before synthesis.
+Hugging Face model coqui/XTTS-v2, language pt. The revision and the SHA-256 of
+each file are pinned and checked before synthesis. Every sentence and word is
+spoken without trailing punctuation. faster-whisper small then rejects a take
+whose transcript names a punctuation mark or runs longer than the text.
 Output matches the Piper pipeline: peak-normalised WAV, AAC 48 kbit/s mono at
 22050 Hz, plus ffmpeg atempo 0.7 and 0.85. A clip under 0.3 s, or a clip under
 0.45 s that is mostly unvoiced, is synthesised again. tools/check-clips.ts
 applies that bar with the same pitch settings as the app.
+faster-whisper is a generation tool, not an app dependency.
 """
 
 from __future__ import annotations
@@ -13,16 +16,21 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import shutil
 import subprocess
 import sys
+import unicodedata
 import wave
 from pathlib import Path
 
 import numpy as np
 
 COQUI_VERSION = "0.27.2"
+FASTER_WHISPER = "1.2.1"
+AV_VERSION = "15.1.0"
+WHISPER_MODEL = "small"
+WHISPER_BEAM = 5
 XTTS_REVISION = "6c2b0d75eae4b7047358e3b6bd9325f857d43f77"
+CPML_URL = f"https://huggingface.co/coqui/XTTS-v2/resolve/{XTTS_REVISION}/LICENSE.txt"
 # SHA-256 of the files at that revision. model.pth is the weights.
 XTTS_SHA256 = {
     "config.json": "ef262b1454dd2a77e1461b0b2cd53e19b8a7624cc131b837d36df67356bc75e8",
@@ -49,18 +57,34 @@ SPEAKERS = [
     {"speaker": "Daisy Studious", "voice": "daisy-studious"},
     {"speaker": "Gracie Wise", "voice": "gracie-wise"},
     {"speaker": "Tammie Ema", "voice": "tammie-ema"},
-    # Experimental. Dropped after the run when the length check still fails.
+    # Trial voice. She stays. Delete this entry and set SHIP_CLARIBEL false in
+    # src/audio/voices.ts to remove her. A failed check does not delete the folder.
     {"speaker": "Claribel Dervla", "voice": "claribel-dervla", "experimental": True},
 ]
 # Full-speed ceiling: words * 0.72 + 0.85. The same formula is in
-# src/pitch/clip-plausible.ts. A spoken "." / "?" / "!" pushes a short line over it.
-# No offline ASR is installed here, so the check is this length, not a transcript.
+# src/pitch/clip-plausible.ts. Trailing punctuation is not spoken.
+# faster-whisper small is the transcript check.
 WORD_SECONDS = 0.72
 LENGTH_SLACK = 0.85
 # Probe noise around the ceiling. 0.03 s keeps "Hoje." at 1.62 s over the limit.
 LENGTH_TOLERANCE = 0.03
+# Whisper sometimes splits one spoken word into two. Two extra words still fail.
+EXTRA_WORDS = 1
 TRAILING_PUNCT = re.compile(r"[.!?…]+$")
 WORD_CHARS = re.compile(r"\w+", re.UNICODE)
+INNER_PUNCT = re.compile(r"[,:;!?…\"“”«»]+")
+# Spoken names of punctuation. Folded, so accents do not matter.
+PUNCT_WORDS = frozenset({
+    "ponto",
+    "pontos",
+    "virgula",
+    "virgulas",
+    "interrogacao",
+    "interrogacoes",
+    "exclamacao",
+    "exclamacoes",
+    "reticencias",
+})
 
 ROOT = Path(__file__).resolve().parents[1]
 LINES = json.loads((ROOT / "tools" / "lines.json").read_text(encoding="utf-8"))
@@ -72,6 +96,12 @@ def require_coqui() -> None:
     found = importlib.metadata.version("coqui-tts")
     if found != COQUI_VERSION:
         raise SystemExit(f"coqui-tts {found} is not the pinned {COQUI_VERSION}")
+    whisper = importlib.metadata.version("faster-whisper")
+    if whisper != FASTER_WHISPER:
+        raise SystemExit(f"faster-whisper {whisper} is not the pinned {FASTER_WHISPER}")
+    av_found = importlib.metadata.version("av")
+    if av_found != AV_VERSION:
+        raise SystemExit(f"av {av_found} is not the pinned {AV_VERSION}")
 
 
 def require_model(model_dir: Path) -> None:
@@ -148,13 +178,6 @@ def synthesize_attempt(model, config, speaker: str, text: str, wav: Path, attemp
     return heard
 
 
-def synthesize_one(model, config, speaker: str, text: str, wav: Path) -> int:
-    for attempt in range(ATTEMPTS):
-        if synthesize_attempt(model, config, speaker, text, wav, attempt) is not None:
-            return attempt
-    raise SystemExit(f"too short after {ATTEMPTS} attempts: {speaker} {text}")
-
-
 def check_voice(paths: list[Path]) -> list[dict[str, str]]:
     listing = Path("/tmp/xtts-check-list.txt")
     report_path = Path("/tmp/xtts-clip-problems.json")
@@ -184,22 +207,32 @@ def tempos_for(target: Path) -> list[tuple[Path, float | None]]:
     ]
 
 
-def write_tempos(model, config, speaker: str, text: str, target: Path) -> bool:
-    tempos = tempos_for(target)
-    if all(path.exists() and path.stat().st_size > 0 for path, _tempo in tempos):
-        return False
-    target.parent.mkdir(parents=True, exist_ok=True)
-    wav = target.with_suffix(".wav")
-    synthesize_one(model, config, speaker, text, wav)
-    for dest, tempo in tempos:
-        encode(wav, dest, tempo)
-    wav.unlink(missing_ok=True)
-    return True
+def clip_ready(target: Path) -> bool:
+    return all(path.exists() and path.stat().st_size > 0 for path, _tempo in tempos_for(target))
 
 
 def strip_trailing_punctuation(text: str) -> str:
     stripped = TRAILING_PUNCT.sub("", text.strip()).strip()
     return stripped or text.strip()
+
+
+def has_trailing_punctuation(text: str) -> bool:
+    return strip_trailing_punctuation(text) != text.strip()
+
+
+def strip_all_punctuation(text: str) -> str:
+    bare = INNER_PUNCT.sub(" ", strip_trailing_punctuation(text))
+    bare = re.sub(r"\s+", " ", bare).strip()
+    return bare or strip_trailing_punctuation(text)
+
+
+def spoken_forms(text: str) -> list[str]:
+    """Trailing punctuation is never spoken. Inner marks are a later attempt."""
+    forms = [strip_trailing_punctuation(text)]
+    bare = strip_all_punctuation(text)
+    if bare != forms[0]:
+        forms.append(bare)
+    return forms
 
 
 def expected_seconds(text: str) -> float:
@@ -219,72 +252,199 @@ def forget_align(target: Path) -> None:
     align.unlink(missing_ok=True)
 
 
-def resynthesize(model, config, speaker: str, text: str, target: Path) -> float | None:
-    """Write a new take that fits the expected length. None when every attempt misses it."""
+def fold_token(token: str) -> str:
+    decomposed = unicodedata.normalize("NFD", token.lower())
+    return "".join(char for char in decomposed if unicodedata.category(char) != "Mn")
+
+
+def transcript_words(text: str) -> list[str]:
+    return [fold_token(token) for token in re.findall(r"[^\W_]+", text, flags=re.UNICODE)]
+
+
+def asr_problem(transcript: str, expected: str) -> str | None:
+    """A take fails when it adds a punctuation word or contains more words than the text.
+
+    "ponto" in "ponto de táxi" is the taxi rank, so a word counts only when the
+    transcript has more copies than the line.
+    """
+    heard = transcript_words(transcript)
+    wanted = transcript_words(strip_all_punctuation(expected))
+    if not heard:
+        return "empty transcript"
+    extra = [word for word in sorted(PUNCT_WORDS) if heard.count(word) > wanted.count(word)]
+    if extra:
+        return "punctuation word " + " ".join(extra) + f": {' '.join(heard)}"
+    if len(heard) > len(wanted) + EXTRA_WORDS:
+        return f"transcript longer {len(heard)}>{len(wanted)}+{EXTRA_WORDS}: {' '.join(heard)}"
+    return None
+
+
+_whisper = None
+
+
+def whisper_model():
+    global _whisper
+    if _whisper is None:
+        from faster_whisper import WhisperModel
+
+        _whisper = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
+    return _whisper
+
+
+def transcribe(path: Path) -> str:
+    # temperature 0 keeps the beam search from falling through to random samples.
+    segments, _info = whisper_model().transcribe(
+        str(path),
+        language=LANGUAGE,
+        beam_size=WHISPER_BEAM,
+        temperature=0.0,
+        condition_on_previous_text=False,
+    )
+    return " ".join(segment.text.strip() for segment in segments)
+
+
+def judge_file(path: Path, text: str) -> str | None:
     limit = expected_seconds(text) + LENGTH_TOLERANCE
-    wav = target.with_suffix(".wav")
-    chosen: float | None = None
-    for attempt in range(ATTEMPTS):
-        heard = synthesize_attempt(model, config, speaker, text, wav, attempt)
-        if heard is None:
-            continue
-        if heard <= limit:
-            chosen = heard
-            break
-        print(f"  attempt {attempt} {heard:.2f}s > {limit:.2f}s", flush=True)
-    if chosen is None:
-        wav.unlink(missing_ok=True)
-        return None
+    heard = duration_seconds(path)
+    if heard > limit:
+        return f"length {heard:.3f}>{limit:.3f}"
+    if heard < MIN_SECONDS:
+        return f"short {heard:.3f}"
+    return asr_problem(transcribe(path), text)
+
+
+def commit_wav(wav: Path, target: Path) -> None:
     for path in expand_tempos([target]):
         path.unlink(missing_ok=True)
     forget_align(target)
     for dest, tempo in tempos_for(target):
         encode(wav, dest, tempo)
     wav.unlink(missing_ok=True)
-    return chosen
 
 
-def repair_punctuation(model, config, speaker: str, voice: str, rows: list[dict]) -> tuple[list[dict], list[dict]]:
-    """Re-render clips that are longer than the word-count ceiling, without trailing punctuation."""
-    replaced: list[dict] = []
-    failed: list[dict] = []
-    for row in rows:
-        target = ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name
-        if not target.exists():
-            failed.append({"file": target.name, "text": row["text"], "reason": "missing"})
-            continue
-        limit = expected_seconds(row["text"])
-        heard = duration_seconds(target)
-        if heard <= limit + LENGTH_TOLERANCE:
-            continue
-        bare = strip_trailing_punctuation(row["text"])
-        print(f"{voice} long {target.name} {heard:.2f}s > {limit:.2f}s", flush=True)
-        fresh = resynthesize(model, config, speaker, bare, target)
-        record = {"file": target.name, "text": row["text"], "spoken": bare, "limit": round(expected_seconds(bare), 3)}
-        if fresh is None:
+def synthesize_clean(model, config, speaker: str, text: str, target: Path, attempt_base: int = 0) -> dict | None:
+    """None when a take fits the length and the transcript. Otherwise the last failure."""
+    wav = target.with_suffix(".wav")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    last: dict | None = None
+    for spoken in spoken_forms(text):
+        limit = expected_seconds(spoken) + LENGTH_TOLERANCE
+        for attempt in range(attempt_base, attempt_base + ATTEMPTS):
+            heard = synthesize_attempt(model, config, speaker, spoken, wav, attempt)
+            record = {"file": target.name, "text": text, "spoken": spoken, "attempt": attempt}
+            if heard is None:
+                record["reason"] = "too short"
+                last = record
+                continue
             record["seconds"] = round(heard, 3)
-            record["reason"] = (
-                "still over expected length after stripping trailing punctuation"
-                if bare != row["text"].strip()
-                else "over expected length and a new take missed the ceiling"
-            )
-            failed.append(record)
-            print(f"{voice} still long {target.name}", flush=True)
+            if heard > limit:
+                record["reason"] = f"length {heard:.3f}>{limit:.3f}"
+                last = record
+                print(f"  {target.name} attempt {attempt} {record['reason']}", flush=True)
+                continue
+            problem = asr_problem(transcribe(wav), spoken)
+            if problem:
+                record["reason"] = problem
+                last = record
+                print(f"  {target.name} attempt {attempt} {problem}", flush=True)
+                continue
+            commit_wav(wav, target)
+            print(f"  {target.name} {heard:.2f}s attempt {attempt}", flush=True)
+            return None
+    if last is not None and wav.exists():
+        commit_wav(wav, target)
+        print(f"  {target.name} kept last take {last.get('reason')}", flush=True)
+    else:
+        wav.unlink(missing_ok=True)
+    return last
+
+
+def ensure_clip(model, config, speaker: str, text: str, target: Path, audit_existing: bool) -> dict | None:
+    if clip_ready(target):
+        if not audit_existing:
+            return None
+        reason = judge_file(target, text)
+        if reason is None:
+            return None
+        print(f"again {target.name} {reason}", flush=True)
+    return synthesize_clean(model, config, speaker, text, target)
+
+
+def forget_affected(voice: str, rows: list[dict]) -> int:
+    """Drop clips whose source still ends in punctuation, so they are spoken again."""
+    removed = 0
+    for row in rows:
+        if not has_trailing_punctuation(row["text"]):
+            continue
+        target = ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name
+        if not clip_ready(target) and not target.with_suffix(".align.json").exists():
+            continue
+        for path, _tempo in tempos_for(target):
+            path.unlink(missing_ok=True)
+        forget_align(target)
+        removed += 1
+    return removed
+
+
+def render_rows(model, config, job: dict, rows: list[dict], respeak: bool) -> list[dict]:
+    voice = job["voice"]
+    experimental = bool(job.get("experimental"))
+    if respeak:
+        removed = forget_affected(voice, rows)
+        if removed:
+            print(f"{voice} cleared {removed} clips that ended with punctuation", flush=True)
+    failures: list[dict] = []
+    made = 0
+    for index, row in enumerate(rows, start=1):
+        target = ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name
+        failure = ensure_clip(model, config, job["speaker"], row["text"], target, audit_existing=respeak)
+        if failure is not None:
+            failure["voice"] = voice
+            if experimental:
+                failure["experimental"] = True
+            failures.append(failure)
+            print(f"{voice} flagged {target.name} {failure.get('reason')}", flush=True)
         else:
-            record["seconds"] = round(fresh, 3)
-            replaced.append(record)
-            print(f"{voice} repaired {target.name} {fresh:.2f}s", flush=True)
-    return replaced, failed
+            made += 1
+        if index % 25 == 0:
+            print(f"{voice} {index}/{len(rows)}", flush=True)
+    paths = [ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name for row in rows]
+    paths = [path for path in paths if path.exists()]
+    if paths:
+        bad = check_voice(expand_tempos(paths))
+        for item in bad:
+            item["voice"] = voice
+            if experimental:
+                item["experimental"] = True
+            failures.append(item)
+        if bad:
+            print(json.dumps({"voice": voice, "voicing": bad}, ensure_ascii=False), flush=True)
+    if failures and not experimental:
+        print(json.dumps({"voice": voice, "failures": failures}, ensure_ascii=False), flush=True)
+    print(f"{voice} done {len(rows)} written-or-kept {made} flagged {len(failures)}", flush=True)
+    return failures
 
 
-def drop_voice(voice: str) -> None:
-    folder = ROOT / "public" / "audio" / "pt-BR" / voice
-    if folder.exists():
-        shutil.rmtree(folder)
-    print(f"{voice} not shipped", flush=True)
+def write_license(model_dir: Path, job: dict) -> None:
+    voice = job["voice"]
+    license_src = model_dir / "LICENSE.txt"
+    notice = (
+        "Travel Talk. Audio in this folder is synthesized offline with Coqui XTTS-v2.\n"
+        f"Speaker: {job['speaker']}. Language: pt. The weights are not in this repository.\n"
+        f"Revision: {XTTS_REVISION}\n"
+        f"SHA-256 model.pth: {XTTS_SHA256['model.pth']}\n"
+        "The model and this output are under the Coqui Public Model License 1.0.0.\n"
+        "Non-commercial use only.\n"
+        f"Licence file at this revision: {CPML_URL}\n"
+        "A copy of that file is docs/samples/cpml.txt.\n\n"
+    )
+    (ROOT / "public" / "audio" / "pt-BR" / voice / "LICENSE.txt").write_text(
+        notice + license_src.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
 
 
-def render(model_dir: Path, words_only: bool = False) -> None:
+def render(model_dir: Path, words_only: bool = False, respeak: bool = False) -> None:
     import torch
     from TTS.tts.configs.xtts_config import XttsConfig
     from TTS.tts.models.xtts import Xtts
@@ -300,103 +460,39 @@ def render(model_dir: Path, words_only: bool = False) -> None:
     rows = [row for row in LINES if row["lang"] == "pt-BR"]
     if not rows:
         raise SystemExit("no pt-BR lines in tools/lines.json")
-    rejected: set[str] = set()
+    failures: list[dict] = []
     for job in SPEAKERS:
         if job["speaker"] not in names:
             raise SystemExit(f"speaker missing: {job['speaker']}")
-        voice = job["voice"]
-        experimental = bool(job.get("experimental"))
         if not words_only:
-            made = 0
-            for index, row in enumerate(rows, start=1):
-                target = ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name
-                if not write_tempos(model, config, job["speaker"], row["text"], target):
-                    continue
-                made += 1
-                if index % 25 == 0 or made == 1:
-                    print(f"{voice} {index}/{len(rows)}", flush=True)
-            if made:
-                paths = [ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name for row in rows]
-                bad = check_voice(expand_tempos(paths))
-                if bad:
-                    print(json.dumps({"voice": voice, "bad": bad}, ensure_ascii=False), flush=True)
-                    if experimental:
-                        rejected.add(voice)
-                    else:
-                        raise SystemExit(f"{voice} failed the duration or voicing check")
-        if voice not in rejected:
-            replaced, failed = repair_punctuation(model, config, job["speaker"], voice, rows)
-            if replaced:
-                bad = check_voice(expand_tempos([ROOT / "public" / "audio" / "pt-BR" / voice / item["file"] for item in replaced]))
-                if bad:
-                    print(json.dumps({"voice": voice, "repaired": bad}, ensure_ascii=False), flush=True)
-                    if experimental:
-                        rejected.add(voice)
-                    else:
-                        raise SystemExit(f"{voice} failed the duration or voicing check after the punctuation repair")
-            if failed:
-                print(json.dumps({"voice": voice, "punctuation": failed}, ensure_ascii=False), flush=True)
-                if experimental:
-                    rejected.add(voice)
-                else:
-                    raise SystemExit(f"{voice} stayed over the expected length")
-        if voice in rejected:
-            print(f"{voice} sentences rejected", flush=True)
-            continue
-        license_src = model_dir / "LICENSE.txt"
-        notice = (
-            "Travel Talk. Audio in this folder is synthesized offline with Coqui XTTS-v2.\n"
-            f"Speaker: {job['speaker']}. Language: pt. The weights are not in this repository.\n"
-            f"Revision: {XTTS_REVISION}\n"
-            f"SHA-256 model.pth: {XTTS_SHA256['model.pth']}\n"
-            "The model and this output are under the Coqui Public Model License 1.0.0.\n"
-            "Non-commercial use only. https://coqui.ai/cpml.txt\n\n"
-        )
-        (ROOT / "public" / "audio" / "pt-BR" / voice / "LICENSE.txt").write_text(
-            notice + license_src.read_text(encoding="utf-8"),
-            encoding="utf-8",
-        )
-        print(f"{voice} done {len(rows)}", flush=True)
-    render_words(model, config, rejected)
-    for voice in rejected:
-        drop_voice(voice)
+            failures.extend(render_rows(model, config, job, rows, respeak))
+        write_license(model_dir, job)
+    failures.extend(render_words(model, config, respeak))
+    reported = Path("/tmp/xtts-asr-failures.json")
+    reported.write_text(json.dumps(failures, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    blocking = [item for item in failures if not item.get("experimental")]
+    print(f"flagged {len(failures)} blocking {len(blocking)} see {reported}", flush=True)
+    if blocking:
+        raise SystemExit(f"{len(blocking)} clips still fail the length, voicing, or transcript check")
+    if failures:
+        print(f"experimental clips flagged {len(failures)}; Claribel stays", flush=True)
 
 
-def render_words(model, config, rejected: set[str]) -> None:
+def render_words(model, config, respeak: bool) -> list[dict]:
     """Citation clips. Same tempos as Piper words, and no align.json, matching 0.9.0."""
     rows = json.loads((ROOT / "tools" / "word-lines.json").read_text(encoding="utf-8"))
     rows = [row for row in rows if row["lang"] == "pt-BR"]
     if len(rows) != 19:
         raise SystemExit(f"expected 19 pt-BR word lines, found {len(rows)}")
+    failures: list[dict] = []
     for job in SPEAKERS:
         voice = job["voice"]
-        if voice in rejected:
-            continue
-        experimental = bool(job.get("experimental"))
-        made = 0
-        for index, row in enumerate(rows, start=1):
-            target = ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name
-            if not write_tempos(model, config, job["speaker"], row["text"], target):
-                continue
-            made += 1
-            print(f"{voice} word {index}/{len(rows)} {row['text']}", flush=True)
-        paths = [ROOT / "public" / "audio" / "pt-BR" / voice / Path(row["file"]).name for row in rows]
-        if made or experimental:
-            bad = check_voice(expand_tempos(paths))
-            if bad:
-                print(json.dumps({"voice": voice, "words": bad}, ensure_ascii=False), flush=True)
-                if experimental:
-                    rejected.add(voice)
-                    continue
-                raise SystemExit(f"{voice} word clips failed the duration or voicing check")
-        _replaced, failed = repair_punctuation(model, config, job["speaker"], voice, rows)
-        if failed:
-            print(json.dumps({"voice": voice, "wordPunctuation": failed}, ensure_ascii=False), flush=True)
-            if experimental:
-                rejected.add(voice)
-                continue
-            raise SystemExit(f"{voice} word clips stayed over the expected length")
-        print(f"{voice} words done {len(rows)} new {made}", flush=True)
+        batch = render_rows(model, config, job, rows, respeak)
+        for item in batch:
+            item.setdefault("voice", voice)
+        failures.extend(batch)
+        print(f"{voice} words done", flush=True)
+    return failures
 
 
 def write_manifest() -> None:
@@ -416,11 +512,14 @@ def main() -> None:
     require_coqui()
     args = sys.argv[1:]
     words_only = "--words-only" in args
-    args = [arg for arg in args if arg != "--words-only"]
+    respeak = "--respeak" in args
+    args = [arg for arg in args if arg not in ("--words-only", "--respeak")]
     if len(args) != 1:
-        raise SystemExit("usage: generate_xtts.py <model-dir> [--words-only]")
-    render(Path(args[0]), words_only=words_only)
-    write_manifest()
+        raise SystemExit("usage: generate_xtts.py <model-dir> [--words-only] [--respeak]")
+    try:
+        render(Path(args[0]), words_only=words_only, respeak=respeak)
+    finally:
+        write_manifest()
 
 
 if __name__ == "__main__":

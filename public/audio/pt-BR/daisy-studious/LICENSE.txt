@@ -3,7 +3,9 @@ Speaker: Daisy Studious. Language: pt. The weights are not in this repository.
 Revision: 6c2b0d75eae4b7047358e3b6bd9325f857d43f77
 SHA-256 model.pth: c7ea20001c6a0a841c77e252d8409f6a74fb423e79b3206a0771ba5989776187
 The model and this output are under the Coqui Public Model License 1.0.0.
-Non-commercial use only. https://coqui.ai/cpml.txt
+Non-commercial use only.
+Licence file at this revision: https://huggingface.co/coqui/XTTS-v2/resolve/6c2b0d75eae4b7047358e3b6bd9325f857d43f77/LICENSE.txt
+A copy of that file is docs/samples/cpml.txt.
 
 # Coqui Public Model License 1.0.0
 https://coqui.ai/cpml.txt
