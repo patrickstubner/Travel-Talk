@@ -37,7 +37,11 @@ export type CaptureSession = {
 
 export async function startMicrophone(onStop: (recording: Recording) => void): Promise<CaptureSession | null> {
   if (!navigator.mediaDevices?.getUserMedia) return null
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  // Chrome's default processing lifts a clean file less often than the take
+  // it just played. Leave echo, noise and gain to the recording itself.
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+  })
   const recorder = new MediaRecorder(stream)
   let released = false
   const chunks: Blob[] = []

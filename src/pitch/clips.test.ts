@@ -9,7 +9,7 @@ import { splitWords } from '../../content/gloss'
 import { alignmentFitsDuration, parseAlignment } from '../audio/align'
 import { VOICES } from '../audio/voices'
 import { allSpeechLines, voiceFile } from '../content/resolve'
-import { contourFromSamples, frameEnergy } from './contour'
+import { contourFromSamples, frameEnergy, type Contour } from './contour'
 import { scoreRepeat } from './feedback'
 import { bandShape, closestBands } from './spectrum'
 
@@ -21,10 +21,13 @@ import { bandShape, closestBands } from './spectrum'
  * and ±10 % tempo below 2 stars, so the old 5 % cap stays as the backstop.
  * A steady tone never gets stars. Joe keeps the stars. The floors below
  * stay, including 35 % at ±3 semitones, until a harmonic repair can do
- * better without praising a tone or a reversed take. A hum on the syllable
- * grid, other speech and reversed audio stay at no stars. Another voice
- * saying the same sentence keeps stars. German also rejects a different
- * sentence. English, Portuguese and Vietnamese do not separate that case.
+ * better without praising a tone or a reversed take. A hum on a fixed 4 Hz
+ * pulse, other speech and reversed audio stay at no stars. A hum whose
+ * loudness follows the file, and singing its melody, still receive stars.
+ * Those two are reported, not gated, while the score stays as it is.
+ * Another voice saying the same sentence keeps stars where the voices are
+ * similar. German rejects a different sentence when the other voice is the
+ * same speaker. A less similar voice does not separate that case.
  * Joe stays under the 98 % self-score of the other voices: clarity 0.6
  * recovered most of that low voice, and the 70 Hz floor was not the cause.
  */
@@ -98,6 +101,10 @@ type Counts = {
   noise: number
   hum: number
   hum3: number
+  /** At least 2 stars. A hum on the file's own loudness. Reported, not gated. */
+  humSyllable: number
+  /** At least 2 stars. The melody sung as a vowel. Reported, not gated. */
+  sing: number
   background: number
   background3: number
   other: number
@@ -123,6 +130,8 @@ function empty(): Counts {
     noise: 0,
     hum: 0,
     hum3: 0,
+    humSyllable: 0,
+    sing: 0,
     background: 0,
     background3: 0,
     other: 0,
@@ -148,6 +157,8 @@ function add(into: Counts, row: Counts): void {
   into.noise += row.noise
   into.hum += row.hum
   into.hum3 += row.hum3
+  into.humSyllable += row.humSyllable
+  into.sing += row.sing
   into.background += row.background
   into.background3 += row.background3
   into.other += row.other
@@ -234,6 +245,101 @@ function mixPink(signal: Float32Array, seed: number, snrDb = 10): Float32Array {
   return mixed
 }
 
+/** Loudness of the file, about 20 ms, so a hum can follow the syllables. */
+function rmsEnvelope(signal: Float32Array): Float32Array {
+  const win = 320
+  const out = new Float32Array(signal.length)
+  let sum = 0
+  for (let index = 0; index < signal.length; index += 1) {
+    const sample = signal[index] ?? 0
+    sum += sample * sample
+    if (index >= win) {
+      const left = signal[index - win] ?? 0
+      sum -= left * left
+    }
+    out[index] = Math.sqrt(Math.max(0, sum) / Math.min(win, index + 1))
+  }
+  return out
+}
+
+function matchPeak(source: Float32Array, rendered: Float32Array): Float32Array {
+  let src = 0
+  let dst = 0
+  for (let index = 0; index < source.length; index += 1) {
+    src = Math.max(src, Math.abs(source[index] ?? 0))
+    dst = Math.max(dst, Math.abs(rendered[index] ?? 0))
+  }
+  if (src === 0 || dst === 0) return rendered
+  const scale = src / dst
+  const out = new Float32Array(rendered.length)
+  for (let index = 0; index < rendered.length; index += 1) out[index] = (rendered[index] ?? 0) * scale
+  return out
+}
+
+/**
+ * A falling hum, with the second and third harmonic, whose loudness is the
+ * file's. The 4 Hz pulse in `humRhythm` does not sit on these syllables.
+ */
+function humOnSyllables(signal: Float32Array): Float32Array {
+  const env = rmsEnvelope(signal)
+  const out = new Float32Array(signal.length)
+  let phase = 0
+  let phase2 = 0
+  let phase3 = 0
+  for (let index = 0; index < signal.length; index += 1) {
+    const hz = 160 * 2 ** ((-2 * index) / Math.max(1, signal.length) / 12)
+    phase += (2 * Math.PI * hz) / 16000
+    phase2 += (2 * Math.PI * hz * 2) / 16000
+    phase3 += (2 * Math.PI * hz * 3) / 16000
+    const tone = Math.sin(phase) + 0.45 * Math.sin(phase2) + 0.2 * Math.sin(phase3)
+    out[index] = tone * (env[index] ?? 0)
+  }
+  return matchPeak(signal, out)
+}
+
+/** Gain of an /a/-like vowel. Ten harmonics use this when the melody is sung. */
+function vowelGain(freq: number): number {
+  const peaks: Array<[number, number]> = [
+    [730, 90],
+    [1090, 110],
+    [2440, 170],
+  ]
+  let gain = 0.08
+  for (const [center, width] of peaks) {
+    const distance = (freq - center) / width
+    gain += Math.exp(-0.5 * distance * distance)
+  }
+  return gain
+}
+
+/**
+ * The file's melody, sung: the contour in semitones around 180 Hz, ten
+ * harmonics shaped like a vowel, loudness from the file.
+ */
+function singMelody(signal: Float32Array, contour: Contour): Float32Array {
+  const env = rmsEnvelope(signal)
+  const hop = 160
+  const out = new Float32Array(signal.length)
+  const phases = new Float64Array(10)
+  let held = 0
+  for (let index = 0; index < signal.length; index += 1) {
+    const frame = Math.min(Math.max(0, contour.length - 1), Math.floor(index / hop))
+    const semi = contour[frame]
+    if (semi != null) held = semi
+    const hz = 180 * 2 ** (held / 12)
+    let sample = 0
+    for (let harmonic = 1; harmonic <= 10; harmonic += 1) {
+      const freq = hz * harmonic
+      const slot = harmonic - 1
+      phases[slot] = (phases[slot] ?? 0) + (2 * Math.PI * freq) / 16000
+      sample += (vowelGain(freq) / harmonic) * Math.sin(phases[slot] ?? 0)
+    }
+    const audible = semi == null ? 0.15 : 1
+    out[index] = sample * (env[index] ?? 0) * audible
+  }
+  return matchPeak(signal, out)
+}
+
 /** A hum that falls two semitones and pulses at 4 Hz, not on the word grid. */
 function humRhythm(length: number): Float32Array {
   const out = new Float32Array(length)
@@ -279,6 +385,10 @@ function pitchFilter(semitones: number): string {
 const ready = ffmpegReady()
 const required = process.env.CI === 'true'
 
+/** Filled by the language tests. The known-failing test reads it afterwards. */
+const reported = new Map<string, { humSyllable: number; sing: number; timed: number }>()
+const collected: unknown[] = []
+
 if (!ready) console.error('ffmpeg fehlt. npm run test:clips wird übersprungen. In CI wird ffmpeg verlangt.')
 
 describe('shipped clips', () => {
@@ -287,9 +397,7 @@ describe('shipped clips', () => {
     else expect(ready).toBe(true)
   })
 
-  it.skipIf(!ready)(
-    'keeps self-score, rejects a reversed take and a steady tone, and keeps small pitch and tempo shifts',
-    () => {
+  function scoreLanguage(only: string): void {
       const dir = mkdtempSync(join(tmpdir(), 'tt-clips-'))
       const paths = {
         up: join(dir, 'up.raw'),
@@ -310,7 +418,7 @@ describe('shipped clips', () => {
       }
       try {
         const lines = allSpeechLines(rawCatalog.concepts)
-        for (const voice of VOICES.filter((item) => item.bundled)) {
+        for (const voice of VOICES.filter((item) => item.bundled && item.lang === only)) {
           const row = empty()
           byVoice.set(voice.id, row)
           const heard: Float32Array[] = []
@@ -377,6 +485,8 @@ describe('shipped clips', () => {
             const hummed = take(humRhythm(samples.length))
             if (hummed.stars > 0) row.hum += 1
             if (hummed.stars === 3) row.hum3 += 1
+            if (take(humOnSyllables(samples)).stars >= 2) row.humSyllable += 1
+            if (take(singMelody(samples, model)).stars >= 2) row.sing += 1
             const foreign = backgroundOf[line.lang]
             if (foreign) {
               const babble = take(foreign)
@@ -480,6 +590,8 @@ describe('shipped clips', () => {
           noise: `${row.noise}/${row.varied}`,
           hum: `${row.hum}/${row.timed}`,
           hum3: row.hum3,
+          humSyllable: `${row.humSyllable}/${row.timed}`,
+          sing: `${row.sing}/${row.timed}`,
           background: `${row.background}/${row.timed}`,
           background3: row.background3,
           other: `${row.other}/${row.timed}`,
@@ -501,6 +613,8 @@ describe('shipped clips', () => {
           noise: `${row.noise}/${row.varied}`,
           hum: `${row.hum}/${row.timed}`,
           hum3: row.hum3,
+          humSyllable: `${row.humSyllable}/${row.timed}`,
+          sing: `${row.sing}/${row.timed}`,
           background: `${row.background}/${row.timed}`,
           background3: row.background3,
           other: `${row.other}/${row.timed}`,
@@ -509,9 +623,25 @@ describe('shipped clips', () => {
           noise10: `${row.noise10}/${row.varied}`,
           otherVoice: `${row.otherVoice}/${row.otherVoiceTimed}`,
         }))
-        const report = { languages, voices: table, reversedStars, joeNoise }
+        const languageRow = byLang.get(only)
+        if (languageRow) {
+          reported.set(only, { humSyllable: languageRow.humSyllable, sing: languageRow.sing, timed: languageRow.timed })
+        }
+        const report = {
+          languages,
+          voices: table,
+          reversedStars,
+          joeNoise,
+          reported: {
+            knownFailing: true,
+            gated: false,
+            humSyllableAtLeast2: languageRow ? `${languageRow.humSyllable}/${languageRow.timed}` : '0/0',
+            singAtLeast2: languageRow ? `${languageRow.sing}/${languageRow.timed}` : '0/0',
+          },
+        }
+        collected.push(report)
         console.error(JSON.stringify(report, null, 2))
-        writeFileSync('/tmp/tt-clip-stats.json', JSON.stringify(report, null, 2))
+        writeFileSync('/tmp/tt-clip-stats.json', JSON.stringify(collected, null, 2))
         const pitchFloor: Record<string, number> = { joe: 0.55, cadu: 0.4 }
         const tempoFloor: Record<string, number> = { joe: 0.55 }
         const roomFloor: Record<string, number> = { joe: 0.3, vais1000: 0.8 }
@@ -553,7 +683,27 @@ describe('shipped clips', () => {
       } finally {
         rmSync(dir, { recursive: true, force: true })
       }
-    },
-    1_800_000,
-  )
+  }
+
+  for (const lang of ['de', 'en', 'pt-BR', 'vi'] as const) {
+    it.skipIf(!ready)(
+      `keeps the score for ${lang}`,
+      () => {
+        scoreLanguage(lang)
+      },
+      900_000,
+    )
+  }
+
+  // Known failing while the score stays as it is. A pass here would mean the
+  // rates dropped to zero. A failure is the measured count, and it does not
+  // turn the suite red.
+  ;(ready ? it.fails : it.skip)('humming on the file rhythm and singing the melody still get stars', () => {
+    for (const lang of ['de', 'en', 'pt-BR', 'vi'] as const) {
+      const row = reported.get(lang)
+      expect(row, lang).toBeDefined()
+      expect.soft(row?.humSyllable ?? 0, `${lang} hum on the syllable rhythm`).toBe(0)
+      expect.soft(row?.sing ?? 0, `${lang} singing the melody`).toBe(0)
+    }
+  })
 })

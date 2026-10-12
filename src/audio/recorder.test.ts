@@ -94,6 +94,17 @@ describe('releaseCapture', () => {
     expect(FakeRecorder.last?.stop).toHaveBeenCalledOnce()
   })
 
+  it('asks for the microphone without echo cancellation, noise suppression or automatic gain', async () => {
+    const close = vi.fn(async () => undefined)
+    installMicrophone(close)
+    const session = await startMicrophone(() => undefined)
+    expect(session).not.toBeNull()
+    const getUserMedia = navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>
+    expect(getUserMedia).toHaveBeenCalledWith({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    })
+  })
+
   it('closes the audio context after the recording is decoded', async () => {
     const close = vi.fn(async () => undefined)
     installMicrophone(close)
