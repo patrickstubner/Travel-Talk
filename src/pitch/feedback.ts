@@ -764,8 +764,13 @@ export function scoreRepeat(input: {
     otherSentence: false,
     reason: tooShort ? 'short' : fileThin ? 'file' : tooLittleVoice ? 'quiet' : null,
   }
+  const lockBands = input.userPlainBands && input.userPlainBands.length > 0 ? input.userPlainBands : input.userBands
+  const lockKnown = Boolean(input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0)
+  const bandReversed = reversedRecording(input.modelBands, lockBands)
   if (tooShort) return empty
   if (fileThin) return { ...empty, tooLittleVoice: false, reason: 'file' }
+  // A reversed file can lose its tracked pitch. That is still «unklar», not a quiet take.
+  if (bandReversed) return { ...empty, tooLittleVoice: false, unclear: true, reason: 'unclear' }
   if (tooLittleVoice) return empty
   const modelSpan = sustained(model)
   const userSpan = sustained(user)
@@ -790,14 +795,10 @@ export function scoreRepeat(input: {
   const modelEnergy = thinEnergy(input.modelEnergy, input.model.length)
   const userEnergy = thinEnergy(input.userEnergy, input.user.length)
   const forward = contourCorrelation(model, heard, path)
-  // With bands, the lock is the gap on the unshifted shape. A frequency
-  // warp can shrink that gap, and a second voice stays under it. Without
-  // bands, the contour lock remains, including the synthetic fixtures.
-  const lockBands = input.userPlainBands && input.userPlainBands.length > 0 ? input.userPlainBands : input.userBands
-  const lockKnown = Boolean(input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0)
-  const reversed = lockKnown
-    ? reversedRecording(input.modelBands, lockBands)
-    : reversedTake(model, heard, forward, path, modelEnergy, userEnergy)
+  // With bands, the hard lock already returned above. The loose contour
+  // lock stays only for fixtures that have no bands, so another voice is
+  // not caught by it.
+  const reversed = lockKnown ? false : reversedTake(model, heard, forward, path, modelEnergy, userEnergy)
   const spoken = (energyVariation(userEnergy) ?? 0) >= SPEECH_ENERGY
   const flat = flatContour(heard, model) && !spoken
   const drone = droneAgainstSpeech(userEnergy, modelEnergy) && (voicedRange(heard) ?? 0) < FLAT_RANGE
