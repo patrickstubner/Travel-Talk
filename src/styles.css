@@ -414,14 +414,21 @@ a.menu-card span { color: var(--muted); }
   main { padding-bottom: 1rem; }
 }
 
-.repeat-plots, .repeat-words, .repeat-pair { display: flex; gap: 0.45rem; align-items: stretch; max-width: 100%; }
-.repeat-plots > div, .repeat-words > button { flex: var(--span, 1) 1 0%; min-width: 0; max-width: 100%; }
-.repeat-words { margin: 0.35rem 0 0.2rem; }
+.repeat-plots, .repeat-words, .repeat-pair, .repeat-board { display: flex; gap: 0.45rem; align-items: stretch; max-width: 100%; }
+.repeat-plots > div, .repeat-words > button, .repeat-board > .word-card { flex: var(--span, 1) 1 0%; min-width: 0; max-width: 100%; }
+.repeat-words, .repeat-board { margin: 0.35rem 0 0.2rem; }
 .word-chip { width: auto; max-width: 100%; border-radius: 1rem; background: var(--card); display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.35rem 0.3rem; }
-.word-chip-text { max-width: 100%; font-weight: 650; }
+.word-chip-text { max-width: 100%; font-weight: 650; line-height: 1.25; }
+.word-curve { display: block; width: 100%; min-width: 0; align-self: stretch; }
+.pitch-canvas-compact { width: 0; min-width: 100%; height: auto; aspect-ratio: 168 / 64; max-height: 2.6rem; border-radius: 0.45rem; }
 @media (max-width: 799px) {
-  .repeat-plots { flex-direction: column; align-items: stretch; }
-  .repeat-plots > div { flex: 0 0 auto; width: 100%; min-width: 0; max-width: 100%; }
+  .repeat-board { flex-wrap: wrap; align-items: flex-start; gap: 0.35rem; }
+  .repeat-board > .word-card {
+    flex: 1 1 6rem;
+    width: auto;
+    min-width: max-content;
+    max-width: calc(33.333% - 0.3rem);
+  }
   .repeat-words { flex-wrap: wrap; }
   .repeat-words > button {
     flex: 0 0 auto;
@@ -430,7 +437,7 @@ a.menu-card span { color: var(--muted); }
     max-width: 100%;
     white-space: nowrap;
   }
-  .word-chip-text, .word-marks, .word-chip .mark { white-space: nowrap; overflow-wrap: normal; }
+  .word-card, .word-chip-text, .word-marks, .word-chip .mark { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
 }
 .word-marks { display: flex; flex-direction: column; align-items: center; font-size: 0.72rem; line-height: 1.25; }
 .word-chip .mark.green { color: #1d7a46; }

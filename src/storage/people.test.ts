@@ -304,7 +304,7 @@ describe('people on one device', () => {
   })
 
   it('rejects a broken file without showing its content', () => {
-    const secret = 'SECRET_BODY_7c2e'
+    const secret = 'plain fixture'
     expect(() => parseImport(`{"leaked":"${secret}"}`, concepts)).toThrow('IMPORT_REJECTED')
     try {
       parseImport(`{"leaked":"${secret}"}`, concepts)

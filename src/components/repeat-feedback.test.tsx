@@ -78,6 +78,12 @@ describe('repeat feedback view', () => {
     expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
     expect(screen.getByTestId('rhythm-bar').getAttribute('data-state')).toBe('passt')
     expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('green')
+    for (const text of ['qua', 'xin', 'nha']) {
+      const card = screen.getByRole('button', { name: text })
+      expect(card.classList.contains('word-card')).toBe(true)
+      expect(card.querySelector('.word-chip-text')?.textContent).toBe(text)
+      expect(card.querySelectorAll('canvas')).toHaveLength(1)
+    }
     expect(screen.getByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeTruthy()
     expect(view.textContent ?? '').not.toMatch(/\d+\s*%/)
   })

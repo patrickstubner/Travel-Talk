@@ -9,4 +9,4 @@ useDefault = true
 id = "generic-api-key"
 
 [rules.allowlist]
-paths = ['''(^|/)tools/help_text_hashes\.json$''']
+paths = ['''^tools/help_text_hashes\.json$''']

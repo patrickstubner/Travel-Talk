@@ -81,16 +81,23 @@ function stroke(context: CanvasRenderingContext2D, contour: Contour, color: stri
   context.stroke()
 }
 
-function Curve({ model, user, color }: { model: Contour; user: Contour; color: Band | null }) {
+function Curve({ model, user, color, compact = false }: { model: Contour; user: Contour; color: Band | null; compact?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const canvas = ref.current
     if (canvas) drawPair(canvas, model, user, color)
   }, [color, model, user])
-  return <canvas ref={ref} className="pitch-canvas" width={280} height={140} />
+  return (
+    <canvas
+      ref={ref}
+      className={compact ? 'pitch-canvas pitch-canvas-compact' : 'pitch-canvas'}
+      width={compact ? 168 : 280}
+      height={compact ? 64 : 140}
+    />
+  )
 }
 
-/** Wide screens share the row by duration. Narrow screens ignore this and wrap. */
+/** Wide screens share one row by duration. Narrow screens wrap fixed cards and ignore this. */
 function spanStyle(start: number, end: number): CSSProperties {
   return { '--span': Math.max(0.2, end - start) } as CSSProperties
 }
@@ -352,24 +359,40 @@ function Result({
       </p>
       {notice ? <p role="status">{notice}</p> : null}
       {modelMissing ? <p>{copy.pitchNoModel}</p> : null}
-      {score && !score.tooShort && !score.tooLittleVoice ? (
-        score.words && score.words.length > 0 ? (
-          <div className="repeat-plots">
-            {score.words.map((word) => (
-              <div key={`${word.text}-${word.start}`} style={spanStyle(word.start, word.end)}>
+      {score && !score.tooShort && !score.tooLittleVoice && !(scored && scored.length > 0) ? (
+        <Curve model={score.model} user={score.userOnModel} color={null} />
+      ) : null}
+      {scored && scored.length > 0 && score && !score.tooShort && !score.tooLittleVoice ? (
+        <div className="repeat-board" data-testid="repeat-board">
+          {scored.map((word, index) => (
+            <button
+              key={`${word.text}-${word.start}-${index}`}
+              type="button"
+              className={`word-card word-chip ${word.color ?? 'plain'}`}
+              aria-label={word.text}
+              data-color={word.color ?? 'none'}
+              data-melody={word.melody ?? 'none'}
+              data-rhythm={word.rhythm ?? 'none'}
+              style={spanStyle(word.start, word.end)}
+              onClick={() => onWord(index)}
+            >
+              <span className="word-chip-text">{word.text}</span>
+              <span className="word-curve">
                 <Curve
+                  compact
                   model={score.model.slice(word.modelFrame, word.modelFrameEnd)}
                   user={score.userOnModel.slice(word.modelFrame, word.modelFrameEnd)}
                   color={word.color}
                 />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Curve model={score.model} user={score.userOnModel} color={null} />
-        )
-      ) : null}
-      {chips.length > 0 ? (
+              </span>
+              <span className="word-marks" aria-hidden="true">
+                <span className={`mark ${word.melody ?? 'plain'}`}>{feedback.melody}</span>
+                <span className={`mark ${word.rhythm ?? 'plain'}`}>{feedback.rhythm}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : chips.length > 0 ? (
         <div className="repeat-words">
           {chips.map((word, index) => (
             <button
