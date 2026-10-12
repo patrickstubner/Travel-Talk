@@ -194,6 +194,11 @@ export function buildDay(
   return { items: [...reviewSlice, ...wordSlice, ...sentenceSlice], sentenceSlots }
 }
 
+/** Due sentences are already in the queue. They do not spend the slots held for sentences this sitting opens. */
+export function newSentenceIds(items: readonly DayItem[]): string[] {
+  return items.filter((item) => item.kind === 'sentence' && item.isNew).map((item) => item.id)
+}
+
 /** Sentences that became free after a word, still inside the slots fixed at the start. */
 export function newlyOpenSentences(
   concepts: readonly { id: string }[],

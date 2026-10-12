@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { FILLERS, WORDS, spokenCitation, wordIds } from '../../content/words'
 import { tryLoadCatalog } from '../content/load'
 import { cardIdFor, orderedConcepts, usableConcepts } from './session'
-import { WORD_BLOCK, buildDay, meaningChoiceIds, meaningChoices, missingKeyword, newlyOpenSentences, sentenceOpen, wordBudget, wordPassed } from './day'
+import { WORD_BLOCK, buildDay, meaningChoiceIds, meaningChoices, missingKeyword, newSentenceIds, newlyOpenSentences, sentenceOpen, wordBudget, wordPassed } from './day'
 import { reviewCard, toStored, fromStored, Rating, emptyCard } from './scheduler'
 import type { Lang } from '../../content/phrase'
 import type { StoredCard } from '../storage/types'
@@ -53,6 +53,27 @@ describe('daily word block', () => {
       'visa.evisa',
       'visa.extend',
     ])
+  })
+
+  it('does not let due sentences take slots from sentences opened today', () => {
+    const list = concepts()
+    const visa = new Set(['visa.days', 'visa.documents', 'visa.evisa', 'visa.extend', 'visa.need', 'visa.photo', 'visa.rules', 'visa.where'])
+    const dueCards = list
+      .filter((concept) => !visa.has(concept.id))
+      .slice(0, 8)
+      .map((concept) => ({ ...passed('de-vi', concept.id), due: now.toISOString() }))
+    const day = buildDay(list, dueCards, 'de-vi', now, 'mix')
+    const dueIds = day.items.filter((item) => item.kind === 'sentence' && !item.isNew).map((item) => item.id)
+    expect(dueIds.length).toBeGreaterThan(0)
+    expect(newSentenceIds(day.items).some((id) => dueIds.includes(id))).toBe(false)
+    const words = day.items.filter((item) => item.kind === 'word' && item.isNew).map((item) => item.id)
+    expect(words.length).toBeGreaterThan(0)
+    const cards = [...dueCards, ...words.map((id) => introducedTodayCard('de-vi', id))]
+    const everySentence = day.items.filter((item) => item.kind === 'sentence').map((item) => item.id)
+    const crowded = newlyOpenSentences(list, cards, 'de-vi', everySentence, day.sentenceSlots, now)
+    const kept = newlyOpenSentences(list, cards, 'de-vi', newSentenceIds(day.items), day.sentenceSlots, now)
+    expect(kept.length).toBeGreaterThan(0)
+    expect(kept.length).toBeGreaterThan(crowded.length)
   })
 
   it('fills free sentence slots with the sentences whose words were passed today', () => {
@@ -160,6 +181,13 @@ describe('daily word block', () => {
     expect(new Set(choices).size).toBe(4)
   })
 
+  it('drops sentences whose words were not passed today', () => {
+    const yesterday = ['w.days', 'w.stay'].map((id) => passed('de-vi', id))
+    const today = introducedTodayCard('de-vi', 'w.documents')
+    const open = newlyOpenSentences(concepts(), [...yesterday, today], 'de-vi', [], 1, now)
+    expect(open).toEqual(['visa.documents'])
+  })
+
   it('skips a synthetic distractor with the same spoken form', () => {
     const forms: Record<string, string> = {
       'w.not': 'não',
@@ -203,7 +231,7 @@ describe('daily word block', () => {
       for (let day = 0; day < 60; day += 1) {
         const clock = new Date(2026, 9, 12 + day, 9, 0, 0)
         const plan = buildDay(list, cards, direction, clock, 'mix')
-        const queued = plan.items.filter((item) => item.kind === 'sentence').map((item) => item.id)
+        const queued = newSentenceIds(plan.items)
         const grade = (id: string) => {
           const cardId = cardIdFor(direction, id)
           const stored = cards.find((card) => card.cardId === cardId)

@@ -170,6 +170,7 @@ export type Dictionary = {
   wordRight: string
   wordWrong: (meaning: string) => string
   todayWords: (count: number) => string
+  sentencesAfterWords: (count: number) => string
   missingWord: (word: string) => string
   reviewCard: (count: number) => string
   reviewNone: string
@@ -251,7 +252,7 @@ export type Dictionary = {
   noReviews: string
   noNewToday: string
   reviewTitle: string
-  startLead: (fresh: number, due: number) => string
+  startLead: (fresh: number, due: number, afterWords?: number) => string
   whoKicker: string
   whoTitle: string
   whoCount: (count: number) => string
@@ -490,6 +491,7 @@ export const de: Dictionary = {
   wordRight: 'Das stimmt.',
   wordWrong: (meaning) => `Gemeint ist «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 neues Wort.' : `${count} neue Wörter.`),
+  sentencesAfterWords: (count) => (count === 1 ? 'bis zu 1 neuer Satz nach den Wörtern' : `bis zu ${count} neue Sätze nach den Wörtern`),
   missingWord: (word) => `Der nächste Satz wartet auf «${word}».`,
   reviewCard: (count) => (count === 1 ? '1 fälliger Satz.' : `${count} fällige Sätze.`),
   reviewNone: 'Fällige Sätze. Heute keine.',
@@ -571,7 +573,8 @@ export const de: Dictionary = {
   noReviews: 'Keine Wiederholung ist fällig.',
   noNewToday: 'Heute keine neuen Sätze mehr. Die Wiederholungen liegen unter Wiederholen.',
   reviewTitle: 'Wiederholen',
-  startLead: (fresh, due) => `${fresh === 1 ? '1 neuer Satz' : `${fresh} neue Sätze`}. ${due === 0 ? 'Keine Wiederholung.' : due === 1 ? '1 Wiederholung.' : `${due} Wiederholungen.`}`,
+  startLead: (fresh, due, afterWords = 0) =>
+    `${fresh === 0 && afterWords > 0 ? (afterWords === 1 ? 'bis zu 1 neuer Satz nach den Wörtern' : `bis zu ${afterWords} neue Sätze nach den Wörtern`) : fresh === 1 ? '1 neuer Satz' : `${fresh} neue Sätze`}. ${due === 0 ? 'Keine Wiederholung.' : due === 1 ? '1 Wiederholung.' : `${due} Wiederholungen.`}`,
   whoKicker: 'Auf diesem Gerät',
   whoTitle: 'Wer lernt?',
   whoCount: (count) => `${count === 1 ? 'Eine' : count === 2 ? 'Zwei' : String(count)} von zehn. Der Name bleibt auf diesem Gerät. Stimmen und Audiodateien sind gemeinsam.`,
@@ -806,6 +809,7 @@ export const en: Dictionary = {
   wordRight: 'That is the one.',
   wordWrong: (meaning) => `The meaning is «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 new word.' : `${count} new words.`),
+  sentencesAfterWords: (count) => (count === 1 ? 'up to 1 new line after the words' : `up to ${count} new lines after the words`),
   missingWord: (word) => `The next line is waiting for «${word}».`,
   reviewCard: (count) => (count === 1 ? '1 line is due.' : `${count} lines are due.`),
   reviewNone: 'Due lines. None today.',
@@ -887,7 +891,8 @@ export const en: Dictionary = {
   noReviews: 'No review is due.',
   noNewToday: 'No new lines today. Reviews are under Review.',
   reviewTitle: 'Review',
-  startLead: (fresh, due) => `${fresh === 1 ? '1 new line' : `${fresh} new lines`}. ${due === 0 ? 'No review.' : due === 1 ? '1 review.' : `${due} reviews.`}`,
+  startLead: (fresh, due, afterWords = 0) =>
+    `${fresh === 0 && afterWords > 0 ? (afterWords === 1 ? 'up to 1 new line after the words' : `up to ${afterWords} new lines after the words`) : fresh === 1 ? '1 new line' : `${fresh} new lines`}. ${due === 0 ? 'No review.' : due === 1 ? '1 review.' : `${due} reviews.`}`,
   whoKicker: 'On this device',
   whoTitle: 'Who is learning?',
   whoCount: (count) => `${count} of ten. The name stays on this device. Voices and audio are shared.`,
@@ -1124,6 +1129,7 @@ export const pt: Dictionary = {
   wordRight: 'É essa.',
   wordWrong: (meaning) => `O sentido é «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 palavra nova.' : `${count} palavras novas.`),
+  sentencesAfterWords: (count) => (count === 1 ? 'até 1 frase nova depois das palavras' : `até ${count} frases novas depois das palavras`),
   missingWord: (word) => `A próxima frase espera «${word}».`,
   reviewCard: (count) => (count === 1 ? '1 frase para revisar.' : `${count} frases para revisar.`),
   reviewNone: 'Frases para revisar. Hoje nenhuma.',
@@ -1205,7 +1211,8 @@ export const pt: Dictionary = {
   noReviews: 'Nenhuma revisão está para hoje.',
   noNewToday: 'Hoje não há frases novas. As revisões ficam em Revisar.',
   reviewTitle: 'Revisar',
-  startLead: (fresh, due) => `${fresh === 1 ? '1 frase nova' : `${fresh} frases novas`}. ${due === 0 ? 'Nenhuma revisão.' : due === 1 ? '1 revisão.' : `${due} revisões.`}`,
+  startLead: (fresh, due, afterWords = 0) =>
+    `${fresh === 0 && afterWords > 0 ? (afterWords === 1 ? 'até 1 frase nova depois das palavras' : `até ${afterWords} frases novas depois das palavras`) : fresh === 1 ? '1 frase nova' : `${fresh} frases novas`}. ${due === 0 ? 'Nenhuma revisão.' : due === 1 ? '1 revisão.' : `${due} revisões.`}`,
   whoKicker: 'Neste aparelho',
   whoTitle: 'Quem aprende?',
   whoCount: (count) => `${count} de dez. O nome fica neste aparelho. Vozes e áudios são compartilhados.`,
@@ -1440,6 +1447,7 @@ export const vi: Dictionary = {
   wordRight: 'Đúng rồi.',
   wordWrong: (meaning) => `Nghĩa là «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 từ mới.' : `${count} từ mới.`),
+  sentencesAfterWords: (count) => `tối đa ${count} câu mới sau các từ`,
   missingWord: (word) => `Câu tiếp theo chờ «${word}».`,
   reviewCard: (count) => (count === 1 ? '1 câu đến hạn.' : `${count} câu đến hạn.`),
   reviewNone: 'Câu đến hạn. Hôm nay không có.',
@@ -1521,7 +1529,8 @@ export const vi: Dictionary = {
   noReviews: 'Không có câu ôn đến hạn.',
   noNewToday: 'Hôm nay không còn câu mới. Phần ôn nằm ở Ôn lại.',
   reviewTitle: 'Ôn lại',
-  startLead: (fresh, due) => `${fresh === 1 ? '1 câu mới' : `${fresh} câu mới`}. ${due === 0 ? 'Không có ôn lại.' : `${due} câu ôn.`}`,
+  startLead: (fresh, due, afterWords = 0) =>
+    `${fresh === 0 && afterWords > 0 ? `tối đa ${afterWords} câu mới sau các từ` : fresh === 1 ? '1 câu mới' : `${fresh} câu mới`}. ${due === 0 ? 'Không có ôn lại.' : `${due} câu ôn.`}`,
   whoKicker: 'Trên máy này',
   whoTitle: 'Ai đang học?',
   whoCount: (count) => `${count} trong mười. Tên ở trên máy này. Giọng và tệp âm thanh dùng chung.`,

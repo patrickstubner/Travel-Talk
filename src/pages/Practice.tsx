@@ -16,7 +16,7 @@ import { RepeatFeedback } from '../components/RepeatFeedback'
 import { RichText } from '../components/RichText'
 import { spokenCitation, wordAudioFile, wordById } from '../../content/words'
 import { Rating, emptyCard, fromStored, previewDue, reviewCard, toStored, type Grade } from '../srs/scheduler'
-import { buildDay, meaningChoices, newlyOpenSentences, type DayItem } from '../srs/day'
+import { buildDay, meaningChoices, newSentenceIds, newlyOpenSentences, type DayItem } from '../srs/day'
 import {
   cardIdFor,
   currentDirection,
@@ -414,7 +414,7 @@ export function PracticePage() {
       await saveCard(next)
       const cards = [...cardsNow.filter((card) => card.cardId !== cardId), next]
       const usable = usableConcepts(orderedConcepts(book), app, targetLang, settings.viRegion)
-      const queued = queueRef.current.filter((entry) => entry.kind === 'sentence').map((entry) => entry.id)
+      const queued = newSentenceIds(queueRef.current)
       const open = newlyOpenSentences(usable, cards, activeDirection, queued, sentenceSlots.current, now)
       if (open.length > 0) {
         setQueue((current) => [...current, ...open.map((id) => ({ id, isNew: true, kind: 'sentence' as const }))])
