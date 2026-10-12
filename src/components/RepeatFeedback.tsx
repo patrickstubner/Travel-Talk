@@ -21,22 +21,41 @@ import {
 
 const TONE_ORDER: ToneId[] = ['ngang', 'huyen', 'sac', 'hoi', 'nga', 'nang']
 
-function drawPair(canvas: HTMLCanvasElement, model: Contour, user: Contour, wash: string): void {
+/** Curve fill and strokes. Light pages keep the 0.8.0 colours. Show mode uses a dark wash and light strokes. */
+export function curveColors(dark: boolean, band: Band | null): { wash: string; model: string; you: string; guide: string } {
+  if (dark) {
+    return {
+      wash: band === 'red' ? '#3a2a22' : band === 'yellow' ? '#3a3220' : band === 'green' ? '#1a3330' : '#24303a',
+      model: '#7dcec4',
+      you: '#e7a090',
+      guide: '#7d8b99',
+    }
+  }
+  return {
+    wash: band === 'red' ? '#f8e4df' : band === 'yellow' ? '#f8efd8' : band === 'green' ? '#e7f4ee' : '#fffaf3',
+    model: '#0e6b66',
+    you: '#9c3b2e',
+    guide: '#e2d5c3',
+  }
+}
+
+function drawPair(canvas: HTMLCanvasElement, model: Contour, user: Contour, band: Band | null): void {
   const context = canvas.getContext('2d')
   if (!context) return
+  const colors = curveColors(canvas.closest('.show-mode') != null, band)
   const width = canvas.width
   const height = canvas.height
   context.clearRect(0, 0, width, height)
-  context.fillStyle = wash
+  context.fillStyle = colors.wash
   context.fillRect(0, 0, width, height)
-  context.strokeStyle = '#e2d5c3'
+  context.strokeStyle = colors.guide
   context.lineWidth = 1
   context.beginPath()
   context.moveTo(8, height / 2)
   context.lineTo(width - 8, height / 2)
   context.stroke()
-  stroke(context, model, '#0e6b66', width, height)
-  stroke(context, user, '#9c3b2e', width, height)
+  stroke(context, model, colors.model, width, height)
+  stroke(context, user, colors.you, width, height)
 }
 
 function stroke(context: CanvasRenderingContext2D, contour: Contour, color: string, width: number, height: number): void {
@@ -62,18 +81,11 @@ function stroke(context: CanvasRenderingContext2D, contour: Contour, color: stri
   context.stroke()
 }
 
-function wash(color: Band | null): string {
-  if (color === 'red') return '#f8e4df'
-  if (color === 'yellow') return '#f8efd8'
-  if (color === 'green') return '#e7f4ee'
-  return '#fffaf3'
-}
-
 function Curve({ model, user, color }: { model: Contour; user: Contour; color: Band | null }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const canvas = ref.current
-    if (canvas) drawPair(canvas, model, user, wash(color))
+    if (canvas) drawPair(canvas, model, user, color)
   }, [color, model, user])
   return <canvas ref={ref} className="pitch-canvas" width={280} height={140} />
 }

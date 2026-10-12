@@ -98,6 +98,7 @@ export type Dictionary = {
   needPair: string
   progress: (index: number, total: number) => string
   forOther: string
+  showPurpose: string
   hideGloss: string
   showGloss: string
   showNote: string
@@ -400,6 +401,8 @@ export const de: Dictionary = {
   needPair: 'Bitte zuerst ein Sprachpaar wählen.',
   progress: (index, total) => `${index} von ${total}`,
   forOther: 'Für die andere Person',
+  showPurpose:
+    'Zeigen stellt einen Satz gross auf den Bildschirm, damit du ihn jemandem hinhältst, zum Beispiel im Notfall oder in der Apotheke, und das Audio lässt sich abspielen.',
   hideGloss: 'Bedeutung ausblenden',
   showGloss: 'Bedeutung einblenden',
   showNote: 'Persönliche Notiz zeigen',
@@ -470,7 +473,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.8.0',
+  version: 'Version 0.8.1',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
@@ -711,6 +714,8 @@ export const en: Dictionary = {
   needPair: 'Choose a language pair first.',
   progress: (index, total) => `${index} of ${total}`,
   forOther: 'For the other person',
+  showPurpose:
+    'Show puts a phrase large on the screen so you can hold it up to someone else, for example in an emergency or at a pharmacy, and the audio can be played.',
   hideGloss: 'Hide the meaning',
   showGloss: 'Show the meaning',
   showNote: 'Show personal note',
@@ -1018,6 +1023,8 @@ export const pt: Dictionary = {
   needPair: 'Escolha primeiro um par de línguas.',
   progress: (index, total) => `${index} de ${total}`,
   forOther: 'Para a outra pessoa',
+  showPurpose:
+    'Mostrar põe uma frase grande na tela para você mostrar a outra pessoa, por exemplo numa emergência ou na farmácia, e o áudio pode ser tocado.',
   hideGloss: 'Esconder o sentido',
   showGloss: 'Mostrar o sentido',
   showNote: 'Mostrar nota pessoal',
@@ -1327,6 +1334,8 @@ export const vi: Dictionary = {
   needPair: 'Hãy chọn một cặp ngôn ngữ trước.',
   progress: (index, total) => `${index} trên ${total}`,
   forOther: 'Cho người kia đọc',
+  showPurpose:
+    'Đưa hiện một câu lớn trên màn hình để đưa cho người khác xem, ví dụ khi cấp cứu hoặc ở nhà thuốc, và có thể phát âm thanh.',
   hideGloss: 'Ẩn nghĩa',
   showGloss: 'Hiện nghĩa',
   showNote: 'Hiện ghi chú cá nhân',

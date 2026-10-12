@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1 — 2026-10-12
+
+- Im Zeigen-Modus sind Karten, Knöpfe, Chips, Karaoke-Wörter, Hinweise, Statusfelder und Details dunkel, mit heller Schrift. Das gilt auch für die obere Leiste und die Navigation. Der Text erreicht WCAG AA (4,5:1, grosse Schrift 3:1).
+- Unter «Für die andere Person» steht, wozu Zeigen da ist: ein Satz gross auf dem Bildschirm, zum Hinhalt an jemand anderen, zum Beispiel im Notfall oder in der Apotheke, und das Audio lässt sich abspielen. Derselbe Satz steht auf Englisch, Portugiesisch (Brasilien) und Vietnamesisch.
+- Kurve, Wortfarben und Balken aus 0.8.0 bleiben auf der Satzseite und in der Übung. Im Zeigen-Modus sind dieselben Flächen dunkel: Wort-Chips, Tonkacheln, Balken und die gezeichnete Kurve. Grün, gelb und rot bleiben unterscheidbar, und der Text bleibt bei WCAG AA.
+
 ## 0.8.0 — 2026-10-12
 
 - Nach jeder Aufnahme, beim Nachsprechen in der Übung und auf der Satzseite, liegt die eigene Tonhöhe über der Kurve der gehörten Datei. Die Wörter stehen darunter. Grün, gelb oder rot ist das schlechtere von Melodie und Rhythmus. Zu wenig stimmhafte Frames im Modell bleiben ungefärbt.

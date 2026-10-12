@@ -149,11 +149,61 @@ textarea { min-height: 5rem; white-space: pre-wrap; }
 .swatch.model::before { background: var(--teal); }
 .swatch.you::before { background: var(--clay); }
 .show h1 { font-size: clamp(2.4rem, 8vw, 4.4rem); }
-.show-mode { background: #14181c; color: #f4efe6; }
+.show-purpose { margin: 0; max-width: 40rem; line-height: 1.45; }
+body:has(.show-mode) { background: #14181c; }
+.show-mode {
+  --paper: #14181c;
+  --ink: #f4efe6;
+  --card: #24303a;
+  --line: #7d8b99;
+  --muted: #d4c8b6;
+  --gold: #f0c27a;
+  background: var(--paper);
+  color: var(--ink);
+  color-scheme: dark;
+}
 .show-mode .top, .show-mode .nav a, .show-mode a { color: #f4efe6; }
-.show-mode .nav a[aria-current="page"] { background: var(--teal); }
+.show-mode .nav a[aria-current="page"] { background: var(--teal); color: #f7f3ea; }
 .show-mode main { max-width: 60rem; }
 .show-mode .for-other { letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.8rem; color: #d9c7a4; }
+.show-mode .skip,
+.show-mode .top-menu,
+.show-mode .card,
+.show-mode fieldset,
+.show-mode .record,
+.show-mode .pitch,
+.show-mode .culture,
+.show-mode a.menu-card,
+.show-mode details,
+.show-mode summary {
+  background: var(--card);
+  color: var(--ink);
+}
+.show-mode summary { padding: 0.55rem 0.8rem; }
+.show-mode details { border: 1px solid var(--line); border-radius: 1rem; }
+.show-mode .button.wide { background: var(--card); color: var(--ink); border-color: var(--teal); }
+.show-mode .banner,
+.show-mode .warn,
+.show-mode .voice-note,
+.show-mode p[role="status"],
+.show-mode p[role="alert"] {
+  background: #3a2a22;
+  color: #f4efe6;
+}
+.show-mode .warn { border-left-color: #e7a090; }
+.show-mode .person-shared { background: #1a3330; color: #f4efe6; }
+.show-mode input,
+.show-mode select,
+.show-mode textarea,
+.show-mode option {
+  background: var(--card);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.show-mode .slot { background: #4a3d2e; color: #f4efe6; }
+.show-mode .badge { background: var(--card); color: var(--muted); }
+.show-mode .target-line.playing { background: #1a3330; color: #f4efe6; }
+.show-mode .pitch-canvas { background: var(--card); }
 .prompt { font-family: var(--serif); font-size: 1.5rem; }
 .eyebrow { margin: 0; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.75rem; color: var(--muted); }
 .pad { padding: 0.95rem 1rem; }
@@ -232,6 +282,12 @@ a.menu-card span { color: var(--muted); }
 }
 .karaoke button.now,
 .karaoke button.now[aria-pressed="true"] { background: #b7e0d4; color: inherit; }
+.show-mode .karaoke button { background: #24303a; color: #f4efe6; }
+.show-mode .karaoke button[aria-pressed="true"] {
+  background: #2c3a46;
+  color: #f4efe6;
+  box-shadow: inset 0 -2px 0 #8fd0c6;
+}
 .show-mode .karaoke button.now,
 .show-mode .karaoke button.now[aria-pressed="true"] { background: #24574d; color: #f4efe6; }
 .word-gloss { margin: 0; }
@@ -285,6 +341,19 @@ a.menu-card span { color: var(--muted); }
 .tone-tile span { color: var(--muted); font-size: 0.85rem; }
 .tone-tile.on { background: #f8e4df; border-color: var(--clay); }
 .tone-you { background: #f8e4df; }
+.show-mode .word-chip { background: #24303a; color: #f4efe6; }
+.show-mode .word-chip.green { background: #1a3330; color: #9be7b8; border-color: #9be7b8; }
+.show-mode .word-chip.yellow { background: #3a3220; color: #f0c27a; border-color: #f0c27a; }
+.show-mode .word-chip.red { background: #3a2a22; color: #ffd0c6; border-color: #e7a090; }
+.show-mode .score-track { background: #1a222a; }
+.show-mode .score-track.passt .score-fill { background: #5ee0d4; }
+.show-mode .score-track.teilweise .score-fill { background: #f0c27a; }
+.show-mode .score-track.daneben .score-fill { background: #e7a090; }
+.show-mode .tone-tile,
+.show-mode .tone-you { background: #24303a; color: #f4efe6; }
+.show-mode .tone-tile.on,
+.show-mode .tone-you { background: #3a2a22; color: #f4efe6; border-color: #e7a090; }
+.show-mode .tone-tile span { color: #d4c8b6; }
 
 @media (min-width: 800px) {
   .layout { display: grid; grid-template-columns: 13rem minmax(0, 1fr); min-height: calc(100vh - 4rem); }
