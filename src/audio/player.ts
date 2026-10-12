@@ -131,7 +131,13 @@ export async function playClip(
     if (current === audio) stopClock()
     if (token === playToken) onEnd?.()
   }
-  audio.onerror = () => halt()
+  audio.onerror = () => {
+    if (halted) return
+    const stillCurrent = token === playToken
+    halt()
+    // A decode error used to notify the end. Callers without a stop signal still leave «Läuft».
+    if (stillCurrent) onEnd?.()
+  }
   audio.onpause = () => {
     if (audio.ended || halted) return
     halt()
@@ -145,12 +151,20 @@ export async function playClip(
     audio.onended = null
     audio.onpause = null
     audio.onerror = null
+    if (current === audio) {
+      stopClock()
+      current = null
+    }
+    audio.pause()
     if (token !== playToken) {
       onStop?.()
       return 'file'
     }
     if (!cached) return 'offline'
+    // play() refused a file that is already stored (NotAllowedError, decode). The old end
+    // signal still fires, and the stop signal tells callers that passed one to reset.
     onStop?.()
+    onEnd?.()
     return 'file'
   }
   if (halted) return 'file'

@@ -149,6 +149,7 @@ export function LanguageChoice({
                     copy={copy}
                     dropOnSuccess={shown === voice.id}
                     retainIds={retainIds}
+                    helpLang={settings.appLang ?? undefined}
                     onKeepPrevious={previousReady ? () => keepPreviousVoice(voice.id) : undefined}
                   />
                 </div>

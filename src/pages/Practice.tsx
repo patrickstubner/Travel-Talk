@@ -150,24 +150,26 @@ export function PracticePage() {
     setSeconds(0)
     setClipDuration(null)
     setOfflineAudio(false)
+    const release = (): void => {
+      if (live && aliveRef.current) {
+        lockedFile.current = ''
+        setPlaying(false)
+        setSeconds(null)
+      }
+    }
     void playClip(
       tempoFile(spokenFile(settings, settings.targetLang, line.file), rate),
       line.speech,
       settings.targetLang,
       rate,
-      () => {
-        if (live && aliveRef.current) {
-          lockedFile.current = ''
-          setPlaying(false)
-          setSeconds(null)
-        }
-      },
+      release,
       (time) => {
         if (live && aliveRef.current) setSeconds(time)
       },
       (duration) => {
         if (live && aliveRef.current) setClipDuration(duration)
       },
+      release,
     ).then((result) => {
       if (!live || !aliveRef.current) return
       if (result === 'offline') {
@@ -241,24 +243,26 @@ export function PracticePage() {
     setPlaying(true)
     setSeconds(0)
     setOfflineAudio(false)
+    const release = (): void => {
+      if (live && aliveRef.current) {
+        lockedFile.current = ''
+        setPlaying(false)
+        setSeconds(null)
+      }
+    }
     void playClip(
       file,
       speech,
       settings.targetLang,
       0.7,
-      () => {
-        if (live && aliveRef.current) {
-          lockedFile.current = ''
-          setPlaying(false)
-          setSeconds(null)
-        }
-      },
+      release,
       (time) => {
         if (live && aliveRef.current) setSeconds(time)
       },
       (duration) => {
         if (live && aliveRef.current) setClipDuration(duration)
       },
+      release,
     ).then((result) => {
       if (!live || !aliveRef.current) return
       if (result === 'offline') {
@@ -335,23 +339,25 @@ export function PracticePage() {
     setOfflineAudio(false)
     setSeconds(0)
     setClipDuration(null)
+    const release = (): void => {
+      if (!aliveRef.current) return
+      lockedFile.current = ''
+      setPlaying(false)
+      setSeconds(null)
+    }
     const result = await playClip(
       played,
       speech,
       targetLang,
       rate,
-      () => {
-        if (!aliveRef.current) return
-        lockedFile.current = ''
-        setPlaying(false)
-        setSeconds(null)
-      },
+      release,
       (time) => {
         if (aliveRef.current) setSeconds(time)
       },
       (duration) => {
         if (aliveRef.current) setClipDuration(duration)
       },
+      release,
     )
     if (aliveRef.current && result === 'offline') {
       lockedFile.current = ''

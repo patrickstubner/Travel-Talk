@@ -26,6 +26,7 @@ export function VoiceOfflineButton({
   onKeepPrevious,
   pendingNote,
   retainIds = [],
+  helpLang,
 }: {
   lang: Lang
   voice: CatalogVoice
@@ -36,12 +37,16 @@ export function VoiceOfflineButton({
   pendingNote?: string
   /** Other people's voices of this language. A full download must not delete them. */
   retainIds?: readonly string[]
+  /** Explanation clips for this app language. Omitted when the app language is not chosen yet. */
+  helpLang?: Lang
 }) {
   const [phase, setPhase] = useState<Phase>({ kind: 'check' })
   const dropRef = useRef(dropOnSuccess)
   dropRef.current = dropOnSuccess
   const retainRef = useRef(retainIds)
   retainRef.current = retainIds
+  const helpRef = useRef(helpLang)
+  helpRef.current = helpLang
   const run = useRef(0)
   const busy = useRef(false)
 
@@ -78,7 +83,7 @@ export function VoiceOfflineButton({
       (have, total) => {
         if (run.current === token) setPhase({ kind: 'loading', have, total })
       },
-      { dropOthers: () => dropRef.current, retainIds: retainRef.current },
+      { dropOthers: () => dropRef.current, retainIds: retainRef.current, helpLang: helpRef.current },
     )
     busy.current = false
     if (run.current !== token) return

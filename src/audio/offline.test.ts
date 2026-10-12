@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defaultSettings } from '../storage/types'
 import { voicesFor } from './voices'
-import { AUDIO_CACHE, discardAdded, dropOtherVoices, dropReplacedClips, forgetVoiceIfUnused, loadVoiceOffline, startAudioMaintenance, voiceProgress } from './offline'
+import { AUDIO_CACHE, HELP_CACHE, discardAdded, dropOtherVoices, dropReplacedClips, forgetVoiceIfUnused, loadVoiceOffline, startAudioMaintenance, voiceProgress } from './offline'
 
 const FILES = [
   'vi/vivos-22/emergency.help__any__base.m4a',
@@ -12,6 +12,8 @@ const FILES = [
   'vi/emergency.help__any__base.m4a',
   'vi/emergency.help__any__base.r70.m4a',
   'vi/emergency.help__any__base.align.json',
+  'de/help/ui.mic__any__base.m4a',
+  'en/help/ui.mic__any__base.m4a',
 ]
 
 type Store = Map<string, string>
@@ -177,16 +179,23 @@ describe('offline voice loading', () => {
 
   it('caches only status 200 and does not migrate audio during install', () => {
     const text = readFileSync(fileURLToPath(new URL('../../rsbuild.config.ts', import.meta.url)), 'utf8')
+    const policy = readFileSync(fileURLToPath(new URL('../pwa/cache-policy.ts', import.meta.url)), 'utf8')
     expect(text).toContain('statuses: [200]')
     expect(text).not.toContain('[0, 200]')
     expect(text).toMatch(/maxEntries:\s*8000/)
-    expect(text).toContain('**/*.align.json')
+    expect(policy).toContain('**/*.align.json')
+    expect(text).toContain('PRECACHE_IGNORES')
     expect(text).toContain('align\\.json')
     expect(text).toContain('cleanupOutdatedCaches: false')
-    expect(text).toContain('audio/*/help/*.m4a')
+    expect(text).toContain('HELP_CACHE')
+    expect(text).toContain('maxEntries: HELP_CACHE_LIMIT')
+    expect(text).toContain('travel-talk-audio')
+    expect(text).not.toContain('audio/*/help/*.m4a')
     expect(text).not.toContain('**/*.m4a')
     expect(text).not.toContain('sw-migrate')
     expect(text).not.toContain('importScripts')
+    expect(text).toContain('HELP_IN_PRECACHE')
+    expect(text).toContain('PRECACHE_TOO_BIG')
   })
 
   it('keeps more than one situation of room above the manifest', () => {
@@ -370,5 +379,35 @@ describe('offline voice loading', () => {
     const source = readFileSync(fileURLToPath(new URL('../main.tsx', import.meta.url)), 'utf8')
     expect(source).toContain('startAudioMaintenance()')
     vi.unstubAllGlobals()
+  })
+
+  it('stores help clips for the app language only and leaves them out of the voice count', async () => {
+    const stores = installCaches()
+    stores.set(HELP_CACHE, new Map([['/audio/en/help/ui.mic__any__base.m4a', 'english']]))
+    const seen: string[] = []
+    const outcome = await loadVoiceOffline('vi', voice('vivos-22'), (have, total) => {
+      seen.push(`${have}/${total}`)
+    }, { dropOthers: () => false, helpLang: 'de' })
+    expect(outcome.status).toBe('ready')
+    expect(seen.at(-1)).toBe('3/3')
+    const help = [...(stores.get(HELP_CACHE)?.keys() ?? [])]
+    expect(help.some((url) => url.includes('/de/help/ui.mic'))).toBe(true)
+    expect(help.some((url) => url.includes('/en/help/'))).toBe(false)
+    const runtime = [...(stores.get(AUDIO_CACHE)?.keys() ?? [])]
+    expect(runtime.some((url) => url.includes('/help/'))).toBe(false)
+  })
+
+  it('keeps explanation clips when another voice of that language is dropped', async () => {
+    const stores = installCaches()
+    const help = '/audio/vi/help/ui.mic__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([
+      [help, 'help'],
+      ['/audio/vi/vivos-22/emergency.help__any__base.m4a', 'voice'],
+    ]))
+    stores.set(HELP_CACHE, new Map([[help, 'help']]))
+    await dropOtherVoices('vi', voice('vais1000'))
+    expect(stores.get(AUDIO_CACHE)?.has(help)).toBe(true)
+    expect(stores.get(HELP_CACHE)?.has(help)).toBe(true)
+    expect(stores.get(AUDIO_CACHE)?.has('/audio/vi/vivos-22/emergency.help__any__base.m4a')).toBe(false)
   })
 })

@@ -137,18 +137,20 @@ export function ShowPage() {
             setSeconds(0)
             setClipDuration(null)
             setOfflineAudio(false)
+            const release = (): void => {
+              lockedFile.current = ''
+              setPlaying(false)
+              setSeconds(null)
+            }
             void playClip(
               file,
               target.speech,
               targetLang,
               step,
-              () => {
-                lockedFile.current = ''
-                setPlaying(false)
-                setSeconds(null)
-              },
+              release,
               (time) => setSeconds(time),
               (duration) => setClipDuration(duration),
+              release,
             ).then((result) => {
               if (result === 'offline') {
                 lockedFile.current = ''

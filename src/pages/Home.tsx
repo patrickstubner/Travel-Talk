@@ -156,6 +156,7 @@ function OfflineOffer({
         dropOnSuccess
         pendingNote={copy.offlineReload}
         retainIds={retainIds}
+        helpLang={settings.appLang ?? undefined}
         onKeepPrevious={previousId ? () => onKeepVoice(previousId) : undefined}
       />
     </section>
