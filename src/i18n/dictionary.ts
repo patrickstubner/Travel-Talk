@@ -59,8 +59,10 @@ export type Dictionary = {
     noWordTimes: string
     tooShort: string
     quiet: string
+    file: string
+    otherSentence: string
     few: string
-    modelGap: string
+    modelGap: (word: string) => string
     again: string
     sequential: string
     backSentence: string
@@ -357,8 +359,10 @@ export const de: Dictionary = {
     noWordTimes: 'Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.',
     tooShort: 'Zu kurz. Sprich den ganzen Satz.',
     quiet: 'Zu leise. Geh näher ans Mikrofon und sprich noch einmal.',
+    file: 'In dieser Datei ist zu wenig Stimme. Nochmal ändert daran nichts.',
+    otherSentence: 'Das klingt nach einem anderen Satz. Hör die Datei noch einmal und sprich denselben.',
     few: 'Nur ein Teil der Wörter ist bewertet. Die Balken gelten für diesen Teil.',
-    modelGap: 'In der Datei hat dieses Wort zu wenig Stimme. Nochmal ändert daran nichts.',
+    modelGap: (word) => `In der Datei hat «${word}» zu wenig Stimme. Nochmal ändert daran nichts.`,
     again: 'Nochmal',
     sequential: 'Nacheinander. Beide laufen nicht zugleich.',
     backSentence: 'Zurück zum Satz',
@@ -681,8 +685,10 @@ export const en: Dictionary = {
     noWordTimes: 'This voice has no word timings. The curve stays, and the words stay grey.',
     tooShort: 'Too short. Say the whole sentence.',
     quiet: 'Too quiet. Move closer to the microphone and try again.',
+    file: 'This file has too little voice. Another take will not change that.',
+    otherSentence: 'That sounds like a different sentence. Listen to the file again and say the same one.',
     few: 'Only part of the words could be scored. The bars cover that part.',
-    modelGap: 'This word has too little voice in the file. Another take will not change that.',
+    modelGap: (word) => `«${word}» has too little voice in the file. Another take will not change that.`,
     again: 'Once more',
     sequential: 'One after the other. The two do not play together.',
     backSentence: 'Back to the sentence',
@@ -1002,8 +1008,10 @@ export const pt: Dictionary = {
     noWordTimes: 'Esta voz não tem os tempos das palavras. A curva fica, e as palavras ficam cinza.',
     tooShort: 'Curto demais. Fale a frase inteira.',
     quiet: 'Baixo demais. Chegue mais perto do microfone e tente de novo.',
+    file: 'Neste arquivo há pouca voz. Outra tentativa não muda o arquivo.',
+    otherSentence: 'Parece outra frase. Ouça o arquivo de novo e fale a mesma.',
     few: 'Só uma parte das palavras foi avaliada. As barras valem para essa parte.',
-    modelGap: 'Esta palavra tem pouca voz no arquivo. Outra tentativa não muda isso.',
+    modelGap: (word) => `«${word}» tem pouca voz no arquivo. Outra tentativa não muda o arquivo.`,
     again: 'De novo',
     sequential: 'Um depois do outro. Os dois não tocam juntos.',
     backSentence: 'Voltar à frase',
@@ -1325,8 +1333,10 @@ export const vi: Dictionary = {
     noWordTimes: 'Giọng này không có thời điểm từng từ. Đường cong vẫn còn, các từ vẫn xám.',
     tooShort: 'Quá ngắn. Nói cả câu.',
     quiet: 'Quá nhỏ. Đưa lại gần micro và nói lại.',
+    file: 'Tệp này ít thanh. Nói lại cũng không đổi tệp.',
+    otherSentence: 'Nghe như một câu khác. Nghe lại tệp và nói đúng câu đó.',
     few: 'Chỉ một phần các từ được chấm. Cột chỉ tính phần đó.',
-    modelGap: 'Từ này trong tệp ít thanh. Nói lại cũng không đổi.',
+    modelGap: (word) => `«${word}» trong tệp ít thanh. Nói lại cũng không đổi.`,
     again: 'Lại',
     sequential: 'Lần lượt. Không phát cùng lúc.',
     backSentence: 'Về câu',

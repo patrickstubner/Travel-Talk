@@ -6,14 +6,18 @@ export type ClipFeatures = {
   contour: Contour
   energy: number[]
   bands: number[][]
+  /** Unshifted band shape. The reverse lock uses this, not a frequency warp. */
+  plainBands: number[][]
 }
 
 /** Features of the file the learner just heard. */
 export function analyzeModel(samples: Float32Array, rate: number): ClipFeatures {
+  const bands = bandShape(samples, rate)
   return {
     contour: contourFromSamples(samples, rate),
     energy: frameEnergy(samples, rate),
-    bands: bandShape(samples, rate),
+    bands,
+    plainBands: bands,
   }
 }
 
@@ -26,9 +30,12 @@ export function analyzeUser(
   rate: number,
   modelBands: readonly (readonly number[])[] | null,
 ): ClipFeatures {
+  const shaped = modelBands && modelBands.length > 0 ? closestBands(modelBands, samples, rate) : null
+  const plain = shaped?.plain ?? bandShape(samples, rate)
   return {
     contour: contourFromSamples(samples, rate),
     energy: frameEnergy(samples, rate),
-    bands: modelBands && modelBands.length > 0 ? closestBands(modelBands, samples, rate) : bandShape(samples, rate),
+    bands: shaped?.closest ?? plain,
+    plainBands: plain,
   }
 }

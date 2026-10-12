@@ -178,6 +178,7 @@ export function RepeatFeedback({
       userEnergy: userFeatures.energy,
       modelBands: modelFeatures.bands,
       userBands: userFeatures.bands,
+      userPlainBands: userFeatures.plainBands,
     })
   }, [lang, modelFeatures, modelRate, region, speech, userFeatures, userRate, userSamples, words])
 
@@ -318,19 +319,28 @@ function Result({
       start: 0,
       end: 0,
     }))
+  const coloured = chips.some((word) => word.color != null)
+  const melodyBar = score?.melodyBar ?? null
+  const rhythmBar = score?.rhythmBar ?? null
+  const showBars = Boolean(melodyBar && rhythmBar && coloured)
+  const gapWord = scored?.find((word) => !word.scorable)
   const notice = tooShort
     ? feedback.tooShort
-    : tooQuiet
-      ? feedback.quiet
-      : timingMissing
-        ? feedback.noWordTimes
-        : score?.unclear
-          ? feedback.unclear
-          : score?.fewWords
-            ? feedback.few
-            : scored?.some((word) => !word.scorable)
-              ? feedback.modelGap
-              : null
+    : score?.reason === 'file'
+      ? feedback.file
+      : tooQuiet
+        ? feedback.quiet
+        : timingMissing
+          ? feedback.noWordTimes
+          : !showBars && score?.unclear
+            ? feedback.unclear
+            : score?.fewWords
+              ? feedback.few
+              : showBars && score?.otherSentence
+                ? feedback.otherSentence
+                : gapWord
+                  ? feedback.modelGap(gapWord.text)
+                  : null
   return (
     <div className="stack">
       <p className="legend">
@@ -381,10 +391,10 @@ function Result({
           ))}
         </div>
       ) : null}
-      {score?.melodyBar && score.rhythmBar ? (
+      {showBars && melodyBar && rhythmBar ? (
         <div className="repeat-bars">
-          <ScoreBar label={feedback.melody} state={score.melodyBar} copy={copy} testId="melody-bar" />
-          <ScoreBar label={feedback.rhythm} state={score.rhythmBar} copy={copy} testId="rhythm-bar" />
+          <ScoreBar label={feedback.melody} state={melodyBar} copy={copy} testId="melody-bar" />
+          <ScoreBar label={feedback.rhythm} state={rhythmBar} copy={copy} testId="rhythm-bar" />
         </div>
       ) : null}
       {lang === 'vi' && voiceId === 'vais1000' ? <p className="hint">{feedback.northern}</p> : null}

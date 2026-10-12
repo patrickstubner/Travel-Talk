@@ -6,8 +6,10 @@ import {
   DRONE_ENERGY,
   MELODY_GREEN,
   MOVING_RANGE,
+  RHYTHM_GREEN_MAX,
   SPECTRAL_DISTANCE_MAX,
   contentMismatch,
+  reversedRecording,
   spectralReversed,
   barFromColours,
   correlation,
@@ -174,6 +176,8 @@ describe('repeat alignment', () => {
     expect(factor).toBeLessThan(1.8)
     expect(againstNormal.words?.every((word) => word.melody === 'green')).toBe(true)
     expect(againstNormal.words?.every((word) => word.color !== 'red')).toBe(true)
+    expect(againstNormal.words?.every((word) => (word.rawRatio ?? 0) > RHYTHM_GREEN_MAX)).toBe(true)
+    expect(againstNormal.words?.every((word) => word.rhythm === 'yellow')).toBe(true)
     expect(againstNormal.rhythmBar).not.toBe('passt')
     expect(againstNormal.melodyBar).toBe('passt')
     const heard = scoreRepeat({
@@ -649,7 +653,7 @@ describe('repeat alignment', () => {
     expect(same.unclear).toBe(false)
   })
 
-  it('calls the take unclear when every word runs the other way', () => {
+  it('keeps the bars when every word runs the other way and still has a colour', () => {
     const model = [...ramp(30, -1, 2), ...ramp(30, -2.5, 0.5), ...ramp(30, 0, 2.4)]
     const user = [...ramp(30, 1.5, -1.2), ...ramp(30, 0.4, -2), ...ramp(30, 2.2, -0.4)]
     const words = [0, 1, 2].map((index) => ({ text: 'qua', start: index * 0.3, end: (index + 1) * 0.3 }))
@@ -667,7 +671,10 @@ describe('repeat alignment', () => {
     expect(takeRunsBackwards(['opposed', 'opposed', 'opposed'])).toBe(true)
     expect(takeRunsBackwards(['opposed', 'same', 'opposed'])).toBe(false)
     expect(takeRunsBackwards(['unknown'])).toBe(false)
-    expect(opposed.unclear).toBe(true)
+    expect(opposed.words?.some((word) => word.color != null)).toBe(true)
+    expect(opposed.melodyBar).not.toBeNull()
+    expect(opposed.rhythmBar).not.toBeNull()
+    expect(opposed.unclear).toBe(false)
     const last = [...user.slice(0, 60), ...model.slice(60)]
     const partial = scoreRepeat({
       model,
@@ -844,10 +851,12 @@ describe('repeat alignment', () => {
     expect(kept.rhythmBar).not.toBeNull()
   })
 
-  it('rejects a band shape that fits the file better backwards', () => {
+  it('locks a band shape that fits the file better backwards', () => {
     const rising = Array.from({ length: 24 }, (_, index) => Array.from({ length: 12 }, (_, band) => (index + 1) * (band + 1)))
     expect(spectralReversed(rising, rising)).toBe(false)
     expect(spectralReversed(rising, [...rising].reverse())).toBe(true)
+    expect(reversedRecording(rising, rising)).toBe(false)
+    expect(reversedRecording(rising, [...rising].reverse())).toBe(true)
     const contour = ramp(24, -1, 2)
     const score = scoreRepeat({
       model: contour,
@@ -861,8 +870,48 @@ describe('repeat alignment', () => {
       modelBands: rising,
       userBands: [...rising].reverse(),
     })
+    expect(score.unclear).toBe(true)
+    expect(score.reason).toBe('unclear')
+    expect(score.words).toBeNull()
+    expect(score.melodyBar).toBeNull()
+    expect(score.rhythmBar).toBeNull()
+    expect(score.otherSentence).toBe(false)
+    const sameBands = scoreRepeat({
+      model: contour,
+      user: contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.24 }],
+      lang: 'de',
+      region: 'south',
+      userDuration: 0.4,
+      modelBands: rising,
+      userBands: rising,
+      userPlainBands: [...rising].reverse(),
+    })
+    expect(reversedRecording(rising, rising)).toBe(false)
+    expect(sameBands.unclear).toBe(true)
+    expect(sameBands.melodyBar).toBeNull()
+    expect(sameBands.reason).toBe('unclear')
+  })
+
+  it('names a thin model file instead of calling the take quiet', () => {
+    const score = scoreRepeat({
+      model: flat(40, null),
+      user: ramp(40, -1, 2),
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'Help!', start: 0, end: 0.4 }],
+      lang: 'en',
+      region: 'south',
+      userDuration: 0.5,
+    })
+    expect(score.reason).toBe('file')
+    expect(score.tooLittleVoice).toBe(false)
+    expect(score.tooShort).toBe(false)
     expect(score.unclear).toBe(false)
-    expect(score.melodyBar).not.toBeNull()
+    expect(score.melodyBar).toBeNull()
+    expect(score.rhythmBar).toBeNull()
   })
 
   it('keeps the bars when the band shape does not move with the file', () => {
@@ -884,6 +933,7 @@ describe('repeat alignment', () => {
       userBands: hum,
     })
     expect(score.unclear).toBe(false)
+    expect(score.otherSentence).toBe(true)
     expect(score.melodyBar).not.toBeNull()
     expect(score.rhythmBar).not.toBeNull()
   })

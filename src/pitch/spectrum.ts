@@ -37,13 +37,14 @@ export function closestBands(
   modelBands: readonly (readonly number[])[] | null | undefined,
   input: Float32Array,
   rate: number,
-): number[][] {
+): { closest: number[][]; plain: number[][] } {
   const prepared = framePowers(input, rate)
-  if (!prepared) return []
-  if (!modelBands || modelBands.length === 0) return shapeFromPowers(prepared.powers, prepared.sampleRate, 0)
-  let best = shapeFromPowers(prepared.powers, prepared.sampleRate, 1)
+  if (!prepared) return { closest: [], plain: [] }
+  const plain = shapeFromPowers(prepared.powers, prepared.sampleRate, 1)
+  if (!modelBands || modelBands.length === 0) return { closest: shapeFromPowers(prepared.powers, prepared.sampleRate, 0), plain }
+  let best = plain
   let bestDistance = bandDistance(modelBands, best, 48) ?? Number.POSITIVE_INFINITY
-  if (bestDistance <= CLOSE_ENOUGH) return best
+  if (bestDistance <= CLOSE_ENOUGH) return { closest: best, plain }
   for (const scale of WARP_SCALES) {
     const bands = shapeFromPowers(prepared.powers, prepared.sampleRate, scale)
     const distance = bandDistance(modelBands, bands, 48)
@@ -52,7 +53,7 @@ export function closestBands(
       bestDistance = distance
     }
   }
-  return best
+  return { closest: best, plain }
 }
 
 function framePowers(input: Float32Array, rate: number): { powers: Array<Float32Array | null>; sampleRate: number } | null {

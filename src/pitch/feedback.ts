@@ -8,33 +8,37 @@ import { bandDistance } from './spectrum'
  * to survive. A mean path distance above UNCLEAR_SEMITONES stays on the
  * curve as a colour. It no longer drops the words. That cutoff is a choice.
  *
- * Rhythm colour of a word uses the local scale after the linear map, so a
- * uniform slow take is not red on every word. The rhythm bar is the worse
- * of that word bar and the band of the whole-span ratio. Comparison is
- * against the file that was heard.
+ * Rhythm colour of a word uses the local tempo against the file: the
+ * whole-span ratio, the local scale, and that word's frames against its
+ * timed length. A uniform slow take is yellow, not red on every word. The
+ * rhythm bar is the worse of that word bar and the band of the whole-span
+ * ratio. Comparison is against the file that was heard.
  *
  * A take is «unklar» when its voiced range stays under FLAT_RANGE and the
  * reference moves by at least that much more, and the take is not itself
  * speech-loud. A short flat phrase matched to itself is not unklar. A take
  * is also «unklar» when every measured word runs the other way (Pearson
  * under DIRECTION_OPPOSED) and none of those words has a colour. One
- * mirrored syllable stays a partial score. A take that matches the file
- * better backwards is «unklar» only when no band shape was measured, or
- * when the band shape agrees with the flip. Another bundled voice can
- * mirror the pitch and still run forwards in the bands, so that voice
- * keeps its colours. A steady tone against a spoken file is «unklar» when
- * the file's loudness moves and the tone's pitch does not. A large pitch
- * offset, a loudness envelope that runs the other way, and a band shape
- * far from the file do not hide the bars. 0.8.3 does not say whether the
- * spoken line was the right one. The old 1–3 grade is in sentence-grade.ts,
- * which the app does not import. Bars stay when at least one word has a
- * colour. Under COLOURED_SHARE the words still show, the bars cover the
- * coloured part, and the page says so. A word whose model moves by
- * MOVING_RANGE needs that movement in the same direction, otherwise it
- * stays at most yellow. Local stretch stays inside about 0.75–1.33.
- * When the local window misses every word but the model word has enough
- * voice, the whole-path distance still colours those words. A second voice
- * often sits outside the four-frame window.
+ * mirrored syllable stays a partial score. When a band shape was measured,
+ * the take is «unklar» when the file fits better backwards by
+ * REVERSE_BAND_GAP. That gap sits between a reversed clip and another
+ * voice of the same sentence, so the other voice keeps its colours.
+ * Without bands, a contour that matches better backwards is still
+ * «unklar». A steady tone against a spoken file is «unklar» when the
+ * file's loudness moves and the tone's pitch does not. A large pitch
+ * offset and a loudness envelope that runs the other way do not hide the
+ * bars. A band shape closer to another sentence leaves the bars and sets
+ * the hint. «unklar» is set only when the bars are absent. A model file
+ * with fewer than MIN_VOICED frames says the file is thin, not that the
+ * take was quiet. The old 1–3 grade is in sentence-grade.ts, which the
+ * app does not import. Bars stay when at least one word has a colour.
+ * Under COLOURED_SHARE the words still show, the bars cover the coloured
+ * part, and the page says so. A word whose model moves by MOVING_RANGE
+ * needs that movement in the same direction, otherwise it stays at most
+ * yellow. Local stretch stays inside about 0.75–1.33. When the local
+ * window misses every word but the model word has enough voice, the
+ * whole-path distance still colours those words. A second voice often
+ * sits outside the four-frame window.
  */
 export const MELODY_GREEN = 1.5
 export const MELODY_YELLOW = 3
@@ -58,6 +62,12 @@ export const DRONE_ENERGY = 0.12
 export const SPEECH_ENERGY = 0.15
 /** A negative loudness correlation means the envelope runs the other way. */
 export const ENERGY_ALIGN_MIN = 0
+/**
+ * Band-distance gap that means the take is the file played backwards.
+ * Reversed clips sit above 0.26. Another bundled voice of the same sentence
+ * stays under 0.05. 0.12 is the space between those two.
+ */
+export const REVERSE_BAND_GAP = 0.12
 /** A model word that moves by this much needs the same movement in the take. */
 export const MOVING_RANGE = 1
 /**
@@ -128,7 +138,9 @@ export type RepeatScore = {
   fewWords: boolean
   globalRatio: number | null
   /** Why the take cannot be scored as a whole. Null when the bars stand. */
-  reason: 'short' | 'quiet' | 'noTimes' | 'unclear' | 'few' | null
+  reason: 'short' | 'quiet' | 'file' | 'noTimes' | 'unclear' | 'few' | null
+  /** The band shape is closer to a different sentence. The bars can stay. */
+  otherSentence: boolean
 }
 
 export function melodyBand(distance: number): Band {
@@ -539,6 +551,21 @@ export function spectralReversed(
   return backward + 0.03 < forward
 }
 
+/**
+ * The file played backwards. The gap is wider than spectralReversed, so a
+ * second voice that is only a little closer backwards is not locked.
+ */
+export function reversedRecording(
+  modelBands: readonly (readonly number[])[] | null | undefined,
+  userBands: readonly (readonly number[])[] | null | undefined,
+): boolean {
+  if (!modelBands || !userBands || modelBands.length < 8 || userBands.length < 8) return false
+  const forward = bandDistance(modelBands, userBands)
+  const backward = bandDistance([...modelBands].reverse(), userBands)
+  if (forward == null || backward == null) return false
+  return backward + REVERSE_BAND_GAP < forward
+}
+
 function thinEnergy(energy: readonly number[] | null | undefined, contourLength: number): number[] | null {
   if (!energy || energy.length !== contourLength) return null
   if (contourLength <= MAX_FRAMES) return [...energy]
@@ -701,6 +728,11 @@ export function scoreRepeat(input: {
   /** Loudness-free band shape, one vector per contour frame. */
   modelBands?: readonly (readonly number[])[] | null
   userBands?: readonly (readonly number[])[] | null
+  /**
+   * Unshifted user bands. A frequency warp can hide a reversed recording,
+   * so the reverse lock uses these when they are present.
+   */
+  userPlainBands?: readonly (readonly number[])[] | null
 }): RepeatScore {
   const modelThin = thin(input.model, input.modelHop > 0 ? input.modelHop : 0.01)
   const userThin = thin(input.user, input.userHop > 0 ? input.userHop : 0.01)
@@ -709,7 +741,9 @@ export function scoreRepeat(input: {
   const modelHop = modelThin.hop
   const userHop = userThin.hop
   const voiced = voicedValues(user).length
+  const modelVoiced = voicedValues(model).length
   const tooShort = input.userDuration < SHORT_SECONDS
+  const fileThin = modelVoiced < MIN_VOICED
   const tooLittleVoice = voiced < MIN_VOICED
   const empty: RepeatScore = {
     model,
@@ -727,9 +761,12 @@ export function scoreRepeat(input: {
     tooShort,
     fewWords: false,
     globalRatio: null,
-    reason: tooShort ? 'short' : tooLittleVoice ? 'quiet' : null,
+    otherSentence: false,
+    reason: tooShort ? 'short' : fileThin ? 'file' : tooLittleVoice ? 'quiet' : null,
   }
-  if (tooShort || tooLittleVoice) return empty
+  if (tooShort) return empty
+  if (fileThin) return { ...empty, tooLittleVoice: false, reason: 'file' }
+  if (tooLittleVoice) return empty
   const modelSpan = sustained(model)
   const userSpan = sustained(user)
   if (!modelSpan || !userSpan) return { ...empty, tooLittleVoice: true, reason: 'quiet' }
@@ -753,11 +790,13 @@ export function scoreRepeat(input: {
   const modelEnergy = thinEnergy(input.modelEnergy, input.model.length)
   const userEnergy = thinEnergy(input.userEnergy, input.user.length)
   const forward = contourCorrelation(model, heard, path)
-  // A far pitch and a loudness envelope that runs the other way stay on the
-  // curve. Another bundled voice can also mirror the pitch while the band
-  // shape still runs forwards, so that voice is not treated as reversed.
-  const reversed = bandsKnown
-    ? flipped && matchesBetterBackwards(model, heard, forward)
+  // With bands, the lock is the gap on the unshifted shape. A frequency
+  // warp can shrink that gap, and a second voice stays under it. Without
+  // bands, the contour lock remains, including the synthetic fixtures.
+  const lockBands = input.userPlainBands && input.userPlainBands.length > 0 ? input.userPlainBands : input.userBands
+  const lockKnown = Boolean(input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0)
+  const reversed = lockKnown
+    ? reversedRecording(input.modelBands, lockBands)
     : reversedTake(model, heard, forward, path, modelEnergy, userEnergy)
   const spoken = (energyVariation(userEnergy) ?? 0) >= SPEECH_ENERGY
   const flat = flatContour(heard, model) && !spoken
@@ -838,8 +877,7 @@ export function scoreRepeat(input: {
       melody = 'yellow'
     }
     const rawRatio = (globalRatio * matched.scale * (frameEnd - frame) * modelHop) / (word.end - word.start)
-    const relative = matched.scale
-    const rhythm = rhythmBand(relative)
+    const rhythm = Number.isFinite(rawRatio) && rawRatio > 0 ? rhythmBand(rawRatio) : rhythmBand(matched.scale)
     return {
       ...base,
       color: worseBand(melody, rhythm),
@@ -889,6 +927,7 @@ export function scoreRepeat(input: {
       tooLittleVoice: false,
       tooShort: false,
       globalRatio,
+      otherSentence: false,
       reason: 'unclear',
     }
   }
@@ -898,12 +937,8 @@ export function scoreRepeat(input: {
   const coloured = scorable.filter((word) => word.color != null).length
   const allowed = scorable.length > 0 && coloured / scorable.length >= COLOURED_SHARE
   const fewWords = !allowed
-  // content and flipped still decide whether a harmonic may be folded onto the
-  // file. They do not remove the bars: another voice of the same sentence sits
-  // past the old limit, and 0.8.3 does not grade the sentence.
-  void content
-  void flipped
-  const backwards = takeRunsBackwards(directions)
+  // A band shape closer to another sentence leaves the bars. The page asks
+  // whether it was a different sentence. It does not drop the colours.
   return {
     model,
     user: heard,
@@ -916,10 +951,11 @@ export function scoreRepeat(input: {
     melodyBar: hasColour ? melodyBar : null,
     rhythmBar: hasColour ? rhythmBar : null,
     fewWords,
-    unclear: backwards,
+    unclear: false,
     tooLittleVoice: false,
     tooShort: false,
     globalRatio,
+    otherSentence: content && hasColour,
     reason: hasColour && !fewWords ? null : 'few',
   }
 }
