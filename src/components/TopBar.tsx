@@ -35,8 +35,11 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
   const [renameDraft, setRenameDraft] = useState(active?.name ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [rejected, setRejected] = useState(false)
+  const [nameInvalid, setNameInvalid] = useState(false)
   const [adding, setAdding] = useState(false)
   const addingRef = useRef(false)
+  const renameTouched = useRef(false)
+  const seenPersonId = useRef(active?.id)
   const personMenu = useId()
   const langMenu = useId()
   const personButton = useRef<HTMLButtonElement>(null)
@@ -47,7 +50,11 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
   unnamedRef.current = unnamed
 
   useEffect(() => {
-    setRenameDraft(active?.name ?? '')
+    const nextId = active?.id
+    const switchedPerson = seenPersonId.current !== undefined && nextId !== seenPersonId.current
+    if (switchedPerson) renameTouched.current = false
+    if (switchedPerson || !renameTouched.current) setRenameDraft(active?.name ?? '')
+    seenPersonId.current = nextId
   }, [active?.id, active?.name])
 
   useEffect(() => {
@@ -79,13 +86,22 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
     setOpen(null)
     setConfirmDelete(false)
     setRejected(false)
+    setNameInvalid(false)
+  }
+
+  function editRename(value: string): void {
+    renameTouched.current = true
+    setNameInvalid(false)
+    setRenameDraft(value)
   }
 
   async function saveName(value: string, id: string | undefined, mode: 'rename' | 'add'): Promise<void> {
     if (!cleanPersonName(value)) {
-      setRejected(true)
+      setNameInvalid(true)
+      setRejected(false)
       return
     }
+    setNameInvalid(false)
     setRejected(false)
     if (mode === 'add') {
       if (addingRef.current) return
@@ -151,16 +167,17 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
               <bdi>{person.name || copy.personNameAsk}</bdi>
             </button>
           ))}
-          {active && active.name === '' ? (
+          {(active && active.name === '') || (!active && askName) ? (
             <form
               onSubmit={(event) => {
                 event.preventDefault()
+                if (!active) return
                 void saveName(renameDraft || draft, active.id, 'rename')
               }}
             >
               <label>
                 {copy.personNameAsk}
-                <input value={renameDraft} maxLength={40} onChange={(event) => setRenameDraft(event.target.value)} />
+                <input value={renameDraft} maxLength={40} onChange={(event) => editRename(event.target.value)} />
               </label>
               <button type="submit">{copy.personSave}</button>
             </form>
@@ -173,7 +190,7 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
             >
               <label>
                 {copy.personRename}
-                <input value={renameDraft} maxLength={40} onChange={(event) => setRenameDraft(event.target.value)} />
+                <input value={renameDraft} maxLength={40} onChange={(event) => editRename(event.target.value)} />
               </label>
               <button type="submit">{copy.personRename}</button>
             </form>
@@ -196,6 +213,7 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
             </form>
           ) : null}
           {active?.name && people.length >= PERSON_LIMIT ? <p>{copy.personLimit}</p> : null}
+          {nameInvalid ? <p role="alert">{copy.personNameEmpty}</p> : null}
           {rejected ? <p role="alert">{copy.importBad}</p> : null}
           {active?.name ? (
             confirmDelete ? (
