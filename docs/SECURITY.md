@@ -335,9 +335,15 @@ Geprüft am 12. Oktober 2026. Die Bewertung und ihre Grenzen bleiben unveränder
 | Mikrofon | Niedrig | Geschlossen | `getUserMedia` fragt ohne Echounterdrückung, ohne Rauschunterdrückung und ohne automatische Lautstärke. Sonst verarbeitet Chrome die Sprache, und dieselbe Datei verliert Sterne. Test: `src/audio/recorder.test.ts`. |
 | P18e-01 | Hoch | Offen | Die Bewertung bleibt. Die frühere Aussage, bei vais1000 sei die Tonhöhe der Grund, ist falsch. Die Spektralgrenze verwirft 81 bis 89 Prozent der Paare vivos gegen vais1000. Die Trennung hängt an der Ähnlichkeit der Stimmen, nicht an der Sprache. AUC 0,96 bis 0,98 bei demselben Sprecher oder bei vivos gegen vivos, 0,81 bei Englisch Mann gegen Frau, 0,53 bei Portugiesisch, 0,48 bei vivos gegen vais1000. Deutsch gegen espeak bleibt bei 3 bis 4 Prozent. |
 | Summen und Singen | Info | Gemeldet, keine Grenze | Ein Summen auf der Lautstärke der Datei und ein Singen der Melodie bekommen weiter Sterne. Der Clip-Test schreibt die Raten und erwartet, dass der Fall scheitert. Das färbt CI nicht rot. Summen im Silbenrhythmus, mindestens 2 Sterne: Deutsch 36 von 272, Englisch 73 von 208, Portugiesisch 111 von 300, Vietnamesisch 85 von 652. Singen: Deutsch 29 von 272, Englisch 45 von 208, Portugiesisch 102 von 300, Vietnamesisch 47 von 652. |
-| Testbudget | Niedrig | Zurückgenommen | `testTimeout` 15 Sekunden greift nicht, weil `asyncUtilTimeout` bei 5 Sekunden bleibt. Die Ursache liegt im Zurücksetzen von `renameDraft` und wird ausserhalb dieser Bewertung behoben. |
+| Testbudget | Niedrig | Zurückgenommen | `testTimeout` 15 Sekunden greift nicht, weil `asyncUtilTimeout` bei 5 Sekunden bleibt. Das Zurücksetzen von `renameDraft` ist in 0.7.1 behoben. Diese Fassung sitzt auf diesem Stand. Das Testbudget bleibt weg. |
 
 Der Clip-Test ist ein Test je Sprache. Summen mit 4-Hz-Takt, Dauerton, Rückwärts und Hintergrund bleiben bei 0.
+
+## 0.7.1
+
+Geprüft am 12. Oktober 2026. Kein neues Paket, kein neues Netz. `npm audit` bleibt bei 0 Schwachstellen. Der Name bleibt auf dem Gerät. Er geht nicht in den Export als Aufnahme und nicht ins Netz.
+
+**Name.** Die Kopfzeile erscheint erst, wenn eine Person im Stand steht. Tippt man den Namen, bevor der Effekt des Einblendens den gespeicherten Text einsetzt, bleibt der getippte Text. «Weiter» speichert ihn. Ein leerer oder unsichtbarer Name sagt «Der Name braucht ein sichtbares Zeichen.» Die Meldung über eine ungültige Exportdatei erscheint dabei nicht. Nach dem Speichern zeigt das Feld den bereinigten Namen, und die Markierung, dass getippt wurde, geht zurück. Wechselt die Person, geht diese Markierung ebenfalls zurück, und ein später ankommender Name dieser Person ersetzt den Entwurf. Das Formular für den ersten Namen gilt nur für eine Person ohne Namen. Es benennt keine schon benannte Person, solange der Stand noch fehlt. Fehlt die Person beim Umbenennen, sagt das Menü «Diese Person ist nicht mehr da.» Scheitert das Hinzufügen, weil schon zehn Personen da sind, nennt es dieses Limit. Beides ist nicht die Meldung zur Exportdatei. Test: `src/components/top-bar.test.tsx`.
 
 ## 0.7.0
 

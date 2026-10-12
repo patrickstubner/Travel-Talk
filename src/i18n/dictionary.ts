@@ -255,6 +255,7 @@ export type Dictionary = {
   personNameAsk: string
   personNameHint: string
   personNameEmpty: string
+  personGone: string
   personSave: string
   personRename: string
   personDelete: string
@@ -568,6 +569,7 @@ export const de: Dictionary = {
   personNameAsk: 'Wie sollen wir dich nennen?',
   personNameHint: 'Ein Kosename reicht. Der Name bleibt auf diesem Gerät.',
   personNameEmpty: 'Der Name braucht ein sichtbares Zeichen.',
+  personGone: 'Diese Person ist nicht mehr da.',
   personSave: 'Weiter',
   personRename: 'Umbenennen',
   personDelete: 'Person löschen',
@@ -876,6 +878,7 @@ export const en: Dictionary = {
   personNameAsk: 'What should we call you?',
   personNameHint: 'A short name is enough. It stays on this device.',
   personNameEmpty: 'The name needs a visible character.',
+  personGone: 'That person is no longer here.',
   personSave: 'Continue',
   personRename: 'Rename',
   personDelete: 'Delete person',
@@ -1186,6 +1189,7 @@ export const pt: Dictionary = {
   personNameAsk: 'Como devemos chamar você?',
   personNameHint: 'Um nome curto basta. O nome fica neste aparelho.',
   personNameEmpty: 'O nome precisa de um caractere visível.',
+  personGone: 'Essa pessoa não está mais aqui.',
   personSave: 'Continuar',
   personRename: 'Mudar o nome',
   personDelete: 'Apagar pessoa',
@@ -1494,6 +1498,7 @@ export const vi: Dictionary = {
   personNameAsk: 'Chúng tôi nên gọi bạn là gì?',
   personNameHint: 'Một tên ngắn là đủ. Tên ở trên máy này.',
   personNameEmpty: 'Tên cần một ký tự nhìn thấy được.',
+  personGone: 'Người này không còn ở đây.',
   personSave: 'Tiếp',
   personRename: 'Đổi tên',
   personDelete: 'Xoá người',

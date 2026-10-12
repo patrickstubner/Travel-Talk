@@ -34,7 +34,7 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
   const [draft, setDraft] = useState('')
   const [renameDraft, setRenameDraft] = useState(active?.name ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [rejected, setRejected] = useState(false)
+  const [nameFailure, setNameFailure] = useState<'gone' | 'full' | null>(null)
   const [nameInvalid, setNameInvalid] = useState(false)
   const [adding, setAdding] = useState(false)
   const addingRef = useRef(false)
@@ -85,7 +85,7 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
   function close(): void {
     setOpen(null)
     setConfirmDelete(false)
-    setRejected(false)
+    setNameFailure(null)
     setNameInvalid(false)
   }
 
@@ -98,18 +98,18 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
   async function saveName(value: string, id: string | undefined, mode: 'rename' | 'add'): Promise<void> {
     if (!cleanPersonName(value)) {
       setNameInvalid(true)
-      setRejected(false)
+      setNameFailure(null)
       return
     }
     setNameInvalid(false)
-    setRejected(false)
+    setNameFailure(null)
     if (mode === 'add') {
       if (addingRef.current) return
       addingRef.current = true
       setAdding(true)
       try {
         const added = await addPerson(value)
-        if (!added) setRejected(true)
+        if (!added) setNameFailure('full')
         else {
           setDraft('')
           close()
@@ -122,8 +122,12 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
     }
     if (!id) return
     const ok = await renamePerson(id, value)
-    if (!ok) setRejected(true)
-    else close()
+    if (!ok) setNameFailure('gone')
+    else {
+      renameTouched.current = false
+      setRenameDraft(cleanPersonName(value) ?? '')
+      close()
+    }
   }
 
   return (
@@ -167,12 +171,11 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
               <bdi>{person.name || copy.personNameAsk}</bdi>
             </button>
           ))}
-          {(active && active.name === '') || (!active && askName) ? (
+          {active && active.name === '' ? (
             <form
               onSubmit={(event) => {
                 event.preventDefault()
-                if (!active) return
-                void saveName(renameDraft || draft, active.id, 'rename')
+                void saveName(renameDraft, active.id, 'rename')
               }}
             >
               <label>
@@ -214,7 +217,8 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
           ) : null}
           {active?.name && people.length >= PERSON_LIMIT ? <p>{copy.personLimit}</p> : null}
           {nameInvalid ? <p role="alert">{copy.personNameEmpty}</p> : null}
-          {rejected ? <p role="alert">{copy.importBad}</p> : null}
+          {nameFailure === 'gone' ? <p role="alert">{copy.personGone}</p> : null}
+          {nameFailure === 'full' ? <p role="alert">{copy.personLimit}</p> : null}
           {active?.name ? (
             confirmDelete ? (
               <div>
