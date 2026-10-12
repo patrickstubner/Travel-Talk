@@ -11,6 +11,7 @@ import { loadAlignment } from '../audio/align'
 import { decodeContourFile, stopClip } from '../audio/player'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { reviewCard } from '../srs/scheduler'
+import { seedPassedWords } from '../test-words'
 import { PracticePage } from './Practice'
 
 vi.mock('../audio/player', () => ({
@@ -67,8 +68,9 @@ function sine(seconds: number): Float32Array {
   return samples
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   freshIndexedDb()
+  await seedPassedWords()
   vi.mocked(startMicrophone).mockReset()
   vi.mocked(reviewCard).mockClear()
   vi.mocked(loadAlignment).mockReset()

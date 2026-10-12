@@ -1,0 +1,818 @@
+[
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "ich",
+    "file": "de/thorsten-high/w.i__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "ja",
+    "file": "de/thorsten-high/w.yes__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "nein",
+    "file": "de/thorsten-high/w.no__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "bitte",
+    "file": "de/thorsten-high/w.please__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "danke",
+    "file": "de/thorsten-high/w.thanks__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "nicht",
+    "file": "de/thorsten-high/w.not__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "wo",
+    "file": "de/thorsten-high/w.where__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "hier",
+    "file": "de/thorsten-high/w.here__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "Wasser",
+    "file": "de/thorsten-high/w.water__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "Hilfe",
+    "file": "de/thorsten-high/w.help__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "Tage",
+    "file": "de/thorsten-high/w.days__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "bleiben",
+    "file": "de/thorsten-high/w.stay__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "Dokumente",
+    "file": "de/thorsten-high/w.documents__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "E-Visum",
+    "file": "de/thorsten-high/w.evisa__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "Visum",
+    "file": "de/thorsten-high/w.visa__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "verlängern",
+    "file": "de/thorsten-high/w.extend__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "Gesuch",
+    "file": "de/thorsten-high/w.application__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "aktuell",
+    "file": "de/thorsten-high/w.current__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "Regel",
+    "file": "de/thorsten-high/w.rule__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "thorsten-high",
+    "model": "de_DE-thorsten-high",
+    "speaker": null,
+    "text": "Passfoto",
+    "file": "de/thorsten-high/w.photo__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "I",
+    "file": "en/joe/w.i__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "yes",
+    "file": "en/joe/w.yes__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "no",
+    "file": "en/joe/w.no__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "please",
+    "file": "en/joe/w.please__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "thank you",
+    "file": "en/joe/w.thanks__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "not",
+    "file": "en/joe/w.not__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "where",
+    "file": "en/joe/w.where__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "here",
+    "file": "en/joe/w.here__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "water",
+    "file": "en/joe/w.water__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "help",
+    "file": "en/joe/w.help__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "days",
+    "file": "en/joe/w.days__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "stay",
+    "file": "en/joe/w.stay__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "documents",
+    "file": "en/joe/w.documents__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "e-visa",
+    "file": "en/joe/w.evisa__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "visa",
+    "file": "en/joe/w.visa__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "extend",
+    "file": "en/joe/w.extend__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "application",
+    "file": "en/joe/w.application__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "current",
+    "file": "en/joe/w.current__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "rule",
+    "file": "en/joe/w.rule__any__base.m4a"
+  },
+  {
+    "lang": "en",
+    "voice": "joe",
+    "model": "en_US-joe-medium",
+    "speaker": null,
+    "text": "passport photo",
+    "file": "en/joe/w.photo__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "eu",
+    "file": "pt-BR/cadu/w.i__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "sim",
+    "file": "pt-BR/cadu/w.yes__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "não",
+    "file": "pt-BR/cadu/w.no__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "por favor",
+    "file": "pt-BR/cadu/w.please__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "obrigado",
+    "file": "pt-BR/cadu/w.thanks__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "não",
+    "file": "pt-BR/cadu/w.not__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "onde",
+    "file": "pt-BR/cadu/w.where__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "aqui",
+    "file": "pt-BR/cadu/w.here__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "água",
+    "file": "pt-BR/cadu/w.water__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "socorro",
+    "file": "pt-BR/cadu/w.help__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "dias",
+    "file": "pt-BR/cadu/w.days__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "ficar",
+    "file": "pt-BR/cadu/w.stay__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "documentos",
+    "file": "pt-BR/cadu/w.documents__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "visto eletrônico",
+    "file": "pt-BR/cadu/w.evisa__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "visto",
+    "file": "pt-BR/cadu/w.visa__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "prorrogar",
+    "file": "pt-BR/cadu/w.extend__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "pedido",
+    "file": "pt-BR/cadu/w.application__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "atual",
+    "file": "pt-BR/cadu/w.current__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "regra",
+    "file": "pt-BR/cadu/w.rule__any__base.m4a"
+  },
+  {
+    "lang": "pt-BR",
+    "voice": "cadu",
+    "model": "pt_BR-cadu-medium",
+    "speaker": null,
+    "text": "foto de passaporte",
+    "file": "pt-BR/cadu/w.photo__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "tôi",
+    "file": "vi/vivos-22/w.i__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "dạ",
+    "file": "vi/vivos-22/w.yes__south__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "vâng",
+    "file": "vi/vivos-22/w.yes__north__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "không",
+    "file": "vi/vivos-22/w.no__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "làm ơn",
+    "file": "vi/vivos-22/w.please__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "cảm ơn",
+    "file": "vi/vivos-22/w.thanks__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "không",
+    "file": "vi/vivos-22/w.not__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "đâu",
+    "file": "vi/vivos-22/w.where__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "đây",
+    "file": "vi/vivos-22/w.here__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "nước",
+    "file": "vi/vivos-22/w.water__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "cứu với",
+    "file": "vi/vivos-22/w.help__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "ngày",
+    "file": "vi/vivos-22/w.days__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "ở",
+    "file": "vi/vivos-22/w.stay__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "giấy tờ",
+    "file": "vi/vivos-22/w.documents__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "visa điện tử",
+    "file": "vi/vivos-22/w.evisa__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "visa",
+    "file": "vi/vivos-22/w.visa__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "gia hạn",
+    "file": "vi/vivos-22/w.extend__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "hồ sơ",
+    "file": "vi/vivos-22/w.application__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "hiện hành",
+    "file": "vi/vivos-22/w.current__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "quy định",
+    "file": "vi/vivos-22/w.rule__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-22",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 9,
+    "text": "ảnh hộ chiếu",
+    "file": "vi/vivos-22/w.photo__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "tôi",
+    "file": "vi/vivos-32/w.i__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "dạ",
+    "file": "vi/vivos-32/w.yes__south__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "vâng",
+    "file": "vi/vivos-32/w.yes__north__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "không",
+    "file": "vi/vivos-32/w.no__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "làm ơn",
+    "file": "vi/vivos-32/w.please__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "cảm ơn",
+    "file": "vi/vivos-32/w.thanks__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "không",
+    "file": "vi/vivos-32/w.not__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "đâu",
+    "file": "vi/vivos-32/w.where__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "đây",
+    "file": "vi/vivos-32/w.here__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "nước",
+    "file": "vi/vivos-32/w.water__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "cứu với",
+    "file": "vi/vivos-32/w.help__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "ngày",
+    "file": "vi/vivos-32/w.days__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "ở",
+    "file": "vi/vivos-32/w.stay__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "giấy tờ",
+    "file": "vi/vivos-32/w.documents__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "visa điện tử",
+    "file": "vi/vivos-32/w.evisa__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "visa",
+    "file": "vi/vivos-32/w.visa__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "gia hạn",
+    "file": "vi/vivos-32/w.extend__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "hồ sơ",
+    "file": "vi/vivos-32/w.application__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "hiện hành",
+    "file": "vi/vivos-32/w.current__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "quy định",
+    "file": "vi/vivos-32/w.rule__any__base.m4a"
+  },
+  {
+    "lang": "vi",
+    "voice": "vivos-32",
+    "model": "vi_VN-vivos-x_low",
+    "speaker": 37,
+    "text": "ảnh hộ chiếu",
+    "file": "vi/vivos-32/w.photo__any__base.m4a"
+  }
+]

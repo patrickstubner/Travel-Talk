@@ -1,10 +1,10 @@
 /**
- * Kept for 0.9.0. The app does not import this file, and neither do the tests.
- * Version 0.8.0 shows the melody curve, the word colours and the melody and
- * rhythm bars. It does not show a grade, and it does not say whether the
- * spoken line was the one that was heard.
+ * Kept for a later release, 0.10.0 or after. The app does not import this
+ * file, and neither do the tests. Version 0.9.0 shows the melody curve, the
+ * word colours and the melody and rhythm bars. It does not show a grade, and
+ * it does not say whether the spoken line was the one that was heard.
  *
- * 0.9.0 grades that question with on-device speech recognition. This bar
+ * That later release grades the question with on-device speech recognition. This bar
  * count is the formula that left the screen, written down so the thresholds
  * are not only in git history. Do not wire it back into the session.
  */

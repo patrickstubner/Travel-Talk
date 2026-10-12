@@ -14,9 +14,10 @@ import { useCopy, useSettings } from '../app/use-copy'
 import { KaraokeLine } from '../components/KaraokeLine'
 import { RepeatFeedback } from '../components/RepeatFeedback'
 import { RichText } from '../components/RichText'
+import { spokenCitation, wordAudioFile, wordById } from '../../content/words'
 import { Rating, emptyCard, fromStored, previewDue, reviewCard, toStored, type Grade } from '../srs/scheduler'
+import { buildDay, meaningChoices, newlyOpenSentences, type DayItem } from '../srs/day'
 import {
-  buildSession,
   cardIdFor,
   currentDirection,
   distractorConcepts,
@@ -27,7 +28,6 @@ import {
   targetTextVisible,
   usableConcepts,
   type LearnStep,
-  type SessionItem,
   type SessionKind,
 } from '../srs/session'
 import { prefsFromSettings } from '../storage/types'
@@ -45,7 +45,11 @@ export function PracticePage() {
   const kind = kindFrom(params.get('kind'))
   const direction = currentDirection(settings.appLang, settings.targetLang)
   const [run, setRun] = useState(0)
-  const [queue, setQueue] = useState<SessionItem[]>([])
+  const [queue, setQueue] = useState<DayItem[]>([])
+  const [wordOptions, setWordOptions] = useState<string[]>([])
+  const sentenceSlots = useRef(0)
+  const queueRef = useRef(queue)
+  queueRef.current = queue
   const [index, setIndex] = useState(0)
   const [stepIndex, setStepIndex] = useState(0)
   const [answered, setAnswered] = useState(false)
@@ -114,7 +118,9 @@ export function PracticePage() {
     const key = `${personId}:${direction}:${kind}:${run}`
     if (readyFor === key) return
     const usable = usableConcepts(orderedConcepts(catalog), settings.appLang, settings.targetLang, settings.viRegion)
-    setQueue(buildSession(usable, snapshot.cards, direction, new Date(), kind))
+    const plan = buildDay(usable, snapshot.cards, direction, new Date(), kind)
+    sentenceSlots.current = plan.sentenceSlots
+    setQueue(plan.items)
     setIndex(0)
     setStepIndex(0)
     setAnswered(false)
@@ -125,7 +131,7 @@ export function PracticePage() {
   }, [catalog, direction, kind, readyFor, run, settings.appLang, settings.targetLang, settings.viRegion, snapshot])
 
   const item = queue[index]
-  const steps = item ? stepsFor(item.isNew) : []
+  const steps: LearnStep[] = item ? (item.kind === 'word' ? ['word'] : stepsFor(item.isNew)) : []
   const step = steps[stepIndex]
   const concept = catalog?.concepts.find((entry) => entry.id === item?.id)
 
@@ -220,6 +226,57 @@ export function PracticePage() {
       live = false
     }
   }, [concept, settings, step, take])
+
+  useEffect(() => {
+    if (item?.kind !== 'word' || !settings.targetLang) return
+    const word = wordById(item.id)
+    if (!word) return
+    let live = true
+    const file = tempoFile(spokenFile(settings, settings.targetLang, wordAudioFile(word, settings.targetLang, settings.viRegion)), 0.7)
+    const speech = spokenCitation(word, settings.targetLang, settings.viRegion)
+    lockedFile.current = file
+    setPlaying(true)
+    setSeconds(0)
+    setOfflineAudio(false)
+    void playClip(
+      file,
+      speech,
+      settings.targetLang,
+      0.7,
+      () => {
+        if (live && aliveRef.current) {
+          lockedFile.current = ''
+          setPlaying(false)
+          setSeconds(null)
+        }
+      },
+      (time) => {
+        if (live && aliveRef.current) setSeconds(time)
+      },
+      (duration) => {
+        if (live && aliveRef.current) setClipDuration(duration)
+      },
+    ).then((result) => {
+      if (!live || !aliveRef.current) return
+      if (result === 'offline') {
+        lockedFile.current = ''
+        setPlaying(false)
+        setSeconds(null)
+        setOfflineAudio(true)
+      }
+    })
+    return () => {
+      live = false
+    }
+  }, [item?.id, item?.kind, settings])
+
+  useEffect(() => {
+    if (item?.kind !== 'word') return
+    const block = queueRef.current.filter((entry) => entry.kind === 'word' && entry.isNew).map((entry) => entry.id)
+    setWordOptions(meaningChoices(item.id, block))
+    setPicked(null)
+    setAnswered(false)
+  }, [item?.id, item?.kind])
 
   useEffect(() => {
     if (!catalog || !concept || step !== 'understand') return
@@ -331,7 +388,107 @@ export function PracticePage() {
     )
   }
 
-  if (!item || !concept || !step) {
+  const word = item?.kind === 'word' ? wordById(item.id) : undefined
+  if (item?.kind === 'word' && word && step === 'word') {
+    const speech = spokenCitation(word, targetLang, settings.viRegion)
+    const file = wordAudioFile(word, targetLang, settings.viRegion)
+    const meaning = spokenCitation(word, app, settings.viRegion)
+    const currentWord = word
+    const book = catalog
+    const cardsNow = snapshot.cards
+    const retention = snapshot.settings.retention ?? 0.9
+    async function gradeWord(correct: boolean): Promise<void> {
+      if (!item || !book) return
+      const review = !item.isNew && correct
+      setPicked(correct ? currentWord.id : 'wrong')
+      setAnswered(true)
+      if (review) return
+      const grade = correct ? Rating.Good : Rating.Again
+      const cardId = cardIdFor(activeDirection, item.id)
+      const stored = cardsNow.find((card) => card.cardId === cardId)
+      const now = new Date()
+      const next = toStored(cardId, reviewCard(stored ? fromStored(stored) : emptyCard(now), grade, now, retention, false))
+      await saveCard(next)
+      const cards = [...cardsNow.filter((card) => card.cardId !== cardId), next]
+      const usable = usableConcepts(orderedConcepts(book), app, targetLang, settings.viRegion)
+      const queued = queueRef.current.filter((entry) => entry.kind === 'sentence').map((entry) => entry.id)
+      const open = newlyOpenSentences(usable, cards, activeDirection, queued, sentenceSlots.current)
+      if (open.length > 0) {
+        setQueue((current) => [...current, ...open.map((id) => ({ id, isNew: true, kind: 'sentence' as const }))])
+      }
+    }
+    return (
+      <section className="stack" data-testid="practice-word">
+        <p className="eyebrow">{copy.wordsFirst}</p>
+        {offlineAudio ? (
+          <p className="warn" role="status">
+            {copy.audioOffline}
+          </p>
+        ) : null}
+        <p className="target-line" data-testid="target-line" lang={targetLang}>
+          {speech}
+        </p>
+        <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 0.7)}>
+          <span className="play-mark" aria-hidden="true" />
+          {playing ? copy.playingSlow : copy.replaySlow}
+        </button>
+        <h1>{copy.wordPrompt}</h1>
+        <ul className="choices">
+          {wordOptions.map((id) => {
+            const choice = wordById(id)
+            const label = choice ? spokenCitation(choice, app, settings.viRegion) : id
+            return (
+              <li key={id}>
+                <button type="button" disabled={answered} onClick={() => void gradeWord(id === word.id)}>
+                  {label}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+        {answered && picked === word.id ? <p className="hint">{copy.wordRight}</p> : null}
+        {answered && picked !== word.id ? <p className="hint">{copy.wordWrong(meaning)}</p> : null}
+        {answered && item.isNew ? (
+          <button type="button" className="button primary" onClick={goNext}>
+            {copy.next}
+          </button>
+        ) : null}
+        {answered && !item.isNew && picked === word.id ? (
+          <div className="rate-grid">
+            {(
+              [
+                [Rating.Again, copy.rateAgain],
+                [Rating.Hard, copy.rateSoon],
+                [Rating.Good, copy.rateLater],
+                [Rating.Easy, copy.rateMuchLater],
+              ] as const
+            ).map(([grade, label]) => (
+              <button
+                key={grade}
+                type="button"
+                onClick={() => {
+                  const cardId = cardIdFor(activeDirection, item.id)
+                  const stored = snapshot.cards.find((card) => card.cardId === cardId)
+                  const now = new Date()
+                  const next = toStored(cardId, reviewCard(stored ? fromStored(stored) : emptyCard(now), grade, now, snapshot.settings.retention ?? 0.9, false))
+                  void saveCard(next).then(() => goNext())
+                }}
+              >
+                <strong>{label}</strong>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {answered && !item.isNew && picked !== word.id ? (
+          <button type="button" className="button primary" onClick={goNext}>
+            {copy.next}
+          </button>
+        ) : null}
+      </section>
+    )
+  }
+
+  if (!item || !concept || !step || step === 'word') {
     return (
       <section className="stack" data-testid="practice">
         <h1>{copy.learnToday}</h1>
@@ -398,6 +555,7 @@ export function PracticePage() {
     understand: copy.stepUnderstand(index + 1, queue.length),
     recall: copy.stepRecall(index + 1, queue.length),
     rate: copy.stepRecall(index + 1, queue.length),
+    word: copy.wordsFirst,
   }
 
   return (

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0 — 2026-10-12
+
+- Vor den neuen Sätzen kommen höchstens sechs Wörter. Jedes Wort ist eine eigene Karte, zum Beispiel `de-vi:w.water`, pro Person. Wörter und Sätze teilen sich die 15 neuen Karten am Tag, über alle Richtungen. Wiederholungen bleiben vorn, höchstens acht. Ab 20 fälligen Karten gibt es keine neuen Wörter und keine neuen Sätze.
+- Ein neues Wort: einmal langsam hören, die Schrift bleibt sichtbar, vier Bedeutungen in der App-Sprache. Richtig zählt als «Gut», falsch zeigt die Bedeutung und zählt als «Nochmal». Kein Mikrofon und kein Schreiben. Bei einer späteren Wiederholung kommen nach der richtigen Bedeutung die vier Abstände.
+- Ein Satz geht erst auf, wenn jedes geprüfte Schlüsselwort mindestens einmal «Gut» oder «Leicht» war. Ein Satz ohne geprüftes Schlüsselwort bleibt zu. Füllwörter sind keine Schlüsselwörter. Die Startseite nennt das fehlende Wort.
+- Geprüft sind die Handliste (ich, ja, nein, bitte, danke, nicht, wo, hier, Wasser, Hilfe) und die Visum-Gruppen (Tage, bleiben, Dokumente, E-Visum, Visum, verlängern, Gesuch, aktuell, Regel, Passfoto). Zahlen sind noch nicht geprüft. Zwanzig Wörter, Piper-Zitierform der Männerstimmen, 70 %, 85 % und 100 %. 306 Dateien, Median 6190 Bytes, zusammen 2'122'235 Bytes. Die älteren Stimmen haben diese Dateien nicht.
+- Die Sterne und die Spracherkennung kommen in einer späteren Fassung, 0.10.0 oder danach. Diese Fassung bewertet den gesprochenen Satz weiter nicht.
+
 ## 0.8.1 — 2026-10-12
 
 - Im Zeigen-Modus sind Karten, Knöpfe, Chips, Karaoke-Wörter, Hinweise, Statusfelder und Details dunkel, mit heller Schrift. Das gilt auch für die obere Leiste und die Navigation. Der Text erreicht WCAG AA (4,5:1, grosse Schrift 3:1).
@@ -9,7 +17,7 @@
 ## 0.8.0 — 2026-10-12
 
 - Nach jeder Aufnahme, beim Nachsprechen in der Übung und auf der Satzseite, liegt die eigene Tonhöhe über der Kurve der gehörten Datei. Die Wörter stehen darunter. Grün, gelb oder rot ist das schlechtere von Melodie und Rhythmus. Zu wenig stimmhafte Frames im Modell bleiben ungefärbt.
-- Diese Fassung zeigt keine Sterne und sagt nicht, ob der Satz der richtige war. Kurve, Wortfarben und die Balken für Melodie und Rhythmus bleiben. Die Sterne kommen mit der Spracherkennung in 0.9.0. Die vier Bewertungen bleiben der Weg durch den Planer. Die Rückmeldung ändert den Lernstand nicht.
+- Diese Fassung zeigt keine Sterne und sagt nicht, ob der Satz der richtige war. Kurve, Wortfarben und die Balken für Melodie und Rhythmus bleiben. Die Sterne kommen mit der Spracherkennung in 0.10.0 oder danach. Die vier Bewertungen bleiben der Weg durch den Planer. Die Rückmeldung ändert den Lernstand nicht.
 - Ein Tippen auf ein Wort spielt zuerst das Modell, dann die eigene Stelle. Beide laufen nicht zugleich. Im Detail hat Modell und Du je einen Knopf «Hören». «Nochmal» nimmt neu auf und ersetzt die Aufnahme. «Weiter» bleibt «Weiter» und gibt das Mikrofon frei.
 - Zwei Balken, Melodie und Rhythmus. Keine Prozentzahl.
 - Ein gleichmässig langsameres Nachsprechen färbt die Wörter nicht rot. Die lokale Dehnung bleibt etwa bei 0,75 bis 1,33. Der Rhythmusbalken folgt dem Tempo der ganzen Aufnahme gegen die Datei, die gerade gehört wurde, auch bei 70 % und 85 %.

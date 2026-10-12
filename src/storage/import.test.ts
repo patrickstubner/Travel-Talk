@@ -79,6 +79,13 @@ describe('import', () => {
     }
   })
 
+  it('keeps a word card for a checked id', () => {
+    const known = new Set(['emergency.help', 'w.water'])
+    const outcome = parseImport(bundle([{ ...card(), cardId: 'de-vi:w.water' }, { ...card(), cardId: 'de-vi:w.missing' }]), known)
+    expect(outcome.snapshot.cards.map((item) => item.cardId)).toEqual(['de-vi:w.water'])
+    expect(outcome.skipped).toBe(1)
+  })
+
   it('skips unknown card ids and summarises what remains', () => {
     const outcome = parseImport(bundle([{ ...card(), cardId: 'de-vi:not-in-catalog' }, card()]), concepts)
     expect(outcome.skipped).toBe(1)
