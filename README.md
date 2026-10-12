@@ -25,7 +25,7 @@ Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Jede Richtung au
 | Sehenswürdigkeiten | Anfang | 6 |
 | Transport | kleiner Satz | 20 |
 
-Vietnamesisch ist im Text südlich voreingestellt. Nord ist eine Variante, zum Beispiel `đậu phộng` und `lạc`. Eine neue Installation spricht mit einer Männerstimme. Die nördliche Frauenstimme bleibt wählbar. Der Akzent der Männerstimmen ist nicht dokumentiert. Das Tempo hat drei Stufen, 70 %, 85 % und 100 %, als eigene Dateien, damit die Tonhöhe gleich bleibt. Die Wahl der Sätze sitzt am Player. Einzelne Wörter haben eine eigene Wahl, ohne Automatisch, und starten bei 100 %. Details in [docs/audio.md](docs/audio.md).
+Vietnamesisch ist im Text südlich voreingestellt. Nord ist eine Variante, zum Beispiel `đậu phộng` und `lạc`. Eine neue Installation spricht mit einer Männerstimme. Die nördliche Frauenstimme bleibt wählbar. Die Hörprobe ist ein Gruss und eine kurze Vorstellung im normalen Tempo. Der Akzent der Männerstimmen ist nicht dokumentiert. Das Tempo hat drei Stufen, 70 %, 85 % und 100 %, als eigene Dateien, damit die Tonhöhe gleich bleibt. Die Wahl der Sätze sitzt am Player. Einzelne Wörter haben eine eigene Wahl, ohne Automatisch, und starten bei 100 %. Details in [docs/audio.md](docs/audio.md).
 
 ## Lokal entwickeln
 

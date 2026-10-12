@@ -31,7 +31,7 @@ describe('language choice voices', () => {
     expect(screen.getByRole('button', { name: 'Mann 1' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', { name: 'Frau (Norden)' }).getAttribute('aria-pressed')).toBe('false')
     fireEvent.click(screen.getByRole('button', { name: 'Hörprobe: Mann 1' }))
-    expect(playClip).toHaveBeenCalledWith('vi/vivos-22/emergency.help__any__base.m4a', 'Mann 1', 'vi', 1)
+    expect(playClip).toHaveBeenCalledWith('vi/vivos-22/voice.sample__any__base.m4a', 'Mann 1', 'vi', 1)
   })
 
   it('keeps the previous voice selected for someone who already has settings', () => {

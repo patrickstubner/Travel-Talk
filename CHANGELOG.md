@@ -5,6 +5,7 @@
 - Ein neues Wort kommt dreimal ohne Frage: Ton, Schrift, lesbare Umschrift in der App-Sprache, IPA und die Bedeutung. Danach erst «Was bedeutet das Wort?». Die FSRS-Karte entsteht bei der Antwort, nicht beim Hören. Eine Wiederholung überspringt die Einführung.
 - Jedes geprüfte Wort hat eine Umschrift für Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Am vietnamesischen Wort steht der Ton der Schreibung. không, đâu und đây tragen den Ton jetzt in der Schrift der Wortkarte. Die alten Clips dieser drei Wörter sind noch ohne diesen Ton.
 - Einzelne Wörter starten bei 100 %. Diese Person kann 70 %, 85 % oder 100 % wählen. Die Wahl bleibt in ihrem Profil. Sätze behalten ihr Tempo, einschliesslich Automatisch. `playbackRate` bleibt 1. Das Tempo liegt in der Datei.
+- Die Hörprobe ist kein einzelnes Wort mehr. Jede mitgelieferte Stimme spricht einen Gruss und eine kurze Vorstellung im normalen Tempo, mindestens zwei Sekunden. Die Datei heisst `voice.sample__any__base.m4a`, ohne 70 % und ohne 85 %. Sie liegt im Manifest und kommt mit «Für offline laden». Die vier portugiesischen XTTS-Stimmen kommen dazu, sobald 0.9.2 gemergt ist.
 
 ## 0.9.0 — 2026-10-12
 

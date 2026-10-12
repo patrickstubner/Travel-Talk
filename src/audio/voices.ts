@@ -33,12 +33,11 @@ export const VOICES: readonly CatalogVoice[] = [
   { id: 'vais1000', lang: 'vi', gender: 'female', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 3 },
 ]
 
-const PREVIEW: Record<Lang, string> = {
-  de: 'de/emergency.help__any__base.m4a',
-  en: 'en/emergency.help__any__base.m4a',
-  'pt-BR': 'pt-BR/emergency.help__any__base.m4a',
-  vi: 'vi/emergency.help__any__base.m4a',
-}
+/**
+ * Hörprobe in the settings. One greeting and a short introduction, at the
+ * normal Piper rate. Not a lesson clip, so there is no slow copy.
+ */
+export const VOICE_SAMPLE = 'voice.sample__any__base.m4a'
 
 export function voicesFor(lang: Lang): CatalogVoice[] {
   return VOICES.filter((voice) => voice.lang === lang && voice.bundled).sort((a, b) => a.order - b.order)
@@ -94,7 +93,7 @@ export function spokenWordFile(settings: Settings, lang: Lang, file: string): st
 }
 
 export function previewFile(lang: Lang, voice: CatalogVoice): string {
-  return voiceFile(PREVIEW[lang], voice.id, voice.legacy)
+  return voiceFile(`${lang}/${VOICE_SAMPLE}`, voice.id, voice.legacy)
 }
 
 /** Onboarding writes the male voice. An explicit choice is kept. Existing rows never come through here. */
