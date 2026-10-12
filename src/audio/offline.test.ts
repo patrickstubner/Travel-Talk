@@ -182,7 +182,7 @@ describe('offline voice loading', () => {
     const policy = readFileSync(fileURLToPath(new URL('../pwa/cache-policy.ts', import.meta.url)), 'utf8')
     expect(text).toContain('statuses: [200]')
     expect(text).not.toContain('[0, 200]')
-    expect(text).toMatch(/maxEntries:\s*8000/)
+    expect(text).toMatch(/maxEntries:\s*12000/)
     expect(policy).toContain('**/*.align.json')
     expect(text).toContain('PRECACHE_IGNORES')
     expect(text).toContain('align\\.json')
@@ -203,7 +203,7 @@ describe('offline voice loading', () => {
     const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../../public/audio/manifest.json', import.meta.url)), 'utf8')) as unknown[]
     const match = text.match(/maxEntries:\s*(\d+)/)
     const limit = Number(match?.[1])
-    expect(limit).toBe(8000)
+    expect(limit).toBe(12000)
     expect(manifest.length).toBeGreaterThan(0)
     expect(limit).toBeGreaterThanOrEqual(manifest.length + 1200)
     expect(manifest.some((item) => typeof item === 'string' && item.includes('/help/') && item.endsWith('.m4a'))).toBe(true)

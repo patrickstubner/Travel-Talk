@@ -79,7 +79,7 @@ export default defineConfig({
                 options: {
                   cacheName: 'travel-talk-audio',
                   cacheableResponse: { statuses: [200] },
-                  expiration: { maxEntries: 8000, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                  expiration: { maxEntries: 12000, maxAgeSeconds: 60 * 60 * 24 * 365 },
                 },
               },
             ],

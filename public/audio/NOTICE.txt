@@ -20,6 +20,8 @@ Vietnamesisch, Ordner vi/vivos-22 und vi/vivos-32: vi_VN-vivos-x_low, Sprecher V
 
 Vietnamesisch, ohne Stimmordner: vi_VN-vais1000-medium. Datensatz VAIS-1000, CC BY 4.0, https://creativecommons.org/licenses/by/4.0/. Das Material wurde verändert. Nördlicher Akzent, eine Sprecherin. Namensnennung: VAIS-1000, IEEE DataPort, Lizenz CC BY 4.0. Feintuning von lessac (medium). Die Stimme übernimmt die Datensatzlizenz nicht allein. Quelle der Modellkarte: https://huggingface.co/rhasspy/piper-voices/blob/main/vi/vi_VN/vais1000/medium/MODEL_CARD.
 
+Portugiesisch (Brasilien), Ordner pt-BR/daisy-studious, pt-BR/gracie-wise und pt-BR/tammie-ema: Coqui XTTS-v2, Sprecherinnen Daisy Studious, Gracie Wise und Tammie Ema, Sprache pt. Quelle https://huggingface.co/coqui/XTTS-v2, Revision 6c2b0d75eae4b7047358e3b6bd9325f857d43f77. SHA-256 von model.pth: c7ea20001c6a0a841c77e252d8409f6a74fb423e79b3206a0771ba5989776187. Lizenz Coqui Public Model License 1.0.0, https://coqui.ai/cpml.txt. Nur nicht kommerzielle Nutzung. Das gilt für das Modell und für dieses Audio. In jedem der drei Ordner liegt eine LICENSE.txt. Die Gewichte liegen nicht in diesem Repo. Der Standard bleibt cadu.
+
 Nicht verwendet: en_US-ryan (CC BY-NC-SA 4.0), en_GB-alan (die Karte sagt nur «See URL»), pt_BR-jeff (Datensatz CC0, Modell von lessac, nicht zusätzlich gepackt), en_US-lessac (nur Research).
 
 Qualität und Akzent sind nicht von einer muttersprachlichen Person geprüft. Die vivos-Stimmen sind hörbar schlechter als vais1000: niedrige Abtastrate, und espeak erzeugt Phoneme, die das Modell nicht kennt.

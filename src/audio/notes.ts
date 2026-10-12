@@ -51,7 +51,11 @@ export function voiceCaption(copy: Dictionary, app: Lang, target: Lang, settings
   if (target === 'en') {
     return id === 'joe' ? fixedPart(app, 'ui.voice-en-male', copy.audioEnMale) : fixedPart(app, 'ui.voice-en', copy.audioEn)
   }
-  return id === 'cadu' ? fixedPart(app, 'ui.voice-pt-male', copy.audioPtMale) : fixedPart(app, 'ui.voice-pt', copy.audioPt)
+  if (id === 'cadu') return fixedPart(app, 'ui.voice-pt-male', copy.audioPtMale)
+  if (id === 'daisy-studious') return { text: copy.audioPtDaisy, clip: null }
+  if (id === 'gracie-wise') return { text: copy.audioPtGracie, clip: null }
+  if (id === 'tammie-ema') return { text: copy.audioPtTammie, clip: null }
+  return fixedPart(app, 'ui.voice-pt', copy.audioPt)
 }
 
 function add(rows: Map<string, string>, part: ExplainPart): void {

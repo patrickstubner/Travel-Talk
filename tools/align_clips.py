@@ -38,6 +38,10 @@ JOBS = [
     {"lang": "en", "model": "en_US-joe-medium", "speaker": None, "voice": "joe"},
     {"lang": "pt-BR", "model": "pt_BR-faber-medium", "speaker": None, "voice": None},
     {"lang": "pt-BR", "model": "pt_BR-cadu-medium", "speaker": None, "voice": "cadu"},
+    # XTTS clips. Cadu supplies the phoneme clock. The m4a is the shipped file.
+    {"lang": "pt-BR", "model": "pt_BR-cadu-medium", "speaker": None, "voice": "daisy-studious"},
+    {"lang": "pt-BR", "model": "pt_BR-cadu-medium", "speaker": None, "voice": "gracie-wise"},
+    {"lang": "pt-BR", "model": "pt_BR-cadu-medium", "speaker": None, "voice": "tammie-ema"},
     {"lang": "vi", "model": "vi_VN-vais1000-medium", "speaker": None, "voice": None},
     {"lang": "vi", "model": "vi_VN-vivos-x_low", "speaker": 9, "voice": "vivos-22"},
     {"lang": "vi", "model": "vi_VN-vivos-x_low", "speaker": 37, "voice": "vivos-32"},
@@ -297,12 +301,27 @@ def main() -> None:
     logging.getLogger("piper").setLevel(logging.ERROR)
     require_piper()
     require_onnx()
-    dirs = [Path(arg) for arg in sys.argv[1:] if not arg.startswith("--")]
+    dirs: list[Path] = []
     limit = 0
-    if "--limit" in sys.argv:
-        limit = int(sys.argv[sys.argv.index("--limit") + 1])
+    voices_only: set[str] = set()
+    raw = sys.argv[1:]
+    index = 0
+    while index < len(raw):
+        arg = raw[index]
+        if arg == "--limit":
+            limit = int(raw[index + 1])
+            index += 2
+            continue
+        if arg == "--voice":
+            voices_only.add(raw[index + 1])
+            index += 2
+            continue
+        if arg.startswith("--"):
+            raise SystemExit(f"unknown option {arg}")
+        dirs.append(Path(arg))
+        index += 1
     if not dirs:
-        raise SystemExit("usage: align_clips.py <model-dir> [--limit N]")
+        raise SystemExit("usage: align_clips.py <model-dir> [--limit N] [--voice id]")
     voices: dict[tuple[str, str], PiperVoice] = {}
     written = 0
     skipped = 0
@@ -310,6 +329,8 @@ def main() -> None:
     ratios: list[float] = []
     boundaries: list[float] = []
     for job in JOBS:
+        if voices_only and job["voice"] not in voices_only:
+            continue
         directory = find_model(job["model"], dirs)
         if directory is None:
             print(f"skip {job['model']}: model not in the given directories", flush=True)

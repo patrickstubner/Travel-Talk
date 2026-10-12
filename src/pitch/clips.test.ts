@@ -10,9 +10,12 @@ import { describe, expect, it } from 'vitest'
 import { rawCatalog } from '../../content'
 import { splitWords } from '../../content/gloss'
 import { alignmentFitsDuration, parseAlignment } from '../audio/align'
+import { tempoFile } from '../audio/speed'
 import { VOICES } from '../audio/voices'
 import { allSpeechLines, voiceFile } from '../content/resolve'
+import { WORDS, wordAudioFile } from '../../content/words'
 import { analyzeModel, analyzeUser } from './analyze'
+import { clipProblem } from './clip-plausible'
 import { contourFromSamples, frameEnergy } from './contour'
 import { scoreRepeat, type RepeatScore } from './feedback'
 import { bandShape } from './spectrum'
@@ -78,6 +81,96 @@ const KNOWN_MISSING = new Set([
   'en/stay.problem__any__base.m4a',
   'en/transport.09.app__any__base.m4a',
   'en/visa.evisa__any__base.m4a',
+  'pt-BR/daisy-studious/arrival.passport__any__base.m4a',
+  'pt-BR/daisy-studious/day.morning__any__base.m4a',
+  'pt-BR/daisy-studious/day.toilet__any__base.m4a',
+  'pt-BR/daisy-studious/emergency.accident__any__base.m4a',
+  'pt-BR/daisy-studious/emergency.allergic__any__base.m4a',
+  'pt-BR/daisy-studious/emergency.family__any__base.m4a',
+  'pt-BR/daisy-studious/emergency.peanut__any__base.m4a',
+  'pt-BR/daisy-studious/food.recommend__any__senhor.m4a',
+  'pt-BR/daisy-studious/meet.address-ask__any__senhor.m4a',
+  'pt-BR/daisy-studious/meet.father__any__base.m4a',
+  'pt-BR/daisy-studious/meet.food-q__any__senhor.m4a',
+  'pt-BR/daisy-studious/meet.hobby-q__any__senhor.m4a',
+  'pt-BR/daisy-studious/meet.job-q__any__senhor.m4a',
+  'pt-BR/daisy-studious/meet.job-q__any__senhora.m4a',
+  'pt-BR/daisy-studious/meet.job__any__base.m4a',
+  'pt-BR/daisy-studious/meet.nice__any__senhor.m4a',
+  'pt-BR/daisy-studious/meet.thanks__any__base.m4a',
+  'pt-BR/daisy-studious/meet.your-name__any__senhor.m4a',
+  'pt-BR/daisy-studious/sight.price__any__base.m4a',
+  'pt-BR/daisy-studious/stay.reservation__any__base.m4a',
+  'pt-BR/daisy-studious/transport.04.airport__any__base.m4a',
+  'pt-BR/daisy-studious/transport.05.price__any__base.m4a',
+  'pt-BR/daisy-studious/transport.06.meter__any__base.m4a',
+  'pt-BR/gracie-wise/arrival.hotel__any__base.m4a',
+  'pt-BR/gracie-wise/arrival.luggage__any__base.m4a',
+  'pt-BR/gracie-wise/arrival.passport__any__base.m4a',
+  'pt-BR/gracie-wise/day.excuse__any__base.m4a',
+  'pt-BR/gracie-wise/emergency.ambulance__any__base.m4a',
+  'pt-BR/gracie-wise/emergency.doctor__any__base.m4a',
+  'pt-BR/gracie-wise/emergency.family__any__base.m4a',
+  'pt-BR/gracie-wise/emergency.hurt__any__base.m4a',
+  'pt-BR/gracie-wise/emergency.passport__any__base.m4a',
+  'pt-BR/gracie-wise/emergency.peanut__any__base.m4a',
+  'pt-BR/gracie-wise/food.good__any__base.m4a',
+  'pt-BR/gracie-wise/food.recommend__any__senhora.m4a',
+  'pt-BR/gracie-wise/meet.address-ask__any__senhora.m4a',
+  'pt-BR/gracie-wise/meet.contact__any__senhor.m4a',
+  'pt-BR/gracie-wise/meet.contact__any__senhora.m4a',
+  'pt-BR/gracie-wise/meet.father__any__base.m4a',
+  'pt-BR/gracie-wise/meet.food-q__any__senhor.m4a',
+  'pt-BR/gracie-wise/meet.hobby-q__any__senhor.m4a',
+  'pt-BR/gracie-wise/meet.job-q__any__senhor.m4a',
+  'pt-BR/gracie-wise/meet.job-q__any__voce.m4a',
+  'pt-BR/gracie-wise/meet.job__any__base.m4a',
+  'pt-BR/gracie-wise/meet.thanks__any__base.m4a',
+  'pt-BR/gracie-wise/sight.price__any__base.m4a',
+  'pt-BR/gracie-wise/sight.where__any__base.m4a',
+  'pt-BR/gracie-wise/stay.name__any__base.m4a',
+  'pt-BR/gracie-wise/stay.reservation__any__base.m4a',
+  'pt-BR/gracie-wise/transport.02.where__any__base.m4a',
+  'pt-BR/gracie-wise/transport.04.airport__any__base.m4a',
+  'pt-BR/gracie-wise/transport.05.price__any__base.m4a',
+  'pt-BR/gracie-wise/transport.08.plate__any__base.m4a',
+  'pt-BR/gracie-wise/transport.13.line__any__base.m4a',
+  'pt-BR/gracie-wise/transport.15.long__any__base.m4a',
+  'pt-BR/gracie-wise/transport.16.gate__any__base.m4a',
+  'pt-BR/gracie-wise/transport.19.ferry__any__base.m4a',
+  'pt-BR/gracie-wise/transport.20.seasick__any__base.m4a',
+  'pt-BR/tammie-ema/arrival.declare__any__base.m4a',
+  'pt-BR/tammie-ema/day.morning__any__base.m4a',
+  'pt-BR/tammie-ema/day.toilet__any__base.m4a',
+  'pt-BR/tammie-ema/emergency.accident__any__base.m4a',
+  'pt-BR/tammie-ema/emergency.help__any__base.m4a',
+  'pt-BR/tammie-ema/emergency.lost__any__base.m4a',
+  'pt-BR/tammie-ema/food.good__any__base.m4a',
+  'pt-BR/tammie-ema/meet.contact__any__base.m4a',
+  'pt-BR/tammie-ema/meet.contact__any__senhor.m4a',
+  'pt-BR/tammie-ema/meet.contact__any__senhora.m4a',
+  'pt-BR/tammie-ema/meet.father__any__base.m4a',
+  'pt-BR/tammie-ema/meet.food-q__any__senhor.m4a',
+  'pt-BR/tammie-ema/meet.food-q__any__senhora.m4a',
+  'pt-BR/tammie-ema/meet.hobby-q__any__senhor.m4a',
+  'pt-BR/tammie-ema/meet.hobby-q__any__senhora.m4a',
+  'pt-BR/tammie-ema/meet.job-q__any__senhora.m4a',
+  'pt-BR/tammie-ema/meet.job__any__base.m4a',
+  'pt-BR/tammie-ema/meet.nice__any__senhor.m4a',
+  'pt-BR/tammie-ema/meet.where-from__any__senhor.m4a',
+  'pt-BR/tammie-ema/meet.where-from__any__senhora.m4a',
+  'pt-BR/tammie-ema/meet.your-name__any__senhora.m4a',
+  'pt-BR/tammie-ema/meet.your-name__any__voce.m4a',
+  'pt-BR/tammie-ema/sight.photo__any__base.m4a',
+  'pt-BR/tammie-ema/sight.price__any__base.m4a',
+  'pt-BR/tammie-ema/sight.where__any__base.m4a',
+  'pt-BR/tammie-ema/stay.checkout__any__base.m4a',
+  'pt-BR/tammie-ema/stay.name__any__base.m4a',
+  'pt-BR/tammie-ema/transport.03.hotel__any__base.m4a',
+  'pt-BR/tammie-ema/transport.04.airport__any__base.m4a',
+  'pt-BR/tammie-ema/transport.09.app__any__base.m4a',
+  'pt-BR/tammie-ema/transport.19.ferry__any__base.m4a',
+  'pt-BR/tammie-ema/transport.20.seasick__any__base.m4a',
 ])
 
 function ffmpegReady(): boolean {
@@ -152,6 +245,14 @@ describe('shipped clips', () => {
         const file = voiceFile(line.file, voice.id, voice.legacy)
         const audio = `public/audio/${file}`
         if (!existsSync(audio)) continue
+        const samples = decode(audio)
+        expect(clipProblem(file, samples), file).toBeNull()
+        for (const step of [0.7, 0.85] as const) {
+          const slow = tempoFile(file, step)
+          const slowPath = `public/audio/${slow}`
+          if (!existsSync(slowPath)) continue
+          expect(clipProblem(slow, decode(slowPath)), slow).toBeNull()
+        }
         const alignPath = audio.replace(/\.m4a$/, '.align.json')
         if (!existsSync(alignPath)) {
           missing.push(file)
@@ -162,7 +263,6 @@ describe('shipped clips', () => {
           missing.push(file)
           continue
         }
-        const samples = decode(audio)
         const duration = samples.length / 16000
         if (!alignmentFitsDuration(times, duration)) {
           missing.push(file)
@@ -207,6 +307,22 @@ describe('shipped clips', () => {
     expect(timed, only).toBeGreaterThan(0)
     for (const file of missing) expect(KNOWN_MISSING.has(file), file).toBe(true)
     expectOtherVoice(only)
+    if (only !== 'pt-BR') return
+    for (const voice of VOICES.filter((item) => item.lang === 'pt-BR' && item.provider === 'xtts')) {
+      for (const word of WORDS) {
+        const file = voiceFile(wordAudioFile(word, 'pt-BR', 'south'), voice.id, false)
+        const audio = `public/audio/${file}`
+        expect(existsSync(audio), file).toBe(true)
+        expect(clipProblem(file, decode(audio)), file).toBeNull()
+        for (const step of [0.7, 0.85] as const) {
+          const slow = tempoFile(file, step)
+          const slowPath = `public/audio/${slow}`
+          expect(existsSync(slowPath), slow).toBe(true)
+          expect(clipProblem(slow, decode(slowPath)), slow).toBeNull()
+        }
+        expect(existsSync(audio.replace(/\.m4a$/, '.align.json')), file).toBe(false)
+      }
+    }
   }
 
   function reverseSamples(samples: Float32Array): Float32Array {
@@ -298,6 +414,7 @@ describe('shipped clips', () => {
     }
   }
 
+
   const allLangs = ['de', 'en', 'pt-BR', 'vi'] as const
   const requested = process.env.CLIP_LANG
   if (requested && !allLangs.includes(requested as (typeof allLangs)[number])) {
@@ -306,7 +423,7 @@ describe('shipped clips', () => {
   const clipLangs = requested ? allLangs.filter((lang) => lang === requested) : [...allLangs]
 
   for (const lang of clipLangs) {
-    it.skipIf(!ready)(`decodes ${lang} and scores the melody`, () => checkLanguage(lang), 1_080_000)
+    it.skipIf(!ready)(`decodes ${lang} and scores the melody`, () => checkLanguage(lang), 2_400_000)
   }
 
   const microphone = [

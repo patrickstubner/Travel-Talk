@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.5 — 2026-10-12
+
+- Portugiesisch (Brasilien) hat drei zusätzliche Frauenstimmen: Daisy Studious, Gracie Wise und Tammie Ema. Die Dateien sind offline mit Coqui XTTS-v2 erzeugt, Sprache `pt`. Der Standard für neue Nutzer bleibt cadu. Wer schon eine Stimme gewählt hat, behält sie.
+- Die Lizenz ist die Coqui Public Model License 1.0.0. Sie erlaubt nur nicht kommerzielle Nutzung. Das gilt für das Modell und für das erzeugte Audio. Der Text steht in `LICENSE.txt` im Stimmordner, in `docs/samples/LICENSE.txt` und in NOTICE.txt. Die App bleibt für die Familie und ist nicht kommerziell.
+- Die Revision ist `6c2b0d75eae4b7047358e3b6bd9325f857d43f77`. Die SHA-256 der Gewichte steht in `tools/generate_xtts.py` und wird vor der Synthese geprüft. Die Gewichte liegen nicht im Repo. `coqui-tts` 0.27.2 ist nur das Erzeugungswerkzeug.
+- Dieselben Stufen wie bei Piper: 450 Sätze, je Basis, 70 % und 85 %, zusammen 1350 m4a, plus 360 `align.json` über `tools/align_clips.py`. Die Wortzeiten kommen aus der Phonemuhr von cadu und liegen auf der XTTS-Datei. 90 Sätze bekommen keine Zeitdatei, weil die Zuordnung nicht trägt. Eine Datei unter 0,3 Sekunden oder eine kurze Datei mit zu wenig stimmhaften Frames wird nicht übernommen.
+- Dieselben neunzehn Wörter wie in 0.9.0, in der Zitierform, je Basis, 70 % und 85 %, ohne Zeitdatei, wie die Piper-Wörter. Drei Stimmen, 171 Dateien. Dieselbe Prüfung auf Dauer und stimmhafte Frames gilt für diese Wörter.
+- `manifest.json` hat 8648 Einträge. Der Audio-Cache lässt 12000 Einträge.
+
 ## 0.9.4 — 2026-10-12
 
 - Auf der Satzseite, in Heute lernen und bei der Wortvorstellung steht zuerst der Satz oder das Wort in der Lernsprache, gross, auf einer Karte. Direkt darunter die Übersetzung. Dann Anhören mit dem Tempo, dann Aufnehmen. Sobald eine Aufnahme bewertet ist, stehen die Wörter, die Balken und der Hinweis direkt darunter, nicht unter den Erklärungen.

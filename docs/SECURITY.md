@@ -418,3 +418,21 @@ Geprüft am 11. Oktober 2026. Die Korrekturen liegen in 0.7.0. Kein neues Paket.
 | P16b-03 | Niedrig | Geschlossen | Die Zeilen zu N14b-02 nennen M1 und N15–N17 als offen und M2 und N4 als geschlossen, ohne ihnen das Verhalten der Download-Tests zuzuschreiben und ohne zu behaupten, die Mutanten-Diffs fehlten im Repo. P16-05 steht als Niedrig. Ein ZWJ zwischen zwei Emoji bleibt im Namen. Ein einzelner ZWJ nicht. Test: `src/storage/people.test.ts`. |
 
 Ein Speichern für eine Person, die gerade gelöscht wurde, schreibt keine Karte und keine Einstellungen. Ein unbekannter Personen-Wechsel ändert die aktive Person nicht. Eine leere Notiz im Import behält die Notiz auf dem Gerät. Die Personenliste setzt den Namen in `<bdi>`. Löschen ruft `forgetVoiceIfUnused` auf. `playClip` hält an, wenn `stopClip` während `play()` gewinnt.
+
+## XTTS-v2, drei portugiesische Frauenstimmen
+
+Geprüft am 12. Oktober 2026. Keine neue Laufzeitabhängigkeit und kein neues npm-Paket. Die App lädt das Modell nicht. `npm audit` bleibt bei 0 Schwachstellen.
+
+**Lizenz.** Die drei Stimmen `daisy-studious`, `gracie-wise` und `tammie-ema` sind offline mit Coqui XTTS-v2 erzeugt, Sprache `pt`, Sprecherinnen Daisy Studious, Gracie Wise und Tammie Ema. Die Lizenz ist die Coqui Public Model License 1.0.0, https://coqui.ai/cpml.txt. Sie erlaubt nur nicht kommerzielle Nutzung des Modells und der Ausgabe. Diese App ist für die Familie und nicht kommerziell. Der Lizenztext liegt in `LICENSE.txt` in jedem Stimmordner, in `docs/samples/LICENSE.txt` und als Hinweis in `public/audio/NOTICE.txt`. Die Oberfläche nennt CPML und die nicht kommerzielle Beschränkung.
+
+**Revision.** Hugging Face `coqui/XTTS-v2`, Revision `6c2b0d75eae4b7047358e3b6bd9325f857d43f77`. SHA-256 von `model.pth`: `c7ea20001c6a0a841c77e252d8409f6a74fb423e79b3206a0771ba5989776187`. `tools/generate_xtts.py` prüft die SHA-256 von `model.pth`, `config.json`, `vocab.json`, `speakers_xtts.pth`, `dvae.pth`, `mel_stats.pth`, `hash.md5` und `LICENSE.txt`, bevor es synthetisiert. Die Gewichte liegen nicht im Repo. `coqui-tts` ist auf 0.27.2 festgeschrieben und steht nicht in `package.json`.
+
+**Pipeline.** Dieselbe Kette wie Piper: Spitzen-Normalisierung, AAC 48 kbit/s, mono, 22050 Hz, `atempo` 0.7 und 0.85. Die Satz-Wortzeiten schreibt `tools/align_clips.py` mit der Phonemuhr von `pt_BR-cadu-medium` (`piper-tts` 1.8.0, `onnx` 1.17.0), gelegt auf die vorhandene m4a. Die neunzehn Wortclips von 0.9.0 haben keine Zeitdatei, wie die Piper-Wörter. Eine Datei unter 0,3 Sekunden auf voller Geschwindigkeit, oder unter 0,45 Sekunden mit weniger als 40 % stimmhaften Frames (pitchy, Klarheit 0,6, 70 bis 450 Hz), wird nicht übernommen. Das gilt für Sätze und Wörter, auch bei 70 % und 85 %. Der Standard für neue Nutzer bleibt cadu. Unbekannte Stimmen-IDs bleiben abgelehnt. Die Ids erfüllen `^[a-z0-9_-]{1,40}$`.
+
+**Cache.** 1350 Satzdateien, 360 Satz-Zeitdateien und 171 Wortdateien. `manifest.json` hat 8648 Einträge, 6851 Audio und 1797 Zeiten. `maxEntries` ist 12000. Die Prüfung von 0.9.0 nannte 8000. Diese Fassung hebt die Grenze, damit mehr als 1200 Plätze frei bleiben, auch wenn Pull Request 22 später dazukommt. Die Cache-Regel bleibt Status 200. Nichts davon kommt in den Precache.
+
+| ID | Schwere | Status | Auflösung |
+| --- | --- | --- | --- |
+| X1 | Mittel | Geschlossen | CPML erlaubt nur nicht kommerzielle Nutzung. LICENSE.txt, NOTICE.txt, die Hörproben und die Satzseite nennen das. Die App holt das Modell nicht. |
+| X2 | Niedrig | Geschlossen | Die Gewichte sind über Revision und SHA-256 festgeschrieben und liegen ausserhalb des Repos. |
+| X3 | Info | Offen gegenüber PR 22 | Pull Request 22 ist nicht gemergt und steht auch gegen `main` von 0.9.0 in Konflikt. Er setzt faber auf Mann, fügt die deutsche Frau `mls-4576` hinzu und hält `maxEntries` bei 8000. Diese Fassung lässt faber weiblich, wie auf `main`, und hebt `maxEntries` auf 12000. Ein Merge braucht die höhere Grenze und behält beide Stimmlisten. |
