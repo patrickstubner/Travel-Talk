@@ -58,4 +58,17 @@ describe('info button', () => {
     expect(vi.mocked(playClip).mock.calls[0]?.[0]).toBe('de/help/ui.mic__any__base.m4a')
     expect(await screen.findByRole('button', { name: 'Vorlesen' })).toBeTruthy()
   })
+
+  it('leaves Stopp when the clip is paused or another sound takes over', async () => {
+    vi.mocked(playClip).mockImplementation(async (_file, _speech, _lang, _rate, _onEnd, _onTime, _onDuration, onStop) => {
+      const stop = onStop as (() => void) | undefined
+      stop?.()
+      return 'file'
+    })
+    renderInfo()
+    fireEvent.click(screen.getByRole('button', { name: 'Erklärungen zum Satz' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Vorlesen' }))
+    expect(await screen.findByRole('button', { name: 'Vorlesen' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Stopp' })).toBeNull()
+  })
 })

@@ -179,4 +179,45 @@ describe('playClip', () => {
     expect(onTime).not.toHaveBeenCalled()
     expect(frame).not.toHaveBeenCalled()
   })
+
+  it('ends the clip on error, pause, or a newer playback', async () => {
+    clearManifestCache()
+    const created: Array<FakeAudio & { onerror: (() => void) | null; onpause: (() => void) | null }> = []
+    vi.stubGlobal(
+      'Audio',
+      class extends FakeAudio {
+        onerror: (() => void) | null = null
+        onpause: (() => void) | null = null
+        constructor(src: string) {
+          super(src)
+          created.push(this)
+        }
+        override pause(): void {
+          this.onpause?.()
+        }
+      },
+    )
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ['vi/emergency.help__any__base.m4a', 'vi/emergency.help__any__base.r70.m4a'],
+      })),
+    )
+    const onEnd = vi.fn()
+    const onStop = vi.fn()
+    await playClip('vi/emergency.help__any__base.m4a', 'Hilfe', 'vi', 1, onEnd, undefined, undefined, onStop)
+    created[0]?.onerror?.()
+    expect(onStop).toHaveBeenCalledOnce()
+    expect(onEnd).not.toHaveBeenCalled()
+
+    clearManifestCache()
+    onStop.mockClear()
+    onEnd.mockClear()
+    created.length = 0
+    await playClip('vi/emergency.help__any__base.m4a', 'Hilfe', 'vi', 1, onEnd, undefined, undefined, onStop)
+    await playClip('vi/emergency.help__any__base.r70.m4a', 'Hilfe', 'vi', 0.7)
+    expect(onStop).toHaveBeenCalled()
+    expect(onEnd).not.toHaveBeenCalled()
+  })
 })

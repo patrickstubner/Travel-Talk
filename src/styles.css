@@ -68,8 +68,8 @@ button[aria-pressed="true"], .pair-button[aria-pressed="true"] {
   padding: 1rem 1.1rem 0.2rem;
 }
 .brand { font-family: var(--serif); font-size: 1.7rem; margin: 0; letter-spacing: -0.03em; }
-.top-switch { position: relative; display: flex; justify-content: center; align-items: stretch; gap: 0.4rem; padding: 0.15rem 0.75rem 0.45rem; }
-.top-trigger { flex: 1 1 auto; min-width: 0; max-width: 11.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; line-height: 1.25; }
+.top-switch { position: relative; display: flex; justify-content: center; align-items: stretch; gap: 0.4rem; min-width: 0; max-width: 100%; padding: 0.15rem 0.75rem 0.45rem; }
+.top-trigger { flex: 1 1 0; width: 0; min-width: 0; max-width: 11.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; line-height: 1.25; }
 .top-menu { position: absolute; z-index: 2; top: calc(100% - 0.2rem); left: 0.75rem; right: 0.75rem; display: grid; gap: 0.45rem; background: var(--card); border: 1px solid var(--line); border-radius: 1rem; padding: 0.75rem; box-shadow: 0 8px 24px rgba(27, 36, 48, 0.08); }
 .top-menu form, .top-menu label { display: grid; gap: 0.3rem; }
 .person-shared { background: #d7efe9; border-radius: 1rem; padding: 0.8rem 0.95rem; margin: 0; }
@@ -404,11 +404,12 @@ a.menu-card span { color: var(--muted); }
     background: var(--card);
     border-top: 1px solid var(--line);
     z-index: 2;
+    overflow: hidden;
     padding-bottom: calc(0.35rem + env(safe-area-inset-bottom));
   }
   .show-mode .nav { background: #1c2228; }
   .app { padding-bottom: calc(4.6rem + env(safe-area-inset-bottom)); }
-  .nav a { font-size: 0.82rem; }
+  .nav a { min-width: 0; text-align: center; font-size: 0.78rem; padding: 0.4rem 0.28rem; }
   main { padding-bottom: 1rem; }
 }
 

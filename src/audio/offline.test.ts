@@ -183,6 +183,8 @@ describe('offline voice loading', () => {
     expect(text).toContain('**/*.align.json')
     expect(text).toContain('align\\.json')
     expect(text).toContain('cleanupOutdatedCaches: false')
+    expect(text).toContain('audio/*/help/*.m4a')
+    expect(text).not.toContain('**/*.m4a')
     expect(text).not.toContain('sw-migrate')
     expect(text).not.toContain('importScripts')
   })
@@ -195,6 +197,7 @@ describe('offline voice loading', () => {
     expect(limit).toBe(8000)
     expect(manifest.length).toBeGreaterThan(0)
     expect(limit).toBeGreaterThanOrEqual(manifest.length + 1200)
+    expect(manifest.some((item) => typeof item === 'string' && item.includes('/help/') && item.endsWith('.m4a'))).toBe(true)
   })
 
   it('skips a missing file and still finishes the voice', async () => {

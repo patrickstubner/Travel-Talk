@@ -94,7 +94,7 @@ export function KaraokeLine({
           {row}
         </h1>
       ) : (
-        <p className="target-line" lang={lang} data-testid={heading ? undefined : 'target-line'}>
+        <p className="target-line" lang={lang} data-testid="target-line">
           {row}
         </p>
       )}

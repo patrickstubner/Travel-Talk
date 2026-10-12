@@ -6,6 +6,11 @@
 - Erklärungen, Kulturhinweise zum Satz, Aussprache- und Stimmenhinweise und die übrigen Hilfetexte stehen hinter einem Info-Knopf (i). Ein Tippen öffnet ein Blatt. Escape, Tippen daneben und «Schliessen» machen es zu. Die Seite selbst zeigt den Lerninhalt.
 - «Vorlesen» im Blatt spricht die Erklärung in der Sprache der App. Zuerst die mitgelieferte Piper-Datei unter `public/audio/{sprache}/help/`. Fehlt sie oder ist sie offline nicht da, spricht `speechSynthesis` denselben Satz. Satz-Audio geht weiter nicht über `speechSynthesis`.
 - Die Karten und Knöpfe sind heller und kräftiger. Der Text bleibt dunkel auf hellem Grund, im Zeigen-Modus hell auf dunklem Grund.
+- «Vorlesen» geht nach einem Abbruch, einer Pause oder anderem Audio von «Stopp» zurück auf «Vorlesen». Der nächste Absatz startet dann nicht.
+- Eine geänderte Erklärung behält die alte Datei nicht: `tools/help_audio.py` vergleicht den SHA-256 des Textes.
+- Die Hilfedateien liegen im Precache. Satz-Audio bleibt draussen.
+- Die App-Sprache Englisch steht im Dokument und in `speechSynthesis` als `en-US`.
+- Bei 375 px bleiben die Sprachwahl und die Navigation in der Breite.
 
 ## 0.9.1 — 2026-10-12
 

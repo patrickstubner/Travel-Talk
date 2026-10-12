@@ -82,44 +82,80 @@ export async function playClip(
   onEnd?: () => void,
   onTime?: (seconds: number) => void,
   onDuration?: (seconds: number) => void,
+  onStop?: () => void,
 ): Promise<'file' | 'offline'> {
   const token = playToken
+  const superseded = (): 'file' => {
+    onStop?.()
+    return 'file'
+  }
   let files: Set<string>
   try {
     files = await loadManifest()
   } catch {
     return 'offline'
   }
-  if (token !== playToken) return 'file'
+  if (token !== playToken) return superseded()
   if (!AUDIO_FILE.test(file) || !files.has(file)) return 'offline'
   const cached = await clipIsCached(file)
-  if (token !== playToken) return 'file'
+  if (token !== playToken) return superseded()
   if (!cached && typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline'
   stopClock()
   current?.pause()
-  if (token !== playToken) return 'file'
+  if (token !== playToken) return superseded()
   const audio = new Audio(publicUrl(`audio/${file}`))
   audio.playbackRate = 1
+  let halted = false
+  const halt = (): void => {
+    if (halted) return
+    halted = true
+    audio.onended = null
+    audio.onpause = null
+    audio.onerror = null
+    if (current === audio) {
+      stopClock()
+      current = null
+    }
+    audio.pause()
+    onStop?.()
+  }
   audio.onloadedmetadata = () => {
-    if (token !== playToken) return
+    if (token !== playToken || halted) return
     if (Number.isFinite(audio.duration) && audio.duration > 0) onDuration?.(audio.duration)
   }
   audio.onended = () => {
+    if (halted) return
+    halted = true
+    audio.onpause = null
+    audio.onerror = null
     if (current === audio) stopClock()
     if (token === playToken) onEnd?.()
+  }
+  audio.onerror = () => halt()
+  audio.onpause = () => {
+    if (audio.ended || halted) return
+    halt()
   }
   current = audio
   try {
     await audio.play()
   } catch {
-    if (token !== playToken) return 'file'
+    if (halted) return 'file'
+    halted = true
+    audio.onended = null
+    audio.onpause = null
+    audio.onerror = null
+    if (token !== playToken) {
+      onStop?.()
+      return 'file'
+    }
     if (!cached) return 'offline'
-    onEnd?.()
+    onStop?.()
     return 'file'
   }
+  if (halted) return 'file'
   if (token !== playToken) {
-    audio.pause()
-    if (current === audio) current = null
+    halt()
     return 'file'
   }
   if (onTime && typeof requestAnimationFrame === 'function') {

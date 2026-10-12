@@ -42,7 +42,7 @@ export default defineConfig({
           // An Rspack plugin would only see compilation assets, not those files.
           const result = await generateSW({
             globDirectory: dist,
-            globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,json,txt}'],
+            globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,json,txt}', 'audio/*/help/*.m4a'],
             globIgnores: ['**/sw.js', '**/workbox-*.js', '**/*.align.json'],
             swDest: join(dist, 'sw.js'),
             modifyURLPrefix: { '': BASE },
@@ -53,14 +53,15 @@ export default defineConfig({
             cacheId: 'travel-talk',
             skipWaiting: true,
             clientsClaim: true,
-            // Audio is not part of install. A full disk must not block the update.
+            // Sentence audio is not part of install. A full disk must not block the update.
+            // Help clips are short and are precached so Vorlesen works after install.
             // Activate still drops precache URLs that left the manifest, including old audio.
             // The start page asks for one reload of the voice after that.
             cleanupOutdatedCaches: false,
             disableDevLogs: true,
             sourcemap: false,
             mode: 'production',
-            // Audio and its timing files are not precached. The selected voice is fetched into this cache.
+            // Sentence audio and timing files are not precached. The selected voice is fetched into this cache.
             runtimeCaching: [
               {
                 urlPattern: /\/Travel-Talk\/audio\/.+\.(?:m4a|align\.json)$/,
