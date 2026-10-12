@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { Concept } from '../../content/phrase'
-import { spokenFile } from '../audio/voices'
+import { selectedVoice, spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
-import { playClip } from '../audio/player'
+import { decodeContourFile, playClip, stopClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { tempoFile } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
+import { stopSlices } from '../audio/slice'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { KaraokeLine } from '../components/KaraokeLine'
+import { RepeatFeedback } from '../components/RepeatFeedback'
 import { RichText } from '../components/RichText'
 import { Rating, emptyCard, fromStored, previewDue, reviewCard, toStored, type Grade } from '../srs/scheduler'
 import {
@@ -59,7 +61,13 @@ export function PracticePage() {
   const [finished, setFinished] = useState(false)
   const [readyFor, setReadyFor] = useState('')
   const [micStarting, setMicStarting] = useState(false)
+  const [take, setTake] = useState<{ url: string; samples: Float32Array | null; sampleRate: number } | null>(null)
+  const [modelTake, setModelTake] = useState<{ samples: Float32Array; sampleRate: number } | null>(null)
+  const [modelMissing, setModelMissing] = useState(false)
+  const [feedbackTimes, setFeedbackTimes] = useState<WordTime[] | null>(null)
+  const [timingsPending, setTimingsPending] = useState(false)
   const sessionRef = useRef<CaptureSession | null>(null)
+  const takeRef = useRef<{ url: string; samples: Float32Array | null; sampleRate: number } | null>(null)
   const lockedFile = useRef('')
   const urlRef = useRef<string | null>(null)
   const aliveRef = useRef(true)
@@ -68,10 +76,14 @@ export function PracticePage() {
 
   function releaseMic(): void {
     micToken.current += 1
-    sessionRef.current?.release(urlRef.current)
+    sessionRef.current?.release(null)
     sessionRef.current = null
     urlRef.current = null
+    const previous = takeRef.current
+    takeRef.current = null
+    if (previous?.url) URL.revokeObjectURL(previous.url)
     if (!aliveRef.current) return
+    setTake(null)
     setRecording(false)
     setMicStarting(false)
   }
@@ -179,6 +191,35 @@ export function PracticePage() {
       live = false
     }
   }, [concept, playing, settings, step])
+
+  useEffect(() => {
+    if (step !== 'repeat' || !take?.samples || !concept || !settings.targetLang) {
+      setModelTake(null)
+      setFeedbackTimes(null)
+      setModelMissing(false)
+      setTimingsPending(false)
+      return
+    }
+    const line = resolvePlayback(concept, settings.targetLang, settings.viRegion, prefsFromSettings(settings.targetLang, settings))
+    if (!line) return
+    const file = tempoFile(spokenFile(settings, settings.targetLang, line.file), 1)
+    let live = true
+    setTimingsPending(true)
+    void decodeContourFile(file).then(async (decoded) => {
+      if (!live) return
+      const aligned = await loadAlignment(file, line.speech)
+      if (!live) return
+      const duration = decoded ? decoded.samples.length / decoded.sampleRate : 0
+      setModelTake(decoded)
+      setModelMissing(!decoded)
+      if (decoded && aligned && alignmentFitsDuration(aligned, duration, alignmentScale(file))) setFeedbackTimes(aligned)
+      else setFeedbackTimes(null)
+      setTimingsPending(false)
+    })
+    return () => {
+      live = false
+    }
+  }, [concept, settings, step, take])
 
   useEffect(() => {
     if (!catalog || !concept || step !== 'understand') return
@@ -419,10 +460,33 @@ export function PracticePage() {
               </p>
             )
           ) : null}
-          <button type="button" className="button wide" aria-pressed={playing} onClick={() => void hear(target.file, target.speech, 1)}>
+          <button
+            type="button"
+            className="button wide"
+            aria-pressed={playing}
+            disabled={recording || micStarting}
+            onClick={() => void hear(target.file, target.speech, 1)}
+          >
             {playing ? copy.playing : copy.play}
           </button>
           {micNote ? <p className="voice-note">{copy.micSkipped}</p> : null}
+          {take?.samples && !recording && !micStarting ? (
+            <RepeatFeedback
+              copy={copy}
+              lang={targetLang}
+              region={settings.viRegion}
+              speech={target.speech}
+              words={feedbackTimes}
+              modelSamples={modelTake?.samples ?? null}
+              modelRate={modelTake?.sampleRate ?? 0}
+              userSamples={take.samples}
+              userRate={take.sampleRate}
+              modelMissing={modelMissing}
+              timingsPending={timingsPending}
+              voiceId={selectedVoice(settings, targetLang).id}
+            />
+          ) : null}
+          {take && !take.samples && !recording ? <p role="status">{copy.pitchEmpty}</p> : null}
           <div className="row">
             {recording ? (
               <button type="button" onClick={() => sessionRef.current?.recorder.stop()}>
@@ -433,12 +497,23 @@ export function PracticePage() {
                 type="button"
                 disabled={micStarting}
                 onClick={() => {
+                  stopClip()
+                  stopSlices()
+                  setPlaying(false)
                   const token = micToken.current + 1
                   micToken.current = token
                   setMicNote(false)
                   setMicStarting(true)
-                  void startMicrophone(() => {
-                    if (!aliveRef.current) return
+                  void startMicrophone((taken) => {
+                    if (!aliveRef.current) {
+                      if (taken.url) URL.revokeObjectURL(taken.url)
+                      return
+                    }
+                    const previous = takeRef.current
+                    if (previous?.url && previous.url !== taken.url) URL.revokeObjectURL(previous.url)
+                    const next = { url: taken.url, samples: taken.samples, sampleRate: taken.sampleRate }
+                    takeRef.current = next
+                    setTake(next)
                     setRecording(false)
                   })
                     .then((next) => {
@@ -463,7 +538,7 @@ export function PracticePage() {
                     })
                 }}
               >
-                {copy.record}
+                {take ? copy.repeatFeedback.again : copy.record}
               </button>
             )}
           </div>

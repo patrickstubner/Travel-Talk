@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto'
 import { freshIndexedDb } from '../test-idb'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createRoot } from 'react-dom/client'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -234,11 +235,43 @@ describe('top bar', () => {
     await waitFor(() => expect(screen.queryByLabelText('Person hinzufügen')).toBeNull())
   })
 
-  it('keeps a name typed before the saved person arrives', async () => {
-    const renamePerson = vi.fn(async () => true)
+  it('does not ask for a first name before a person is loaded', () => {
+    render(
+      <AppContext.Provider
+        value={{
+          catalog: null,
+          catalogOk: true,
+          snapshot: null,
+          storageError: false,
+          saveSettings: async () => undefined,
+          saveCard: async () => undefined,
+          replaceAll: async () => undefined,
+          addPerson: async () => false,
+          renamePerson: async () => false,
+          deletePerson: async () => undefined,
+          switchPerson: async () => undefined,
+          importPerson: async () => 'ok',
+          importAll: async () => undefined,
+          everyone: async () => [],
+        }}
+      >
+        <TopBar askName />
+      </AppContext.Provider>,
+    )
+    expect(screen.queryByLabelText('Wie sollen wir dich nennen?')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Weiter' })).toBeNull()
+  })
+
+  it('keeps text typed before the mount effect ran', async () => {
+    const previous = (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = false
+    const calls: [string, string][] = []
+    const p1 = person('p1', '')
     function Host() {
       const [snapshot, setSnapshot] = useState<ProgressSnapshot | null>(null)
-      const people = [person('p1', '')]
+      useEffect(() => {
+        void Promise.resolve().then(() => setSnapshot({ settings: p1.settings, cards: [], people: [p1], activePersonId: 'p1' }))
+      }, [])
       return (
         <AppContext.Provider
           value={{
@@ -250,7 +283,10 @@ describe('top bar', () => {
             saveCard: async () => undefined,
             replaceAll: async () => undefined,
             addPerson: async () => false,
-            renamePerson,
+            renamePerson: async (id: string, name: string) => {
+              calls.push([id, name])
+              return true
+            },
             deletePerson: async () => undefined,
             switchPerson: async () => undefined,
             importPerson: async () => 'ok',
@@ -258,27 +294,40 @@ describe('top bar', () => {
             everyone: async () => [],
           }}
         >
-          <button
-            type="button"
-            onClick={() =>
-              setSnapshot({ settings: people[0]!.settings, cards: [], people, activePersonId: 'p1' })
-            }
-          >
-            laden
-          </button>
-          <TopBar askName />
+          {snapshot ? <TopBar askName /> : <p>laden</p>}
         </AppContext.Provider>
       )
     }
-    render(<Host />)
-    const field = await screen.findByLabelText('Wie sollen wir dich nennen?')
-    fireEvent.change(field, { target: { value: 'Ada' } })
-    fireEvent.click(screen.getByRole('button', { name: 'laden' }))
-    await screen.findByText(/Eine von zehn/)
-    expect((screen.getByLabelText('Wie sollen wir dich nennen?') as HTMLInputElement).value).toBe('Ada')
-    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
-    await waitFor(() => expect(renamePerson).toHaveBeenCalledWith('p1', 'Ada'))
-    expect(screen.queryByText('Die Datei ist kein gültiger Travel-Talk-Export.')).toBeNull()
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    try {
+      const typed = new Promise<void>((resolve) => {
+        const observer = new MutationObserver(() => {
+          const input = host.querySelector('input')
+          if (!input) return
+          observer.disconnect()
+          const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+          setter?.call(input, 'A')
+          input.dispatchEvent(new Event('input', { bubbles: true }))
+          resolve()
+        })
+        observer.observe(host, { childList: true, subtree: true })
+      })
+      root.render(<Host />)
+      await typed
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      const input = host.querySelector('input') as HTMLInputElement
+      expect(input.value).toBe('A')
+      ;(host.querySelector('button[type=submit]') as HTMLButtonElement).click()
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(calls).toEqual([['p1', 'A']])
+      expect(host.textContent).not.toContain('Travel-Talk-Export')
+    } finally {
+      root.unmount()
+      host.remove()
+      ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = previous
+    }
   })
 
   it('says an empty name needs a visible character', async () => {
@@ -327,5 +376,150 @@ describe('top bar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Bea' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Wer lernt?: Bea' }))
     expect((screen.getByLabelText('Umbenennen') as HTMLInputElement).value).toBe('Bea')
+  })
+
+  it('shows the cleaned name after a rename is saved', async () => {
+    const people = [person('p1', 'Ada')]
+    const renamePerson = vi.fn(async () => true)
+    render(
+      <AppContext.Provider
+        value={{
+          catalog: null,
+          catalogOk: true,
+          snapshot: { settings: people[0]!.settings, cards: [], people, activePersonId: 'p1' },
+          storageError: false,
+          saveSettings: async () => undefined,
+          saveCard: async () => undefined,
+          replaceAll: async () => undefined,
+          addPerson: async () => false,
+          renamePerson,
+          deletePerson: async () => undefined,
+          switchPerson: async () => undefined,
+          importPerson: async () => 'ok',
+          importAll: async () => undefined,
+          everyone: async () => [],
+        }}
+      >
+        <TopBar />
+      </AppContext.Provider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: Ada' }))
+    fireEvent.change(screen.getByLabelText('Umbenennen'), { target: { value: 'Ada ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Umbenennen' }))
+    await waitFor(() => expect(renamePerson).toHaveBeenCalledWith('p1', 'Ada '))
+    fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: Ada' }))
+    expect((screen.getByLabelText('Umbenennen') as HTMLInputElement).value).toBe('Ada')
+  })
+
+  it('forgets a name discarded with Escape', async () => {
+    const people = [person('p1', 'Ada')]
+    render(
+      <AppContext.Provider
+        value={{
+          catalog: null,
+          catalogOk: true,
+          snapshot: { settings: people[0]!.settings, cards: [], people, activePersonId: 'p1' },
+          storageError: false,
+          saveSettings: async () => undefined,
+          saveCard: async () => undefined,
+          replaceAll: async () => undefined,
+          addPerson: async () => false,
+          renamePerson: async () => false,
+          deletePerson: async () => undefined,
+          switchPerson: async () => undefined,
+          importPerson: async () => 'ok',
+          importAll: async () => undefined,
+          everyone: async () => [],
+        }}
+      >
+        <TopBar />
+      </AppContext.Provider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: Ada' }))
+    fireEvent.change(screen.getByLabelText('Umbenennen'), { target: { value: 'Weg damit' } })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByLabelText('Umbenennen')).toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: Ada' }))
+    expect((screen.getByLabelText('Umbenennen') as HTMLInputElement).value).toBe('Ada')
+  })
+
+  it('drops the typed draft when the person changes and the new name arrives later', async () => {
+    const initial = [person('p1', 'Ada'), person('p2', 'Bea')]
+    function Host() {
+      const [people, setPeople] = useState(initial)
+      const [activePersonId, setActivePersonId] = useState('p1')
+      return (
+        <AppContext.Provider
+          value={{
+            catalog: null,
+            catalogOk: true,
+            snapshot: { settings: people[0]!.settings, cards: [], people, activePersonId },
+            storageError: false,
+            saveSettings: async () => undefined,
+            saveCard: async () => undefined,
+            replaceAll: async () => undefined,
+            addPerson: async () => false,
+            renamePerson: async () => false,
+            deletePerson: async () => undefined,
+            switchPerson: async (id) => setActivePersonId(id),
+            importPerson: async () => 'ok',
+            importAll: async () => undefined,
+            everyone: async () => [],
+          }}
+        >
+          <button type="button" onClick={() => setPeople([person('p1', 'Ada'), person('p2', 'Beate')])}>
+            name
+          </button>
+          <TopBar />
+        </AppContext.Provider>
+      )
+    }
+    render(<Host />)
+    fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: Ada' }))
+    fireEvent.change(screen.getByLabelText('Umbenennen'), { target: { value: 'Ada tippt' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Bea' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Wer lernt?: Bea' }))
+    expect((screen.getByLabelText('Umbenennen') as HTMLInputElement).value).toBe('Bea')
+    fireEvent.click(screen.getByRole('button', { name: 'name' }))
+    await waitFor(() => expect((screen.getByLabelText('Umbenennen') as HTMLInputElement).value).toBe('Beate'))
+  })
+
+  it('says when the person is gone and when ten people are already there', async () => {
+    const people = [person('p1', 'Ada')]
+    const renamePerson = vi.fn(async () => false)
+    const addPerson = vi.fn(async () => false)
+    render(
+      <AppContext.Provider
+        value={{
+          catalog: null,
+          catalogOk: true,
+          snapshot: { settings: people[0]!.settings, cards: [], people, activePersonId: 'p1' },
+          storageError: false,
+          saveSettings: async () => undefined,
+          saveCard: async () => undefined,
+          replaceAll: async () => undefined,
+          addPerson,
+          renamePerson,
+          deletePerson: async () => undefined,
+          switchPerson: async () => undefined,
+          importPerson: async () => 'ok',
+          importAll: async () => undefined,
+          everyone: async () => [],
+        }}
+      >
+        <TopBar />
+      </AppContext.Provider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: Ada' }))
+    fireEvent.change(screen.getByLabelText('Umbenennen'), { target: { value: 'Berta' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Umbenennen' }))
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Diese Person ist nicht mehr da.')
+    expect(screen.queryByText('Die Datei ist kein gültiger Travel-Talk-Export.')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Person hinzufügen'), { target: { value: 'C' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Person hinzufügen' }))
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Zehn Personen. Mehr geht auf diesem Gerät nicht.')
+    expect(screen.queryByText('Diese Person ist nicht mehr da.')).toBeNull()
+    expect(screen.queryByText('Die Datei ist kein gültiger Travel-Talk-Export.')).toBeNull()
+    expect(addPerson).toHaveBeenCalledWith('C')
   })
 })

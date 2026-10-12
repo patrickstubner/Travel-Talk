@@ -1,3 +1,4 @@
+import { stopClip } from './player'
 import { mixToMono } from '../pitch/contour'
 
 export type Recording = {
@@ -28,6 +29,8 @@ export function releaseCapture(
   if (blobUrl) revoke(blobUrl)
 }
 
+export const RECORD_LIMIT_MS = 15_000
+
 export type CaptureSession = {
   recorder: MediaRecorder
   release: (blobUrl: string | null) => void
@@ -35,14 +38,25 @@ export type CaptureSession = {
 
 export async function startMicrophone(onStop: (recording: Recording) => void): Promise<CaptureSession | null> {
   if (!navigator.mediaDevices?.getUserMedia) return null
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  // Noise suppression and automatic gain reshape the take, so both stay off.
+  // Echo cancellation stays on and keeps the speaker out of the recording.
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false },
+  })
   const recorder = new MediaRecorder(stream)
   let released = false
   const chunks: Blob[] = []
   recorder.addEventListener('dataavailable', (event) => {
     if (event.data.size > 0) chunks.push(event.data)
   })
+  let limitTimer: ReturnType<typeof setTimeout> | null = null
+  function clearLimit(): void {
+    if (limitTimer == null) return
+    clearTimeout(limitTimer)
+    limitTimer = null
+  }
   recorder.addEventListener('stop', () => {
+    clearLimit()
     for (const track of stream.getTracks()) track.stop()
     if (released) return
     const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })
@@ -63,10 +77,15 @@ export async function startMicrophone(onStop: (recording: Recording) => void): P
       }
     })
   })
+  stopClip()
   recorder.start()
+  limitTimer = setTimeout(() => {
+    if (recorder.state === 'recording') recorder.stop()
+  }, RECORD_LIMIT_MS)
   return {
     recorder,
     release(blobUrl) {
+      clearLimit()
       released = true
       releaseCapture(recorder, blobUrl)
     },

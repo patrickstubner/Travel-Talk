@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defaultSettings } from '../storage/types'
 import { voicesFor } from './voices'
-import { AUDIO_CACHE, discardAdded, dropOtherVoices, forgetVoiceIfUnused, loadVoiceOffline, voiceProgress } from './offline'
+import { AUDIO_CACHE, discardAdded, dropOtherVoices, dropReplacedClips, forgetVoiceIfUnused, loadVoiceOffline, startAudioMaintenance, voiceProgress } from './offline'
 
 const FILES = [
   'vi/vivos-22/emergency.help__any__base.m4a',
@@ -179,12 +179,22 @@ describe('offline voice loading', () => {
     const text = readFileSync(fileURLToPath(new URL('../../rsbuild.config.ts', import.meta.url)), 'utf8')
     expect(text).toContain('statuses: [200]')
     expect(text).not.toContain('[0, 200]')
-    expect(text).toMatch(/maxEntries:\s*6500/)
+    expect(text).toMatch(/maxEntries:\s*8000/)
     expect(text).toContain('**/*.align.json')
     expect(text).toContain('align\\.json')
     expect(text).toContain('cleanupOutdatedCaches: false')
     expect(text).not.toContain('sw-migrate')
     expect(text).not.toContain('importScripts')
+  })
+
+  it('keeps more than one situation of room above the manifest', () => {
+    const text = readFileSync(fileURLToPath(new URL('../../rsbuild.config.ts', import.meta.url)), 'utf8')
+    const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../../public/audio/manifest.json', import.meta.url)), 'utf8')) as unknown[]
+    const match = text.match(/maxEntries:\s*(\d+)/)
+    const limit = Number(match?.[1])
+    expect(limit).toBe(8000)
+    expect(manifest.length).toBeGreaterThan(0)
+    expect(limit).toBeGreaterThanOrEqual(manifest.length + 1200)
   })
 
   it('skips a missing file and still finishes the voice', async () => {
@@ -317,5 +327,45 @@ describe('offline voice loading', () => {
     expect(outcome.missing).toBe(0)
     expect(stores.get(AUDIO_CACHE)?.has(other)).toBe(true)
     expect(stores.get(AUDIO_CACHE)?.has(legacy)).toBe(false)
+  })
+
+  it('drops the old names of clips that were spoken again', async () => {
+    const stores = installCaches()
+    const stale = '/Travel-Talk/audio/vi/vivos-22/transport.01.taxi__any__base.m4a'
+    const staleTimes = '/audio/de/transport.20.seasick__any__base.align.json'
+    const kept = '/audio/vi/vivos-22/emergency.help__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([
+      [stale, 'old-taxi'],
+      [staleTimes, 'old-times'],
+      [kept, 'kept'],
+    ]))
+    await dropReplacedClips()
+    expect(stores.get(AUDIO_CACHE)?.has(stale)).toBe(false)
+    expect(stores.get(AUDIO_CACHE)?.has(staleTimes)).toBe(false)
+    expect(stores.get(AUDIO_CACHE)?.has(kept)).toBe(true)
+  })
+
+  it('scans the replaced names once per revision, and the start hook does that scan', async () => {
+    const memory = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => memory.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        memory.set(key, value)
+      },
+      removeItem: (key: string) => {
+        memory.delete(key)
+      },
+    })
+    const stores = installCaches()
+    const stale = '/audio/vi/vivos-22/transport.01.taxi__any__base.m4a'
+    stores.set(AUDIO_CACHE, new Map([[stale, 'old-taxi']]))
+    await startAudioMaintenance()
+    expect(stores.get(AUDIO_CACHE)?.has(stale)).toBe(false)
+    stores.get(AUDIO_CACHE)?.set(stale, 'came-back')
+    await startAudioMaintenance()
+    expect(stores.get(AUDIO_CACHE)?.has(stale)).toBe(true)
+    const source = readFileSync(fileURLToPath(new URL('../main.tsx', import.meta.url)), 'utf8')
+    expect(source).toContain('startAudioMaintenance()')
+    vi.unstubAllGlobals()
   })
 })

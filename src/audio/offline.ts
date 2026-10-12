@@ -1,5 +1,6 @@
 import type { Lang } from '../../content/phrase'
 import { publicUrl } from '../public-url'
+import { CLIP_REVISION, replacedClipPaths } from './clip-revision'
 import { loadManifest } from './player'
 import type { Settings } from '../storage/types'
 import { filesForVoice, selectedVoice, voicesFor, voicesKeptByOthers, type CatalogVoice } from './voices'
@@ -139,6 +140,52 @@ export async function loadVoiceOffline(
   }
   if (missing === 0 && options.dropOthers()) await dropOtherVoices(lang, voice, options.retainIds ?? [])
   return { status: 'ready', missing, added }
+}
+
+/** Set after one scan, so a later start does not walk the whole audio cache. */
+const CLIP_REVISION_KEY = 'travel-talk-clip-revision'
+
+function clipRevisionMarker(): string | null {
+  try {
+    return globalThis.localStorage?.getItem(CLIP_REVISION_KEY) ?? null
+  } catch {
+    return null
+  }
+}
+
+function rememberClipRevision(): void {
+  try {
+    globalThis.localStorage?.setItem(CLIP_REVISION_KEY, CLIP_REVISION)
+  } catch {
+    // A private window has no storage. The next start scans again.
+  }
+}
+
+/**
+ * Drops the 0.7.0 names of clips that were spoken again in 0.8.0.
+ * The page now asks for `.v2`. The old bytes would otherwise stay for a year.
+ * One successful scan per revision is enough. The marker is not a recording.
+ */
+export async function dropReplacedClips(): Promise<void> {
+  if (!('caches' in globalThis)) return
+  if (clipRevisionMarker() === CLIP_REVISION) return
+  const stale = replacedClipPaths()
+  const cache = await caches.open(AUDIO_CACHE)
+  let removed = 0
+  for (const request of await cache.keys()) {
+    const url = requestUrl(request)
+    if (stale.some((file) => url.endsWith(`/${file}`))) {
+      await cache.delete(request)
+      removed += 1
+    }
+  }
+  rememberClipRevision()
+  if (removed > 0) notifyAudioChanged()
+}
+
+/** Startup hook. The page calls this once; the scan itself is in `dropReplacedClips`. */
+export function startAudioMaintenance(): Promise<void> {
+  return dropReplacedClips()
 }
 
 /** Drops only the files added by a failed attempt, so a complete older voice stays. */

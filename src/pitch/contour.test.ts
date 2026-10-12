@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contourFromSamples, describeShape, dtwDistance, voicedValues } from './contour'
+import { ANALYSIS_RATE, contourFromSamples, describeShape, dtwDistance, repairHarmonics, samplesForAnalysis, voicedValues } from './contour'
 
 function tone(startHz: number, endHz: number, seconds = 1.6): Float32Array {
   const sampleRate = 16000
@@ -15,6 +15,37 @@ function tone(startHz: number, endHz: number, seconds = 1.6): Float32Array {
 }
 
 describe('pitch contour', () => {
+  it('folds a lone harmonic and leaves a mixed contour alone', () => {
+    const steady = Array.from({ length: 40 }, () => 110)
+    steady[10] = 220
+    steady[11] = 221
+    steady[12] = 330
+    const fixed = repairHarmonics(steady)
+    expect(fixed[10]).toBeCloseTo(110, 0)
+    expect(fixed[12]).toBeCloseTo(110, 0)
+    expect(fixed[0]).toBe(110)
+    const mixed = Array.from({ length: 20 }, (_, index) => (index < 10 ? 110 : 220))
+    expect(repairHarmonics(mixed)).toEqual(mixed)
+    const rise = Array.from({ length: 30 }, (_, index) => 100 + index * 3)
+    expect(repairHarmonics(rise)).toEqual(rise)
+  })
+
+  it('folds a short second harmonic while the contour is built', () => {
+    const rate = 16000
+    const length = Math.floor(rate * 1.2)
+    const samples = new Float32Array(length)
+    let phase = 0
+    for (let index = 0; index < length; index += 1) {
+      const hz = index > rate * 0.45 && index < rate * 0.7 ? 220 : 110
+      phase += (2 * Math.PI * hz) / rate
+      samples[index] = Math.sin(phase) * 0.8
+    }
+    const contour = contourFromSamples(samples, rate)
+    const hop = Math.round(rate * 0.01)
+    const burst = Math.round((0.55 * rate) / hop)
+    expect(Math.abs(contour[burst] ?? 99)).toBeLessThan(3)
+  })
+
   it('reads a steady sine near its own median', () => {
     const contour = contourFromSamples(tone(220, 220), 16000)
     const voiced = voicedValues(contour)
@@ -31,5 +62,20 @@ describe('pitch contour', () => {
     const distance = dtwDistance(values, values)
     expect(distance).not.toBeNull()
     expect(distance ?? 1).toBeLessThan(0.05)
+  })
+
+  it('downsamples to 16 kHz before a short 48 kHz buffer can grow a frame', () => {
+    const samples = new Float32Array(4000)
+    for (let index = 0; index < samples.length; index += 1) samples[index] = Math.sin((2 * Math.PI * 220 * index) / 48000)
+    const prepared = samplesForAnalysis(samples, 48000)
+    expect(prepared.sampleRate).toBe(ANALYSIS_RATE)
+    expect(prepared.samples.length).toBeLessThan(2048)
+    expect(contourFromSamples(samples, 48000)).toEqual([])
+    const second = new Float32Array(48000)
+    for (let index = 0; index < second.length; index += 1) {
+      const hz = 140 + (160 * index) / second.length
+      second[index] = Math.sin((2 * Math.PI * hz * index) / 48000)
+    }
+    expect(voicedValues(contourFromSamples(second, 48000)).length).toBeGreaterThan(20)
   })
 })

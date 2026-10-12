@@ -1,6 +1,6 @@
 {
   "name": "travel-talk",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -12,6 +12,7 @@
     "preview": "rsbuild preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:clips": "vitest run --config vitest.clips.config.ts",
     "lint": "eslint .",
     "export-speech": "tsx tools/export-speech.ts"
   },

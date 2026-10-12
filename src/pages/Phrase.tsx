@@ -4,17 +4,17 @@ import { selectedVoice, spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { directionId } from '../domain/direction'
 import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
-import { decodeContourFile, playClip } from '../audio/player'
+import { decodeContourFile, playClip, stopClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { SPEED_STEPS, effectiveSpeed, speedPercent, tempoFile, type SpeedStep } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
+import { stopSlices } from '../audio/slice'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
-import { PitchPanel } from '../components/PitchPanel'
+import { RepeatFeedback } from '../components/RepeatFeedback'
 import { KaraokeLine } from '../components/KaraokeLine'
 import { RichText } from '../components/RichText'
-import { contourFromSamples, type Contour } from '../pitch/contour'
 import { cardIdFor } from '../srs/session'
 import type { Dictionary } from '../i18n/dictionary'
 import { prefsFromSettings, type Settings } from '../storage/types'
@@ -44,12 +44,25 @@ export function PhrasePage() {
   const [times, setTimes] = useState<WordTime[] | null>(null)
   const [clipDuration, setClipDuration] = useState<number | null>(null)
   const [recording, setRecording] = useState(false)
+  const [micStarting, setMicStarting] = useState(false)
   const [mineUrl, setMineUrl] = useState<string | null>(null)
   const sessionRef = useRef<CaptureSession | null>(null)
   const urlRef = useRef<string | null>(null)
+  const mineAudio = useRef<HTMLAudioElement | null>(null)
   const aliveRef = useRef(true)
   const micToken = useRef(0)
   const releaseRef = useRef<() => void>(() => undefined)
+
+  function stopMinePlayback(): void {
+    const audio = mineAudio.current
+    if (!audio) return
+    audio.pause()
+    try {
+      audio.currentTime = 0
+    } catch {
+      // The element cannot seek until it has data. Pause already keeps it out of the take.
+    }
+  }
 
   function releaseCaptureNow(): void {
     micToken.current += 1
@@ -58,13 +71,16 @@ export function PhrasePage() {
     urlRef.current = null
     if (!aliveRef.current) return
     setRecording(false)
+    setMicStarting(false)
   }
 
   releaseRef.current = releaseCaptureNow
   const [micError, setMicError] = useState(false)
-  const [userContour, setUserContour] = useState<Contour>([])
-  const [modelContour, setModelContour] = useState<Contour>([])
+  const [userAudio, setUserAudio] = useState<{ samples: Float32Array; sampleRate: number } | null>(null)
+  const [modelAudio, setModelAudio] = useState<{ samples: Float32Array; sampleRate: number } | null>(null)
   const [modelMissing, setModelMissing] = useState(false)
+  const [feedbackTimes, setFeedbackTimes] = useState<WordTime[] | null>(null)
+  const [timingsPending, setTimingsPending] = useState(false)
 
   const target = concept && targetLang ? resolvePlayback(concept, targetLang, settings.viRegion, prefsFromSettings(targetLang, settings)) : undefined
   const source = concept && app ? resolvePlayback(concept, app, settings.viRegion, prefsFromSettings(app, settings)) : undefined
@@ -97,7 +113,10 @@ export function PhrasePage() {
       document.removeEventListener('visibilitychange', onHidden)
       window.removeEventListener('pagehide', onPageHide)
       releaseRef.current()
+      stopMinePlayback()
+      mineAudio.current = null
       setMineUrl(null)
+      setUserAudio(null)
     }
   }, [conceptId])
 
@@ -118,21 +137,29 @@ export function PhrasePage() {
 
   useEffect(() => {
     let active = true
-    if (!targetFile || targetLang !== 'vi' || userContour.length === 0) return
-    void decodeContourFile(targetFile).then((decoded) => {
-      if (!active) return
-      if (!decoded) {
-        setModelContour([])
-        setModelMissing(true)
-        return
-      }
+    if (!userAudio || !alignFile || !targetSpeech) {
+      setModelAudio(null)
       setModelMissing(false)
-      setModelContour(contourFromSamples(decoded.samples, decoded.sampleRate))
+      setFeedbackTimes(null)
+      setTimingsPending(false)
+      return
+    }
+    setTimingsPending(true)
+    void decodeContourFile(alignFile).then(async (decoded) => {
+      if (!active) return
+      const aligned = await loadAlignment(alignFile, targetSpeech)
+      if (!active) return
+      const duration = decoded ? decoded.samples.length / decoded.sampleRate : 0
+      setModelAudio(decoded)
+      setModelMissing(!decoded)
+      if (decoded && aligned && alignmentFitsDuration(aligned, duration, alignmentScale(alignFile))) setFeedbackTimes(aligned)
+      else setFeedbackTimes(null)
+      setTimingsPending(false)
     })
     return () => {
       active = false
     }
-  }, [targetFile, targetLang, userContour.length])
+  }, [alignFile, targetSpeech, userAudio])
 
   if (!catalog || !concept || !direction || !app || !targetLang || !target || !source) {
     return <p>{direction ? copy.noResults : copy.needPair}</p>
@@ -182,7 +209,12 @@ export function PhrasePage() {
   }
 
   async function onRecord(): Promise<void> {
+    stopClip()
+    stopSlices()
+    stopMinePlayback()
+    setPlaying(false)
     setMicError(false)
+    setMicStarting(true)
     const token = micToken.current + 1
     micToken.current = token
     try {
@@ -192,19 +224,27 @@ export function PhrasePage() {
           return
         }
         rememberUrl(taken.url)
-        setUserContour(taken.samples && taken.sampleRate ? contourFromSamples(taken.samples, taken.sampleRate) : [])
+        setUserAudio(taken.samples && taken.sampleRate ? { samples: taken.samples, sampleRate: taken.sampleRate } : null)
         setRecording(false)
       })
-      if (!next || !aliveRef.current || token !== micToken.current) {
+      if (!aliveRef.current || token !== micToken.current) {
         next?.release(null)
-        if (!next && aliveRef.current && token === micToken.current) setMicError(true)
+        return
+      }
+      if (!next) {
+        setMicError(true)
+        setMicStarting(false)
         return
       }
       sessionRef.current?.release(null)
       sessionRef.current = next
       setRecording(true)
+      setMicStarting(false)
     } catch {
-      if (aliveRef.current && token === micToken.current) setMicError(true)
+      if (aliveRef.current && token === micToken.current) {
+        setMicError(true)
+        setMicStarting(false)
+      }
     }
   }
 
@@ -268,6 +308,7 @@ export function PhrasePage() {
           type="button"
           className="play-row"
           aria-pressed={playing}
+          disabled={recording || micStarting}
           onClick={() => void onPlay(tempoFile(spokenFile(settings, targetLang, target.file), step), step)}
         >
           <span className="play-mark" aria-hidden="true" />
@@ -292,15 +333,18 @@ export function PhrasePage() {
               {copy.stop}
             </button>
           ) : (
-            <button type="button" onClick={() => void onRecord()}>
-              {copy.record}
+            <button type="button" disabled={micStarting} onClick={() => void onRecord()}>
+              {userAudio ? copy.repeatFeedback.again : copy.record}
             </button>
           )}
           {mineUrl ? (
             <button
               type="button"
+              disabled={recording || micStarting}
               onClick={() => {
+                stopMinePlayback()
                 const audio = new Audio(mineUrl)
+                mineAudio.current = audio
                 void audio.play()
               }}
             >
@@ -309,9 +353,23 @@ export function PhrasePage() {
           ) : null}
         </div>
       </section>
-      {targetLang === 'vi' && userContour.length > 0 ? (
-        <PitchPanel model={modelContour} user={userContour} copy={copy} modelMissing={modelMissing} />
+      {userAudio && !recording && !micStarting ? (
+        <RepeatFeedback
+          copy={copy}
+          lang={targetLang}
+          region={settings.viRegion}
+          speech={target.speech}
+          words={feedbackTimes}
+          modelSamples={modelAudio?.samples ?? null}
+          modelRate={modelAudio?.sampleRate ?? 0}
+          userSamples={userAudio.samples}
+          userRate={userAudio.sampleRate}
+          modelMissing={modelMissing}
+          timingsPending={timingsPending}
+          voiceId={selectedVoice(settings, targetLang).id}
+        />
       ) : null}
+      {!userAudio && mineUrl ? <p role="status">{copy.pitchEmpty}</p> : null}
       <p className="hint">{copy.uncheckedCalm}</p>
     </article>
   )

@@ -3,11 +3,54 @@ import { PitchDetector } from 'pitchy'
 export type Contour = Array<number | null>
 
 const FRAME = 2048
+export const ANALYSIS_RATE = 16000
+/**
+ * Pitchy frames below this are left unvoiced. 0.8 dropped most of the
+ * low English voice (joe): the pitch was around 110 Hz, not under 70.
+ * 0.6 keeps those frames. Noise and a 50/100/150 Hz hum still stay empty.
+ */
+export const CLARITY_MIN = 0.6
+export const PITCH_HZ_MIN = 70
+export const PITCH_HZ_MAX = 450
 
-export function contourFromSamples(samples: Float32Array, sampleRate: number): Contour {
+export function hopSeconds(sampleRate: number): number {
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0) return 0.01
+  return Math.max(1, Math.round(sampleRate * 0.01)) / sampleRate
+}
+
+/** Average bins down to 16 kHz. A rate already at or under that stays as it is. */
+export function samplesForAnalysis(samples: Float32Array, sampleRate: number): { samples: Float32Array; sampleRate: number } {
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0) return { samples, sampleRate: ANALYSIS_RATE }
+  if (sampleRate <= ANALYSIS_RATE * 1.01) return { samples, sampleRate }
+  const ratio = sampleRate / ANALYSIS_RATE
+  const length = Math.max(0, Math.floor(samples.length / ratio))
+  const out = new Float32Array(length)
+  for (let index = 0; index < length; index += 1) {
+    const start = Math.floor(index * ratio)
+    const end = Math.min(samples.length, Math.max(start + 1, Math.floor((index + 1) * ratio)))
+    let sum = 0
+    let count = 0
+    for (let cursor = start; cursor < end; cursor += 1) {
+      sum += samples[cursor] ?? 0
+      count += 1
+    }
+    out[index] = count > 0 ? sum / count : 0
+  }
+  return { samples: out, sampleRate: ANALYSIS_RATE }
+}
+
+/** Hop of the contour `contourFromSamples` actually writes. */
+export function analysisHop(sampleRate: number): number {
+  return hopSeconds(samplesForAnalysis(new Float32Array(0), sampleRate).sampleRate)
+}
+
+export function contourFromSamples(input: Float32Array, rate: number): Contour {
+  const prepared = samplesForAnalysis(input, rate)
+  const samples = prepared.samples
+  const sampleRate = prepared.sampleRate
   if (samples.length < FRAME) return []
   const detector = PitchDetector.forFloat32Array(FRAME)
-  detector.clarityThreshold = 0.8
+  detector.clarityThreshold = CLARITY_MIN
   detector.minVolumeDecibels = -45
   const hop = Math.max(1, Math.round(sampleRate * 0.01))
   const frame = new Float32Array(FRAME)
@@ -15,14 +58,49 @@ export function contourFromSamples(samples: Float32Array, sampleRate: number): C
   for (let index = 0; index + FRAME < samples.length; index += hop) {
     frame.set(samples.subarray(index, index + FRAME))
     const [hz, clarity] = detector.findPitch(frame, sampleRate)
-    if (clarity >= 0.8 && hz >= 70 && hz <= 450) pitches.push(hz)
+    if (clarity >= CLARITY_MIN && hz >= PITCH_HZ_MIN && hz <= PITCH_HZ_MAX) pitches.push(hz)
     else pitches.push(null)
   }
-  const voiced = pitches.filter((value): value is number => value != null).sort((a, b) => a - b)
-  if (voiced.length < 5) return pitches.map(() => null)
+  const repaired = repairHarmonics(pitches)
+  const voiced = repaired.filter((value): value is number => value != null).sort((a, b) => a - b)
+  if (voiced.length < 5) return repaired.map(() => null)
   const median = voiced[Math.floor(voiced.length / 2)] ?? 1
-  const semis = pitches.map((value) => (value == null ? null : 12 * Math.log2(value / median)))
+  const semis = repaired.map((value) => (value == null ? null : 12 * Math.log2(value / median)))
   return medianFilter(semis, 5)
+}
+
+/**
+ * A lone frame on the 2nd, 3rd or 4th harmonic is folded back to the median.
+ * A rise that is not that harmonic stays. If more than about a third of the
+ * voiced frames would move, the median itself is mixed and the contour stays.
+ */
+export function repairHarmonics(hz: Contour): Contour {
+  const voiced = hz.filter((value): value is number => value != null && value > 0).sort((a, b) => a - b)
+  if (voiced.length < 5) return hz
+  const median = voiced[Math.floor(voiced.length / 2)] ?? 0
+  if (median <= 0) return hz
+  let changes = 0
+  const folded = hz.map((value) => {
+    if (value == null || value <= 0) return value
+    const original = Math.abs(12 * Math.log2(value / median))
+    let best = value
+    let bestDist = original
+    for (const factor of [1 / 3, 0.5, 2, 3, 4]) {
+      const cand = value * factor
+      if (cand < PITCH_HZ_MIN || cand > PITCH_HZ_MAX) continue
+      const moved = Math.abs(12 * Math.log2(factor))
+      if (Math.abs(original - moved) > 1.8) continue
+      const dist = Math.abs(12 * Math.log2(cand / median))
+      if (dist + 6 < bestDist) {
+        best = cand
+        bestDist = dist
+      }
+    }
+    if (best !== value) changes += 1
+    return best
+  })
+  if (changes / voiced.length > 0.35) return hz
+  return folded
 }
 
 function medianFilter(values: Contour, width: number): Contour {
@@ -38,6 +116,26 @@ function medianFilter(values: Contour, width: number): Contour {
     window.sort((a, b) => a - b)
     return window[Math.floor(window.length / 2)] ?? null
   })
+}
+
+/** Root-mean-square of each analysis frame, on the same grid as `contourFromSamples`. */
+export function frameEnergy(input: Float32Array, rate: number): number[] {
+  const prepared = samplesForAnalysis(input, rate)
+  const samples = prepared.samples
+  const sampleRate = prepared.sampleRate
+  if (samples.length < FRAME) return []
+  const hop = Math.max(1, Math.round(sampleRate * 0.01))
+  const energy: number[] = []
+  for (let index = 0; index + FRAME < samples.length; index += hop) {
+    let sum = 0
+    const end = index + FRAME
+    for (let cursor = index; cursor < end; cursor += 1) {
+      const sample = samples[cursor] ?? 0
+      sum += sample * sample
+    }
+    energy.push(Math.sqrt(sum / FRAME))
+  }
+  return energy
 }
 
 export function voicedValues(contour: Contour): number[] {

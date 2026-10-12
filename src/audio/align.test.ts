@@ -30,6 +30,9 @@ describe('alignment files', () => {
 
   it('scales a slowed file and keeps the base name', () => {
     expect(alignmentName('vi/vivos-22/emergency.help__any__base.r70.m4a')).toBe('vi/vivos-22/emergency.help__any__base.align.json')
+    expect(alignmentName('vi/vivos-22/transport.01.taxi__any__base.v2.r70.m4a')).toBe(
+      'vi/vivos-22/transport.01.taxi__any__base.v2.align.json',
+    )
     expect(alignmentScale('de/emergency.help__any__base.r85.m4a')).toBeCloseTo(1 / 0.85)
     const scaled = scaleTimes([{ start: 0.2, end: 0.4 }], 1 / 0.7)
     expect(scaled?.[0]?.start).toBeCloseTo(0.286, 2)
