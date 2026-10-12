@@ -104,6 +104,50 @@ describe('phrase microphone', () => {
     await screen.findByRole('button', { name: 'Stopp' })
     window.dispatchEvent(new Event('pagehide'))
     await waitFor(() => expect(track.stop).toHaveBeenCalled())
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
+  })
+
+  it('unlocks the buttons when the tab hides during the microphone prompt', async () => {
+    const track = { stop: vi.fn() }
+    const stream = { getTracks: () => [track] }
+    let resolveStream: (value: typeof stream) => void = () => undefined
+    const pending = new Promise<typeof stream>((resolve) => {
+      resolveStream = resolve
+    })
+    vi.stubGlobal('MediaRecorder', FakeRecorder)
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: vi.fn(() => pending) },
+    })
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
+    render(
+      <AppProvider>
+        <ReadyPhrase>
+          <MemoryRouter initialEntries={['/phrase/emergency.help']}>
+            <Routes>
+              <Route path="/phrase/:conceptId" element={<PhrasePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPhrase>
+      </AppProvider>,
+    )
+    expect((await screen.findByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Aufnehmen' }))
+    await waitFor(() => {
+      expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true)
+      expect((screen.getByRole('button', { name: 'Aufnehmen' }) as HTMLButtonElement).disabled).toBe(true)
+    })
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' })
+    document.dispatchEvent(new Event('visibilitychange'))
+    await waitFor(() => {
+      expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(false)
+      expect((screen.getByRole('button', { name: 'Aufnehmen' }) as HTMLButtonElement).disabled).toBe(false)
+    })
+    resolveStream(stream)
+    await waitFor(() => expect(track.stop).toHaveBeenCalled())
+    expect(screen.queryByRole('button', { name: 'Stopp' })).toBeNull()
+    expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(false)
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
   })
 
   it('releases a microphone that starts after the next phrase', async () => {

@@ -48,9 +48,21 @@ export function PhrasePage() {
   const [mineUrl, setMineUrl] = useState<string | null>(null)
   const sessionRef = useRef<CaptureSession | null>(null)
   const urlRef = useRef<string | null>(null)
+  const mineAudio = useRef<HTMLAudioElement | null>(null)
   const aliveRef = useRef(true)
   const micToken = useRef(0)
   const releaseRef = useRef<() => void>(() => undefined)
+
+  function stopMinePlayback(): void {
+    const audio = mineAudio.current
+    if (!audio) return
+    audio.pause()
+    try {
+      audio.currentTime = 0
+    } catch {
+      // The element cannot seek until it has data. Pause already keeps it out of the take.
+    }
+  }
 
   function releaseCaptureNow(): void {
     micToken.current += 1
@@ -59,6 +71,7 @@ export function PhrasePage() {
     urlRef.current = null
     if (!aliveRef.current) return
     setRecording(false)
+    setMicStarting(false)
   }
 
   releaseRef.current = releaseCaptureNow
@@ -100,6 +113,8 @@ export function PhrasePage() {
       document.removeEventListener('visibilitychange', onHidden)
       window.removeEventListener('pagehide', onPageHide)
       releaseRef.current()
+      stopMinePlayback()
+      mineAudio.current = null
       setMineUrl(null)
       setUserAudio(null)
     }
@@ -196,6 +211,7 @@ export function PhrasePage() {
   async function onRecord(): Promise<void> {
     stopClip()
     stopSlices()
+    stopMinePlayback()
     setPlaying(false)
     setMicError(false)
     setMicStarting(true)
@@ -326,7 +342,9 @@ export function PhrasePage() {
               type="button"
               disabled={recording || micStarting}
               onClick={() => {
+                stopMinePlayback()
                 const audio = new Audio(mineUrl)
+                mineAudio.current = audio
                 void audio.play()
               }}
             >

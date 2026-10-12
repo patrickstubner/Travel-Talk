@@ -50,6 +50,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  vi.unstubAllGlobals()
 })
 
 async function record(lang: 'en' | 'pt-BR' | 'de'): Promise<void> {
@@ -330,5 +331,66 @@ describe('phrase repeat feedback', () => {
     } as unknown as CaptureSession)
     expect(await screen.findByRole('button', { name: 'Stopp' })).toBeTruthy()
     expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('pauses and resets my recording when a new take starts', async () => {
+    const samples = sine()
+    vi.mocked(startMicrophone).mockImplementation(async (onStop) => {
+      const session = {
+        recorder: {
+          stop: () => onStop({ url: 'blob:phrase-take', samples, sampleRate: 16000 }),
+          state: 'recording',
+          stream: { getTracks: () => [] },
+        },
+        release: vi.fn(),
+      }
+      return session as unknown as CaptureSession
+    })
+    const played: Array<{ src: string; currentTime: number; pause: ReturnType<typeof vi.fn>; play: ReturnType<typeof vi.fn> }> = []
+    class MineAudio {
+      currentTime = 0
+      pause = vi.fn()
+      play = vi.fn(async () => undefined)
+      constructor(public src: string) {
+        played.push(this)
+      }
+    }
+    vi.stubGlobal('Audio', MineAudio)
+    render(
+      <AppProvider>
+        <ReadyPhrase lang="en">
+          <MemoryRouter initialEntries={['/phrase/emergency.doctor']}>
+            <Routes>
+              <Route path="/phrase/:conceptId" element={<PhrasePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPhrase>
+      </AppProvider>,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Aufnehmen' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Meine Aufnahme' }))
+    expect(played).toHaveLength(1)
+    expect(played[0]?.play).toHaveBeenCalled()
+    const mine = played[0]
+    if (!mine) throw new Error('missing playback')
+    mine.currentTime = 1.4
+    let releaseMic: (session: CaptureSession) => void = () => undefined
+    vi.mocked(startMicrophone).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseMic = resolve
+        }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Nochmal' }))
+    expect(mine.pause).toHaveBeenCalled()
+    expect(mine.currentTime).toBe(0)
+    expect(played).toHaveLength(1)
+    releaseMic({
+      recorder: { stop: vi.fn(), state: 'recording', stream: { getTracks: () => [] } },
+      release: vi.fn(),
+    } as unknown as CaptureSession)
+    expect(await screen.findByRole('button', { name: 'Stopp' })).toBeTruthy()
+    expect((screen.getByRole('button', { name: 'Meine Aufnahme' }) as HTMLButtonElement).disabled).toBe(true)
   })
 })
