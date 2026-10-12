@@ -277,6 +277,43 @@ describe('repeat alignment', () => {
     expect(moved?.rhythm).toBe('green')
   })
 
+  it('measures a shorter word in the recording instead of the local scale', () => {
+    // The pitch matches, so the local search stays on scale 1, which is
+    // inside the green band. Only the loudness shows that the middle word
+    // is about a quarter as long. Returning the scale alone would stay green.
+    const model: Contour = [...ramp(24, -3, 3), ...ramp(24, 3, -3), ...ramp(24, -2, 2)]
+    const user = model.slice()
+    const words = [
+      { text: 'Could', start: 0, end: 0.24 },
+      { text: 'you', start: 0.24, end: 0.48 },
+      { text: 'please?', start: 0.48, end: 0.72 },
+    ]
+    const modelEnergy = model.map((value) => (value == null ? 0 : 0.5))
+    const userEnergy = user.map((value, index) => {
+      if (value == null) return 0
+      if (index >= 30 && index < 48) return 0
+      return 0.5
+    })
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'en',
+      region: 'south',
+      userDuration: 0.72,
+      modelEnergy,
+      userEnergy,
+    })
+    const shorter = score.words?.[1]
+    expect(shorter?.melody).toBe('green')
+    expect(shorter?.rawRatio ?? 1).toBeLessThan(RHYTHM_GREEN_MIN)
+    expect(shorter?.rhythm).not.toBe('green')
+    expect(score.words?.[0]?.rhythm).toBe('green')
+    expect(score.words?.[2]?.rhythm).toBe('green')
+  })
+
   it('keeps later words green when a near-silent tail still has a pitch', () => {
     const model: Contour = [
       ...flat(10, null),

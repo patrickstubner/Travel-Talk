@@ -8,14 +8,14 @@ import { bandDistance } from './spectrum'
  * to survive. A mean path distance above UNCLEAR_SEMITONES stays on the
  * curve as a colour. It no longer drops the words. That cutoff is a choice.
  *
- * Rhythm colour of a word is that word's duration against the file,
- * divided by the tempo of the whole take, times the local scale. A take
- * that is only slower still has the file's proportions, so the words stay
- * green. The rhythm bar is the worse of that word bar and the band of the
- * whole-span ratio, so a uniform 0.7 take is not a perfect bar. The local
- * search (about 0.75–1.33) is part of the word ratio: without it a word
- * that moved against the rest looks like the global tempo. Comparison is
- * against the file that was heard.
+ * Rhythm colour of a word is how long that word sounds in the recording,
+ * divided by how long it sounds in the file, then by the tempo of the
+ * whole take. A take that is only slower still has the file's proportions,
+ * so the words stay green. The rhythm bar is the worse of that word bar
+ * and the band of the whole-span ratio, so a uniform 0.7 take is not a
+ * perfect bar. The local search (about 0.75–1.33) is only the fallback
+ * when the recording has no loudness to measure. Comparison is against
+ * the file that was heard.
  *
  * A take is «unklar» when its voiced range stays under FLAT_RANGE and the
  * reference moves by at least that much more, and the take is not itself
@@ -234,23 +234,49 @@ export function thin(contour: Contour, hop: number): { contour: Contour; hop: nu
 const DECAY_FRAMES = 6
 
 /**
- * First run of three voiced frames, and the last voiced frame. When
- * loudness is known, the end is the last run of at least three frames
- * that rises above the floor. A near-silent continuation, or one or two
- * leftover frames, does not stretch the map. Later words would otherwise
- * land in the gaps.
+ * First run of three voiced frames, and the last voiced frame. A run
+ * under ten frames is stepped over when a run of at least twelve frames
+ * follows and is clearly louder. Only that one run: the onset just
+ * after a soft splinter stays. The analysis window leans into a
+ * microphone lead-in and opens a brief pitch there. A real onset is
+ * about as loud as what follows, so it stays even when the take makes
+ * it a few frames longer. The quiet splinter would otherwise stretch
+ * the whole-take tempo.
+ * When loudness is known, the end is the last run of at least three
+ * frames that rises above the floor. A near-silent continuation, or one
+ * or two leftover frames, does not stretch the map. Later words would
+ * otherwise land in the gaps.
  */
 function sustained(contour: Contour, energy?: readonly number[] | null): { start: number; end: number } | null {
-  let start = -1
-  for (let index = 0; index <= contour.length - 3; index += 1) {
-    if (contour[index] != null && contour[index + 1] != null && contour[index + 2] != null) {
-      start = index
-      break
-    }
-  }
-  if (start < 0) return null
-  let end = start + 1
   const levels = loudLevels(energy, contour.length)
+  const runs: Array<{ start: number; end: number; peak: number }> = []
+  let cursor = 0
+  while (cursor < contour.length) {
+    if (contour[cursor] == null) {
+      cursor += 1
+      continue
+    }
+    const runStart = cursor
+    let peak = 0
+    while (cursor < contour.length && contour[cursor] != null) {
+      const level = levels?.[cursor] ?? 0
+      if (level > peak) peak = level
+      cursor += 1
+    }
+    runs.push({ start: runStart, end: cursor, peak })
+  }
+  const body = runs.filter((run) => run.end - run.start >= 3)
+  let chosen = body[0]
+  if (!chosen) return null
+  while (chosen.end - chosen.start < 10 && chosen.peak > 0) {
+    const louderLater = body.some((run) => run.start >= chosen.end && run.end - run.start >= 12 && run.peak > chosen.peak + 0.12)
+    if (!louderLater) break
+    const next = body.find((run) => run.start >= chosen.end)
+    if (!next) break
+    chosen = next
+  }
+  const start = chosen.start
+  let end = start + 1
   if (levels == null) {
     for (let index = contour.length - 1; index >= start; index -= 1) {
       if (contour[index] != null) {
@@ -341,10 +367,51 @@ function mappedFrame(
   return userSpan.start + rel * Math.max(0, userSpan.end - userSpan.start - 1)
 }
 
+/** Where `time` lands once the two spans have been lined up. */
+function mapSpanTime(
+  time: number,
+  modelSpan: { start: number; end: number },
+  userSpan: { start: number; end: number },
+  modelHop: number,
+  userHop: number,
+): number {
+  const modelStart = modelSpan.start * modelHop
+  const modelLength = Math.max(modelHop, (modelSpan.end - modelSpan.start) * modelHop)
+  const rel = (time - modelStart) / modelLength
+  return userSpan.start * userHop + rel * (userSpan.end - userSpan.start) * userHop
+}
+
 /**
- * How long the word lasts in the take, once the global map has lined the
- * two spans up. A uniform stretch cancels when this is divided by the
- * span ratio. The local scale then keeps a word that moved against the rest.
+ * Seconds from the first loud frame of a word to the last. The floor is
+ * the same share of the peak that limits the timed span. Fewer than two
+ * loud frames is not a duration.
+ */
+function loudSpanSeconds(energy: readonly number[] | null, timeStart: number, timeEnd: number, hop: number): number | null {
+  if (!energy || !(hop > 0) || !(timeEnd > timeStart)) return null
+  let peak = 0
+  for (const value of energy) if (value > peak) peak = value
+  if (!(peak > 0)) return null
+  const floor = peak * LOUD_FRACTION
+  const from = Math.max(0, Math.floor(timeStart / hop))
+  const to = Math.min(energy.length, Math.ceil(timeEnd / hop))
+  let first = -1
+  let last = -1
+  for (let index = from; index < to; index += 1) {
+    if ((energy[index] ?? 0) >= floor) {
+      if (first < 0) first = index
+      last = index
+    }
+  }
+  if (first < 0 || last <= first) return null
+  return (last - first + 1) * hop
+}
+
+/**
+ * The word's own duration in the recording, divided by the same span in
+ * the file and by the tempo of the whole take. The local scale is only
+ * the fallback when loudness is missing, as in the synthetic fixtures.
+ * Multiplying a measured duration by that scale would paint every word
+ * green: every scale sits inside the green band.
  */
 function wordRhythmRatio(
   start: number,
@@ -355,15 +422,16 @@ function wordRhythmRatio(
   userSpan: { start: number; end: number },
   modelHop: number,
   userHop: number,
+  modelEnergy: readonly number[] | null,
+  userEnergy: readonly number[] | null,
 ): number {
-  const fileDuration = end - start
-  if (!(fileDuration > 0) || !(globalRatio > 0) || !(scale > 0)) return scale
-  const modelStart = modelSpan.start * modelHop
-  const modelLength = Math.max(modelHop, (modelSpan.end - 1) * modelHop - modelStart)
-  const userStart = userSpan.start * userHop
-  const userLength = Math.max(0, (userSpan.end - 1) * userHop - userStart)
-  const userDuration = ((end - start) / modelLength) * userLength * scale
-  const ratio = userDuration / fileDuration / globalRatio
+  if (!(scale > 0)) return scale
+  const modelSeconds = loudSpanSeconds(modelEnergy, start, end, modelHop)
+  const userFrom = mapSpanTime(start, modelSpan, userSpan, modelHop, userHop)
+  const userTo = mapSpanTime(end, modelSpan, userSpan, modelHop, userHop)
+  const userSeconds = loudSpanSeconds(userEnergy, Math.min(userFrom, userTo), Math.max(userFrom, userTo), userHop)
+  if (modelSeconds == null || userSeconds == null || !(globalRatio > 0)) return scale
+  const ratio = userSeconds / modelSeconds / globalRatio
   return Number.isFinite(ratio) && ratio > 0 ? ratio : scale
 }
 
@@ -968,11 +1036,21 @@ export function scoreRepeat(input: {
     if (scorable && modelRange >= MOVING_RANGE && pitchCorr != null && !follows && melody === 'green') {
       melody = 'yellow'
     }
-    // The word's own duration against the file, with the whole-take tempo
-    // divided out. The local scale stays in, so one word can still move
-    // against the rest. The span ratio alone would paint every word with
-    // the global tempo, and that scale by itself never leaves the green band.
-    const rawRatio = wordRhythmRatio(word.start, word.end, matched.scale, globalRatio, modelSpan, userSpan, modelHop, userHop)
+    // Measured from the loud frames of this word. The scale is not part of
+    // that ratio: it never leaves the green band, so another voice would
+    // look perfectly in time.
+    const rawRatio = wordRhythmRatio(
+      word.start,
+      word.end,
+      matched.scale,
+      globalRatio,
+      modelSpan,
+      userSpan,
+      modelHop,
+      userHop,
+      modelEnergy,
+      userEnergy,
+    )
     const rhythm = rhythmBand(rawRatio)
     return {
       ...base,
@@ -992,7 +1070,7 @@ export function scoreRepeat(input: {
       : words.map((word) => {
           if (!word.scorable) return word
           const melody = melodyBand(meanDistance)
-          const rawRatio = wordRhythmRatio(word.start, word.end, 1, globalRatio, modelSpan, userSpan, modelHop, userHop)
+          const rawRatio = wordRhythmRatio(word.start, word.end, 1, globalRatio, modelSpan, userSpan, modelHop, userHop, modelEnergy, userEnergy)
           const rhythm = rhythmBand(rawRatio)
           return {
             ...word,

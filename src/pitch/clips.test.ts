@@ -24,15 +24,13 @@ import { bandShape } from './spectrum'
 /**
  * The file against itself has no usable pitch, so test (a) does not ask it
  * for colours. joe «Help!» and «I cannot breathe.» have no voiced frame at
- * clarity 0.6. joe «It hurts here.» and «Where is the hospital?» have no
- * word with three voiced frames in the model. vais1000 «Dạ.» and «Vâng.»
+ * clarity 0.6. joe «It hurts here.» and «Where is the hospital?» now have
+ * a scorable word, and that word stays green. vais1000 «Dạ.» and «Vâng.»
  * are shorter than 0.3 seconds.
  */
 const SELF_THIN = new Set([
   'en/joe/emergency.help__any__base.m4a',
   'en/joe/emergency.breathe__any__base.m4a',
-  'en/joe/emergency.hurt__any__base.m4a',
-  'en/joe/emergency.hospital__any__base.m4a',
   'vi/meet.yes__south__base.m4a',
   'vi/meet.yes__north__base.m4a',
 ])
@@ -361,4 +359,126 @@ describe('shipped clips', () => {
       }
     }
   }, 120_000)
+
+  it.skipIf(!ready)('keeps a short clip in time when the microphone has a lead-in', () => {
+    const file = 'public/audio/vi/vivos-22/transport.05.price__any__base.m4a'
+    const texts = splitWords('Bao nhiêu?')
+    const times = parseAlignment(JSON.parse(readFileSync(file.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+    expect(times, file).not.toBeNull()
+    const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+    const modelSamples = pcm(
+      execFileSync('ffmpeg', ['-v', 'error', '-i', file, '-ac', '1', '-ar', '48000', '-f', 'f32le', 'pipe:1'], {
+        maxBuffer: 16 * 1024 * 1024,
+      }),
+    )
+    const lead = Math.floor(48000 * 0.45)
+    const tail = Math.floor(48000 * 0.7)
+    const userSamples = new Float32Array(lead + modelSamples.length + tail)
+    userSamples.set(modelSamples, lead)
+    const model = analyzeModel(modelSamples, 48000)
+    const user = analyzeUser(userSamples, 48000, model.bands)
+    const score = scoreRepeat({
+      model: model.contour,
+      user: user.contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'vi',
+      region: 'south',
+      userDuration: userSamples.length / 48000,
+      modelEnergy: model.energy,
+      userEnergy: user.energy,
+      modelBands: model.bands,
+      userBands: user.bands,
+      userPlainBands: user.plainBands,
+    })
+    expect(score.globalRatio ?? 0, file).toBeGreaterThan(0.85)
+    expect(score.globalRatio ?? 9, file).toBeLessThan(1.2)
+    expect(score.rhythmBar, file).toBe('passt')
+    for (const word of score.words ?? []) {
+      if (word.scorable) expect(word.rhythm, `${file} ${word.text}`).toBe('green')
+    }
+  }, 60_000)
+
+  it.skipIf(!ready)('dates a short word of a real clip at the centre of the window', () => {
+    const file = 'public/audio/en/joe/emergency.ambulance__any__base.m4a'
+    const texts = splitWords('Please call an ambulance.')
+    const times = parseAlignment(JSON.parse(readFileSync(file.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+    const word = times?.find((_, index) => texts[index] === 'an')
+    expect(word, file).toBeTruthy()
+    const samples = decode(file)
+    const contour = contourFromSamples(samples, 16000)
+    const from = Math.floor((word?.start ?? 0) / 0.01)
+    const to = Math.ceil((word?.end ?? 0) / 0.01)
+    let voiced = 0
+    for (let index = from; index < to && index < contour.length; index += 1) if (contour[index] != null) voiced += 1
+    expect(voiced, file).toBeGreaterThanOrEqual(3)
+  }, 30_000)
+
+  it.skipIf(!ready)('keeps the tempo when a real clip is followed by a quiet copy', () => {
+    const file = 'public/audio/vi/vivos-22/transport.05.price__any__base.m4a'
+    const texts = splitWords('Bao nhiêu?')
+    const times = parseAlignment(JSON.parse(readFileSync(file.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+    const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+    const modelSamples = decode(file)
+    const gap = Math.floor(16000 * 0.12)
+    const quiet = new Float32Array(modelSamples.length)
+    for (let index = 0; index < modelSamples.length; index += 1) quiet[index] = (modelSamples[index] ?? 0) * 0.04
+    const userSamples = new Float32Array(modelSamples.length + gap + quiet.length)
+    userSamples.set(modelSamples, 0)
+    userSamples.set(quiet, modelSamples.length + gap)
+    const model = analyzeModel(modelSamples, 16000)
+    const user = analyzeUser(userSamples, 16000, model.bands)
+    const score = scoreRepeat({
+      model: model.contour,
+      user: user.contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'vi',
+      region: 'south',
+      userDuration: userSamples.length / 16000,
+      modelEnergy: model.energy,
+      userEnergy: user.energy,
+      modelBands: model.bands,
+      userBands: user.bands,
+      userPlainBands: user.plainBands,
+    })
+    const modelVoiced = model.contour.filter((value) => value != null).length
+    const userVoiced = user.contour.filter((value) => value != null).length
+    expect(userVoiced, file).toBeGreaterThan(modelVoiced + 8)
+    expect(score.globalRatio ?? 9, file).toBeLessThan(1.25)
+    expect(score.rhythmBar, file).toBe('passt')
+    expect(score.words?.some((word) => word.rhythm === 'green'), file).toBe(true)
+  }, 30_000)
+
+  it.skipIf(!ready)('paints at least one word yellow when another voice says the same line', () => {
+    const text = 'Mir ist schwindlig.'
+    const texts = splitWords(text)
+    const modelFile = 'public/audio/de/emergency.dizzy__any__base.m4a'
+    const userFile = 'public/audio/de/thorsten-high/emergency.dizzy__any__base.m4a'
+    const times = parseAlignment(JSON.parse(readFileSync(modelFile.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+    const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+    const modelSamples = decode(modelFile)
+    const userSamples = decode(userFile)
+    const score = scoreRepeat({
+      model: contourFromSamples(modelSamples, 16000),
+      user: contourFromSamples(userSamples, 16000),
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'de',
+      region: 'south',
+      userDuration: userSamples.length / 16000,
+      modelEnergy: frameEnergy(modelSamples, 16000),
+      userEnergy: frameEnergy(userSamples, 16000),
+      modelBands: bandShape(modelSamples, 16000),
+      userBands: bandShape(userSamples, 16000),
+    })
+    const schwindlig = score.words?.find((word) => word.text === 'schwindlig.')
+    expect(schwindlig?.rhythm, modelFile).toBe('yellow')
+    expect(score.melodyBar, modelFile).not.toBeNull()
+    expect(score.rhythmBar, modelFile).not.toBeNull()
+    expect(score.otherSentence, modelFile).toBe(false)
+  }, 30_000)
 })
