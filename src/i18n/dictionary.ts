@@ -165,6 +165,13 @@ export type Dictionary = {
   noResults: string
   phrases: (count: number) => string
   learnToday: string
+  wordsFirst: string
+  wordPrompt: string
+  wordRight: string
+  wordWrong: (meaning: string) => string
+  todayWords: (count: number) => string
+  sentencesAfterWords: (count: number) => string
+  missingWord: (word: string) => string
   reviewCard: (count: number) => string
   reviewNone: string
   learnNew: string
@@ -245,7 +252,7 @@ export type Dictionary = {
   noReviews: string
   noNewToday: string
   reviewTitle: string
-  startLead: (fresh: number, due: number) => string
+  startLead: (fresh: number, due: number, afterWords?: number) => string
   whoKicker: string
   whoTitle: string
   whoCount: (count: number) => string
@@ -473,12 +480,19 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.8.1',
+  version: 'Version 0.9.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
   phrases: (count) => (count === 1 ? '1 Satz' : `${count} Sätze`),
   learnToday: 'Heute lernen',
+  wordsFirst: 'Zuerst die Wörter von heute.',
+  wordPrompt: 'Was bedeutet das Wort?',
+  wordRight: 'Das stimmt.',
+  wordWrong: (meaning) => `Gemeint ist «${meaning}».`,
+  todayWords: (count) => (count === 1 ? '1 neues Wort.' : `${count} neue Wörter.`),
+  sentencesAfterWords: (count) => (count === 1 ? 'Bis zu 1 neuer Satz nach den Wörtern' : `Bis zu ${count} neue Sätze nach den Wörtern`),
+  missingWord: (word) => `Der nächste Satz wartet auf «${word}».`,
   reviewCard: (count) => (count === 1 ? '1 fälliger Satz.' : `${count} fällige Sätze.`),
   reviewNone: 'Fällige Sätze. Heute keine.',
   learnNew: 'Neu lernen',
@@ -559,7 +573,8 @@ export const de: Dictionary = {
   noReviews: 'Keine Wiederholung ist fällig.',
   noNewToday: 'Heute keine neuen Sätze mehr. Die Wiederholungen liegen unter Wiederholen.',
   reviewTitle: 'Wiederholen',
-  startLead: (fresh, due) => `${fresh === 1 ? '1 neuer Satz' : `${fresh} neue Sätze`}. ${due === 0 ? 'Keine Wiederholung.' : due === 1 ? '1 Wiederholung.' : `${due} Wiederholungen.`}`,
+  startLead: (fresh, due, afterWords = 0) =>
+    `${fresh === 0 && afterWords > 0 ? (afterWords === 1 ? 'Bis zu 1 neuer Satz nach den Wörtern' : `Bis zu ${afterWords} neue Sätze nach den Wörtern`) : fresh === 1 ? '1 neuer Satz' : `${fresh} neue Sätze`}. ${due === 0 ? 'Keine Wiederholung.' : due === 1 ? '1 Wiederholung.' : `${due} Wiederholungen.`}`,
   whoKicker: 'Auf diesem Gerät',
   whoTitle: 'Wer lernt?',
   whoCount: (count) => `${count === 1 ? 'Eine' : count === 2 ? 'Zwei' : String(count)} von zehn. Der Name bleibt auf diesem Gerät. Stimmen und Audiodateien sind gemeinsam.`,
@@ -783,11 +798,19 @@ export const en: Dictionary = {
   privacy: 'Progress, recordings and the note stay on this device. No account, no tracking, no font from the network.',
   loading: 'One moment.',
   storageError: 'Local storage is not available.',
+  version: 'Version 0.9.0',
   exampleAudio: 'The audio speaks the example sentence.',
   pairNote: 'Note for this pair',
   noResults: 'No matches.',
   phrases: (count) => (count === 1 ? '1 line' : `${count} lines`),
   learnToday: 'Learn today',
+  wordsFirst: 'The words for today come first.',
+  wordPrompt: 'What does the word mean?',
+  wordRight: 'That is the one.',
+  wordWrong: (meaning) => `The meaning is «${meaning}».`,
+  todayWords: (count) => (count === 1 ? '1 new word.' : `${count} new words.`),
+  sentencesAfterWords: (count) => (count === 1 ? 'Up to 1 new line after the words' : `Up to ${count} new lines after the words`),
+  missingWord: (word) => `The next line is waiting for «${word}».`,
   reviewCard: (count) => (count === 1 ? '1 line is due.' : `${count} lines are due.`),
   reviewNone: 'Due lines. None today.',
   learnNew: 'Learn something new',
@@ -868,7 +891,8 @@ export const en: Dictionary = {
   noReviews: 'No review is due.',
   noNewToday: 'No new lines today. Reviews are under Review.',
   reviewTitle: 'Review',
-  startLead: (fresh, due) => `${fresh === 1 ? '1 new line' : `${fresh} new lines`}. ${due === 0 ? 'No review.' : due === 1 ? '1 review.' : `${due} reviews.`}`,
+  startLead: (fresh, due, afterWords = 0) =>
+    `${fresh === 0 && afterWords > 0 ? (afterWords === 1 ? 'Up to 1 new line after the words' : `Up to ${afterWords} new lines after the words`) : fresh === 1 ? '1 new line' : `${fresh} new lines`}. ${due === 0 ? 'No review.' : due === 1 ? '1 review.' : `${due} reviews.`}`,
   whoKicker: 'On this device',
   whoTitle: 'Who is learning?',
   whoCount: (count) => `${count} of ten. The name stays on this device. Voices and audio are shared.`,
@@ -1069,7 +1093,7 @@ export const pt: Dictionary = {
   backupDownload: 'Baixar uma cópia',
   voicesTitle: 'Vozes e licenças',
   voicesVi:
-    'Quem começa agora usa uma voz de homem. A voz anterior fica até você trocar. Vietnamita: vais1000 (conjunto CC BY 4.0, mulher, norte; o modelo vem de lessac) e vivos (CC BY-NC-SA 4.0, homens, qualidade baixa, treinado do zero). O áudio gerado de vivos fica na mesma licença. Alemão thorsten, cadu e faber, e joe: o conjunto é CC0, a voz não. Ela vem de lessac, e lessac vale só para pesquisa. LJSpeech é domínio público e treinado do zero. A atribuição está em NOTICE.txt.',
+    'Quem começa agora usa uma voz de homem. A voz anterior fica até você trocar. Vietnamita: vais1000 (conjunto CC BY 4.0, mulher, norte; o modelo vem de lessac) e vivos (CC BY-NC-SA 4.0, homens, qualidade baixa, treinado do zero). O áudio gerado de vivos fica na mesma licença. Alemão thorsten, português cadu e faber, e inglês joe: o conjunto é CC0, a voz não. Ela vem de lessac, e lessac vale só para pesquisa. LJSpeech é domínio público e treinado do zero. A atribuição está em NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'O material foi alterado.',
@@ -1094,11 +1118,19 @@ export const pt: Dictionary = {
   privacy: 'Progresso, gravações e a nota ficam neste aparelho. Sem conta, sem rastreamento, sem fonte da rede.',
   loading: 'Um momento.',
   storageError: 'O armazenamento local não está disponível.',
+  version: 'Version 0.9.0',
   exampleAudio: 'O áudio fala a frase de exemplo.',
   pairNote: 'Nota deste par',
   noResults: 'Nenhum resultado.',
   phrases: (count) => (count === 1 ? '1 frase' : `${count} frases`),
   learnToday: 'Aprender hoje',
+  wordsFirst: 'Primeiro as palavras de hoje.',
+  wordPrompt: 'O que a palavra significa?',
+  wordRight: 'É essa.',
+  wordWrong: (meaning) => `O sentido é «${meaning}».`,
+  todayWords: (count) => (count === 1 ? '1 palavra nova.' : `${count} palavras novas.`),
+  sentencesAfterWords: (count) => (count === 1 ? 'Até 1 frase nova depois das palavras' : `Até ${count} frases novas depois das palavras`),
+  missingWord: (word) => `A próxima frase espera «${word}».`,
   reviewCard: (count) => (count === 1 ? '1 frase para revisar.' : `${count} frases para revisar.`),
   reviewNone: 'Frases para revisar. Hoje nenhuma.',
   learnNew: 'Aprender algo novo',
@@ -1179,7 +1211,8 @@ export const pt: Dictionary = {
   noReviews: 'Nenhuma revisão está para hoje.',
   noNewToday: 'Hoje não há frases novas. As revisões ficam em Revisar.',
   reviewTitle: 'Revisar',
-  startLead: (fresh, due) => `${fresh === 1 ? '1 frase nova' : `${fresh} frases novas`}. ${due === 0 ? 'Nenhuma revisão.' : due === 1 ? '1 revisão.' : `${due} revisões.`}`,
+  startLead: (fresh, due, afterWords = 0) =>
+    `${fresh === 0 && afterWords > 0 ? (afterWords === 1 ? 'Até 1 frase nova depois das palavras' : `Até ${afterWords} frases novas depois das palavras`) : fresh === 1 ? '1 frase nova' : `${fresh} frases novas`}. ${due === 0 ? 'Nenhuma revisão.' : due === 1 ? '1 revisão.' : `${due} revisões.`}`,
   whoKicker: 'Neste aparelho',
   whoTitle: 'Quem aprende?',
   whoCount: (count) => `${count} de dez. O nome fica neste aparelho. Vozes e áudios são compartilhados.`,
@@ -1378,7 +1411,7 @@ export const vi: Dictionary = {
   backupDownload: 'Tải bản sao',
   voicesTitle: 'Giọng và giấy phép',
   voicesVi:
-    'Người mới bắt đầu với giọng nam. Giọng cũ giữ nguyên cho đến khi đổi. Tiếng Việt: vais1000 (dữ liệu CC BY 4.0, nữ, miền Bắc; mô hình tinh chỉnh từ lessac) và vivos (CC BY-NC-SA 4.0, nam, chất lượng thấp, huấn luyện từ đầu). Audio tạo từ vivos cùng giấy phép đó. Tiếng Đức thorsten, cadu, faber và joe: bộ dữ liệu là CC0, bản thân giọng thì không. Giọng được tinh chỉnh từ lessac, và lessac chỉ dùng cho nghiên cứu. LJSpeech là phạm vi công cộng và huấn luyện từ đầu. Ghi nguồn nằm trong NOTICE.txt.',
+    'Người mới bắt đầu với giọng nam. Giọng cũ giữ nguyên cho đến khi đổi. Tiếng Việt: vais1000 (dữ liệu CC BY 4.0, nữ, miền Bắc; mô hình tinh chỉnh từ lessac) và vivos (CC BY-NC-SA 4.0, nam, chất lượng thấp, huấn luyện từ đầu). Audio tạo từ vivos cùng giấy phép đó. Tiếng Đức thorsten, tiếng Bồ Đào Nha cadu và faber, và tiếng Anh joe: bộ dữ liệu là CC0, bản thân giọng thì không. Giọng được tinh chỉnh từ lessac, và lessac chỉ dùng cho nghiên cứu. LJSpeech là phạm vi công cộng và huấn luyện từ đầu. Ghi nguồn nằm trong NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'Tài liệu đã được thay đổi.',
@@ -1403,11 +1436,19 @@ export const vi: Dictionary = {
   privacy: 'Tiến độ, bản ghi và ghi chú ở trên máy này. Không tài khoản, không theo dõi, không phông từ mạng.',
   loading: 'Một lát.',
   storageError: 'Bộ nhớ trên máy không dùng được.',
+  version: 'Version 0.9.0',
   exampleAudio: 'Audio đọc câu ví dụ.',
   pairNote: 'Ghi chú của cặp này',
   noResults: 'Không thấy.',
   phrases: (count) => (count === 1 ? '1 câu' : `${count} câu`),
   learnToday: 'Học hôm nay',
+  wordsFirst: 'Trước hết là từ của hôm nay.',
+  wordPrompt: 'Từ này nghĩa là gì?',
+  wordRight: 'Đúng rồi.',
+  wordWrong: (meaning) => `Nghĩa là «${meaning}».`,
+  todayWords: (count) => (count === 1 ? '1 từ mới.' : `${count} từ mới.`),
+  sentencesAfterWords: (count) => `Tối đa ${count} câu mới sau các từ`,
+  missingWord: (word) => `Câu tiếp theo chờ «${word}».`,
   reviewCard: (count) => (count === 1 ? '1 câu đến hạn.' : `${count} câu đến hạn.`),
   reviewNone: 'Câu đến hạn. Hôm nay không có.',
   learnNew: 'Học câu mới',
@@ -1488,7 +1529,8 @@ export const vi: Dictionary = {
   noReviews: 'Không có câu ôn đến hạn.',
   noNewToday: 'Hôm nay không còn câu mới. Phần ôn nằm ở Ôn lại.',
   reviewTitle: 'Ôn lại',
-  startLead: (fresh, due) => `${fresh === 1 ? '1 câu mới' : `${fresh} câu mới`}. ${due === 0 ? 'Không có ôn lại.' : `${due} câu ôn.`}`,
+  startLead: (fresh, due, afterWords = 0) =>
+    `${fresh === 0 && afterWords > 0 ? `Tối đa ${afterWords} câu mới sau các từ` : fresh === 1 ? '1 câu mới' : `${fresh} câu mới`}. ${due === 0 ? 'Không có ôn lại.' : `${due} câu ôn.`}`,
   whoKicker: 'Trên máy này',
   whoTitle: 'Ai đang học?',
   whoCount: (count) => `${count} trong mười. Tên ở trên máy này. Giọng và tệp âm thanh dùng chung.`,

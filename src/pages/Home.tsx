@@ -7,7 +7,9 @@ import { LanguageChoice } from '../components/LanguageChoice'
 import { VoiceOfflineButton } from '../components/VoiceOffline'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
-import { buildSession, currentDirection, dueConcepts, orderedConcepts, usableConcepts } from '../srs/session'
+import { WORDS } from '../../content/words'
+import { buildDay, missingKeyword } from '../srs/day'
+import { cardIdFor, currentDirection, dueConcepts, isDueCard, orderedConcepts, usableConcepts } from '../srs/session'
 import type { Dictionary } from '../i18n/dictionary'
 import type { Settings } from '../storage/types'
 
@@ -46,8 +48,16 @@ export function HomePage() {
 
   const usable = usableConcepts(orderedConcepts(catalog), settings.appLang, settings.targetLang, settings.viRegion)
   const now = new Date()
-  const due = dueConcepts(usable, snapshot.cards, direction, now).length
-  const fresh = buildSession(usable, snapshot.cards, direction, now, 'new').length
+  const due =
+    dueConcepts(usable, snapshot.cards, direction, now).length +
+    WORDS.filter((word) => isDueCard(snapshot.cards.find((card) => card.cardId === cardIdFor(direction, word.id)), now)).length
+  const planned = buildDay(usable, snapshot.cards, direction, now, 'new')
+  const fresh = planned.items.filter((item) => item.kind === 'sentence').length
+  const coming = fresh + planned.waiting
+  const words = planned.items.filter((item) => item.kind === 'word').length
+  const appLang = settings.appLang
+  const waiting = appLang ? usable.find((concept) => missingKeyword(concept.id, snapshot.cards, direction, appLang, settings.viRegion)) : undefined
+  const missing = waiting && appLang ? missingKeyword(waiting.id, snapshot.cards, direction, appLang, settings.viRegion) : null
   const skipped = catalog.concepts.length - usable.length
 
   return (
@@ -71,7 +81,9 @@ export function HomePage() {
           void saveSettings({ ...settings, voices: { ...settings.voices, [settings.targetLang]: id } })
         }}
       />
-      <p>{copy.startLead(fresh, due)}</p>
+      <p>{copy.startLead(fresh === 0 ? 0 : coming, due, fresh === 0 ? planned.waiting : 0)}</p>
+      {words > 0 ? <p>{copy.todayWords(words)}</p> : null}
+      {missing ? <p>{copy.missingWord(missing)}</p> : null}
       <Link className="button primary" to="/practice">
         {copy.learnToday}
       </Link>
@@ -82,7 +94,7 @@ export function HomePage() {
       </Link>
       <Link className="menu-card" to="/practice?kind=new">
         <strong>{copy.learnNew}</strong>
-        <span>{fresh === 0 ? copy.noNewToday : copy.learnNewHint}</span>
+        <span>{fresh === 0 && planned.waiting > 0 ? copy.sentencesAfterWords(planned.waiting) : coming === 0 ? copy.noNewToday : copy.learnNewHint}</span>
       </Link>
       <Link className="menu-card" to="/lookup">
         <strong>{copy.lookupCard}</strong>

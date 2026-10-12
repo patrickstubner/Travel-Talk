@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DE_ADDRESS, PT_ADDRESS, PT_SPEAKER, VI_ADDRESS } from '../../content/address'
+import { wordIds } from '../../content/words'
 import { voicesKeptByOthers } from '../audio/voices'
 import { LanguageChoice } from '../components/LanguageChoice'
 import { interfaceLang } from '../app/labels'
@@ -27,7 +28,7 @@ export function SettingsPage() {
   const settings = useSettings()
   const copy = useCopy()
   const ui = interfaceLang(settings)
-  const conceptIds = useMemo(() => new Set(catalog?.concepts.map((concept) => concept.id) ?? []), [catalog])
+  const conceptIds = useMemo(() => new Set([...(catalog?.concepts.map((concept) => concept.id) ?? []), ...wordIds()]), [catalog])
   const [importState, setImportState] = useState<'ok' | 'bad' | 'newer' | 'future' | 'reset' | null>(null)
   const [keptDirection, setKeptDirection] = useState(false)
   const [skipped, setSkipped] = useState(0)

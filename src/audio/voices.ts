@@ -83,6 +83,16 @@ export function spokenFile(settings: Settings, lang: Lang, file: string): string
   return voiceFile(file, voice.id, voice.legacy)
 }
 
+/**
+ * Word clips ship with the default voice of each language, and with vivos-32.
+ * thorsten, ljspeech, faber and vais1000 have the sentences only, so a word uses the default voice.
+ */
+export function spokenWordFile(settings: Settings, lang: Lang, file: string): string {
+  const selected = selectedVoice(settings, lang)
+  const voice = selected.legacy ? defaultVoice(lang) : selected
+  return voiceFile(file, voice.id, false)
+}
+
 export function previewFile(lang: Lang, voice: CatalogVoice): string {
   return voiceFile(PREVIEW[lang], voice.id, voice.legacy)
 }

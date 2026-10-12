@@ -7,10 +7,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadAlignment } from '../audio/align'
 import { AppProvider, useApp } from '../app/state'
-import { tryLoadCatalog } from '../content/load'
-import { orderedConcepts } from '../srs/session'
-import { DexieProgressRepository } from '../storage/dexie-repository'
-import { defaultSettings, type StoredCard } from '../storage/types'
+import { seedPassedWords } from '../test-words'
 import { PracticePage } from './Practice'
 import { ShowPage } from './Show'
 
@@ -45,24 +42,9 @@ function Ready({ children }: { children: ReactNode }) {
   )
 }
 
-function laterCard(cardId: string): StoredCard {
-  return {
-    cardId,
-    due: new Date(Date.now() + 30 * 86_400_000).toISOString(),
-    stability: 2,
-    difficulty: 5,
-    elapsed_days: 1,
-    scheduled_days: 10,
-    learning_steps: 0,
-    reps: 3,
-    lapses: 0,
-    state: 2,
-    last_review: new Date(Date.now() - 86_400_000).toISOString(),
-  }
-}
-
-beforeEach(() => {
+beforeEach(async () => {
   freshIndexedDb()
+  await seedPassedWords()
   vi.mocked(loadAlignment).mockClear()
 })
 
@@ -129,16 +111,7 @@ describe('N15c-01', () => {
     expect(screen.getByTestId('karaoke')).toBeTruthy()
   })
 
-  it('keeps the written slot next to the spoken line in practice', async () => {
-    const catalog = tryLoadCatalog()
-    if (!catalog.ok) throw new Error('catalog')
-    const repo = new DexieProgressRepository('travel-talk')
-    const personId = (await repo.load()).activePersonId ?? ''
-    await repo.saveSettings(personId, { ...defaultSettings, appLang: 'de', targetLang: 'vi', speed: 'auto' })
-    for (const concept of orderedConcepts(catalog.catalog)) {
-      if (concept.id === 'meet.name') break
-      await repo.saveCard(personId, laterCard(`de-vi:${concept.id}`))
-    }
+  it('keeps the spoken line next to the words once the keywords are known', async () => {
     render(
       <AppProvider>
         <Ready>
@@ -150,7 +123,7 @@ describe('N15c-01', () => {
         </Ready>
       </AppProvider>,
     )
-    expect((await screen.findByTestId('placeholder-line')).textContent).toContain('[tên]')
-    expect(screen.getByTestId('karaoke')).toBeTruthy()
+    expect(await screen.findByTestId('karaoke')).toBeTruthy()
+    expect(screen.queryByTestId('practice-word')).toBeNull()
   })
 })

@@ -5,8 +5,14 @@ import { freshIndexedDb } from '../test-idb'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { WORDS } from '../../content/words'
+import { tryLoadCatalog } from '../content/load'
 import { AppProvider } from '../app/state'
-import { defaultSettings } from '../storage/types'
+import { dictionaries } from '../i18n/dictionary'
+import { DexieProgressRepository } from '../storage/dexie-repository'
+import { defaultSettings, type StoredCard } from '../storage/types'
+import { orderedConcepts, usableConcepts } from '../srs/session'
+import { emptyCard, reviewCard, toStored, Rating } from '../srs/scheduler'
 import { HomePage } from './Home'
 
 beforeEach(() => {
@@ -63,4 +69,88 @@ describe('home hints', () => {
     expect(screen.queryByText(/Männerstimmen/)).toBeNull()
     expect(screen.queryByText(/zurückgesetzt/)).toBeNull()
   })
+
+  it('shows the reserved sentence slots instead of no new lines', async () => {
+    const repo = new DexieProgressRepository('travel-talk')
+    const personId = (await repo.load()).activePersonId ?? ''
+    await repo.saveSettings(personId, { ...defaultSettings, appLang: 'de', targetLang: 'vi', voiceHintSeen: true })
+    render(
+      <AppProvider>
+        <MemoryRouter>
+          <HomePage />
+        </MemoryRouter>
+      </AppProvider>,
+    )
+    expect(await screen.findByText('Bis zu 4 neue Sätze nach den Wörtern. Keine Wiederholung.')).toBeTruthy()
+    expect(screen.getAllByText(/Bis zu 4 neue Sätze nach den Wörtern/)).toHaveLength(2)
+    expect(screen.queryByText(/0 neue Sätze/)).toBeNull()
+    expect(screen.queryByText(/Heute keine neuen Sätze mehr/)).toBeNull()
+    expect(dictionaries.en.sentencesAfterWords(4)).toBe('Up to 4 new lines after the words')
+    expect(dictionaries.en.startLead(0, 0, 4)).toBe('Up to 4 new lines after the words. No review.')
+    expect(dictionaries['pt-BR'].sentencesAfterWords(4)).toBe('Até 4 frases novas depois das palavras')
+    expect(dictionaries['pt-BR'].startLead(0, 0, 4)).toBe('Até 4 frases novas depois das palavras. Nenhuma revisão.')
+    expect(dictionaries.vi.sentencesAfterWords(4)).toBe('Tối đa 4 câu mới sau các từ')
+    expect(dictionaries.vi.startLead(0, 0, 4)).toBe('Tối đa 4 câu mới sau các từ. Không có ôn lại.')
+    expect(dictionaries.de.sentencesAfterWords(1)).toBe('Bis zu 1 neuer Satz nach den Wörtern')
+  })
+
+  it('shows the full count when some sentences are already listed and one still follows the words', async () => {
+    const loaded = tryLoadCatalog()
+    if (!loaded.ok) throw new Error('catalog')
+    const list = usableConcepts(orderedConcepts(loaded.catalog), 'de', 'vi', 'south')
+    const keywordIds = new Set(WORDS.flatMap((word) => [...word.sentences]))
+    const repo = new DexieProgressRepository('travel-talk')
+    const personId = (await repo.load()).activePersonId ?? ''
+    await repo.saveSettings(personId, { ...defaultSettings, appLang: 'de', targetLang: 'vi', voiceHintSeen: true })
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    for (const word of WORDS) {
+      if (word.id === 'w.documents') continue
+      await repo.saveCard(personId, settled(`de-vi:${word.id}`, yesterday))
+    }
+    for (const concept of list) {
+      if (concept.id === 'visa.documents' || !keywordIds.has(concept.id)) continue
+      await repo.saveCard(personId, settled(`de-vi:${concept.id}`, yesterday))
+    }
+    render(
+      <AppProvider>
+        <MemoryRouter>
+          <HomePage />
+        </MemoryRouter>
+      </AppProvider>,
+    )
+    expect(await screen.findByText('4 neue Sätze. Keine Wiederholung.')).toBeTruthy()
+    expect(screen.queryByText(/3 neue Sätze/)).toBeNull()
+    expect(screen.queryByText(/Bis zu/)).toBeNull()
+  })
+
+  it('shows no new lines once every sentence and every word is learned', async () => {
+    const loaded = tryLoadCatalog()
+    if (!loaded.ok) throw new Error('catalog')
+    const list = usableConcepts(orderedConcepts(loaded.catalog), 'de', 'vi', 'south')
+    const repo = new DexieProgressRepository('travel-talk')
+    const personId = (await repo.load()).activePersonId ?? ''
+    await repo.saveSettings(personId, { ...defaultSettings, appLang: 'de', targetLang: 'vi', voiceHintSeen: true })
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    for (const word of WORDS) await repo.saveCard(personId, settled(`de-vi:${word.id}`, yesterday))
+    for (const concept of list) await repo.saveCard(personId, settled(`de-vi:${concept.id}`, yesterday))
+    render(
+      <AppProvider>
+        <MemoryRouter>
+          <HomePage />
+        </MemoryRouter>
+      </AppProvider>,
+    )
+    expect(await screen.findByText('0 neue Sätze. Keine Wiederholung.')).toBeTruthy()
+    expect(screen.getByText('Heute keine neuen Sätze mehr. Die Wiederholungen liegen unter Wiederholen.')).toBeTruthy()
+    expect(screen.queryByText(/Bis zu/)).toBeNull()
+  })
 })
+
+function settled(cardId: string, at: Date): StoredCard {
+  const card = reviewCard(emptyCard(at), Rating.Good, at, 0.9, false)
+  const due = new Date(at)
+  due.setDate(due.getDate() + 2)
+  return { ...toStored(cardId, card), elapsed_days: 1, last_review: at.toISOString(), due: due.toISOString() }
+}

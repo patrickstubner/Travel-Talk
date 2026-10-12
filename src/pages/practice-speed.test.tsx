@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { playClip } from '../audio/player'
 import { AppProvider, useApp } from '../app/state'
+import { seedPassedWords } from '../test-words'
 import { PracticePage } from './Practice'
 
 vi.mock('../audio/player', () => ({
@@ -25,8 +26,9 @@ function ReadyPractice({ children }: { children: ReactNode }) {
   return children
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   freshIndexedDb()
+  await seedPassedWords()
 })
 
 afterEach(() => {

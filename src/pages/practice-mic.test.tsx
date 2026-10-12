@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppProvider, useApp } from '../app/state'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
+import { seedPassedWords } from '../test-words'
 import { PracticePage } from './Practice'
 
 vi.mock('../audio/player', () => ({
@@ -58,8 +59,9 @@ async function openRepeat(): Promise<void> {
   await screen.findByRole('button', { name: 'Aufnehmen' })
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   freshIndexedDb()
+  await seedPassedWords()
   vi.mocked(startMicrophone).mockReset()
 })
 
