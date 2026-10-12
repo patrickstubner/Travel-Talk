@@ -73,6 +73,7 @@ export function ShowPage() {
   return (
     <section className="stack show" data-testid="show">
       <p className="for-other">{copy.forOther}</p>
+      <p className="show-purpose">{copy.showPurpose}</p>
       {offlineAudio ? (
         <p className="warn" role="status">
           {copy.audioOffline}
