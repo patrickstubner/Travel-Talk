@@ -130,8 +130,9 @@ describe('word block', () => {
       expect(saved?.reps).toBe(1)
     })
     fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
-    expect(await screen.findByRole('heading', { name: 'Welche Dokumente brauche ich?' })).toBeTruthy()
-    expect(screen.queryByRole('heading', { name: 'Wie viele Tage darf ich bleiben?' })).toBeNull()
+    const head = await screen.findByTestId('learn-head')
+    expect(head.textContent).toMatch(/Dokumente/)
+    expect(head.textContent).not.toMatch(/bleiben/)
   })
 })
 

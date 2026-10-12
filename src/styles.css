@@ -89,6 +89,33 @@ main { padding: 0.5rem 1.1rem 1.5rem; max-width: 46rem; }
 h1, h2 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.02em; }
 h1 { font-size: 2rem; line-height: 1.15; margin: 0.2rem 0; }
 .stack { display: grid; gap: 0.8rem; }
+.learn { gap: 0.4rem; }
+.learn h2 { margin: 0; }
+.learn-head { display: grid; gap: 0.12rem; }
+.learn-head h1, .learn-head .target-line { margin: 0; }
+.learn-head .karaoke-block { gap: 0.12rem; }
+.learn-head .gloss { margin: 0; color: var(--ink); }
+.learn-actions, .learn-speak { display: grid; gap: 0.3rem; }
+.learn .speed { padding: 0.4rem 0.55rem; }
+.learn .speed .hint { margin: 0; }
+.learn .record, .learn .pitch {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+}
+.learn-notes {
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--card);
+  padding: 0.35rem 0.7rem 0.45rem;
+  color: var(--ink);
+}
+.learn-notes summary { cursor: pointer; font-weight: 650; color: var(--ink); }
+.learn-notes-body { display: grid; gap: 0.35rem; padding-top: 0.35rem; }
+.learn-notes-body p, .learn-notes .hint { margin: 0; color: var(--ink); }
+.repeat-feedback .stack { gap: 0.35rem; }
+h2.eyebrow { font-family: var(--sans); font-weight: 650; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; margin: 0; color: var(--ink); }
 .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .speed { padding: 0.8rem 0.9rem; }
 .speed .row button { min-width: 4.5rem; }

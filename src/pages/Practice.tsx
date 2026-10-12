@@ -12,6 +12,7 @@ import { stopSlices } from '../audio/slice'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { KaraokeLine } from '../components/KaraokeLine'
+import { LearnNotes } from '../components/LearnNotes'
 import { RepeatFeedback } from '../components/RepeatFeedback'
 import { RichText } from '../components/RichText'
 import { spokenCitation, wordAudioFile, wordById } from '../../content/words'
@@ -421,21 +422,24 @@ export function PracticePage() {
       }
     }
     return (
-      <section className="stack" data-testid="practice-word">
-        <p className="eyebrow">{copy.wordsFirst}</p>
+      <section className="stack learn" data-testid="practice-word">
+        <h2 className="eyebrow">{copy.wordsFirst}</h2>
         {offlineAudio ? (
           <p className="warn" role="status">
             {copy.audioOffline}
           </p>
         ) : null}
-        <p className="target-line" data-testid="target-line" lang={targetLang}>
-          {speech}
-        </p>
+        <div className="learn-head" data-testid="learn-head">
+          <p className="target-line" data-testid="target-line" lang={targetLang}>
+            {speech}
+          </p>
+          {answered ? <p className="gloss">{meaning}</p> : null}
+        </div>
         <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 0.7)}>
           <span className="play-mark" aria-hidden="true" />
           {playing ? copy.playingSlow : copy.replaySlow}
         </button>
-        <h1>{copy.wordPrompt}</h1>
+        <h2>{copy.wordPrompt}</h2>
         <ul className="choices">
           {wordOptions.map((id) => {
             const choice = wordById(id)
@@ -534,7 +538,6 @@ export function PracticePage() {
       links={links}
       times={markTimes}
       seconds={playing ? seconds : null}
-      note={revealGloss ? copy.glossUnchecked : undefined}
       template={target.text}
     />
   ) : null
@@ -561,9 +564,25 @@ export function PracticePage() {
     word: copy.wordsFirst,
   }
 
+  const sentence = showTarget ? (
+    followWords && spoken ? (
+      spoken
+    ) : (
+      <p className={playing ? 'target-line playing' : 'target-line'} data-testid="target-line" lang={targetLang}>
+        <RichText text={target.text} />
+      </p>
+    )
+  ) : null
+  const glossLine =
+    revealGloss && !(followWords && spoken) ? (
+      <p className="gloss">
+        <RichText text={source.text} />
+      </p>
+    ) : null
+
   return (
-    <section className="stack" data-testid="practice">
-      <p className="eyebrow">{heading[step]}</p>
+    <section className="stack learn" data-testid="practice">
+      <h2 className="eyebrow">{heading[step]}</h2>
       {offlineAudio ? (
         <p className="warn" role="status">
           {copy.audioOffline}
@@ -571,9 +590,10 @@ export function PracticePage() {
       ) : null}
       {step === 'slow' || step === 'normal' ? (
         <>
-          <h1>
-            <RichText text={source.text} />
-          </h1>
+          <div className="learn-head" data-testid="learn-head">
+            {sentence}
+            {glossLine}
+          </div>
           <button
             type="button"
             className="play-row"
@@ -583,16 +603,6 @@ export function PracticePage() {
             <span className="play-mark" aria-hidden="true" />
             {playing ? (step === 'slow' ? copy.playingSlow : copy.playingNormal) : step === 'slow' ? copy.playSlow : copy.playNormal}
           </button>
-          {showTarget ? (
-            followWords && spoken ? (
-              spoken
-            ) : (
-              <p className={playing ? 'target-line playing' : 'target-line'} data-testid="target-line" lang={targetLang}>
-                <RichText text={target.text} />
-              </p>
-            )
-          ) : null}
-          <p className="hint">{concept.context[app]}</p>
           {step === 'slow' ? (
             <>
               <button type="button" className="button wide" onClick={() => void hear(target.file, target.speech, 0.7)}>
@@ -607,47 +617,32 @@ export function PracticePage() {
               {copy.next}
             </button>
           )}
+          <LearnNotes title={copy.aboutLine}>
+            <p>
+              {copy.context}: {concept.context[app]}
+            </p>
+            {followWords ? <p>{copy.glossUnchecked}</p> : null}
+          </LearnNotes>
         </>
       ) : null}
       {step === 'repeat' ? (
         <>
-          <h1>{copy.stepRepeat(index + 1, queue.length)}</h1>
-          {showTarget ? (
-            followWords && spoken ? (
-              spoken
-            ) : (
-              <p className="target-line" data-testid="target-line" lang={targetLang}>
-                <RichText text={target.text} />
-              </p>
-            )
-          ) : null}
+          <div className="learn-head" data-testid="learn-head">
+            {sentence}
+            {glossLine}
+          </div>
           <button
             type="button"
-            className="button wide"
+            className="play-row"
             aria-pressed={playing}
             disabled={recording || micStarting}
             onClick={() => void hear(target.file, target.speech, 1)}
           >
+            <span className="play-mark" aria-hidden="true" />
             {playing ? copy.playing : copy.play}
           </button>
           {micNote ? <p className="voice-note">{copy.micSkipped}</p> : null}
-          {take?.samples && !recording && !micStarting ? (
-            <RepeatFeedback
-              copy={copy}
-              lang={targetLang}
-              region={settings.viRegion}
-              speech={target.speech}
-              words={feedbackTimes}
-              modelSamples={modelTake?.samples ?? null}
-              modelRate={modelTake?.sampleRate ?? 0}
-              userSamples={take.samples}
-              userRate={take.sampleRate}
-              modelMissing={modelMissing}
-              timingsPending={timingsPending}
-              voiceId={selectedVoice(settings, targetLang).id}
-            />
-          ) : null}
-          {take && !take.samples && !recording ? <p role="status">{copy.pitchEmpty}</p> : null}
+          <div className="learn-speak" data-testid="learn-record">
           <div className="row">
             {recording ? (
               <button type="button" onClick={() => sessionRef.current?.recorder.stop()}>
@@ -703,15 +698,43 @@ export function PracticePage() {
               </button>
             )}
           </div>
+          {take?.samples && !recording && !micStarting ? (
+            <RepeatFeedback
+              copy={copy}
+              lang={targetLang}
+              region={settings.viRegion}
+              speech={target.speech}
+              words={feedbackTimes}
+              modelSamples={modelTake?.samples ?? null}
+              modelRate={modelTake?.sampleRate ?? 0}
+              userSamples={take.samples}
+              userRate={take.sampleRate}
+              modelMissing={modelMissing}
+              timingsPending={timingsPending}
+              voiceId={selectedVoice(settings, targetLang).id}
+            />
+          ) : null}
+          {take && !take.samples && !recording ? <p role="status">{copy.pitchEmpty}</p> : null}
+          </div>
           <button type="button" className="button primary" disabled={micStarting} onClick={goNext}>
             {copy.next}
           </button>
+          <LearnNotes title={copy.aboutLine}>
+            <p>
+              {copy.context}: {concept.context[app]}
+            </p>
+            <p>{copy.micHint}</p>
+            {followWords ? <p>{copy.glossUnchecked}</p> : null}
+          </LearnNotes>
         </>
       ) : null}
       {step === 'understand' ? (
         <>
-          <h1>{item.isNew ? copy.visibleTitle : copy.meaningPrompt}</h1>
-          {item.isNew ? <p>{copy.newStays}</p> : null}
+          <div className="learn-head" data-testid="learn-head">
+            {sentence}
+            {glossLine}
+          </div>
+          <h2>{item.isNew ? copy.visibleTitle : copy.meaningPrompt}</h2>
           {item.isNew ? <p>{copy.meaningPrompt}</p> : null}
           <button
             type="button"
@@ -722,15 +745,6 @@ export function PracticePage() {
             <span className="play-mark" aria-hidden="true" />
             {playing ? copy.playingNormal : copy.play}
           </button>
-          {showTarget ? (
-            followWords && spoken ? (
-              spoken
-            ) : (
-              <p className={playing ? 'target-line playing' : 'target-line'} data-testid="target-line" lang={targetLang}>
-                <RichText text={target.text} />
-              </p>
-            )
-          ) : null}
           <ul className="choices">
             {choices.map((choice) => {
               const line = resolvePlayback(choice, app, settings.viRegion, prefsFromSettings(app, settings))
@@ -757,41 +771,45 @@ export function PracticePage() {
               {copy.next}
             </button>
           ) : null}
+          <LearnNotes title={copy.aboutLine}>
+            <p>
+              {copy.context}: {concept.context[app]}
+            </p>
+            {item.isNew ? <p>{copy.newStays}</p> : null}
+            {answered && followWords ? <p>{copy.glossUnchecked}</p> : null}
+          </LearnNotes>
         </>
       ) : null}
       {step === 'recall' ? (
         <>
-          <h1>{copy.recallTitle}</h1>
-          <div className="card pad">
-            <p className="prompt">
-              <RichText text={source.text} />
-            </p>
-          </div>
+          <h2>{copy.recallTitle}</h2>
           {!answered ? (
-            <button
-              type="button"
-              className="button wide"
-              onClick={() => {
-                setAnswered(true)
-                void hear(target.file, target.speech, 1)
-              }}
-            >
-              {copy.saidIt}
-            </button>
+            <>
+              <p className="gloss">
+                <RichText text={source.text} />
+              </p>
+              <button
+                type="button"
+                className="button wide"
+                onClick={() => {
+                  setAnswered(true)
+                  void hear(target.file, target.speech, 1)
+                }}
+              >
+                {copy.saidIt}
+              </button>
+            </>
           ) : (
-            <div className="card pad stack">
+            <>
+              <div className="learn-head" data-testid="learn-head">
+                {sentence}
+                {glossLine}
+              </div>
               <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(target.file, target.speech, 1)}>
                 <span className="play-mark" aria-hidden="true" />
                 {playing ? copy.playingNormal : copy.play}
               </button>
-              {followWords && spoken ? (
-                spoken
-              ) : (
-                <p className={playing ? 'target-line playing' : 'target-line'} data-testid="target-line" lang={targetLang}>
-                  <RichText text={target.text} />
-                </p>
-              )}
-            </div>
+            </>
           )}
           {answered ? (
             <>
@@ -810,7 +828,12 @@ export function PracticePage() {
                   </button>
                 ))}
               </div>
-              <p className="hint">{copy.rateHint}</p>
+              <LearnNotes title={copy.aboutLine}>
+                <p>{copy.rateHint}</p>
+                <p>
+                  {copy.context}: {concept.context[app]}
+                </p>
+              </LearnNotes>
             </>
           ) : null}
         </>

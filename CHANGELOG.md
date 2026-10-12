@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.4 — 2026-10-12
+
+- Auf der Satzseite, in Heute lernen und bei der Wortvorstellung steht zuerst der Satz oder das Wort in der Lernsprache, gross. Direkt darunter die Übersetzung. Dann Anhören mit dem Tempo, dann Aufnehmen. Sobald eine Aufnahme bewertet ist, stehen die Wörter, die Balken und der Hinweis direkt darunter, nicht unter den Erklärungen.
+- Wozu der Satz, die Stimme, der Beispielton und die übrigen Hinweise stehen in «Zum Satz», zugeklappt. Die Abstände zwischen den Blöcken sind kleiner. Die Schrift in den Hinweisen bleibt dunkel auf hellem Grund.
+
 ## 0.9.1 — 2026-10-12
 
 - Nach dem Nachsprechen stehen die Wörter immer da. Jedes Wort zeigt Melodie und Rhythmus, nicht nur die schlechtere Farbe. Grün, gelb und rot bleiben. Ein Wort ohne bewertbare Stimme bleibt grau.

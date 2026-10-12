@@ -90,11 +90,11 @@ export function KaraokeLine({
   return (
     <div className="karaoke-block" data-testid="karaoke">
       {heading ? (
-        <h1 aria-label={speech} lang={lang}>
+        <h1 aria-label={speech} lang={lang} data-testid="target-line">
           {row}
         </h1>
       ) : (
-        <p className="target-line" lang={lang} data-testid="target-line">
+        <p className="target-line" lang={lang} data-testid={heading ? undefined : 'target-line'}>
           {row}
         </p>
       )}
