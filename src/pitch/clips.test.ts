@@ -4,6 +4,7 @@ import { readFileSync as readBytes } from 'fs'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { rawCatalog } from '../../content'
 import { splitWords } from '../../content/gloss'
@@ -103,9 +104,9 @@ type Counts = {
   noise: number
   hum: number
   hum3: number
-  /** At least 2 stars. A hum on the file's own loudness. Reported, not gated. */
+  /** At least 2 stars. A hum on the file's own loudness. An upper bound gates a rise. */
   humSyllable: number
-  /** At least 2 stars. The melody sung as a vowel. Reported, not gated below. */
+  /** At least 2 stars. The melody sung as a vowel. An upper bound gates a rise. */
   sing: number
   /** At least 2 stars. A hum that follows the file's melody. An upper bound gates a rise. */
   humMelody: number
@@ -195,6 +196,11 @@ function pcm(raw: Uint8Array): Float32Array {
 
 const decoded = new Map<string, Float32Array>()
 const clipCacheDir = process.env.CLIP_CACHE || join(process.cwd(), '.cache', 'tt-clips')
+/** Part of the decoded-clip name, so a change in this file does not reuse old pcm. */
+const decodeStamp = createHash('sha1')
+  .update(new Uint8Array(readBytes(fileURLToPath(import.meta.url))))
+  .digest('hex')
+  .slice(0, 12)
 
 function decodeFresh(path: string): Float32Array {
   return pcm(
@@ -208,7 +214,9 @@ function decode(path: string): Float32Array {
   const hit = decoded.get(path)
   if (hit) return hit
   const info = statSync(path)
-  const name = createHash('sha1').update(new TextEncoder().encode(`${path}\0${info.size}`)).digest('hex')
+  const name = createHash('sha1')
+    .update(new TextEncoder().encode(`${decodeStamp}\0${path}\0${info.size}`))
+    .digest('hex')
   const cached = join(clipCacheDir, `${name}.f32`)
   if (existsSync(cached)) {
     const samples = pcm(readBytes(cached))
@@ -689,7 +697,6 @@ describe('shipped clips', () => {
           reversedStars,
           joeNoise,
           reported: {
-            knownFailing: true,
             gated: 'ceiling',
             humSyllableAtLeast2: languageRow ? `${languageRow.humSyllable}/${languageRow.timed}` : '0/0',
             singAtLeast2: languageRow ? `${languageRow.sing}/${languageRow.timed}` : '0/0',
@@ -718,7 +725,7 @@ describe('shipped clips', () => {
           expect(share(row.noise10, row.varied), `${id} 10 dB`).toBeGreaterThanOrEqual(noise10Floor[id] ?? 0.45)
         }
         const otherVoiceFloor: Record<string, number> = { de: 0.45, en: 0.12, 'pt-BR': 0.12, vi: 0.15 }
-        const otherCeiling: Record<string, number> = { en: 0.3, 'pt-BR': 0.35, vi: 0.3 }
+        const otherCeiling: Record<string, number> = { en: 0.16, 'pt-BR': 0.21, vi: 0.14 }
         for (const [id, row] of byLang) {
           expect(row.hum, `${id} hum`).toBe(0)
           expect(row.hum3, `${id} hum with three stars`).toBe(0)
@@ -730,7 +737,7 @@ describe('shipped clips', () => {
             expect(row.other, `${id} other sentence`).toBe(0)
             expect(row.other3, `${id} other sentence with three stars`).toBe(0)
           } else {
-            expect(share(row.other, row.timed), `${id} other sentence`).toBeLessThanOrEqual(otherCeiling[id] ?? 0.35)
+            expect(share(row.other, row.timed), `${id} other sentence`).toBeLessThanOrEqual(otherCeiling[id] ?? 0)
           }
           expect(share(row.otherVoice, row.otherVoiceTimed), `${id} other voice`).toBeGreaterThanOrEqual(otherVoiceFloor[id] ?? 0.05)
           expect(share(row.reverb, row.varied), `${id} reverb`).toBeGreaterThanOrEqual(0.6)

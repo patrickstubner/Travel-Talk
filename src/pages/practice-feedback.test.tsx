@@ -215,16 +215,23 @@ describe('practice repeat feedback', () => {
   })
 
   it('stops the model and disables listen while the microphone is open', async () => {
-    vi.mocked(startMicrophone).mockImplementation(async () => {
-      const session = {
-        recorder: { stop: vi.fn(), state: 'recording', stream: { getTracks: () => [] } },
-        release: vi.fn(),
-      }
-      return session as unknown as CaptureSession
-    })
+    let releaseMic: (session: CaptureSession) => void = () => undefined
+    vi.mocked(startMicrophone).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseMic = resolve
+        }),
+    )
     await openRepeat()
     fireEvent.click(screen.getByRole('button', { name: 'Aufnehmen' }))
     expect(vi.mocked(stopClip)).toHaveBeenCalled()
     await waitFor(() => expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true))
+    expect(screen.queryByRole('button', { name: 'Stopp' })).toBeNull()
+    releaseMic({
+      recorder: { stop: vi.fn(), state: 'recording', stream: { getTracks: () => [] } },
+      release: vi.fn(),
+    } as unknown as CaptureSession)
+    expect(await screen.findByRole('button', { name: 'Stopp' })).toBeTruthy()
+    expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true)
   })
 })

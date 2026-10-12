@@ -8,6 +8,7 @@ import { decodeContourFile, playClip, stopClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { tempoFile } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
+import { stopSlices } from '../audio/slice'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { KaraokeLine } from '../components/KaraokeLine'
@@ -463,13 +464,13 @@ export function PracticePage() {
             type="button"
             className="button wide"
             aria-pressed={playing}
-            disabled={recording}
+            disabled={recording || micStarting}
             onClick={() => void hear(target.file, target.speech, 1)}
           >
             {playing ? copy.playing : copy.play}
           </button>
           {micNote ? <p className="voice-note">{copy.micSkipped}</p> : null}
-          {take?.samples && !recording ? (
+          {take?.samples && !recording && !micStarting ? (
             <RepeatFeedback
               copy={copy}
               lang={targetLang}
@@ -497,6 +498,7 @@ export function PracticePage() {
                 disabled={micStarting}
                 onClick={() => {
                   stopClip()
+                  stopSlices()
                   setPlaying(false)
                   const token = micToken.current + 1
                   micToken.current = token

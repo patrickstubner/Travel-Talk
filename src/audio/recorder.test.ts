@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as player from './player'
 import { releaseCapture, startMicrophone } from './recorder'
 
 class FakeRecorder {
@@ -92,6 +93,28 @@ describe('releaseCapture', () => {
     expect(FakeRecorder.last?.stop).not.toHaveBeenCalled()
     await vi.advanceTimersByTimeAsync(1)
     expect(FakeRecorder.last?.stop).toHaveBeenCalledOnce()
+  })
+
+  it('stops playback after the stream is open and before the recorder starts', async () => {
+    const order: string[] = []
+    const stop = vi.spyOn(player, 'stopClip').mockImplementation(() => {
+      order.push('stop')
+    })
+    const start = FakeRecorder.prototype.start
+    FakeRecorder.prototype.start = function startRecorder(this: FakeRecorder) {
+      order.push('start')
+      start.call(this)
+    }
+    const close = vi.fn(async () => undefined)
+    installMicrophone(close)
+    try {
+      const session = await startMicrophone(() => undefined)
+      expect(session).not.toBeNull()
+      expect(order).toEqual(['stop', 'start'])
+    } finally {
+      FakeRecorder.prototype.start = start
+      stop.mockRestore()
+    }
   })
 
   it('asks for echo cancellation, and leaves noise suppression and automatic gain off', async () => {

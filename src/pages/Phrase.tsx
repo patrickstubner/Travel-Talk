@@ -8,6 +8,7 @@ import { decodeContourFile, playClip, stopClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { SPEED_STEPS, effectiveSpeed, speedPercent, tempoFile, type SpeedStep } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
+import { stopSlices } from '../audio/slice'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
@@ -43,6 +44,7 @@ export function PhrasePage() {
   const [times, setTimes] = useState<WordTime[] | null>(null)
   const [clipDuration, setClipDuration] = useState<number | null>(null)
   const [recording, setRecording] = useState(false)
+  const [micStarting, setMicStarting] = useState(false)
   const [mineUrl, setMineUrl] = useState<string | null>(null)
   const sessionRef = useRef<CaptureSession | null>(null)
   const urlRef = useRef<string | null>(null)
@@ -193,8 +195,10 @@ export function PhrasePage() {
 
   async function onRecord(): Promise<void> {
     stopClip()
+    stopSlices()
     setPlaying(false)
     setMicError(false)
+    setMicStarting(true)
     const token = micToken.current + 1
     micToken.current = token
     try {
@@ -207,16 +211,24 @@ export function PhrasePage() {
         setUserAudio(taken.samples && taken.sampleRate ? { samples: taken.samples, sampleRate: taken.sampleRate } : null)
         setRecording(false)
       })
-      if (!next || !aliveRef.current || token !== micToken.current) {
+      if (!aliveRef.current || token !== micToken.current) {
         next?.release(null)
-        if (!next && aliveRef.current && token === micToken.current) setMicError(true)
+        return
+      }
+      if (!next) {
+        setMicError(true)
+        setMicStarting(false)
         return
       }
       sessionRef.current?.release(null)
       sessionRef.current = next
       setRecording(true)
+      setMicStarting(false)
     } catch {
-      if (aliveRef.current && token === micToken.current) setMicError(true)
+      if (aliveRef.current && token === micToken.current) {
+        setMicError(true)
+        setMicStarting(false)
+      }
     }
   }
 
@@ -280,7 +292,7 @@ export function PhrasePage() {
           type="button"
           className="play-row"
           aria-pressed={playing}
-          disabled={recording}
+          disabled={recording || micStarting}
           onClick={() => void onPlay(tempoFile(spokenFile(settings, targetLang, target.file), step), step)}
         >
           <span className="play-mark" aria-hidden="true" />
@@ -305,14 +317,14 @@ export function PhrasePage() {
               {copy.stop}
             </button>
           ) : (
-            <button type="button" onClick={() => void onRecord()}>
+            <button type="button" disabled={micStarting} onClick={() => void onRecord()}>
               {userAudio ? copy.repeatFeedback.again : copy.record}
             </button>
           )}
           {mineUrl ? (
             <button
               type="button"
-              disabled={recording}
+              disabled={recording || micStarting}
               onClick={() => {
                 const audio = new Audio(mineUrl)
                 void audio.play()
@@ -323,7 +335,7 @@ export function PhrasePage() {
           ) : null}
         </div>
       </section>
-      {userAudio ? (
+      {userAudio && !recording && !micStarting ? (
         <RepeatFeedback
           copy={copy}
           lang={targetLang}

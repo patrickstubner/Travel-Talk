@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppProvider, useApp } from '../app/state'
 import { stopClip } from '../audio/player'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
+import * as slice from '../audio/slice'
 import { PhrasePage } from './Phrase'
 
 vi.mock('../audio/player', () => ({
@@ -251,5 +252,83 @@ describe('phrase repeat feedback', () => {
       expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true)
       expect((screen.getByRole('button', { name: 'Meine Aufnahme' }) as HTMLButtonElement).disabled).toBe(true)
     })
+  })
+
+  it('hides the feedback and stops a playing word when recording starts again', async () => {
+    const samples = sine()
+    vi.mocked(startMicrophone).mockImplementation(async (onStop) => {
+      const session = {
+        recorder: {
+          stop: () => onStop({ url: 'blob:phrase-take', samples, sampleRate: 16000 }),
+          state: 'recording',
+          stream: { getTracks: () => [] },
+        },
+        release: vi.fn(),
+      }
+      return session as unknown as CaptureSession
+    })
+    render(
+      <AppProvider>
+        <ReadyPhrase lang="en">
+          <MemoryRouter initialEntries={['/phrase/emergency.doctor']}>
+            <Routes>
+              <Route path="/phrase/:conceptId" element={<PhrasePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPhrase>
+      </AppProvider>,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Aufnehmen' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+    expect(await screen.findByTestId('repeat-feedback')).toBeTruthy()
+    const stopWords = vi.spyOn(slice, 'stopSlices').mockImplementation(() => undefined)
+    let releaseMic: (session: CaptureSession) => void = () => undefined
+    vi.mocked(startMicrophone).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseMic = resolve
+        }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Nochmal' }))
+    expect(stopWords).toHaveBeenCalled()
+    await waitFor(() => expect(screen.queryByTestId('repeat-feedback')).toBeNull())
+    releaseMic({
+      recorder: { stop: vi.fn(), state: 'recording', stream: { getTracks: () => [] } },
+      release: vi.fn(),
+    } as unknown as CaptureSession)
+    expect(await screen.findByRole('button', { name: 'Stopp' })).toBeTruthy()
+    expect(screen.queryByTestId('repeat-feedback')).toBeNull()
+    stopWords.mockRestore()
+  })
+
+  it('disables listen while the microphone is still starting', async () => {
+    let releaseMic: (session: CaptureSession | null) => void = () => undefined
+    vi.mocked(startMicrophone).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseMic = resolve
+        }),
+    )
+    render(
+      <AppProvider>
+        <ReadyPhrase lang="en">
+          <MemoryRouter initialEntries={['/phrase/emergency.doctor']}>
+            <Routes>
+              <Route path="/phrase/:conceptId" element={<PhrasePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPhrase>
+      </AppProvider>,
+    )
+    expect((await screen.findByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Aufnehmen' }))
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true))
+    expect(screen.queryByRole('button', { name: 'Stopp' })).toBeNull()
+    releaseMic({
+      recorder: { stop: vi.fn(), state: 'recording', stream: { getTracks: () => [] } },
+      release: vi.fn(),
+    } as unknown as CaptureSession)
+    expect(await screen.findByRole('button', { name: 'Stopp' })).toBeTruthy()
+    expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true)
   })
 })

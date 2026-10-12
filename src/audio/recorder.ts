@@ -1,3 +1,4 @@
+import { stopClip } from './player'
 import { mixToMono } from '../pitch/contour'
 
 export type Recording = {
@@ -38,7 +39,7 @@ export type CaptureSession = {
 export async function startMicrophone(onStop: (recording: Recording) => void): Promise<CaptureSession | null> {
   if (!navigator.mediaDevices?.getUserMedia) return null
   // Noise suppression and automatic gain cost a clean file its stars.
-  // Echo cancellation does not, and it keeps the speaker out of the take.
+  // Echo cancellation costs hardly any: 5 of 7, not 6 of 7. It keeps the speaker out.
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false },
   })
@@ -76,6 +77,7 @@ export async function startMicrophone(onStop: (recording: Recording) => void): P
       }
     })
   })
+  stopClip()
   recorder.start()
   limitTimer = setTimeout(() => {
     if (recorder.state === 'recording') recorder.stop()
