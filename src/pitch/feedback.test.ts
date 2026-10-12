@@ -17,7 +17,6 @@ import {
   melodyBand,
   rhythmBand,
   scoreRepeat,
-  starsFromBars,
   takeRunsBackwards,
   thin,
   toneSentence,
@@ -81,7 +80,7 @@ describe('scoring bands', () => {
     expect(rhythmBand(0.49)).toBe('red')
   })
 
-  it('builds the bars and the stars without a percentage', () => {
+  it('builds the bars without a percentage', () => {
     expect(barFromColours(['green', 'green', 'red'])).toBe('teilweise')
     expect(barFromColours(['green', 'green', 'green'])).toBe('passt')
     expect(barFromColours(['red', 'red', 'green'])).toBe('daneben')
@@ -89,16 +88,11 @@ describe('scoring bands', () => {
     expect(barFromColours(['green'])).toBe('passt')
     expect(barFromColours(['green', 'yellow'])).toBe('passt')
     expect(barFromColours([null, 'green'])).toBe('passt')
-    expect(starsFromBars('teilweise', 'passt')).toBe(2)
-    expect(starsFromBars('passt', 'passt')).toBe(3)
-    expect(starsFromBars('daneben', 'passt')).toBe(1)
-    expect(starsFromBars('daneben', 'daneben')).toBe(1)
-    expect(starsFromBars(null, 'passt')).toBe(0)
   })
 })
 
 describe('repeat alignment', () => {
-  it('keeps the path and paints the same curve green with three stars', () => {
+  it('keeps the path and paints the same curve green', () => {
     const model = [...flat(40, -2), ...flat(40, 1.6), ...flat(40, 0)]
     const score = scoreRepeat({
       model,
@@ -119,7 +113,6 @@ describe('repeat alignment', () => {
     expect(score.words?.every((word) => word.color === 'green')).toBe(true)
     expect(score.melodyBar).toBe('passt')
     expect(score.rhythmBar).toBe('passt')
-    expect(score.stars).toBe(3)
     expect(score.words?.every((word) => word.sentence == null)).toBe(true)
   })
 
@@ -142,7 +135,6 @@ describe('repeat alignment', () => {
     })
     expect(steady.tooLittleVoice).toBe(false)
     expect(steady.unclear).toBe(true)
-    expect(steady.stars).toBe(0)
     expect(steady.words).toBeNull()
     const moving = scoreRepeat({
       model: contourFromSamples(tone(140, 240), 16000),
@@ -157,7 +149,6 @@ describe('repeat alignment', () => {
     expect(moving.unclear).toBe(false)
     expect(moving.meanDistance ?? 9).toBeLessThan(1.5)
     expect(moving.words?.every((word) => word.melody === 'green')).toBe(true)
-    expect(moving.stars).toBe(3)
   })
 
   it('marks a uniform 0.7 stretch against the normal file, and not against the slow file', () => {
@@ -201,7 +192,6 @@ describe('repeat alignment', () => {
     })
     expect(heard.rhythmBar).toBe('passt')
     expect(heard.melodyBar).toBe('passt')
-    expect(heard.stars).toBe(3)
   })
 
   it('finds the voice after a leading silence and still lines the words up', () => {
@@ -240,7 +230,6 @@ describe('repeat alignment', () => {
     expect(vietnamese.words?.[2]?.color).toBe('green')
     expect(vietnamese.melodyBar).toBe('teilweise')
     expect(vietnamese.rhythmBar).toBe('passt')
-    expect(vietnamese.stars).toBe(2)
     expect(vietnamese.words?.[0]?.sentence).toBeNull()
     expect(vietnamese.words?.[1]?.sentence).toEqual({ you: 'rising', should: 'falling', tone: 'huyen' })
     expect(vietnamese.words?.[2]?.sentence).toBeNull()
@@ -249,7 +238,6 @@ describe('repeat alignment', () => {
       const other = scoreRepeat({ ...shared, lang, region: 'south' })
       expect(other.words?.[1]?.color).toBe('red')
       expect(other.words?.every((word) => word.sentence == null)).toBe(true)
-      expect(other.stars).toBe(2)
     }
   })
 
@@ -285,7 +273,7 @@ describe('repeat alignment', () => {
     expect(toneSentence('nặng', 'rising', 'vi', 'north')?.should).toBe('falling')
   })
 
-  it('withholds stars for silence, noise, and a short take', () => {
+  it('withholds colours for silence, noise, and a short take', () => {
     const silence = contourFromSamples(new Float32Array(16000), 16000)
     const quiet = scoreRepeat({
       model: flat(80, 0),
@@ -298,7 +286,6 @@ describe('repeat alignment', () => {
       userDuration: 1,
     })
     expect(quiet.tooLittleVoice).toBe(true)
-    expect(quiet.stars).toBe(0)
     expect(quiet.words).toBeNull()
     const noiseSamples = new Float32Array(16000)
     let seed = 17
@@ -318,7 +305,6 @@ describe('repeat alignment', () => {
       userDuration: 1,
     })
     expect(noisy.tooLittleVoice).toBe(true)
-    expect(noisy.stars).toBe(0)
     const short = scoreRepeat({
       model: flat(40, 0),
       user: contourFromSamples(tone(220, 220, 0.2), 16000),
@@ -330,7 +316,6 @@ describe('repeat alignment', () => {
       userDuration: 0.2,
     })
     expect(short.tooShort).toBe(true)
-    expect(short.stars).toBe(0)
     expect(short.words).toBeNull()
   })
 
@@ -347,7 +332,6 @@ describe('repeat alignment', () => {
       userDuration: 0.4,
     })
     expect(missing.words).toBeNull()
-    expect(missing.stars).toBe(0)
     expect(missing.path.length).toBeGreaterThan(0)
     expect(missing.userOnModel.some((value) => value != null)).toBe(true)
     const apart = scoreRepeat({
@@ -361,7 +345,6 @@ describe('repeat alignment', () => {
       userDuration: 0.3,
     })
     expect(apart.unclear).toBe(true)
-    expect(apart.stars).toBe(0)
     expect(apart.words).toBeNull()
     expect(apart.meanDistance ?? 0).toBeGreaterThan(6)
   })
@@ -392,7 +375,7 @@ describe('repeat alignment', () => {
     expect(score.meanDistance ?? 1).toBeLessThan(0.2)
   })
 
-  it('withholds stars for a steady tone, a hum, a reversed take and a thin colouring', () => {
+  it('withholds colours for a steady tone, a hum, a reversed take and a thin colouring', () => {
     const hop = 0.01
     const words = [
       { text: 'qua', start: 0.15, end: 0.4 },
@@ -411,7 +394,6 @@ describe('repeat alignment', () => {
     })
     expect(flatContour(steady.user, steady.model)).toBe(true)
     expect(steady.unclear).toBe(true)
-    expect(steady.stars).toBe(0)
     expect(steady.words).toBeNull()
     const level = flat(40, 0.2)
     const shortPhrase = scoreRepeat({
@@ -426,7 +408,6 @@ describe('repeat alignment', () => {
     })
     expect(flatContour(level, level)).toBe(false)
     expect(shortPhrase.unclear).toBe(false)
-    expect(shortPhrase.stars).toBe(3)
     const humSamples = new Float32Array(16000 * 1.2)
     for (let index = 0; index < humSamples.length; index += 1) {
       const time = index / 16000
@@ -442,7 +423,6 @@ describe('repeat alignment', () => {
       region: 'south',
       userDuration: 1.2,
     })
-    expect(hum.stars).toBe(0)
     expect(hum.words == null || hum.words.every((word) => word.color !== 'green' || hum.unclear)).toBe(true)
     const rising = tone(140, 280)
     const reversed = Float32Array.from(rising).reverse()
@@ -456,7 +436,6 @@ describe('repeat alignment', () => {
       region: 'south',
       userDuration: 1.2,
     })
-    expect(backwards.stars).not.toBe(3)
     expect(backwards.words?.every((word) => word.color === 'green') ?? false).toBe(false)
     const piece = ramp(20, -2, 2)
     const gap = flat(20, null)
@@ -475,7 +454,6 @@ describe('repeat alignment', () => {
     expect(sparse.words?.filter((word) => word.color != null)).toHaveLength(2)
     expect(sparse.fewWords).toBe(false)
     expect(sparse.melodyBar).toBe('passt')
-    expect(sparse.stars).toBe(3)
     const full = [...piece, ...piece, ...piece, ...piece, ...piece]
     const thinUser = full.map((value, index) => (index < 40 || index % 5 === 0 ? value : null))
     const held = scoreRepeat({
@@ -490,7 +468,6 @@ describe('repeat alignment', () => {
     })
     expect(held.words?.filter((word) => word.scorable)).toHaveLength(5)
     expect(held.words?.filter((word) => word.color != null).length ?? 5).toBeLessThan(3)
-    expect(held.stars).toBe(0)
     expect(held.fewWords).toBe(true)
     expect(held.melodyBar).toBeNull()
     expect(held.rhythmBar).toBeNull()
@@ -506,7 +483,6 @@ describe('repeat alignment', () => {
       userDuration: 1,
     })
     expect(covered.words?.filter((word) => word.color != null)).toHaveLength(3)
-    expect(covered.stars).toBe(3)
   })
 
   it('keeps a uniform 0.7 recording green on the words and off a perfect rhythm bar', () => {
@@ -541,8 +517,6 @@ describe('repeat alignment', () => {
     expect(score.words?.every((word) => word.melody === 'green')).toBe(true)
     expect(score.words?.some((word) => word.color === 'red')).toBe(false)
     expect(score.rhythmBar).not.toBe('passt')
-    expect(score.stars).not.toBe(1)
-    expect(score.stars).toBe(2)
   })
 
   it('thins a long contour before the score uses it', () => {
@@ -615,7 +589,7 @@ describe('repeat alignment', () => {
     expect(score.words?.[0]?.color).not.toBeNull()
   })
 
-  it('withholds stars when a steady tone meets a spoken envelope, and keeps a flat phrase against itself', () => {
+  it('calls a steady tone against a spoken envelope unclear, and keeps a flat phrase against itself', () => {
     const level = flat(80, 0.2)
     const speech: number[] = []
     for (let index = 0; index < 80; index += 1) speech.push(index < 18 ? 0.05 : index < 42 ? 0.5 : 0.08)
@@ -635,13 +609,10 @@ describe('repeat alignment', () => {
     }
     const drone = scoreRepeat({ ...shared, modelEnergy: speech, userEnergy: toneEnergy })
     expect(drone.unclear).toBe(true)
-    expect(drone.stars).toBe(0)
     const reversed = scoreRepeat({ ...shared, modelEnergy: speech, userEnergy: [...speech].reverse() })
     expect(reversed.unclear).toBe(true)
-    expect(reversed.stars).toBe(0)
     const itself = scoreRepeat({ ...shared, modelEnergy: speech, userEnergy: speech })
     expect(itself.unclear).toBe(false)
-    expect(itself.stars).toBe(3)
   })
 
   it('calls a reversed contour unclear and keeps the same contour', () => {
@@ -660,7 +631,6 @@ describe('repeat alignment', () => {
     })
     expect(matchesBetterBackwards(rising, falling, null)).toBe(true)
     expect(reversed.unclear).toBe(true)
-    expect(reversed.stars).toBe(0)
     const same = scoreRepeat({
       model: rising,
       user: rising,
@@ -672,7 +642,6 @@ describe('repeat alignment', () => {
       userDuration: 0.6,
     })
     expect(same.unclear).toBe(false)
-    expect(same.stars).toBe(3)
   })
 
   it('calls the take unclear when every word runs the other way', () => {
@@ -694,7 +663,6 @@ describe('repeat alignment', () => {
     expect(takeRunsBackwards(['opposed', 'same', 'opposed'])).toBe(false)
     expect(takeRunsBackwards(['unknown'])).toBe(false)
     expect(opposed.unclear).toBe(true)
-    expect(opposed.stars).toBe(0)
     const last = [...user.slice(0, 60), ...model.slice(60)]
     const partial = scoreRepeat({
       model,
@@ -746,12 +714,11 @@ describe('repeat alignment', () => {
       userEnergy: mild,
     })
     expect(tone.unclear).toBe(true)
-    expect(tone.stars).toBe(0)
     const lively = Array.from({ length: 40 }, (_, index) => (index % 2 === 0 ? 1 : 1.5))
     expect(droneAgainstSpeech(lively, speech)).toBe(false)
   })
 
-  it('withholds stars when most moving words do not follow the melody', () => {
+  it('keeps the word colours when only some moving words follow the melody', () => {
     const wave = (phase: number) => Array.from({ length: 32 }, (_, index) => Math.sin((2 * Math.PI * index) / 8 + phase))
     const model = [...wave(0), ...wave(0), ...wave(0)]
     const user = [...wave(1.5), ...wave(1.5), ...wave(0)]
@@ -768,7 +735,6 @@ describe('repeat alignment', () => {
     expect(score.unclear).toBe(false)
     expect(score.words?.[0]?.melody).toBe('yellow')
     expect(score.words?.[2]?.melody).toBe('green')
-    expect(score.stars).toBe(0)
   })
 
   it('drops a close word from green to yellow when the correlation is only weak', () => {
@@ -868,7 +834,9 @@ describe('repeat alignment', () => {
       modelBands: model,
       userBands: near,
     })
-    expect(kept.stars).toBeGreaterThan(0)
+    expect(kept.unclear).toBe(false)
+    expect(kept.melodyBar).not.toBeNull()
+    expect(kept.rhythmBar).not.toBeNull()
   })
 
   it('rejects a band shape that fits the file better backwards', () => {
@@ -889,7 +857,6 @@ describe('repeat alignment', () => {
       userBands: [...rising].reverse(),
     })
     expect(score.unclear).toBe(true)
-    expect(score.stars).toBe(0)
   })
 
   it('calls a hum unclear when the band shape does not move with the file', () => {
@@ -911,7 +878,6 @@ describe('repeat alignment', () => {
       userBands: hum,
     })
     expect(score.unclear).toBe(true)
-    expect(score.stars).toBe(0)
     expect(score.melodyBar).toBeNull()
   })
 })

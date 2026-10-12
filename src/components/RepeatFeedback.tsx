@@ -302,7 +302,6 @@ function Result({
       {tooShort ? <p role="status">{feedback.tooShort}</p> : null}
       {tooQuiet ? <p role="status">{copy.pitchEmpty}</p> : null}
       {score?.unclear ? <p role="status">{feedback.unclear}</p> : null}
-      {score?.fewWords ? <p role="status">{feedback.fewWords}</p> : null}
       {timingMissing ? <p role="status">{feedback.noWordTimes}</p> : null}
       {modelMissing ? <p>{copy.pitchNoModel}</p> : null}
       {score && !score.tooShort && !score.tooLittleVoice ? (
@@ -343,11 +342,6 @@ function Result({
           <ScoreBar label={feedback.melody} state={score.melodyBar} copy={copy} testId="melody-bar" />
           <ScoreBar label={feedback.rhythm} state={score.rhythmBar} copy={copy} testId="rhythm-bar" />
         </div>
-      ) : null}
-      {score && score.stars > 0 ? (
-        <p className="stars" data-testid="repeat-stars">
-          <span aria-hidden="true">{`${'★'.repeat(score.stars)}${'☆'.repeat(3 - score.stars)}`}</span> {feedback.stars(score.stars)}
-        </p>
       ) : null}
       {lang === 'vi' && voiceId === 'vais1000' ? <p className="hint">{feedback.northern}</p> : null}
       {score?.words?.map((word) =>

@@ -69,12 +69,12 @@ afterEach(() => {
 })
 
 describe('repeat feedback view', () => {
-  it('shows the curves, the word colours and the stars without an extra step', () => {
+  it('shows the curves, the word colours and the bars without an extra step', () => {
     renderFeedback()
     const view = screen.getByTestId('repeat-feedback')
     expect(view.hidden).toBe(false)
     expect(view.closest('details')).toBeNull()
-    expect(screen.getByTestId('repeat-stars').textContent).toContain('Drei von drei')
+    expect(screen.queryByTestId('repeat-stars')).toBeNull()
     expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
     expect(screen.getByTestId('rhythm-bar').getAttribute('data-state')).toBe('passt')
     expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('green')
@@ -84,7 +84,8 @@ describe('repeat feedback view', () => {
 
   it('shows the northern hint only for vais1000', () => {
     renderFeedback('vi', tone(140, 280, 1.2), words, 'vivos-22')
-    expect(screen.getByTestId('repeat-stars').textContent).toContain('Drei von drei')
+    expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
+    expect(screen.queryByTestId('repeat-stars')).toBeNull()
     expect(screen.queryByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeNull()
   })
 
@@ -121,10 +122,11 @@ describe('repeat feedback view', () => {
     expect(screen.queryByText(/sechs Formen/)).toBeNull()
   })
 
-  it('keeps the stars for joe when the take matches the file', () => {
+  it('keeps the word colour for joe when the take matches the file', () => {
     renderFeedback('en', tone(140, 280, 1.2), words, 'joe')
     expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('green')
-    expect(screen.getByTestId('repeat-stars').textContent).toContain('Drei von drei')
+    expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
+    expect(screen.queryByTestId('repeat-stars')).toBeNull()
   })
 
   it('passes the loudness of the model and the take into the score', () => {
@@ -154,7 +156,7 @@ describe('repeat feedback view', () => {
     expect(screen.getByText('Keine Wortzeiten für diese Stimme.')).toBeTruthy()
   })
 
-  it('names a short take and a quiet take without stars', () => {
+  it('names a short take and a quiet take', () => {
     renderFeedback('de', tone(220, 220, 0.2), [{ start: 0, end: 0.2 }])
     expect(screen.getByText('Die Aufnahme ist zu kurz.')).toBeTruthy()
     expect(screen.queryByTestId('repeat-stars')).toBeNull()
@@ -178,7 +180,7 @@ describe('repeat feedback view', () => {
     expect(screen.queryByTestId('repeat-stars')).toBeNull()
   })
 
-  it('names too few recognised words instead of a passing bar', () => {
+  it('leaves the bars empty when too little of the line has a colour', () => {
     const model = tone(140, 280, 1.6)
     const user = new Float32Array(model.length)
     let phase = 0
@@ -210,7 +212,8 @@ describe('repeat feedback view', () => {
         voiceId="thorsten-high"
       />,
     )
-    expect(screen.getByText('Zu wenige Wörter erkannt.')).toBeTruthy()
+    expect(screen.queryByText('Zu wenige Wörter erkannt.')).toBeNull()
+    expect(screen.queryByText('Too few words were recognized.')).toBeNull()
     expect(screen.queryByText('passt')).toBeNull()
     expect(screen.queryByTestId('repeat-stars')).toBeNull()
   })

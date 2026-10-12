@@ -279,7 +279,6 @@ a.menu-card span { color: var(--muted); }
 .score-track.passt .score-fill { background: var(--teal); }
 .score-track.teilweise .score-fill { background: var(--gold); }
 .score-track.daneben .score-fill { background: var(--clay); }
-.stars { letter-spacing: 0.08em; }
 .tone-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; }
 .tone-tile { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 0.8rem; padding: 0.45rem 0.35rem; text-align: center; }
 .tone-tile strong, .tone-tile span { display: block; }

@@ -56,11 +56,9 @@ export type Dictionary = {
     part: string
     off: string
     unclear: string
-    fewWords: string
     noWordTimes: string
     tooShort: string
     again: string
-    stars: (count: number) => string
     sequential: string
     backSentence: string
     back: string
@@ -345,11 +343,9 @@ export const de: Dictionary = {
     part: 'teilweise',
     off: 'daneben',
     unclear: 'unklar',
-    fewWords: 'Zu wenige Wörter erkannt.',
     noWordTimes: 'Keine Wortzeiten für diese Stimme.',
     tooShort: 'Die Aufnahme ist zu kurz.',
     again: 'Nochmal',
-    stars: (count) => (count === 1 ? 'Ein von drei' : count === 2 ? 'Zwei von drei' : 'Drei von drei'),
     sequential: 'Nacheinander. Beide laufen nicht zugleich.',
     backSentence: 'Zurück zum Satz',
     back: 'Zurück',
@@ -658,11 +654,9 @@ export const en: Dictionary = {
     part: 'partly',
     off: 'off',
     unclear: 'unclear',
-    fewWords: 'Too few words were recognized.',
     noWordTimes: 'No word timings for this voice.',
     tooShort: 'The recording is too short.',
     again: 'Once more',
-    stars: (count) => (count === 1 ? 'One of three' : count === 2 ? 'Two of three' : 'Three of three'),
     sequential: 'One after the other. The two do not play together.',
     backSentence: 'Back to the sentence',
     back: 'Back',
@@ -967,11 +961,9 @@ export const pt: Dictionary = {
     part: 'em parte',
     off: 'fora',
     unclear: 'incerto',
-    fewWords: 'Poucas palavras foram reconhecidas.',
     noWordTimes: 'Não há tempos das palavras para esta voz.',
     tooShort: 'A gravação é curta demais.',
     again: 'De novo',
-    stars: (count) => (count === 1 ? 'Uma de três' : count === 2 ? 'Duas de três' : 'Três de três'),
     sequential: 'Um depois do outro. Os dois não tocam juntos.',
     backSentence: 'Voltar à frase',
     back: 'Voltar',
@@ -1278,11 +1270,9 @@ export const vi: Dictionary = {
     part: 'một phần',
     off: 'lệch',
     unclear: 'chưa rõ',
-    fewWords: 'Nhận ra quá ít từ.',
     noWordTimes: 'Không có thời điểm từng từ cho giọng này.',
     tooShort: 'Bản ghi quá ngắn.',
     again: 'Lại',
-    stars: (count) => (count === 1 ? 'Một trên ba' : count === 2 ? 'Hai trên ba' : 'Ba trên ba'),
     sequential: 'Lần lượt. Không phát cùng lúc.',
     backSentence: 'Về câu',
     back: 'Quay lại',

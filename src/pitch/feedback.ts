@@ -20,13 +20,14 @@ import { bandDistance } from './spectrum'
  * loudness envelope does not follow the file. One mirrored syllable stays
  * a partial score. A take that matches the file better backwards than
  * forwards is «unklar». A steady tone against a spoken file is «unklar»
- * when the file's loudness moves and the tone's does not. Stars need at least
+ * when the file's loudness moves and the tone's does not. Bars need at least
  * COLOURED_SHARE of the words that have enough voice in the model. A word
  * whose model moves by MOVING_RANGE needs that movement in the same
- * direction, otherwise it stays at most yellow. Stars also need a majority
- * of those words to agree. The band shape has to follow the file: a hum,
- * other speech, or another sentence does not. Local stretch stays inside
- * about 0.75–1.33.
+ * direction, otherwise it stays at most yellow. The band shape has to follow
+ * the file before the bars appear. That is not a sentence grade: 0.8.0 does
+ * not say whether the spoken line was the right one. The old 1–3 grade is
+ * in sentence-grade.ts, which the app does not import. Local stretch stays
+ * inside about 0.75–1.33.
  */
 export const MELODY_GREEN = 1.5
 export const MELODY_YELLOW = 3
@@ -52,8 +53,6 @@ export const SPEECH_ENERGY = 0.15
 export const ENERGY_ALIGN_MIN = 0
 /** A model word that moves by this much needs the same movement in the take. */
 export const MOVING_RANGE = 1
-/** Share of those words that must run the same way before any star is given. */
-export const DIRECTION_MAJORITY = 0.5
 /**
  * DTW cost after per-coefficient mean and variance normalisation, and
  * after a frequency warp of about ±20 %. Chosen on every fourth timed
@@ -61,7 +60,7 @@ export const DIRECTION_MAJORITY = 0.5
  * different sentence is the negative, and the full clip run is the check.
  * German still separates the two. English, Portuguese and Vietnamese do
  * not, so there the limit only keeps hum, a tone, reversed audio and
- * background speech out. A different sentence can still earn stars.
+ * background speech from filling the bars. It does not decide the sentence.
  */
 export const SPECTRAL_DISTANCE_MAX: Record<Lang, number> = {
   de: 0.5,
@@ -116,7 +115,6 @@ export type RepeatScore = {
   words: FeedbackWord[] | null
   melodyBar: BarState | null
   rhythmBar: BarState | null
-  stars: 0 | 1 | 2 | 3
   unclear: boolean
   tooLittleVoice: boolean
   tooShort: boolean
@@ -151,13 +149,6 @@ export function barFromColours(colours: Array<Band | null>): BarState | null {
   }
   if (reds === 0 && greens / used.length >= 0.7) return 'passt'
   return 'teilweise'
-}
-
-export function starsFromBars(melody: BarState | null, rhythm: BarState | null): 0 | 1 | 2 | 3 {
-  if (!melody || !rhythm) return 0
-  if (melody === 'passt' && rhythm === 'passt') return 3
-  if (melody === 'daneben' || rhythm === 'daneben') return 1
-  return 2
 }
 
 const TONE_MARK: Record<string, ToneId> = {}
@@ -722,7 +713,6 @@ export function scoreRepeat(input: {
     words: null,
     melodyBar: null,
     rhythmBar: null,
-    stars: 0,
     unclear: false,
     tooLittleVoice,
     tooShort,
@@ -777,8 +767,6 @@ export function scoreRepeat(input: {
     }
   }
   const directions: WordDirection[] = []
-  let movingWords = 0
-  let sameMoving = 0
   const words = input.words.map((word) => {
     const frame = Math.max(0, Math.min(model.length - 1, Math.floor(word.start / modelHop)))
     const frameEnd = Math.max(frame + 1, Math.min(model.length, Math.ceil(word.end / modelHop)))
@@ -822,13 +810,8 @@ export function scoreRepeat(input: {
     directions.push(direction)
     const modelRange = voicedRange(model.slice(frame, frameEnd)) ?? 0
     const userRange = voicedRange(userSlice) ?? 0
-    // A null correlation is too little movement to judge. It must not
-    // cancel the stars of a take that matches the file.
+    // A null correlation is too little movement to judge.
     const follows = pitchCorr != null && pitchCorr >= DIRECTION_MIN && userRange >= MOVING_RANGE
-    if (scorable && modelRange >= MOVING_RANGE && pitchCorr != null) {
-      movingWords += 1
-      if (follows) sameMoving += 1
-    }
     let melody = melodyBand(matched.mean)
     if (pitchCorr != null && pitchCorr < DIRECTION_OPPOSED) melody = 'red'
     else if (pitchCorr != null && pitchCorr < DIRECTION_MIN && melody === 'green') melody = 'yellow'
@@ -866,9 +849,6 @@ export function scoreRepeat(input: {
   const scorable = words.filter((word) => word.scorable)
   const coloured = scorable.filter((word) => word.color != null).length
   const allowed = scorable.length > 0 && coloured / scorable.length >= COLOURED_SHARE
-  let stars = allowed ? starsFromBars(melodyBar, rhythmBar) : 0
-  if (stars > 0 && movingWords >= 2 && sameMoving / movingWords < DIRECTION_MAJORITY) stars = 0
-  if (content || flipped) stars = 0
   const fewWords = !allowed
   const rejected = content || flipped
   return {
@@ -882,7 +862,6 @@ export function scoreRepeat(input: {
     words,
     melodyBar: fewWords || rejected ? null : melodyBar,
     rhythmBar: fewWords || rejected ? null : rhythmBar,
-    stars,
     fewWords,
     unclear: rejected,
     tooLittleVoice: false,

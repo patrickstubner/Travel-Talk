@@ -38,8 +38,8 @@ export type CaptureSession = {
 
 export async function startMicrophone(onStop: (recording: Recording) => void): Promise<CaptureSession | null> {
   if (!navigator.mediaDevices?.getUserMedia) return null
-  // Noise suppression and automatic gain cost a clean file its stars.
-  // Echo cancellation costs hardly any: 5 of 7, not 6 of 7. It keeps the speaker out.
+  // Noise suppression and automatic gain reshape the take, so both stay off.
+  // Echo cancellation stays on and keeps the speaker out of the recording.
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false },
   })
