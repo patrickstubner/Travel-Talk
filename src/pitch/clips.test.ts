@@ -4,13 +4,15 @@ import { readFileSync as readBytes } from 'fs'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { PitchDetector } from 'pitchy'
 import { describe, expect, it } from 'vitest'
 import { rawCatalog } from '../../content'
 import { splitWords } from '../../content/gloss'
 import { alignmentFitsDuration, parseAlignment } from '../audio/align'
+import { tempoFile } from '../audio/speed'
 import { VOICES } from '../audio/voices'
 import { allSpeechLines, voiceFile } from '../content/resolve'
-import { contourFromSamples, frameEnergy } from './contour'
+import { CLARITY_MIN, PITCH_HZ_MAX, PITCH_HZ_MIN, contourFromSamples, frameEnergy } from './contour'
 import { scoreRepeat } from './feedback'
 import { bandShape } from './spectrum'
 
@@ -72,6 +74,66 @@ const KNOWN_MISSING = new Set([
   'vi/vivos-32/meet.hello__any__co.m4a',
   'vi/vivos-32/meet.hello__any__ong.m4a',
 ])
+
+/**
+ * Full-speed length. Slow files are longer by the tempo, so the comparison
+ * uses duration times 0.7 or 0.85. Two legacy Vietnamese syllables are real
+ * speech and shorter than this: «Dạ.» (south) and «Vâng.» (north).
+ */
+const MIN_BASE_SECONDS = 0.3
+/**
+ * A clip this short, at full speed, has to be voiced. The bare mls-4576
+ * words «Bitte.» and «Danke.» were about 0.2 s of noise: no pitch frame
+ * cleared the same bar the app uses (clarity 0.6, 70–450 Hz). 40 % of frames
+ * is above that noise and below the shortest real lines (about 52 %).
+ * Longer clips are not held to the ratio. joe and cadu stay sparse there.
+ */
+const SHORT_BASE_SECONDS = 0.45
+const SHORT_VOICED_RATIO = 0.4
+const PITCH_FRAME = 2048
+
+const SHORT_LINE_EXCEPTIONS = new Set([
+  'vi/meet.yes__south__base.m4a',
+  'vi/meet.yes__north__base.m4a',
+])
+
+function playbackTempo(file: string): number {
+  if (file.endsWith('.r70.m4a')) return 0.7
+  if (file.endsWith('.r85.m4a')) return 0.85
+  return 1
+}
+
+function fullSpeedName(file: string): string {
+  return file.replace(/\.r70\.m4a$/, '.m4a').replace(/\.r85\.m4a$/, '.m4a')
+}
+
+function voicedFrameRatio(samples: Float32Array): number {
+  if (samples.length < PITCH_FRAME) return 0
+  const detector = PitchDetector.forFloat32Array(PITCH_FRAME)
+  detector.clarityThreshold = CLARITY_MIN
+  detector.minVolumeDecibels = -45
+  const frame = new Float32Array(PITCH_FRAME)
+  let frames = 0
+  let voiced = 0
+  for (let index = 0; index + PITCH_FRAME < samples.length; index += 160) {
+    frame.set(samples.subarray(index, index + PITCH_FRAME))
+    frames += 1
+    const [hz, clarity] = detector.findPitch(frame, 16000)
+    if (clarity >= CLARITY_MIN && hz >= PITCH_HZ_MIN && hz <= PITCH_HZ_MAX) voiced += 1
+  }
+  return frames === 0 ? 0 : voiced / frames
+}
+
+function assertClipPlausible(file: string, samples: Float32Array): void {
+  const tempo = playbackTempo(file)
+  const atFullSpeed = (samples.length / 16000) * tempo
+  if (!SHORT_LINE_EXCEPTIONS.has(fullSpeedName(file))) {
+    expect(atFullSpeed, `${file} duration`).toBeGreaterThanOrEqual(MIN_BASE_SECONDS)
+  }
+  if (atFullSpeed < SHORT_BASE_SECONDS) {
+    expect(voicedFrameRatio(samples), `${file} voicing`).toBeGreaterThanOrEqual(SHORT_VOICED_RATIO)
+  }
+}
 
 function ffmpegReady(): boolean {
   try {
@@ -145,6 +207,14 @@ describe('shipped clips', () => {
         const file = voiceFile(line.file, voice.id, voice.legacy)
         const audio = `public/audio/${file}`
         if (!existsSync(audio)) continue
+        const samples = decode(audio)
+        assertClipPlausible(file, samples)
+        for (const step of [0.7, 0.85] as const) {
+          const slow = tempoFile(file, step)
+          const slowPath = `public/audio/${slow}`
+          if (!existsSync(slowPath)) continue
+          assertClipPlausible(slow, decode(slowPath))
+        }
         const alignPath = audio.replace(/\.m4a$/, '.align.json')
         if (!existsSync(alignPath)) {
           missing.push(file)
@@ -155,7 +225,6 @@ describe('shipped clips', () => {
           missing.push(file)
           continue
         }
-        const samples = decode(audio)
         const duration = samples.length / 16000
         if (!alignmentFitsDuration(times, duration)) {
           missing.push(file)

@@ -11,6 +11,7 @@ import sys
 import wave
 from pathlib import Path
 
+import numpy as np
 from piper import PiperVoice
 from piper.config import SynthesisConfig
 
@@ -50,6 +51,13 @@ LEGACY = {
     "pt-BR": "pt_BR-faber-medium",
     "vi": "vi_VN-vais1000-medium",
 }
+# The bare words collapse to about 0.2 s of noise for this speaker. The clip is the
+# first word of a carrier, synthesized with noise scales at 0 so a later run matches.
+CARRIERS = {
+    "Bitte.": "Bitte schön.",
+    "Danke.": "Danke schön.",
+}
+
 # Free voices added in 0.4.0. speaker is the Piper id for a multi-speaker model.
 EXTRA = [
     {"lang": "vi", "model": "vi_VN-vivos-x_low", "speaker": 9, "voice": "vivos-22"},
@@ -114,9 +122,64 @@ def main() -> None:
     write_manifest()
 
 
+def cut_carrier_word(loaded: PiperVoice, text: str, speaker: int | None) -> tuple[np.ndarray, int, float, float]:
+    """First word of a longer line, plus the gap before the next word."""
+    carrier = CARRIERS[text]
+    syn = SynthesisConfig(
+        speaker_id=speaker,
+        normalize_audio=True,
+        noise_scale=0.0,
+        noise_w_scale=0.0,
+        length_scale=1.0,
+    )
+    wav_path = ROOT / "public" / "audio" / "_carrier.wav"
+    wav_path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(wav_path), "wb") as handle:
+        alignments = loaded.synthesize_wav(carrier, handle, syn_config=syn, include_alignments=True)
+    with wave.open(str(wav_path), "rb") as handle:
+        rate = handle.getframerate()
+        frames = handle.readframes(handle.getnframes())
+    wav_path.unlink(missing_ok=True)
+    samples = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+    clock = 0
+    word_start: int | None = None
+    word_end = 0
+    space_after = 0
+    closed = False
+    for item in alignments or []:
+        count = int(item.num_samples)
+        if not closed and item.phoneme not in ("^", "$", " "):
+            if word_start is None:
+                word_start = clock
+            word_end = clock + count
+        elif item.phoneme == " " and word_start is not None and not closed:
+            space_after = count
+            closed = True
+        clock += count
+    if word_start is None or word_end <= word_start:
+        raise SystemExit(f"carrier produced no word for {text}")
+    end = word_end + space_after
+    clip = samples[:end].copy()
+    fade = int(rate * 0.012)
+    if fade > 0 and len(clip) > fade:
+        clip[-fade:] *= np.linspace(1.0, 0.0, fade, dtype=np.float32)
+    peak = float(np.max(np.abs(clip))) or 1.0
+    clip = clip / peak * 0.95
+    return clip, rate, word_start / rate, word_end / rate
+
+
+def write_wav(path: Path, samples: np.ndarray, rate: int) -> None:
+    pcm = np.clip(samples * 32767.0, -32768, 32767).astype(np.int16)
+    with wave.open(str(path), "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(rate)
+        handle.writeframes(pcm.tobytes())
+
+
 def synthesize(lang: str, model_dir: Path, model: str, voice: str | None, speaker: int | None) -> None:
     require_model(model_dir, model)
-    loaded = PiperVoice.load(model_dir / f"{model}.onnx")
+    loaded = PiperVoice.load(model_dir / f"{model}.onnx", include_alignments=(voice == "mls-4576"))
     rows = [row for row in LINES if row["lang"] == lang]
     syn = SynthesisConfig(speaker_id=speaker, normalize_audio=True)
     label = voice or "legacy"
@@ -134,8 +197,17 @@ def synthesize(lang: str, model_dir: Path, model: str, voice: str | None, speake
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         wav = target.with_suffix(".wav")
-        with wave.open(str(wav), "wb") as handle:
-            loaded.synthesize_wav(row["text"], handle, syn_config=syn)
+        if voice == "mls-4576" and row["text"] in CARRIERS:
+            clip, rate, start, end = cut_carrier_word(loaded, row["text"], speaker)
+            write_wav(wav, clip, rate)
+            align = target.with_suffix(".align.json")
+            align.write_text(
+                json.dumps({"words": [{"start": round(start, 3), "end": round(end, 3)}]}, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+        else:
+            with wave.open(str(wav), "wb") as handle:
+                loaded.synthesize_wav(row["text"], handle, syn_config=syn)
         for dest, tempo in tempos:
             encode(wav, dest, tempo)
         wav.unlink(missing_ok=True)

@@ -7,6 +7,7 @@
 - Keine Frauenstimme für Portugiesisch (Brasilien). Die Piper-Stimmen cadu, faber, edresson und jeff sind Männer. `pt_PT-tugão` ist europäisches Portugiesisch. Dii ist eine Frau, die Lizenz auf der Modellkarte ist CC BY-NC-ND 4.0, und die Stimme gehört TigreGotico Lda. MMS-TTS `por` ist CC BY-NC 4.0, aber nicht als brasilianisch ausgewiesen. XTTS v2 steht unter der Coqui Public Model License und braucht eine Referenzstimme. Keine davon ist eine klar nutzbare brasilianische Frauenstimme.
 - Der Audio-Cache bleibt bei 8000 Einträgen. `manifest.json` hat 6406 Einträge.
 - Auf Vietnamesisch heisst der Zweck von Đưa: «Chế độ Đưa hiển thị một câu lớn trên màn hình để bạn đưa cho người khác xem, …». Der Rest bleibt: zum Beispiel im Notfall oder in der Apotheke, und das Audio kann abgespielt werden.
+- «Bitte.» und «Danke.» von mls-4576 waren etwa 0,2 Sekunden Rauschen, in allen drei Tempi und in der Zeitdatei. Neu sind sie das erste Wort aus «Bitte schön.» und «Danke schön.», ohne Dauer-Rauschen, damit ein späterer Lauf dieselbe Stelle trifft. Die Clip-Prüfung verlangt 0,3 Sekunden und, unter 0,45 Sekunden, eine stimmhafte Tonhöhe. «Dạ.» und «Vâng.» bleiben die Ausnahme: eine Silbe, kürzer, aber vollständig stimmhaft.
 
 ## 0.8.1 — 2026-10-12
 
