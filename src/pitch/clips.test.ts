@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { readFileSync as readBytes } from 'fs'
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -353,6 +354,14 @@ describe('shipped clips', () => {
         if (word.scorable) expect(word.rhythm, `${item.file} ${word.text}`).toBe('green')
       }
       if (item.lang === 'en') expect(score.words?.find((word) => word.text === 'down,')?.rhythm, item.file).toBe('green')
+      if (item.lang === 'pt-BR') {
+        for (const text of ['isso,', 'favor?']) {
+          const word = score.words?.find((candidate) => candidate.text === text)
+          expect(word?.scorable, `${item.file} ${text}`).toBe(true)
+          expect(word?.melody, `${item.file} ${text}`).toBe('green')
+          expect(word?.rhythm, `${item.file} ${text}`).toBe('green')
+        }
+      }
       if (item.lang === 'vi') {
         expect(score.words, item.file).toHaveLength(5)
         expect(score.words?.every((word) => word.rhythm === 'green'), item.file).toBe(true)
@@ -481,4 +490,173 @@ describe('shipped clips', () => {
     expect(score.rhythmBar, modelFile).not.toBeNull()
     expect(score.otherSentence, modelFile).toBe(false)
   }, 30_000)
+
+  function decodeRate(path: string, rate: number): Float32Array {
+    return pcm(
+      execFileSync('ffmpeg', ['-v', 'error', '-i', path, '-ac', '1', '-ar', String(rate), '-f', 'f32le', 'pipe:1'], {
+        maxBuffer: 16 * 1024 * 1024,
+      }),
+    )
+  }
+
+  function withLead(samples: Float32Array, rate: number): Float32Array {
+    const lead = Math.floor(rate * 0.45)
+    const tail = Math.floor(rate * 0.7)
+    const padded = new Float32Array(lead + samples.length + tail)
+    padded.set(samples, lead)
+    return padded
+  }
+
+  /** Opus at 32 kbit/s, the codec the browser records into. */
+  function throughOpus(samples: Float32Array, rate: number): Float32Array {
+    const dir = mkdtempSync(join(tmpdir(), 'tt-opus-'))
+    try {
+      const wav = join(dir, 'in.wav')
+      const webm = join(dir, 'out.webm')
+      const data = Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength)
+      const header = Buffer.alloc(44)
+      header.write('RIFF', 0)
+      header.writeUInt32LE(36 + data.length, 4)
+      header.write('WAVE', 8)
+      header.write('fmt ', 12)
+      header.writeUInt32LE(16, 16)
+      header.writeUInt16LE(3, 20)
+      header.writeUInt16LE(1, 22)
+      header.writeUInt32LE(rate, 24)
+      header.writeUInt32LE(rate * 4, 28)
+      header.writeUInt16LE(4, 32)
+      header.writeUInt16LE(32, 34)
+      header.write('data', 36)
+      header.writeUInt32LE(data.length, 40)
+      writeFileSync(wav, Buffer.concat([header, data]) as unknown as string)
+      execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', wav, '-c:a', 'libopus', '-b:a', '32k', '-application', 'voip', webm])
+      return decodeRate(webm, rate)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }
+
+  function scorePadded(
+    modelFile: string,
+    userSamples: Float32Array,
+    text: string,
+    lang: 'de' | 'en' | 'pt-BR' | 'vi',
+  ): RepeatScore {
+    const rate = 48000
+    const texts = splitWords(text)
+    const times = parseAlignment(JSON.parse(readFileSync(modelFile.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+    const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+    const modelSamples = decodeRate(modelFile, rate)
+    const model = analyzeModel(modelSamples, rate)
+    const user = analyzeUser(userSamples, rate, model.bands)
+    return scoreRepeat({
+      model: model.contour,
+      user: user.contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang,
+      region: 'south',
+      userDuration: userSamples.length / rate,
+      modelEnergy: model.energy,
+      userEnergy: user.energy,
+      modelBands: model.bands,
+      userBands: user.bands,
+      userPlainBands: user.plainBands,
+    })
+  }
+
+  it.skipIf(!ready || !clipLangs.includes('de'))(
+    'marks a longer word when another German voice is padded like a microphone',
+    () => {
+      const text = 'Können Sie das bitte aufschreiben?'
+      const modelFile = 'public/audio/de/thorsten-high/emergency.write__any__base.m4a'
+      const userFile = 'public/audio/de/emergency.write__any__base.m4a'
+      const user = withLead(decodeRate(userFile, 48000), 48000)
+      const score = scorePadded(modelFile, user, text, 'de')
+      const sie = score.words?.find((word) => word.text === 'Sie')
+      expect(sie?.scorable, modelFile).toBe(true)
+      expect(['yellow', 'red']).toContain(sie?.rhythm)
+      const own = scorePadded(modelFile, withLead(decodeRate(modelFile, 48000), 48000), text, 'de')
+      for (const word of own.words ?? []) {
+        if (word.scorable) expect(word.rhythm, `${modelFile} ${word.text}`).toBe('green')
+      }
+    },
+    60_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('en'))(
+    'keeps «down,» green after the padded take is encoded with opus',
+    () => {
+      const text = 'Could you write that down, please?'
+      const file = 'public/audio/en/joe/emergency.write__any__base.m4a'
+      const coded = throughOpus(withLead(decodeRate(file, 48000), 48000), 48000)
+      const score = scorePadded(file, coded, text, 'en')
+      const down = score.words?.find((word) => word.text === 'down,')
+      expect(down?.rhythm, file).toBe('green')
+      for (const word of score.words ?? []) {
+        if (word.scorable) expect(word.rhythm, `${file} ${word.text}`).toBe('green')
+      }
+      const where = 'public/audio/en/transport.02.where__any__base.m4a'
+      const short = scorePadded(where, withLead(decodeRate(where, 48000), 48000), 'Where to?', 'en')
+      expect(short.globalRatio ?? 0, where).toBeGreaterThan(0.85)
+      expect(short.globalRatio ?? 9, where).toBeLessThan(1.2)
+      for (const word of short.words ?? []) {
+        if (word.scorable) expect(word.rhythm, `${where} ${word.text}`).toBe('green')
+      }
+    },
+    60_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'keeps cadu «isso,» and «favor?» green after the padded take is encoded with opus',
+    () => {
+      const line = 'Você pode escrever isso, por favor?'
+      const file = 'public/audio/pt-BR/cadu/emergency.write__any__base.m4a'
+      const coded = throughOpus(withLead(decodeRate(file, 48000), 48000), 48000)
+      const score = scorePadded(file, coded, line, 'pt-BR')
+      for (const text of ['isso,', 'favor?']) {
+        const word = score.words?.find((candidate) => candidate.text === text)
+        expect(word?.scorable, `${file} ${text}`).toBe(true)
+        expect(word?.melody, `${file} ${text}`).toBe('green')
+        expect(word?.rhythm, `${file} ${text}`).toBe('green')
+      }
+      expect(score.rhythmBar, file).toBe('passt')
+    },
+    60_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('vi'))(
+    'keeps the rhythm bar when a real clip fades and the decay still counts',
+    () => {
+      const file = 'public/audio/vi/day.please__any__base.m4a'
+      const texts = splitWords('Làm ơn.')
+      const times = parseAlignment(JSON.parse(readFileSync(file.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+      const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+      const samples = decode(file)
+      const model = analyzeModel(samples, 16000)
+      expect(model.contour.length, file).toBe(41)
+      const userEnergy = model.energy.map((value, index) => (index < 26 ? value : value * 0.05))
+      const score = scoreRepeat({
+        model: model.contour,
+        user: model.contour,
+        modelHop: 0.01,
+        userHop: 0.01,
+        words,
+        lang: 'vi',
+        region: 'south',
+        userDuration: samples.length / 16000,
+        modelEnergy: model.energy,
+        userEnergy,
+        modelBands: model.bands,
+        userBands: model.bands,
+        userPlainBands: model.plainBands,
+      })
+      expect(score.globalRatio ?? 0, file).toBeGreaterThan(0.7)
+      expect(score.globalRatio ?? 9, file).toBeLessThan(0.9)
+      expect(score.rhythmBar, file).toBe('passt')
+      expect(score.words?.every((word) => word.rhythm === 'green'), file).toBe(true)
+    },
+    30_000,
+  )
 })

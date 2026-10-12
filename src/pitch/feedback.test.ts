@@ -314,6 +314,46 @@ describe('repeat alignment', () => {
     expect(score.words?.[2]?.rhythm).toBe('green')
   })
 
+  it('reads a stretched word from the band path, not from the local scale', () => {
+    // The pitch matches, so the local search stays on scale 1. The middle
+    // word's band shape is twice as long. A ratio taken from the scale, or
+    // from a linear map of continuous loudness, would stay green.
+    const frames = 60
+    const model: Contour = flat(frames, 0)
+    const user: Contour = flat(80, 0)
+    const words = [
+      { text: 'Could', start: 0, end: 0.2 },
+      { text: 'you', start: 0.2, end: 0.4 },
+      { text: 'please?', start: 0.4, end: 0.6 },
+    ]
+    const modelBands = Array.from({ length: frames }, (_, index) => [index / 10, index % 5])
+    const userBands = Array.from({ length: 80 }, (_, index) => {
+      const source = index < 20 ? index : index < 60 ? 20 + (index - 20) / 2 : 40 + (index - 60)
+      return [source / 10, Math.floor(source) % 5]
+    })
+    const energy = (length: number) => Array.from({ length }, () => 0.4)
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'en',
+      region: 'south',
+      userDuration: 0.8,
+      modelEnergy: energy(frames),
+      userEnergy: energy(80),
+      modelBands,
+      userBands,
+    })
+    const stretched = score.words?.[1]
+    expect(stretched?.melody).toBe('green')
+    expect(stretched?.rawRatio ?? 1).toBeGreaterThan(RHYTHM_GREEN_MAX)
+    expect(stretched?.rhythm).not.toBe('green')
+    expect(score.words?.[0]?.rhythm).toBe('green')
+    expect(score.words?.[2]?.rhythm).toBe('green')
+  })
+
   it('keeps later words green when a near-silent tail still has a pitch', () => {
     const model: Contour = [
       ...flat(10, null),
@@ -356,6 +396,33 @@ describe('repeat alignment', () => {
     expect(score.globalRatio ?? 0).toBeGreaterThan(0.9)
     expect(score.globalRatio ?? 9).toBeLessThan(1.15)
     expect(score.words?.every((word) => word.color === 'green')).toBe(true)
+  })
+
+  it('keeps a fading ending inside the timed span', () => {
+    // The file stays loud. The take's last frames fall under 8 % of its
+    // peak but the vowel is still there. Those frames are the decay.
+    // Leaving them out shortens the take by more than the green band.
+    const model: Contour = ramp(30, -1, 1)
+    const user: Contour = [...ramp(18, -1, 0.2), ...ramp(12, 0.2, 1)]
+    const words = [
+      { text: 'Could', start: 0, end: 0.15 },
+      { text: 'please?', start: 0.15, end: 0.3 },
+    ]
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'en',
+      region: 'south',
+      userDuration: 0.3,
+      modelEnergy: model.map(() => 0.5),
+      userEnergy: user.map((_, index) => (index < 18 ? 0.5 : 0.02)),
+    })
+    expect(score.globalRatio ?? 0).toBeGreaterThan(0.7)
+    expect(score.globalRatio ?? 9).toBeLessThan(1.15)
+    expect(score.rhythmBar).toBe('passt')
   })
 
   it('finds the voice after a leading silence and still lines the words up', () => {
