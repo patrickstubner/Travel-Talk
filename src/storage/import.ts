@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { PAIRS } from '../domain/pairs'
 import { directionLangs, legacyDirection } from '../domain/direction'
 import { capDueIso } from '../srs/scheduler'
+import { isSpeedStep } from '../audio/speed'
 import { LEVEL_PLACEHOLDER, VOICE_ID, cleanPersonName, cleanVoices, defaultSettings, normalizeSpeed, type ImportedPerson, type ProgressSnapshot, type Settings, type StoredCard } from './types'
 
 /** Ten people with several directions. Still capped, so a file cannot fill the database. */
@@ -72,7 +73,7 @@ const settingsSchemaV3 = z.strictObject({
   voices: voicesSchema,
 })
 
-/** Format 4 adds other learning languages. Highlighting stays off the file. */
+/** Format 4 adds other learning languages. Highlighting stays off the file. Word tempo is optional. */
 const settingsSchemaV4 = z.strictObject({
   appLang: lang,
   targetLang: lang,
@@ -80,6 +81,7 @@ const settingsSchemaV4 = z.strictObject({
   speed: speedChoice,
   voices: voicesSchema,
   moreTargets: z.array(lang).max(3).optional(),
+  wordSpeed: z.union([z.literal(0.7), z.literal(0.85), z.literal(1)]).optional(),
 })
 
 const personName = z.string().refine((value) => cleanPersonName(value) === value)
@@ -292,11 +294,12 @@ function settingsFromV4(settings: z.infer<typeof settingsSchemaV4>): Settings {
   if (new Set(more).size !== more.length) throw new Error('IMPORT_REJECTED')
   if (more.some((entry) => entry === settings.appLang || entry === settings.targetLang)) throw new Error('IMPORT_REJECTED')
   const voices = cleanVoices(settings.voices)
-  const { voices: _voices, moreTargets: _more, ...rest } = settings
+  const { voices: _voices, moreTargets: _more, wordSpeed, ...rest } = settings
   return {
     ...rest,
     ...(voices ? { voices } : {}),
     ...(more.length > 0 ? { moreTargets: more } : {}),
+    ...(isSpeedStep(wordSpeed) ? { wordSpeed } : {}),
   }
 }
 
@@ -367,6 +370,7 @@ function exportSettings(settings: Settings, includeNote: boolean): Record<string
     speed: settings.speed,
     ...(voices ? { voices } : {}),
     ...(more.length > 0 ? { moreTargets: more } : {}),
+    ...(isSpeedStep(settings.wordSpeed) ? { wordSpeed: settings.wordSpeed } : {}),
   }
 }
 

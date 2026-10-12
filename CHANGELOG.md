@@ -4,7 +4,7 @@
 
 - Ein neues Wort kommt dreimal ohne Frage: Ton, Schrift, lesbare Umschrift in der App-Sprache, IPA und die Bedeutung. Danach erst «Was bedeutet das Wort?». Die FSRS-Karte entsteht bei der Antwort, nicht beim Hören. Eine Wiederholung überspringt die Einführung.
 - Jedes geprüfte Wort hat eine Umschrift für Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Am vietnamesischen Wort steht der Ton der Schreibung. không, đâu und đây tragen den Ton jetzt in der Schrift der Wortkarte. Die alten Clips dieser drei Wörter sind noch ohne diesen Ton.
-- Wortclips spielen die normale Datei. Die 70-%- und 85-%-Dateien bleiben für die Sätze. `playbackRate` bleibt 1.
+- Einzelne Wörter starten bei 100 %. Diese Person kann 70 %, 85 % oder 100 % wählen. Die Wahl bleibt in ihrem Profil. Sätze behalten ihr Tempo, einschliesslich Automatisch. `playbackRate` bleibt 1. Das Tempo liegt in der Datei.
 
 ## 0.9.0 — 2026-10-12
 

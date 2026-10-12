@@ -6,7 +6,7 @@ import { resolvePlayback } from '../content/resolve'
 import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
 import { decodeContourFile, playClip, stopClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
-import { tempoFile } from '../audio/speed'
+import { SPEED_STEPS, tempoFile, wordTempo, type SpeedStep } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { stopSlices } from '../audio/slice'
 import { useApp } from '../app/state'
@@ -40,7 +40,7 @@ function kindFrom(value: string | null): SessionKind {
 }
 
 export function PracticePage() {
-  const { catalog, snapshot, saveCard } = useApp()
+  const { catalog, snapshot, saveCard, saveSettings } = useApp()
   const settings = useSettings()
   const copy = useCopy()
   const [params] = useSearchParams()
@@ -234,7 +234,10 @@ export function PracticePage() {
     const word = wordById(item.id)
     if (!word) return
     let live = true
-    const file = spokenWordFile(settings, settings.targetLang, wordAudioFile(word, settings.targetLang, settings.viRegion))
+    const file = tempoFile(
+      spokenWordFile(settings, settings.targetLang, wordAudioFile(word, settings.targetLang, settings.viRegion)),
+      wordTempo(settings),
+    )
     const speech = spokenCitation(word, settings.targetLang, settings.viRegion)
     lockedFile.current = file
     setPlaying(true)
@@ -329,7 +332,7 @@ export function PracticePage() {
     const bare = file.slice(file.lastIndexOf('/') + 1)
     const wordClip = bare.startsWith('w.')
     const resolved = wordClip ? spokenWordFile(settings, targetLang, file) : spokenFile(settings, targetLang, file)
-    const played = wordClip ? resolved : tempoFile(resolved, rate)
+    const played = tempoFile(resolved, wordClip ? wordTempo(settings) : rate)
     const clipRate = wordClip ? 1 : rate
     lockedFile.current = played
     setPlaying(true)
@@ -427,6 +430,20 @@ export function PracticePage() {
         setQueue((current) => [...current, ...open.map((id) => ({ id, isNew: true, kind: 'sentence' as const }))])
       }
     }
+    const wordTempoControl = (
+      <WordTempoControl
+        chosen={wordTempo(settings)}
+        title={copy.wordSpeedTitle}
+        hint={copy.wordSpeedHint}
+        slow={copy.speed70}
+        mid={copy.speed85}
+        full={copy.speed100}
+        onPick={(option) => {
+          if (wordTempo(settings) === option) return
+          void saveSettings({ ...settings, wordSpeed: option })
+        }}
+      />
+    )
     if (step === 'word-intro') {
       return (
         <section className="stack" data-testid="word-intro">
@@ -448,6 +465,7 @@ export function PracticePage() {
           </p>
           <p className="hint">{copy.wordGloss}</p>
           <p data-testid="word-meaning">{meaning}</p>
+          {wordTempoControl}
           <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
             <span className="play-mark" aria-hidden="true" />
             {playing ? copy.playingNormal : copy.wordReplay}
@@ -475,6 +493,7 @@ export function PracticePage() {
         <p className="hint" data-testid="word-ipa">
           {copy.wordIpa} {sound.ipa}
         </p>
+        {wordTempoControl}
         <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
           <span className="play-mark" aria-hidden="true" />
           {playing ? copy.playingNormal : copy.wordReplay}
@@ -861,5 +880,38 @@ export function PracticePage() {
         </>
       ) : null}
     </section>
+  )
+}
+
+function WordTempoControl({
+  chosen,
+  title,
+  hint,
+  slow,
+  mid,
+  full,
+  onPick,
+}: {
+  chosen: SpeedStep
+  title: string
+  hint: string
+  slow: string
+  mid: string
+  full: string
+  onPick: (step: SpeedStep) => void
+}) {
+  const label = (option: SpeedStep) => (option === 0.7 ? slow : option === 0.85 ? mid : full)
+  return (
+    <fieldset className="speed" data-testid="word-speed">
+      <legend>{title}</legend>
+      <div className="row" role="group" aria-label={title}>
+        {SPEED_STEPS.map((option) => (
+          <button key={option} type="button" aria-pressed={chosen === option} onClick={() => onPick(option)}>
+            {label(option)}
+          </button>
+        ))}
+      </div>
+      <p className="hint">{hint}</p>
+    </fieldset>
   )
 }

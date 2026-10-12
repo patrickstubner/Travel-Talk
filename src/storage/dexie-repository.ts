@@ -288,6 +288,7 @@ function mergeLocal(incoming: Settings, local: Settings | undefined): Settings {
     voices: incoming.voices ?? local.voices,
     ...(local.voiceHintSeen ? { voiceHintSeen: true } : {}),
     ...(local.highlightWords === false ? { highlightWords: false } : {}),
+    ...(incoming.wordSpeed == null && local.wordSpeed != null ? { wordSpeed: local.wordSpeed } : {}),
   }
 }
 

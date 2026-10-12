@@ -49,7 +49,7 @@ Mit dem Standard-Planer, Behaltensrate 0.9 und ohne Zufall erreicht eine neue Ka
 
 Die Satzseite benutzt dieselbe Funktion. Eine bekannte Karte wird bei «Automatisch» mit 100 % abgespielt. Die Sitzung seit 0.3.0 spielt einen neuen Satz erst mit 70 % und dann mit 100 %, als zwei Schritte, nicht über diesen Regler.
 
-Die einzige Wahl sitzt am Player des Satzes: Automatisch, 70 %, 85 %, 100 %. Eine feste Stufe gilt für alles Audio, auch Üben und Zeigen, und bleibt in den lokalen Einstellungen, bis wieder «Automatisch» gewählt wird. Üben und Zeigen zeigen die Stufe als Text und haben keine zweite Schalterleiste. Die Tonhöhenkurve liest weiter die Datei mit 100 %, nicht eine gedehnte.
+Die Wahl der Sätze sitzt am Player des Satzes: Automatisch, 70 %, 85 %, 100 %. Eine feste Stufe gilt für die Sätze, auch Üben und Zeigen, und bleibt in den lokalen Einstellungen, bis wieder «Automatisch» gewählt wird. Üben und Zeigen zeigen die Stufe der Sätze als Text und haben keine zweite Schalterleiste. Einzelne Wörter haben drei Knöpfe, 70 %, 85 % und 100 %, ohne Automatisch. Fehlt die Wahl, gilt 100 %. Sie liegt bei der Person und geht in den Export, sobald sie gesetzt ist. Die Tonhöhenkurve liest weiter die Datei mit 100 %, nicht eine gedehnte.
 
 Ein Export aus 0.1.0 hat `slow` und kein `speed`. `slow: true` wird fest 85 %, die nähere Stufe zu `atempo=0.8`. `slow: false` und ein fehlendes `slow` sind der alte Standard und werden «Automatisch», damit die Steigerung an bleibt und sich von einer bewusst gewählten 100 % unterscheidet. Ein gesetztes `speed` gewinnt. Neue Installationen starten mit «Automatisch».
 

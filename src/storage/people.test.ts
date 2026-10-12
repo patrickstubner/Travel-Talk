@@ -198,9 +198,25 @@ describe('people on one device', () => {
     expect(kept.settings.voiceHintSeen).toBe(true)
     expect(kept.settings.highlightWords).toBe(false)
     expect(kept.settings.voices?.vi).toBe('vais1000')
+    expect(kept.settings.wordSpeed).toBeUndefined()
     expect(kept.people?.find((person) => person.id === id)?.name).toBe('A')
     await repo.importPerson('replace', { name: 'C', settings: { ...learning('de', 'en'), personalNote: 'Neu' }, cards: [] }, kept.settings, id)
     expect((await repo.load()).settings.personalNote).toBe('Neu')
+  })
+
+  it('keeps a local word tempo when the file omits it and takes the step the file names', async () => {
+    const repo = new DexieProgressRepository(`travel-talk-test-${crypto.randomUUID()}`)
+    const first = await repo.load()
+    const id = first.activePersonId ?? ''
+    const local: Settings = { ...learning('de', 'vi'), wordSpeed: 0.7 }
+    await repo.saveSettings(id, local)
+    await repo.importPerson('replace', { name: 'C', settings: learning('de', 'en'), cards: [] }, local, id)
+    expect((await repo.load()).settings.wordSpeed).toBe(0.7)
+    await repo.importPerson('replace', { name: 'C', settings: { ...learning('de', 'en'), wordSpeed: 1 }, cards: [] }, (await repo.load()).settings, id)
+    expect((await repo.load()).settings.wordSpeed).toBe(1)
+    const other = await repo.addPerson('D')
+    expect(other).toBe(true)
+    expect((await repo.load()).settings.wordSpeed).toBeUndefined()
   })
 
   it('does not drop a person with an invisible name while replacing everyone', async () => {

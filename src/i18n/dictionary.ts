@@ -172,6 +172,8 @@ export type Dictionary = {
   wordGloss: string
   wordIpa: string
   wordReplay: string
+  wordSpeedTitle: string
+  wordSpeedHint: string
   wordRight: string
   wordWrong: (meaning: string) => string
   todayWords: (count: number) => string
@@ -320,8 +322,8 @@ export const de: Dictionary = {
   speed85: '85 %',
   speed100: '100 %',
   speedAutoHint: (percent) =>
-    `Automatisch, dieser Satz mit ${percent} %. Neue und unsichere Sätze starten bei 70 % und steigen nach sicheren Wiederholungen auf 85 % und dann auf 100 %. Eine feste Stufe hier gilt für alles Audio, bis du wieder Automatisch wählst.`,
-  speedFixedHint: (percent) => `Fest ${percent} % für alles Audio, bis du wieder Automatisch wählst.`,
+    `Automatisch, dieser Satz mit ${percent} %. Neue und unsichere Sätze starten bei 70 % und steigen nach sicheren Wiederholungen auf 85 % und dann auf 100 %. Eine feste Stufe hier gilt für die Sätze, bis du wieder Automatisch wählst. Einzelne Wörter haben ihr eigenes Tempo.`,
+  speedFixedHint: (percent) => `Fest ${percent} % für die Sätze, bis du wieder Automatisch wählst. Einzelne Wörter haben ihr eigenes Tempo.`,
   speedShown: (percent) => `Tempo ${percent} %`,
   unchecked: 'Noch nicht geprüft',
   audioVi:
@@ -498,6 +500,8 @@ export const de: Dictionary = {
   wordGloss: 'Bedeutung',
   wordIpa: 'IPA',
   wordReplay: 'Noch einmal hören',
+  wordSpeedTitle: 'Tempo der Wörter',
+  wordSpeedHint: 'Gilt für einzelne Wörter dieser Person und bleibt gespeichert. Sätze behalten ihr Tempo.',
   wordRight: 'Das stimmt.',
   wordWrong: (meaning) => `Gemeint ist «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 neues Wort.' : `${count} neue Wörter.`),
@@ -647,8 +651,8 @@ export const en: Dictionary = {
   speed85: '85 %',
   speed100: '100 %',
   speedAutoHint: (percent) =>
-    `Automatic, this line at ${percent} %. New and shaky lines start at 70 % and step up to 85 % and then 100 % after reliable reviews. A fixed step here applies to all audio until you choose Automatic again.`,
-  speedFixedHint: (percent) => `Fixed at ${percent} % for all audio until you choose Automatic again.`,
+    `Automatic, this line at ${percent} %. New and shaky lines start at 70 % and step up to 85 % and then 100 % after reliable reviews. A fixed step here applies to sentences until you choose Automatic again. Single words have their own speed.`,
+  speedFixedHint: (percent) => `Fixed at ${percent} % for sentences until you choose Automatic again. Single words have their own speed.`,
   speedShown: (percent) => `Speed ${percent} %`,
   unchecked: 'Not checked yet',
   audioVi: 'Voice: Piper vais1000, northern accent, one woman. Tones and quality are not checked.',
@@ -821,6 +825,8 @@ export const en: Dictionary = {
   wordGloss: 'Meaning',
   wordIpa: 'IPA',
   wordReplay: 'Hear it again',
+  wordSpeedTitle: 'Word speed',
+  wordSpeedHint: 'Applies to single words for this person and stays saved. Sentences keep their speed.',
   wordRight: 'That is the one.',
   wordWrong: (meaning) => `The meaning is «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 new word.' : `${count} new words.`),
@@ -970,8 +976,8 @@ export const pt: Dictionary = {
   speed85: '85 %',
   speed100: '100 %',
   speedAutoHint: (percent) =>
-    `Automático, esta frase em ${percent} %. Frases novas ou pouco firmes começam em 70 % e sobem para 85 % e depois 100 % depois de revisões seguras. Um passo fixo aqui vale para todo o áudio, até você escolher Automático de novo.`,
-  speedFixedHint: (percent) => `Fixo em ${percent} % para todo o áudio, até você escolher Automático de novo.`,
+    `Automático, esta frase em ${percent} %. Frases novas ou pouco firmes começam em 70 % e sobem para 85 % e depois 100 % depois de revisões seguras. Um passo fixo aqui vale para as frases, até você escolher Automático de novo. Palavras soltas têm a própria velocidade.`,
+  speedFixedHint: (percent) => `Fixo em ${percent} % para as frases, até você escolher Automático de novo. Palavras soltas têm a própria velocidade.`,
   speedShown: (percent) => `Velocidade ${percent} %`,
   unchecked: 'Ainda não revisado',
   audioVi: 'Voz: Piper vais1000, sotaque do norte, uma mulher. Tons e qualidade não foram revisados.',
@@ -1146,6 +1152,8 @@ export const pt: Dictionary = {
   wordGloss: 'Sentido',
   wordIpa: 'IPA',
   wordReplay: 'Ouvir de novo',
+  wordSpeedTitle: 'Velocidade das palavras',
+  wordSpeedHint: 'Vale para as palavras soltas desta pessoa e fica guardada. As frases mantêm a velocidade delas.',
   wordRight: 'É essa.',
   wordWrong: (meaning) => `O sentido é «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 palavra nova.' : `${count} palavras novas.`),
@@ -1295,8 +1303,8 @@ export const vi: Dictionary = {
   speed85: '85 %',
   speed100: '100 %',
   speedAutoHint: (percent) =>
-    `Tự động, câu này ở ${percent} %. Câu mới hoặc chưa chắc bắt đầu ở 70 % và tăng lên 85 % rồi 100 % sau các lần nhớ chắc. Một mức cố định ở đây áp dụng cho mọi audio, cho đến khi bạn chọn Tự động.`,
-  speedFixedHint: (percent) => `Cố định ${percent} % cho mọi audio, cho đến khi bạn chọn lại Tự động.`,
+    `Tự động, câu này ở ${percent} %. Câu mới hoặc chưa chắc bắt đầu ở 70 % và tăng lên 85 % rồi 100 % sau các lần nhớ chắc. Một mức cố định ở đây áp dụng cho các câu, cho đến khi bạn chọn lại Tự động. Từ đơn có tốc độ riêng.`,
+  speedFixedHint: (percent) => `Cố định ${percent} % cho các câu, cho đến khi bạn chọn lại Tự động. Từ đơn có tốc độ riêng.`,
   speedShown: (percent) => `Tốc độ ${percent} %`,
   unchecked: 'Chưa được kiểm tra',
   audioVi: 'Giọng: Piper vais1000, giọng Bắc, một người nữ. Thanh điệu và chất lượng chưa được kiểm tra.',
@@ -1469,6 +1477,8 @@ export const vi: Dictionary = {
   wordGloss: 'Nghĩa',
   wordIpa: 'IPA',
   wordReplay: 'Nghe lại',
+  wordSpeedTitle: 'Tốc độ của từ',
+  wordSpeedHint: 'Áp dụng cho từ đơn của người này và được lưu. Câu giữ tốc độ riêng.',
   wordRight: 'Đúng rồi.',
   wordWrong: (meaning) => `Nghĩa là «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 từ mới.' : `${count} từ mới.`),

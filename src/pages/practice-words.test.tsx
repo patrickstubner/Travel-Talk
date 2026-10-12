@@ -188,6 +188,81 @@ describe('word block', () => {
     expect(screen.queryByTestId('word-intro')).toBeNull()
     expect(screen.getByTestId('word-read').textContent).toBe('ngai, fallend')
   })
+
+  it('plays a new word at 100 % and keeps 70 % for this person only', async () => {
+    render(
+      <AppProvider>
+        <ReadyPractice>
+          <MemoryRouter initialEntries={['/practice?kind=new']}>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPractice>
+      </AppProvider>,
+    )
+    expect(await screen.findByRole('button', { name: '100 %', pressed: true })).toBeTruthy()
+    expect(screen.getByTestId('word-speed').querySelectorAll('button')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: 'Automatisch' })).toBeNull()
+    await waitFor(() => {
+      const call = vi.mocked(playClip).mock.calls.at(-1)
+      expect(String(call?.[0])).toMatch(/\/w\.days__any__base\.m4a$/)
+      expect(call?.[3]).toBe(1)
+    })
+    fireEvent.click(screen.getByRole('button', { name: '70 %' }))
+    expect(await screen.findByRole('button', { name: '70 %', pressed: true })).toBeTruthy()
+    await waitFor(() => {
+      const call = vi.mocked(playClip).mock.calls.at(-1)
+      expect(String(call?.[0])).toMatch(/\/w\.days__any__base\.r70\.m4a$/)
+      expect(call?.[3]).toBe(1)
+    })
+    const repo = new DexieProgressRepository('travel-talk')
+    const firstId = await waitFor(async () => {
+      const loaded = await repo.load()
+      expect(loaded.settings.wordSpeed).toBe(0.7)
+      return loaded.activePersonId ?? ''
+    })
+    cleanup()
+    vi.mocked(playClip).mockClear()
+    render(
+      <AppProvider>
+        <ReadyPractice>
+          <MemoryRouter initialEntries={['/practice?kind=new']}>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPractice>
+      </AppProvider>,
+    )
+    expect(await screen.findByRole('button', { name: '70 %', pressed: true })).toBeTruthy()
+    await waitFor(() => {
+      expect(String(vi.mocked(playClip).mock.calls.at(-1)?.[0])).toMatch(/\.r70\.m4a$/)
+    })
+    expect(await repo.addPerson('B')).toBe(true)
+    cleanup()
+    vi.mocked(playClip).mockClear()
+    render(
+      <AppProvider>
+        <ReadyPractice>
+          <MemoryRouter initialEntries={['/practice?kind=new']}>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPractice>
+      </AppProvider>,
+    )
+    expect(await screen.findByRole('button', { name: '100 %', pressed: true })).toBeTruthy()
+    await waitFor(() => {
+      const call = vi.mocked(playClip).mock.calls.at(-1)
+      expect(String(call?.[0])).toMatch(/\/w\.days__any__base\.m4a$/)
+      expect(String(call?.[0])).not.toMatch(/\.r70\.|\.r85\./)
+    })
+    const second = await repo.load()
+    expect(second.settings.wordSpeed).toBeUndefined()
+    expect(second.people?.find((person) => person.id === firstId)?.settings.wordSpeed).toBe(0.7)
+  })
 })
 
 function studied(cardId: string, at: Date, dueNow: boolean): StoredCard {

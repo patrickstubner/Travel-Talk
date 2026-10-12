@@ -41,6 +41,11 @@ export function suggestedSpeed(card: { state: number; stability: number } | null
   return 1
 }
 
+/** A missing word tempo is 100 %. Words do not follow the sentence choice. */
+export function wordTempo(settings: { wordSpeed?: SpeedStep | null }): SpeedStep {
+  return isSpeedStep(settings.wordSpeed) ? settings.wordSpeed : 1
+}
+
 /** A fixed choice wins for every phrase, including a listening exercise at 100 %. */
 export function effectiveSpeed(
   choice: SpeedChoice,

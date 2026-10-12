@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { State } from 'ts-fsrs'
 import { Rating, emptyCard, reviewCard } from '../srs/scheduler'
-import { FULL_SPEED_STABILITY, effectiveSpeed, speedPercent, suggestedSpeed, tempoFile } from './speed'
+import { FULL_SPEED_STABILITY, effectiveSpeed, speedPercent, suggestedSpeed, tempoFile, wordTempo } from './speed'
 
 describe('suggested speed', () => {
   it('starts slow and reaches 100 % only for a stable review', () => {
@@ -59,5 +59,13 @@ describe('suggested speed', () => {
     expect(tempoFile(file, 1)).toBe(file)
     expect(tempoFile(file, 0.7)).toBe('vi/emergency.help__any__base.r70.m4a')
     expect(tempoFile(file, 0.85)).toBe('vi/emergency.help__any__base.r85.m4a')
+  })
+
+  it('plays a word at 100 % until this person stores another step', () => {
+    expect(wordTempo({})).toBe(1)
+    expect(wordTempo({ wordSpeed: null })).toBe(1)
+    expect(wordTempo({ wordSpeed: 1 })).toBe(1)
+    expect(wordTempo({ wordSpeed: 0.85 })).toBe(0.85)
+    expect(wordTempo({ wordSpeed: 0.7 })).toBe(0.7)
   })
 })
