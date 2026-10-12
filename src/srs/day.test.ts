@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { FILLERS, WORDS, spokenCitation, wordIds } from '../../content/words'
 import { tryLoadCatalog } from '../content/load'
 import { cardIdFor, orderedConcepts, usableConcepts } from './session'
-import { WORD_BLOCK, buildDay, meaningChoices, missingKeyword, newlyOpenSentences, wordBudget, wordPassed } from './day'
+import { WORD_BLOCK, buildDay, meaningChoiceIds, meaningChoices, missingKeyword, newlyOpenSentences, sentenceOpen, wordBudget, wordPassed } from './day'
 import { reviewCard, toStored, fromStored, Rating, emptyCard } from './scheduler'
 import type { Lang } from '../../content/phrase'
 import type { StoredCard } from '../storage/types'
@@ -18,6 +18,11 @@ function concepts() {
 function passed(direction: string, id: string): StoredCard {
   const card = reviewCard(emptyCard(now), Rating.Good, now, 0.9, false)
   return { ...toStored(`${direction}:${id}`, card), elapsed_days: 1, last_review: new Date(2026, 9, 11, 9, 0, 0).toISOString(), due: new Date(2026, 9, 14, 9, 0, 0).toISOString() }
+}
+
+function introducedTodayCard(direction: string, id: string): StoredCard {
+  const card = reviewCard(emptyCard(now), Rating.Good, now, 0.9, false)
+  return { ...toStored(`${direction}:${id}`, card), elapsed_days: 0, last_review: now.toISOString() }
 }
 
 describe('daily word block', () => {
@@ -37,22 +42,30 @@ describe('daily word block', () => {
 
   it('puts the six visa words ahead of their sentences', () => {
     const day = buildDay(concepts(), [], 'de-vi', now, 'mix')
-    expect(day.items.map((item) => item.id)).toEqual([
-      'w.days',
-      'w.stay',
-      'w.documents',
-      'w.evisa',
-      'w.extend',
-      'w.visa',
-      'arrival.days',
-      'arrival.declare',
-      'arrival.level',
-      'arrival.passport',
-    ])
-    expect(day.items.slice(0, 6).every((item) => item.kind === 'word' && item.isNew)).toBe(true)
-    expect(day.items.slice(6).every((item) => item.kind === 'sentence' && missingKeyword(item.id, [], 'de-vi', 'de', 'south') == null)).toBe(true)
+    expect(day.items.map((item) => item.id)).toEqual(['w.days', 'w.stay', 'w.documents', 'w.evisa', 'w.extend', 'w.visa'])
+    expect(day.items.every((item) => item.kind === 'word' && item.isNew)).toBe(true)
     expect(day.sentenceSlots).toBe(4)
     expect(missingKeyword('visa.days', [], 'de-vi', 'de', 'south')).toBe('Tage')
+    const cards = day.items.map((item) => introducedTodayCard('de-vi', item.id))
+    expect(newlyOpenSentences(concepts(), cards, 'de-vi', [], day.sentenceSlots, now)).toEqual([
+      'visa.days',
+      'visa.documents',
+      'visa.evisa',
+      'visa.extend',
+    ])
+  })
+
+  it('fills free sentence slots with the sentences whose words were passed today', () => {
+    const ids = ['w.days', 'w.stay', 'w.documents', 'w.evisa', 'w.extend', 'w.visa']
+    const cards = ids.map((id) => introducedTodayCard('de-vi', id))
+    const day = buildDay(concepts(), cards, 'de-vi', now, 'mix')
+    expect(day.items.filter((item) => item.kind === 'sentence').map((item) => item.id)).toEqual([
+      'visa.days',
+      'visa.documents',
+      'visa.evisa',
+      'visa.extend',
+    ])
+    expect(day.items.some((item) => item.id === 'arrival.days')).toBe(false)
   })
 
   it('opens a sentence once each keyword was good, and keeps a wrong word shut', () => {
@@ -64,20 +77,20 @@ describe('daily word block', () => {
     expect(wordPassed(toStored('de-vi:w.days', again))).toBe(false)
     const easy = reviewCard(emptyCard(now), Rating.Easy, now, 0.9, false)
     expect(wordPassed(toStored('de-vi:w.days', easy))).toBe(true)
-    const day = buildDay(concepts(), cards, 'de-vi', now, 'new')
+    const today = ids.map((id) => introducedTodayCard('de-vi', id))
+    const day = buildDay(concepts(), today, 'de-vi', now, 'new')
     const sentenceAt = day.items.findIndex((item) => item.id === 'visa.days')
     const wordAt = day.items.findIndex((item) => item.kind === 'word')
     expect(sentenceAt).toBeGreaterThan(wordAt)
     expect(day.items[sentenceAt]?.kind).toBe('sentence')
   })
 
-  it('adds the sentence after the block when the last keyword is right', () => {
+  it('holds sentence slots for today when the visa words were passed yesterday', () => {
     const six = ['w.days', 'w.stay', 'w.documents', 'w.evisa', 'w.extend', 'w.visa']
     const cards = six.map((id) => passed('de-vi', id))
     const day = buildDay(concepts(), cards, 'de-vi', now, 'mix')
     expect(day.items.filter((item) => item.kind === 'word').map((item) => item.id)).toEqual(['w.i', 'w.where', 'w.current', 'w.rule', 'w.application', 'w.photo'])
-    expect(day.items.filter((item) => item.kind === 'sentence').map((item) => item.id)).toEqual(['visa.days', 'visa.documents', 'visa.evisa', 'visa.extend'])
-    expect(day.items.findIndex((item) => item.kind === 'sentence')).toBeGreaterThan(day.items.findIndex((item) => item.kind === 'word'))
+    expect(day.items.filter((item) => item.kind === 'sentence')).toEqual([])
     const queued = newlyOpenSentences(concepts(), cards, 'de-vi', [], day.sentenceSlots)
     expect(queued).toEqual(['visa.days', 'visa.documents', 'visa.evisa', 'visa.extend'])
   })
@@ -86,6 +99,8 @@ describe('daily word block', () => {
     expect(wordBudget(20, 0)).toBe(0)
     expect(wordBudget(0, 0)).toBe(WORD_BLOCK)
     expect(wordBudget(0, 14)).toBe(1)
+    expect(wordBudget(0, 6, 6)).toBe(0)
+    expect(wordBudget(0, 4, 4)).toBe(2)
     const list = concepts()
     const cards = list.slice(0, 20).map((concept) => ({ ...passed('de-vi', concept.id), due: now.toISOString() }))
     const day = buildDay(list, cards, 'de-vi', now, 'mix')
@@ -104,11 +119,60 @@ describe('daily word block', () => {
     expect(mine.items[0]?.id).toBe('w.days')
   })
 
+  it('stops new words after six on the same day', () => {
+    const first = buildDay(concepts(), [], 'de-vi', now, 'new')
+    const words = first.items.filter((item) => item.kind === 'word')
+    expect(words).toHaveLength(WORD_BLOCK)
+    const cards = words.map((item) => introducedTodayCard('de-vi', item.id))
+    const second = buildDay(concepts(), cards, 'de-vi', now, 'new')
+    expect(second.items.filter((item) => item.kind === 'word' && item.isNew)).toEqual([])
+    const third = buildDay(concepts(), cards.slice(0, 4), 'de-vi', now, 'new')
+    expect(third.items.filter((item) => item.kind === 'word' && item.isNew)).toHaveLength(2)
+  })
+
+  it('counts a synthetic relearning card as passed', () => {
+    const card = (id: string, state: number, learningSteps: number): StoredCard => ({
+      cardId: `de-vi:${id}`,
+      due: now.toISOString(),
+      stability: 1,
+      difficulty: 5,
+      elapsed_days: 1,
+      scheduled_days: 0,
+      learning_steps: learningSteps,
+      reps: 2,
+      lapses: 1,
+      state,
+      last_review: new Date(2026, 9, 11, 9, 0, 0).toISOString(),
+    })
+    const relearning = card('w.days', 3, 0)
+    expect(wordPassed(relearning)).toBe(true)
+    expect(wordPassed(card('w.days', 1, 0))).toBe(false)
+    const stay = card('w.stay', 3, 0)
+    expect(missingKeyword('visa.days', [relearning, stay], 'de-vi', 'de', 'south')).toBeNull()
+    expect(sentenceOpen('visa.days', [relearning, stay], 'de-vi')).toBe(true)
+    expect(sentenceOpen('visa.days', [card('w.days', 1, 0), stay], 'de-vi')).toBe(false)
+  })
+
   it('picks four meanings from the block', () => {
     const choices = meaningChoices('w.days', ['w.days', 'w.stay', 'w.documents', 'w.evisa'], 'de', 'south')
     expect(choices).toHaveLength(4)
     expect(choices).toContain('w.days')
     expect(new Set(choices).size).toBe(4)
+  })
+
+  it('skips a synthetic distractor with the same spoken form', () => {
+    const forms: Record<string, string> = {
+      'w.not': 'não',
+      'w.no': 'não',
+      'w.yes': 'sim',
+      'w.water': 'água',
+      'w.where': 'onde',
+    }
+    const choices = meaningChoiceIds('w.not', Object.keys(forms), (id) => forms[id])
+    expect(choices).toEqual(['w.not', 'w.water', 'w.where', 'w.yes'])
+    expect(choices).not.toContain('w.no')
+    const spoken = choices.map((id) => forms[id]!.toLocaleLowerCase())
+    expect(new Set(spoken).size).toBe(spoken.length)
   })
 
   it('keeps one spoken form per button in Portuguese and Vietnamese', () => {
@@ -149,7 +213,7 @@ describe('daily word block', () => {
         for (const item of plan.items) {
           grade(item.id)
           if (item.kind !== 'word' || !item.isNew) continue
-          const open = newlyOpenSentences(list, cards, direction, queued, plan.sentenceSlots)
+          const open = newlyOpenSentences(list, cards, direction, queued, plan.sentenceSlots, clock)
           for (const id of open) {
             queued.push(id)
             grade(id)

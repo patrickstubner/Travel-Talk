@@ -415,7 +415,7 @@ export function PracticePage() {
       const cards = [...cardsNow.filter((card) => card.cardId !== cardId), next]
       const usable = usableConcepts(orderedConcepts(book), app, targetLang, settings.viRegion)
       const queued = queueRef.current.filter((entry) => entry.kind === 'sentence').map((entry) => entry.id)
-      const open = newlyOpenSentences(usable, cards, activeDirection, queued, sentenceSlots.current)
+      const open = newlyOpenSentences(usable, cards, activeDirection, queued, sentenceSlots.current, now)
       if (open.length > 0) {
         setQueue((current) => [...current, ...open.map((id) => ({ id, isNew: true, kind: 'sentence' as const }))])
       }

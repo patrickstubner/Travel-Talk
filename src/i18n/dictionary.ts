@@ -1088,7 +1088,7 @@ export const pt: Dictionary = {
   backupDownload: 'Baixar uma cópia',
   voicesTitle: 'Vozes e licenças',
   voicesVi:
-    'Quem começa agora usa uma voz de homem. A voz anterior fica até você trocar. Vietnamita: vais1000 (conjunto CC BY 4.0, mulher, norte; o modelo vem de lessac) e vivos (CC BY-NC-SA 4.0, homens, qualidade baixa, treinado do zero). O áudio gerado de vivos fica na mesma licença. Alemão thorsten, cadu e faber, e joe: o conjunto é CC0, a voz não. Ela vem de lessac, e lessac vale só para pesquisa. LJSpeech é domínio público e treinado do zero. A atribuição está em NOTICE.txt.',
+    'Quem começa agora usa uma voz de homem. A voz anterior fica até você trocar. Vietnamita: vais1000 (conjunto CC BY 4.0, mulher, norte; o modelo vem de lessac) e vivos (CC BY-NC-SA 4.0, homens, qualidade baixa, treinado do zero). O áudio gerado de vivos fica na mesma licença. Alemão thorsten, português cadu e faber, e inglês joe: o conjunto é CC0, a voz não. Ela vem de lessac, e lessac vale só para pesquisa. LJSpeech é domínio público e treinado do zero. A atribuição está em NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'O material foi alterado.',
@@ -1404,7 +1404,7 @@ export const vi: Dictionary = {
   backupDownload: 'Tải bản sao',
   voicesTitle: 'Giọng và giấy phép',
   voicesVi:
-    'Người mới bắt đầu với giọng nam. Giọng cũ giữ nguyên cho đến khi đổi. Tiếng Việt: vais1000 (dữ liệu CC BY 4.0, nữ, miền Bắc; mô hình tinh chỉnh từ lessac) và vivos (CC BY-NC-SA 4.0, nam, chất lượng thấp, huấn luyện từ đầu). Audio tạo từ vivos cùng giấy phép đó. Tiếng Đức thorsten, cadu, faber và joe: bộ dữ liệu là CC0, bản thân giọng thì không. Giọng được tinh chỉnh từ lessac, và lessac chỉ dùng cho nghiên cứu. LJSpeech là phạm vi công cộng và huấn luyện từ đầu. Ghi nguồn nằm trong NOTICE.txt.',
+    'Người mới bắt đầu với giọng nam. Giọng cũ giữ nguyên cho đến khi đổi. Tiếng Việt: vais1000 (dữ liệu CC BY 4.0, nữ, miền Bắc; mô hình tinh chỉnh từ lessac) và vivos (CC BY-NC-SA 4.0, nam, chất lượng thấp, huấn luyện từ đầu). Audio tạo từ vivos cùng giấy phép đó. Tiếng Đức thorsten, tiếng Bồ Đào Nha cadu và faber, và tiếng Anh joe: bộ dữ liệu là CC0, bản thân giọng thì không. Giọng được tinh chỉnh từ lessac, và lessac chỉ dùng cho nghiên cứu. LJSpeech là phạm vi công cộng và huấn luyện từ đầu. Ghi nguồn nằm trong NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'Tài liệu đã được thay đổi.',

@@ -70,10 +70,23 @@ function dueCountOf(concepts: readonly { id: string }[], cards: readonly StoredC
   return due
 }
 
-/** At 20 due cards the new pile is empty: no block and no new sentence. */
-export function wordBudget(dueCount: number, introduced: number): number {
+/** At 20 due cards the new pile is empty: no block and no new sentence. Six words is a day, not a sitting. */
+export function wordBudget(dueCount: number, introduced: number, wordsToday = 0): number {
   if (dueCount >= 20) return 0
-  return Math.min(WORD_BLOCK, Math.max(0, DAILY_NEW_CAP - introduced))
+  const dailyRoom = Math.max(0, DAILY_NEW_CAP - introduced)
+  const blockRoom = Math.max(0, WORD_BLOCK - wordsToday)
+  return Math.min(blockRoom, dailyRoom)
+}
+
+function wordsIntroducedToday(cards: readonly StoredCard[], now: Date): number {
+  const ids = new Set(WORDS.map((word) => word.id))
+  let count = 0
+  for (const card of cards) {
+    if (!introducedToday(card, now)) continue
+    const id = card.cardId.slice(card.cardId.indexOf(':') + 1)
+    if (ids.has(id)) count += 1
+  }
+  return count
 }
 
 /**
@@ -110,10 +123,31 @@ function rankWindow(windowIds: readonly string[], cards: readonly StoredCard[], 
   return fresh
 }
 
+function passedOnDay(card: StoredCard | undefined, now: Date): boolean {
+  return wordPassed(card) && card != null && introducedToday(card, now)
+}
+
+/** Open, and at least one keyword was passed today. A sentence with no keyword is not in this set. */
+function openedByToday(conceptId: string, cards: readonly StoredCard[], direction: string, now: Date): boolean {
+  const keys = keywords(conceptId)
+  if (keys.length === 0) return false
+  if (!keys.every((word) => wordPassed(cardFor(cards, direction, word.id)))) return false
+  return keys.some((word) => passedOnDay(cardFor(cards, direction, word.id), now))
+}
+
+/** Still shut, but every missing keyword is in the words this sitting will introduce. */
+function waitingOnWords(conceptId: string, cards: readonly StoredCard[], direction: string, todayWordIds: ReadonlySet<string>): boolean {
+  const keys = keywords(conceptId)
+  if (keys.length === 0 || cardFor(cards, direction, conceptId)) return false
+  if (keys.every((word) => wordPassed(cardFor(cards, direction, word.id)))) return false
+  return keys.every((word) => wordPassed(cardFor(cards, direction, word.id)) || todayWordIds.has(word.id))
+}
+
 /**
- * Reviews, then at most six new words from the next sentences that still
- * have a word with no card, then the sentences that are already open.
- * A sentence with no keyword is open at once.
+ * Reviews, then at most six new words for the day, then sentences.
+ * Slots go first to sentences whose keywords were passed today.
+ * Slots stay free for sentences this sitting's words will open.
+ * A sentence with no keyword fills only what remains.
  */
 export function buildDay(
   concepts: readonly { id: string }[],
@@ -137,12 +171,23 @@ export function buildDay(
   const lookAhead = newCardBudget(dueCount, introduced)
   const windowIds = wordSourceIds(concepts, cards, direction, lookAhead)
   const ranked = rankWindow(windowIds, cards, direction)
-  const wordsTaken = Math.min(wordBudget(dueCount, introduced), ranked.length)
+  const wordsToday = wordsIntroducedToday(cards, now)
+  const wordsTaken = Math.min(wordBudget(dueCount, introduced, wordsToday), ranked.length)
   const sentenceSlots = newCardBudget(dueCount, introduced + wordsTaken)
   const wordSlice = ranked.slice(0, wordsTaken).map((word): DayItem => ({ id: word.id, isNew: true, kind: 'word' }))
-  const sentenceSlice = freshSentences
-    .filter((concept) => keywordsOfPassed(concept.id, cards, direction))
-    .slice(0, sentenceSlots)
+  const todayWordIds = new Set(wordSlice.map((item) => item.id))
+  const openedToday = freshSentences.filter((concept) => openedByToday(concept.id, cards, direction, now))
+  const takenToday = openedToday.slice(0, sentenceSlots)
+  const reserved = Math.min(
+    freshSentences.filter((concept) => waitingOnWords(concept.id, cards, direction, todayWordIds)).length,
+    sentenceSlots - takenToday.length,
+  )
+  const earlier = freshSentences.filter(
+    (concept) => keywords(concept.id).length > 0 && keywordsOfPassed(concept.id, cards, direction) && !openedByToday(concept.id, cards, direction, now),
+  )
+  const keywordFree = freshSentences.filter((concept) => keywords(concept.id).length === 0)
+  const sentenceSlice = [...takenToday, ...earlier, ...keywordFree]
+    .slice(0, sentenceSlots - reserved)
     .map((concept): DayItem => ({ id: concept.id, isNew: true, kind: 'sentence' }))
   if (kind === 'review') return { items: reviewSlice, sentenceSlots: 0 }
   if (kind === 'new') return { items: [...wordSlice, ...sentenceSlice], sentenceSlots }
@@ -156,11 +201,15 @@ export function newlyOpenSentences(
   direction: string,
   queuedSentenceIds: readonly string[],
   sentenceSlots: number,
+  now?: Date,
 ): string[] {
   const queued = new Set(queuedSentenceIds)
-  const open = concepts.filter(
-    (concept) => !queued.has(concept.id) && !cardFor(cards, direction, concept.id) && keywordsOfPassed(concept.id, cards, direction),
-  )
+  const open = concepts.filter((concept) => {
+    if (queued.has(concept.id) || cardFor(cards, direction, concept.id)) return false
+    if (keywords(concept.id).length === 0 || !keywordsOfPassed(concept.id, cards, direction)) return false
+    if (now && !openedByToday(concept.id, cards, direction, now)) return false
+    return true
+  })
   return open.slice(0, Math.max(0, sentenceSlots - queuedSentenceIds.length)).map((concept) => concept.id)
 }
 
@@ -169,17 +218,25 @@ export function newlyOpenSentences(
  * A distractor with the same spoken form as the answer is skipped, so two buttons
  * cannot both be right.
  */
-export function meaningChoices(correctId: string, blockIds: readonly string[], lang: Lang, viRegion: 'south' | 'north'): string[] {
-  const correct = wordById(correctId)
-  const correctForm = correct ? spokenCitation(correct, lang, viRegion).toLocaleLowerCase() : ''
-  const pool = [...blockIds, ...WORDS.map((word) => word.id)]
+/** Four ids. A pool entry with the same spoken form as the answer is not a choice. */
+export function meaningChoiceIds(correctId: string, poolIds: readonly string[], formOf: (id: string) => string | undefined): string[] {
+  const correctForm = (formOf(correctId) ?? '').toLocaleLowerCase()
   const others: string[] = []
-  for (const id of pool) {
-    const word = wordById(id)
-    if (id === correctId || !word || others.includes(id)) continue
-    if (correctForm && spokenCitation(word, lang, viRegion).toLocaleLowerCase() === correctForm) continue
+  for (const id of poolIds) {
+    if (id === correctId || others.includes(id)) continue
+    const form = formOf(id)
+    if (!form) continue
+    if (correctForm && form.toLocaleLowerCase() === correctForm) continue
     others.push(id)
     if (others.length === 3) break
   }
   return [correctId, ...others].sort((left, right) => left.localeCompare(right))
+}
+
+export function meaningChoices(correctId: string, blockIds: readonly string[], lang: Lang, viRegion: 'south' | 'north'): string[] {
+  const pool = [...blockIds, ...WORDS.map((word) => word.id)]
+  return meaningChoiceIds(correctId, pool, (id) => {
+    const word = wordById(id)
+    return word ? spokenCitation(word, lang, viRegion) : undefined
+  })
 }
