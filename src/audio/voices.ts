@@ -24,10 +24,11 @@ export type CatalogVoice = {
 export const VOICES: readonly CatalogVoice[] = [
   { id: 'thorsten-high', lang: 'de', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
   { id: 'thorsten', lang: 'de', gender: 'male', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
+  { id: 'mls-4576', lang: 'de', gender: 'female', provider: 'piper', bundled: true, legacy: false, defaultNew: false, order: 3 },
   { id: 'joe', lang: 'en', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
   { id: 'ljspeech', lang: 'en', gender: 'female', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
   { id: 'cadu', lang: 'pt-BR', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
-  { id: 'faber', lang: 'pt-BR', gender: 'female', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
+  { id: 'faber', lang: 'pt-BR', gender: 'male', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
   { id: 'vivos-22', lang: 'vi', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
   { id: 'vivos-32', lang: 'vi', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: false, order: 2 },
   { id: 'vais1000', lang: 'vi', gender: 'female', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 3 },

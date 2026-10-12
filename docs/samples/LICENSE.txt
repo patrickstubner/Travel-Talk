@@ -5,4 +5,8 @@ https://creativecommons.org/licenses/by-nc-sa/4.0/
 Namensnennung: VIVOS, AILAB HCMUS / InfoRe. Dieselben Dateien liegen als m4a unter public/audio/vi/vivos-22/ und public/audio/vi/vivos-32/, jeweils mit einer LICENSE.
 
 de-mann-erdnuss.mp3 und pt-mann-erdnuss.mp3: der Datensatz (Thorsten-Voice bzw. OHF-Voice) ist CC0. Die Stimme selbst ist kein CC0. Die Modelle sind von lessac feinjustiert, und lessac gilt nur für Forschung.
+
+de-frau-erdnuss.mp3 steht unter CC BY 4.0. Dieselbe Synthese liegt als m4a unter public/audio/de/mls-4576/, mit einer LICENSE.
+https://creativecommons.org/licenses/by/4.0/
+Namensnennung: Multilingual LibriSpeech, Pratap et al., OpenSLR 94, LibriVox. Das Material wurde verändert.
 https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html

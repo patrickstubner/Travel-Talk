@@ -398,3 +398,13 @@ Geprüft am 11. Oktober 2026. Die Korrekturen liegen in 0.7.0. Kein neues Paket.
 | P16b-03 | Niedrig | Geschlossen | Die Zeilen zu N14b-02 nennen M1 und N15–N17 als offen und M2 und N4 als geschlossen, ohne ihnen das Verhalten der Download-Tests zuzuschreiben und ohne zu behaupten, die Mutanten-Diffs fehlten im Repo. P16-05 steht als Niedrig. Ein ZWJ zwischen zwei Emoji bleibt im Namen. Ein einzelner ZWJ nicht. Test: `src/storage/people.test.ts`. |
 
 Ein Speichern für eine Person, die gerade gelöscht wurde, schreibt keine Karte und keine Einstellungen. Ein unbekannter Personen-Wechsel ändert die aktive Person nicht. Eine leere Notiz im Import behält die Notiz auf dem Gerät. Die Personenliste setzt den Namen in `<bdi>`. Löschen ruft `forgetVoiceIfUnused` auf. `playClip` hält an, wenn `stopClip` während `play()` gewinnt.
+
+## 0.8.2
+
+Geprüft am 12. Oktober 2026. Keine neue Laufzeitabhängigkeit, kein neues Paket, kein neues Netz aus der App. Die Modelle bleiben ausserhalb des Repos. Die App lädt keine Stimme zur Laufzeit.
+
+**Audio.** Eine neue Stimme, `de/mls-4576`, erzeugt offline mit `piper-tts` 1.8.0. `onnx` 1.17.0 bleibt nur im Erzeugungspfad der Wortzeiten. Die SHA-256 von `de_DE-mls-medium.onnx` und der `.onnx.json` stehen in `tools/generate_audio.py` und werden vor der Synthese geprüft. 411 Audiodateien und 132 Zeitdateien. Fünf Clips ohne Zeitdatei stehen nicht in `manifest.json` und zählen nicht als fehlend. «Ich bin seekrank.» heisst `.v2`, wie bei den anderen deutschen Stimmen. `manifest.json` hat danach 6406 Einträge. `maxEntries` bleibt 8000 und lässt Abstand zur Manifestlänge. Die Cache-Regel bleibt Status 200. Nichts davon kommt in den Precache. Die Dateinamen bleiben im Muster `AUDIO_FILE`.
+
+**Lizenz.** Das erzeugte Audio steht unter CC BY 4.0. Die LICENSE liegt in `de/mls-4576/`. NOTICE.txt und die Einstellungen nennen die Quelle. Faber bleibt im Repo, die Bezeichnung ist Mann. Es kommt keine weitere portugiesische Stimme dazu.
+
+**Eingabe.** Keine neuen Felder im Export. Die Stimmen-ID `mls-4576` erfüllt `^[a-z0-9_-]{1,40}$`. Eine unbekannte ID wird weiter abgelehnt.

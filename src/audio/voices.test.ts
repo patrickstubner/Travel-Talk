@@ -45,6 +45,18 @@ describe('voices', () => {
     ])
   })
 
+  it('keeps faber as a man and the german woman off the default', () => {
+    expect(voicesFor('pt-BR').map((voice) => [voice.id, voice.gender, voice.defaultNew])).toEqual([
+      ['cadu', 'male', true],
+      ['faber', 'male', false],
+    ])
+    expect(voicesFor('de').map((voice) => [voice.id, voice.gender, voice.defaultNew])).toEqual([
+      ['thorsten-high', 'male', true],
+      ['thorsten', 'male', false],
+      ['mls-4576', 'female', false],
+    ])
+  })
+
   it('keeps another person voice and not the active person own voice', () => {
     const people = [
       { id: 'a', settings: { ...defaultSettings, appLang: 'de' as const, targetLang: 'vi' as const, voices: { vi: 'vivos-22' } } },

@@ -34,6 +34,7 @@ AUDIO = ROOT / "public" / "audio"
 JOBS = [
     {"lang": "de", "model": "de_DE-thorsten-medium", "speaker": None, "voice": None},
     {"lang": "de", "model": "de_DE-thorsten-high", "speaker": None, "voice": "thorsten-high"},
+    {"lang": "de", "model": "de_DE-mls-medium", "speaker": 153, "voice": "mls-4576"},
     {"lang": "en", "model": "en_US-ljspeech-medium", "speaker": None, "voice": None},
     {"lang": "en", "model": "en_US-joe-medium", "speaker": None, "voice": "joe"},
     {"lang": "pt-BR", "model": "pt_BR-faber-medium", "speaker": None, "voice": None},
@@ -296,8 +297,11 @@ def main() -> None:
     limit = 0
     if "--limit" in sys.argv:
         limit = int(sys.argv[sys.argv.index("--limit") + 1])
+    only = None
+    if "--voice" in sys.argv:
+        only = sys.argv[sys.argv.index("--voice") + 1]
     if not dirs:
-        raise SystemExit("usage: align_clips.py <model-dir> [--limit N]")
+        raise SystemExit("usage: align_clips.py <model-dir> [--limit N] [--voice id]")
     voices: dict[tuple[str, str], PiperVoice] = {}
     written = 0
     skipped = 0
@@ -305,6 +309,8 @@ def main() -> None:
     ratios: list[float] = []
     boundaries: list[float] = []
     for job in JOBS:
+        if only and job["voice"] != only:
+            continue
         directory = find_model(job["model"], dirs)
         require_model(directory, job["model"])
         key = (str(directory), job["model"])

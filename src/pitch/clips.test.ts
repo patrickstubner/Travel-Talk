@@ -21,6 +21,11 @@ import { bandShape } from './spectrum'
  */
 
 const KNOWN_MISSING = new Set([
+  'de/mls-4576/meet.food-q__any__du.m4a',
+  'de/mls-4576/meet.why__any__base.m4a',
+  'de/mls-4576/sight.price__any__base.m4a',
+  'de/mls-4576/stay.noisy__any__base.m4a',
+  'de/mls-4576/visa.days__any__base.m4a',
   'de/stay.noisy__any__base.m4a',
   'de/thorsten-high/stay.noisy__any__base.m4a',
   'en/arrival.days__any__base.m4a',

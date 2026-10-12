@@ -32,6 +32,7 @@ export type Dictionary = {
   audioPtMale: string
   audioDe: string
   audioDeHigh: string
+  audioDeFemale: string
   audioEn: string
   audioEnMale: string
   audioOffline: string
@@ -192,6 +193,7 @@ export type Dictionary = {
   voiceFrau: string
   voiceMannHigh: string
   voiceMannMid: string
+  voiceMannLegacy: string
   voicePreview: string
   voiceViNote: string
   voiceEnNote: string
@@ -316,10 +318,11 @@ export const de: Dictionary = {
     'Stimme: Piper vais1000, nördlicher Akzent, eine Sprecherin. Töne und Qualität sind nicht geprüft.',
   audioViMale:
     'Stimme: Piper vivos, Mann, Qualität sehr niedrig. Der Akzent steht nicht in der Modellkarte. Töne und Qualität sind nicht geprüft.',
-  audioPt: 'Stimme: Piper faber, Frau, Portugiesisch (Brasilien). Die Modellkarte nennt das Geschlecht nicht. Qualität nicht geprüft.',
+  audioPt: 'Stimme: Piper faber, Mann, Portugiesisch (Brasilien). Die Modellkarte nennt das Geschlecht nicht. Qualität nicht geprüft.',
   audioPtMale: 'Stimme: Piper cadu, Mann, Portugiesisch (Brasilien). Qualität nicht geprüft.',
   audioDe: 'Stimme: Piper thorsten, mittlere Qualität, Mann. Deutsch aus Deutschland, nicht Schweizerdeutsch. Qualität nicht geprüft.',
   audioDeHigh: 'Stimme: Piper thorsten, hohe Qualität, Mann. Deutsch aus Deutschland, nicht Schweizerdeutsch. Qualität nicht geprüft.',
+  audioDeFemale: 'Stimme: Piper mls, Sprecherin 4576, Frau, mittlere Qualität. Deutsch aus Deutschland, nicht Schweizerdeutsch. Qualität nicht geprüft.',
   audioEn: 'Stimme: Piper LJSpeech, Frau, Englisch (USA). Qualität nicht geprüft.',
   audioEnMale: 'Stimme: Piper joe, Mann, Englisch (USA). Qualität nicht geprüft.',
   audioOffline: 'Stimme offline nicht geladen',
@@ -447,7 +450,7 @@ export const de: Dictionary = {
   backupDownload: 'Sicherung herunterladen',
   voicesTitle: 'Stimmen und Lizenzen',
   voicesVi:
-    'Neue Nutzer starten mit einer Männerstimme. Die bisherige Stimme bleibt, bis du wechselst. Vietnamesisch: vais1000 (Datensatz CC BY 4.0, Frau, Norden; das Modell ist von lessac feinjustiert) und vivos (CC BY-NC-SA 4.0, Männer, Qualität niedrig, von Grund auf trainiert). Das erzeugte vivos-Audio steht unter derselben Lizenz. Deutsch thorsten, Portugiesisch cadu und faber, Englisch joe: der Datensatz ist CC0, die Stimme nicht. Sie ist von lessac feinjustiert, und lessac gilt nur für Forschung. LJSpeech ist gemeinfrei und von Grund auf trainiert. Namensnennung steht in NOTICE.txt.',
+    'Neue Nutzer starten mit einer Männerstimme. Die bisherige Stimme bleibt, bis du wechselst. Vietnamesisch: vais1000 (Datensatz CC BY 4.0, Frau, Norden; das Modell ist von lessac feinjustiert) und vivos (CC BY-NC-SA 4.0, Männer, Qualität niedrig, von Grund auf trainiert). Das erzeugte vivos-Audio steht unter derselben Lizenz. Deutsch thorsten, Portugiesisch cadu und faber, Englisch joe: der Datensatz ist CC0, die Stimme nicht. Sie ist von lessac feinjustiert, und lessac gilt nur für Forschung. Deutsch hat zusätzlich eine Frau, mls 4576, aus Multilingual LibriSpeech, CC BY 4.0, von Grund auf trainiert. Faber ist ein Mann. LJSpeech ist gemeinfrei und von Grund auf trainiert. Namensnennung steht in NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'Das Material wurde verändert.',
@@ -473,7 +476,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.8.1',
+  version: 'Version 0.8.2',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
@@ -506,11 +509,12 @@ export const de: Dictionary = {
   voiceFrau: 'Frau',
   voiceMannHigh: 'Mann (hoch)',
   voiceMannMid: 'Mann (mittel)',
+  voiceMannLegacy: 'Mann (bisher)',
   voicePreview: 'Hörprobe',
   voiceViNote: 'Zwei Männerstimmen, Qualität sehr niedrig. Der Akzent steht nicht in der Modellkarte. Die Frau ist nördlich.',
   voiceEnNote: 'Mann oder Frau. Englisch aus den USA.',
-  voiceDeNote: 'Mann, hohe oder mittlere Qualität. Deutsch aus Deutschland, nicht Schweizerdeutsch.',
-  voicePtNote: 'Mann oder Frau. Portugiesisch aus Brasilien. Bei der Frau nennt die Modellkarte das Geschlecht nicht.',
+  voiceDeNote: 'Ein Mann, hohe oder mittlere Qualität, oder eine Frau. Deutsch aus Deutschland, nicht Schweizerdeutsch.',
+  voicePtNote: 'Zwei Männerstimmen. Portugiesisch aus Brasilien. Die Modellkarten nennen das Geschlecht nicht.',
   voiceHint: 'Es gibt jetzt Männerstimmen. Die bisherige Stimme bleibt ausgewählt.',
   voiceHintClose: 'Verstanden',
   cardsReset: (count) => (count === 1 ? '1 Karte zurückgesetzt.' : `${count} Karten zurückgesetzt.`),
@@ -629,10 +633,11 @@ export const en: Dictionary = {
   audioVi: 'Voice: Piper vais1000, northern accent, one woman. Tones and quality are not checked.',
   audioViMale:
     'Voice: Piper vivos, a man, very low quality. The accent is not on the model card. Tones and quality are not checked.',
-  audioPt: 'Voice: Piper faber, a woman, Brazilian Portuguese. The model card does not state the gender. Quality not checked.',
+  audioPt: 'Voice: Piper faber, a man, Brazilian Portuguese. The model card does not state the gender. Quality not checked.',
   audioPtMale: 'Voice: Piper cadu, a man, Brazilian Portuguese. Quality not checked.',
   audioDe: 'Voice: Piper thorsten, medium quality, a man. German from Germany, not Swiss German. Quality not checked.',
   audioDeHigh: 'Voice: Piper thorsten, high quality, a man. German from Germany, not Swiss German. Quality not checked.',
+  audioDeFemale: 'Voice: Piper mls, speaker 4576, a woman, medium quality. German from Germany, not Swiss German. Quality not checked.',
   audioEn: 'Voice: Piper LJSpeech, a woman, English (US). Quality not checked.',
   audioEnMale: 'Voice: Piper joe, a man, English (US). Quality not checked.',
   audioOffline: 'Voice not loaded for offline',
@@ -758,7 +763,7 @@ export const en: Dictionary = {
   backupDownload: 'Download a backup',
   voicesTitle: 'Voices and licences',
   voicesVi:
-    'New users start with a male voice. The previous voice stays until you change it. Vietnamese: vais1000 (dataset CC BY 4.0, woman, north; the model is fine-tuned from lessac) and vivos (CC BY-NC-SA 4.0, men, low quality, trained from scratch). The generated vivos audio is under the same licence. German thorsten, Brazilian cadu and faber, and English joe: the dataset is CC0, the voice is not. It is fine-tuned from lessac, and lessac is research-only. LJSpeech is public domain and trained from scratch. Attribution is in NOTICE.txt.',
+    'New users start with a male voice. The previous voice stays until you change it. Vietnamese: vais1000 (dataset CC BY 4.0, woman, north; the model is fine-tuned from lessac) and vivos (CC BY-NC-SA 4.0, men, low quality, trained from scratch). The generated vivos audio is under the same licence. German thorsten, Brazilian cadu and faber, and English joe: the dataset is CC0, the voice is not. It is fine-tuned from lessac, and lessac is research-only. German also has a woman, mls 4576, from Multilingual LibriSpeech, CC BY 4.0, trained from scratch. Faber is a man. LJSpeech is public domain and trained from scratch. Attribution is in NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'The material was changed.',
@@ -815,11 +820,12 @@ export const en: Dictionary = {
   voiceFrau: 'Woman',
   voiceMannHigh: 'Man (high)',
   voiceMannMid: 'Man (medium)',
+  voiceMannLegacy: 'Man (previous)',
   voicePreview: 'Preview',
   voiceViNote: 'Two male voices, very low quality. The accent is not on the model card. The woman is northern.',
   voiceEnNote: 'A man or a woman. English from the US.',
-  voiceDeNote: 'A man, high or medium quality. German from Germany, not Swiss German.',
-  voicePtNote: 'A man or a woman. Brazilian Portuguese. The model card does not state the woman’s gender.',
+  voiceDeNote: 'A man, high or medium quality, or a woman. German from Germany, not Swiss German.',
+  voicePtNote: 'Two male voices. Brazilian Portuguese. The model cards do not state the gender.',
   voiceHint: 'Male voices are available now. Your current voice stays selected.',
   voiceHintClose: 'Got it',
   cardsReset: (count) => (count === 1 ? '1 card was reset.' : `${count} cards were reset.`),
@@ -938,10 +944,11 @@ export const pt: Dictionary = {
   audioVi: 'Voz: Piper vais1000, sotaque do norte, uma mulher. Tons e qualidade não foram revisados.',
   audioViMale:
     'Voz: Piper vivos, homem, qualidade muito baixa. O sotaque não está no cartão do modelo. Tons e qualidade não foram revisados.',
-  audioPt: 'Voz: Piper faber, mulher, português do Brasil. O cartão do modelo não diz o gênero. Qualidade não revisada.',
+  audioPt: 'Voz: Piper faber, homem, português do Brasil. O cartão do modelo não diz o gênero. Qualidade não revisada.',
   audioPtMale: 'Voz: Piper cadu, homem, português do Brasil. Qualidade não revisada.',
   audioDe: 'Voz: Piper thorsten, qualidade média, homem. Alemão da Alemanha, não suíço-alemão. Qualidade não revisada.',
   audioDeHigh: 'Voz: Piper thorsten, qualidade alta, homem. Alemão da Alemanha, não suíço-alemão. Qualidade não revisada.',
+  audioDeFemale: 'Voz: Piper mls, falante 4576, mulher, qualidade média. Alemão da Alemanha, não suíço-alemão. Qualidade não revisada.',
   audioEn: 'Voz: Piper LJSpeech, mulher, inglês (EUA). Qualidade não revisada.',
   audioEnMale: 'Voz: Piper joe, homem, inglês (EUA). Qualidade não revisada.',
   audioOffline: 'Voz não carregada para offline',
@@ -1069,7 +1076,7 @@ export const pt: Dictionary = {
   backupDownload: 'Baixar uma cópia',
   voicesTitle: 'Vozes e licenças',
   voicesVi:
-    'Quem começa agora usa uma voz de homem. A voz anterior fica até você trocar. Vietnamita: vais1000 (conjunto CC BY 4.0, mulher, norte; o modelo vem de lessac) e vivos (CC BY-NC-SA 4.0, homens, qualidade baixa, treinado do zero). O áudio gerado de vivos fica na mesma licença. Alemão thorsten, cadu e faber, e joe: o conjunto é CC0, a voz não. Ela vem de lessac, e lessac vale só para pesquisa. LJSpeech é domínio público e treinado do zero. A atribuição está em NOTICE.txt.',
+    'Quem começa agora usa uma voz de homem. A voz anterior fica até você trocar. Vietnamita: vais1000 (conjunto CC BY 4.0, mulher, norte; o modelo vem de lessac) e vivos (CC BY-NC-SA 4.0, homens, qualidade baixa, treinado do zero). O áudio gerado de vivos fica na mesma licença. Alemão thorsten, cadu e faber, e joe: o conjunto é CC0, a voz não. Ela vem de lessac, e lessac vale só para pesquisa. O alemão também tem uma mulher, mls 4576, do Multilingual LibriSpeech, CC BY 4.0, treinada do zero. Faber é homem. LJSpeech é domínio público e treinado do zero. A atribuição está em NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'O material foi alterado.',
@@ -1126,11 +1133,12 @@ export const pt: Dictionary = {
   voiceFrau: 'Mulher',
   voiceMannHigh: 'Homem (alta)',
   voiceMannMid: 'Homem (média)',
+  voiceMannLegacy: 'Homem (anterior)',
   voicePreview: 'Ouvir',
   voiceViNote: 'Duas vozes de homem, qualidade muito baixa. O sotaque não está no cartão do modelo. A mulher é do norte.',
   voiceEnNote: 'Homem ou mulher. Inglês dos EUA.',
-  voiceDeNote: 'Homem, qualidade alta ou média. Alemão da Alemanha, não suíço-alemão.',
-  voicePtNote: 'Homem ou mulher. Português do Brasil. No cartão da mulher o gênero não está escrito.',
+  voiceDeNote: 'Um homem, qualidade alta ou média, ou uma mulher. Alemão da Alemanha, não suíço-alemão.',
+  voicePtNote: 'Duas vozes de homem. Português do Brasil. Os cartões não dizem o gênero.',
   voiceHint: 'Agora há vozes de homem. A voz de agora continua escolhida.',
   voiceHintClose: 'Entendi',
   cardsReset: (count) => (count === 1 ? '1 cartão foi zerado.' : `${count} cartões foram zerados.`),
@@ -1249,10 +1257,11 @@ export const vi: Dictionary = {
   audioVi: 'Giọng: Piper vais1000, giọng Bắc, một người nữ. Thanh điệu và chất lượng chưa được kiểm tra.',
   audioViMale:
     'Giọng: Piper vivos, nam, chất lượng rất thấp. Thẻ mô hình không ghi phương ngữ. Thanh điệu và chất lượng chưa được kiểm tra.',
-  audioPt: 'Giọng: Piper faber, nữ, tiếng Bồ Đào Nha Brasil. Thẻ mô hình không ghi giới tính. Chất lượng chưa được kiểm tra.',
+  audioPt: 'Giọng: Piper faber, nam, tiếng Bồ Đào Nha Brasil. Thẻ mô hình không ghi giới tính. Chất lượng chưa được kiểm tra.',
   audioPtMale: 'Giọng: Piper cadu, nam, tiếng Bồ Đào Nha Brasil. Chất lượng chưa được kiểm tra.',
   audioDe: 'Giọng: Piper thorsten, chất lượng trung bình, nam. Tiếng Đức của Đức, không phải tiếng Đức Thụy Sĩ. Chất lượng chưa được kiểm tra.',
   audioDeHigh: 'Giọng: Piper thorsten, chất lượng cao, nam. Tiếng Đức của Đức, không phải tiếng Đức Thụy Sĩ. Chất lượng chưa được kiểm tra.',
+  audioDeFemale: 'Giọng: Piper mls, người nói 4576, nữ, chất lượng trung bình. Tiếng Đức của Đức, không phải tiếng Đức Thụy Sĩ. Chất lượng chưa được kiểm tra.',
   audioEn: 'Giọng: Piper LJSpeech, nữ, tiếng Anh (Mỹ). Chất lượng chưa được kiểm tra.',
   audioEnMale: 'Giọng: Piper joe, nam, tiếng Anh (Mỹ). Chất lượng chưa được kiểm tra.',
   audioOffline: 'Giọng chưa được tải để dùng offline',
@@ -1378,7 +1387,7 @@ export const vi: Dictionary = {
   backupDownload: 'Tải bản sao',
   voicesTitle: 'Giọng và giấy phép',
   voicesVi:
-    'Người mới bắt đầu với giọng nam. Giọng cũ giữ nguyên cho đến khi đổi. Tiếng Việt: vais1000 (dữ liệu CC BY 4.0, nữ, miền Bắc; mô hình tinh chỉnh từ lessac) và vivos (CC BY-NC-SA 4.0, nam, chất lượng thấp, huấn luyện từ đầu). Audio tạo từ vivos cùng giấy phép đó. Tiếng Đức thorsten, cadu, faber và joe: bộ dữ liệu là CC0, bản thân giọng thì không. Giọng được tinh chỉnh từ lessac, và lessac chỉ dùng cho nghiên cứu. LJSpeech là phạm vi công cộng và huấn luyện từ đầu. Ghi nguồn nằm trong NOTICE.txt.',
+    'Người mới bắt đầu với giọng nam. Giọng cũ giữ nguyên cho đến khi đổi. Tiếng Việt: vais1000 (dữ liệu CC BY 4.0, nữ, miền Bắc; mô hình tinh chỉnh từ lessac) và vivos (CC BY-NC-SA 4.0, nam, chất lượng thấp, huấn luyện từ đầu). Audio tạo từ vivos cùng giấy phép đó. Tiếng Đức thorsten, cadu, faber và joe: bộ dữ liệu là CC0, bản thân giọng thì không. Giọng được tinh chỉnh từ lessac, và lessac chỉ dùng cho nghiên cứu. Tiếng Đức còn một giọng nữ, mls 4576, từ Multilingual LibriSpeech, CC BY 4.0, huấn luyện từ đầu. Faber là nam. LJSpeech là phạm vi công cộng và huấn luyện từ đầu. Ghi nguồn nằm trong NOTICE.txt.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'Tài liệu đã được thay đổi.',
@@ -1435,11 +1444,12 @@ export const vi: Dictionary = {
   voiceFrau: 'Nữ',
   voiceMannHigh: 'Nam (cao)',
   voiceMannMid: 'Nam (vừa)',
+  voiceMannLegacy: 'Nam (trước)',
   voicePreview: 'Nghe thử',
   voiceViNote: 'Hai giọng nam, chất lượng rất thấp. Thẻ mô hình không ghi phương ngữ. Giọng nữ là miền Bắc.',
   voiceEnNote: 'Nam hoặc nữ. Tiếng Anh Mỹ.',
-  voiceDeNote: 'Nam, chất lượng cao hoặc vừa. Tiếng Đức của Đức, không phải tiếng Đức Thụy Sĩ.',
-  voicePtNote: 'Nam hoặc nữ. Tiếng Bồ Đào Nha Brasil. Thẻ của giọng nữ không ghi giới tính.',
+  voiceDeNote: 'Một giọng nam, chất lượng cao hoặc vừa, hoặc một giọng nữ. Tiếng Đức của Đức, không phải tiếng Đức Thụy Sĩ.',
+  voicePtNote: 'Hai giọng nam. Tiếng Bồ Đào Nha Brasil. Thẻ mô hình không ghi giới tính.',
   voiceHint: 'Đã có giọng nam. Giọng hiện tại vẫn được chọn.',
   voiceHintClose: 'Đã hiểu',
   cardsReset: (count) => (count === 1 ? '1 thẻ đã được đặt lại.' : `${count} thẻ đã được đặt lại.`),

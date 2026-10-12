@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.2 — 2026-10-12
+
+- Faber ist ein Mann. Die Modellkarte nennt das Geschlecht nicht. Die Synthese der vorhandenen Clips liegt im Median bei etwa 155 Hz, 95 von 150 Clips unter 165 Hz. Die Wahl und die Satzseite sagen jetzt Mann. Die Männerstimmen bleiben der Standard für neue Nutzer.
+- Deutsch hat eine optionale Frau: Piper `mls-4576`, Sprecherin 4576 aus Multilingual LibriSpeech (OpenSLR 94, CC BY 4.0), von Grund auf trainiert, mittlere Qualität, 22050 Hz, Piper-Id 153. `piper-tts` 1.8.0, Commit `c10ece1aade47bb51c153c893d14e5bf8e5b7117` von `rhasspy/piper-voices`. Die Gewichte liegen nicht im Repo. Die SHA-256 steht im Erzeugungsskript. Dieselben drei Tempi, und Wortzeiten, wo die Zuordnung trägt. Fünf Clips haben keine Zeitdatei: `meet.food-q__any__du`, `meet.why__any__base`, `sight.price__any__base`, `stay.noisy__any__base`, `visa.days__any__base`. «Ich bin seekrank.» liegt als `.v2`, wie die anderen deutschen Stimmen. Der Median der Grundfrequenz liegt bei etwa 194 Hz. Die LICENSE liegt im Stimmordner.
+- Keine Frauenstimme für Portugiesisch (Brasilien). Die Piper-Stimmen cadu, faber, edresson und jeff sind Männer. `pt_PT-tugão` ist europäisches Portugiesisch. Dii ist eine Frau, die Lizenz auf der Modellkarte ist CC BY-NC-ND 4.0, und die Stimme gehört TigreGotico Lda. MMS-TTS `por` ist CC BY-NC 4.0, aber nicht als brasilianisch ausgewiesen. XTTS v2 steht unter der Coqui Public Model License und braucht eine Referenzstimme. Keine davon ist eine klar nutzbare brasilianische Frauenstimme.
+- Der Audio-Cache bleibt bei 8000 Einträgen. `manifest.json` hat 6406 Einträge.
+
 ## 0.8.1 — 2026-10-12
 
 - Im Zeigen-Modus sind Karten, Knöpfe, Chips, Karaoke-Wörter, Hinweise, Statusfelder und Details dunkel, mit heller Schrift. Das gilt auch für die obere Leiste und die Navigation. Der Text erreicht WCAG AA (4,5:1, grosse Schrift 3:1).

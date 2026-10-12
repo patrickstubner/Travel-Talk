@@ -23,7 +23,11 @@ import type { Lang } from '../../content/phrase'
 function audioCaption(copy: Dictionary, lang: Lang, settings: Settings): string {
   const id = selectedVoice(settings, lang).id
   if (lang === 'vi') return id === 'vais1000' ? copy.audioVi : copy.audioViMale
-  if (lang === 'de') return id === 'thorsten-high' ? copy.audioDeHigh : copy.audioDe
+  if (lang === 'de') {
+    if (id === 'thorsten-high') return copy.audioDeHigh
+    if (id === 'mls-4576') return copy.audioDeFemale
+    return copy.audioDe
+  }
   if (lang === 'en') return id === 'joe' ? copy.audioEnMale : copy.audioEn
   return id === 'cadu' ? copy.audioPtMale : copy.audioPt
 }

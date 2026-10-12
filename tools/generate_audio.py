@@ -27,6 +27,7 @@ MODEL_SHA256 = {
     "en_US-ljspeech-medium": "6f52a751e2349abe7a76735eb09dc1875298c77ea2342ffd2fef79ff81b87f22",
     "pt_BR-faber-medium": "858555e3a064209c57088fe6bd70c4c3dc54d03eaa00c45d5ecaf43a33f95aa7",
     "vi_VN-vais1000-medium": "ec7c89e2c85f4d1edc24b6120c18aaf1bda614f06b511567eb9c7c0de15e2dab",
+    "de_DE-mls-medium": "69cd1d2aa5a35839a518966fcc4924b5f93e5f8c948ed0752b1a616ad53f65bf",
 }
 # Sidecar next to the onnx file. Checked with the weights. Not a runtime file.
 JSON_SHA256 = {
@@ -38,6 +39,7 @@ JSON_SHA256 = {
     "en_US-ljspeech-medium": "141d612cc0a95ed7efc1ca936b845c2364967f2e9217c5dbfcf69fc4d6c65860",
     "pt_BR-faber-medium": "7e694de195ae3fc36dd732c445eb04fb49b649854893cb5506b978f0d50a1d6f",
     "vi_VN-vais1000-medium": "fafb9da1354ed4b77c31af228ed41fb41cd825c14cffa105454b25e6ae751ee0",
+    "de_DE-mls-medium": "b0af1c89ddfdc72d32e015729b0e89b99eec13c2c8caa1db7488d98e9e570b40",
 }
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,6 +57,8 @@ EXTRA = [
     {"lang": "de", "model": "de_DE-thorsten-high", "speaker": None, "voice": "thorsten-high"},
     {"lang": "en", "model": "en_US-joe-medium", "speaker": None, "voice": "joe"},
     {"lang": "pt-BR", "model": "pt_BR-cadu-medium", "speaker": None, "voice": "cadu"},
+    # MLS speaker 4576, Piper id 153. Female, medium, CC BY 4.0, trained from scratch.
+    {"lang": "de", "model": "de_DE-mls-medium", "speaker": 153, "voice": "mls-4576"},
 ]
 
 
@@ -96,7 +100,10 @@ def main() -> None:
     require_piper()
     if len(sys.argv) >= 2 and sys.argv[1] == "extra":
         model_dir = Path(sys.argv[2])
+        only = sys.argv[3] if len(sys.argv) >= 4 else None
         for job in EXTRA:
+            if only and job["voice"] != only:
+                continue
             synthesize(job["lang"], model_dir, job["model"], job["voice"], job["speaker"])
         write_manifest()
         write_samples()
@@ -166,6 +173,7 @@ def write_samples() -> None:
         ("vi/vivos-22/emergency.peanut__south__base.m4a", "vi-mann-1-erdnuss.mp3"),
         ("vi/vivos-32/emergency.peanut__south__base.m4a", "vi-mann-2-erdnuss.mp3"),
         ("de/thorsten-high/emergency.peanut__any__base.m4a", "de-mann-erdnuss.mp3"),
+        ("de/mls-4576/emergency.peanut__any__base.m4a", "de-frau-erdnuss.mp3"),
         ("pt-BR/cadu/emergency.peanut__any__base.m4a", "pt-mann-erdnuss.mp3"),
     ]
     for source, name in jobs:
