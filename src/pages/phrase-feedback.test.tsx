@@ -2,15 +2,17 @@
 import 'fake-indexeddb/auto'
 import { freshIndexedDb } from '../test-idb'
 import { useEffect, type ReactNode } from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppProvider, useApp } from '../app/state'
+import { stopClip } from '../audio/player'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { PhrasePage } from './Phrase'
 
 vi.mock('../audio/player', () => ({
   playClip: vi.fn(async () => 'file'),
+  stopClip: vi.fn(),
   decodeContourFile: vi.fn(async () => null),
 }))
 
@@ -211,5 +213,43 @@ describe('phrase repeat feedback', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Aufnehmen' }))
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Das Mikrofon ist nicht verfügbar. Es wurde nichts aufgenommen.')
     expect(screen.getByRole('heading', { level: 1 })).toBeTruthy()
+  })
+
+  it('stops the model and disables listen and my recording while the microphone is open', async () => {
+    const samples = sine()
+    vi.mocked(startMicrophone).mockImplementation(async (onStop) => {
+      const session = {
+        recorder: {
+          stop: () => onStop({ url: 'blob:phrase-take', samples, sampleRate: 16000 }),
+          state: 'recording',
+          stream: { getTracks: () => [] },
+        },
+        release: vi.fn(),
+      }
+      return session as unknown as CaptureSession
+    })
+    render(
+      <AppProvider>
+        <ReadyPhrase lang="en">
+          <MemoryRouter initialEntries={['/phrase/emergency.doctor']}>
+            <Routes>
+              <Route path="/phrase/:conceptId" element={<PhrasePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPhrase>
+      </AppProvider>,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Aufnehmen' }))
+    expect(vi.mocked(stopClip)).toHaveBeenCalled()
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true))
+    fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+    expect((await screen.findByRole('button', { name: 'Meine Aufnahme' }) as HTMLButtonElement).disabled).toBe(false)
+    vi.mocked(stopClip).mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Nochmal' }))
+    expect(vi.mocked(stopClip)).toHaveBeenCalled()
+    await waitFor(() => {
+      expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true)
+      expect((screen.getByRole('button', { name: 'Meine Aufnahme' }) as HTMLButtonElement).disabled).toBe(true)
+    })
   })
 })

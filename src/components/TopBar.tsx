@@ -67,6 +67,10 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
     node?.focus()
     function onKey(event: KeyboardEvent): void {
       if (event.key !== 'Escape') return
+      renameTouched.current = false
+      setRenameDraft(active?.name ?? '')
+      setNameFailure(null)
+      setNameInvalid(false)
       setOpen(null)
       setConfirmDelete(false)
       const back = open === 'person' ? personButton.current : langButton.current
@@ -74,7 +78,7 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, active?.id, unnamed])
+  }, [open, active?.id, active?.name, unnamed])
 
   const target = settings.targetLang
   const variant = target === 'vi' ? (settings.viRegion === 'north' ? copy.regionNorth : copy.regionSouth) : ''
@@ -87,6 +91,8 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
     setConfirmDelete(false)
     setNameFailure(null)
     setNameInvalid(false)
+    renameTouched.current = false
+    setRenameDraft(active?.name ?? '')
   }
 
   function editRename(value: string): void {
@@ -124,9 +130,10 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
     const ok = await renamePerson(id, value)
     if (!ok) setNameFailure('gone')
     else {
-      renameTouched.current = false
-      setRenameDraft(cleanPersonName(value) ?? '')
+      const cleaned = cleanPersonName(value) ?? ''
       close()
+      renameTouched.current = false
+      setRenameDraft(cleaned)
     }
   }
 
@@ -140,7 +147,10 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
           aria-expanded={open === 'person'}
           aria-controls={personMenu}
           aria-label={`${copy.whoTitle}: ${personText}`}
-          onClick={() => setOpen((value) => (value === 'person' ? null : 'person'))}
+          onClick={() => {
+            if (open === 'person') close()
+            else setOpen('person')
+          }}
         >
           <bdi>{personText}</bdi>
         </button>

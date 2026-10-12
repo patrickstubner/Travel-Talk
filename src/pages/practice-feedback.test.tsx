@@ -8,13 +8,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppProvider, useApp } from '../app/state'
 import { splitWords } from '../../content/gloss'
 import { loadAlignment } from '../audio/align'
-import { decodeContourFile } from '../audio/player'
+import { decodeContourFile, stopClip } from '../audio/player'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { reviewCard } from '../srs/scheduler'
 import { PracticePage } from './Practice'
 
 vi.mock('../audio/player', () => ({
   playClip: vi.fn(async () => 'file'),
+  stopClip: vi.fn(),
   decodeContourFile: vi.fn(async () => null),
 }))
 
@@ -211,5 +212,19 @@ describe('practice repeat feedback', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
     await screen.findByTestId('repeat-feedback')
     expect(screen.queryByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeNull()
+  })
+
+  it('stops the model and disables listen while the microphone is open', async () => {
+    vi.mocked(startMicrophone).mockImplementation(async () => {
+      const session = {
+        recorder: { stop: vi.fn(), state: 'recording', stream: { getTracks: () => [] } },
+        release: vi.fn(),
+      }
+      return session as unknown as CaptureSession
+    })
+    await openRepeat()
+    fireEvent.click(screen.getByRole('button', { name: 'Aufnehmen' }))
+    expect(vi.mocked(stopClip)).toHaveBeenCalled()
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true))
   })
 })

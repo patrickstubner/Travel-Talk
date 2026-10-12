@@ -4,7 +4,7 @@ import type { Concept } from '../../content/phrase'
 import { selectedVoice, spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
-import { decodeContourFile, playClip } from '../audio/player'
+import { decodeContourFile, playClip, stopClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { tempoFile } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
@@ -459,7 +459,13 @@ export function PracticePage() {
               </p>
             )
           ) : null}
-          <button type="button" className="button wide" aria-pressed={playing} onClick={() => void hear(target.file, target.speech, 1)}>
+          <button
+            type="button"
+            className="button wide"
+            aria-pressed={playing}
+            disabled={recording}
+            onClick={() => void hear(target.file, target.speech, 1)}
+          >
             {playing ? copy.playing : copy.play}
           </button>
           {micNote ? <p className="voice-note">{copy.micSkipped}</p> : null}
@@ -490,6 +496,8 @@ export function PracticePage() {
                 type="button"
                 disabled={micStarting}
                 onClick={() => {
+                  stopClip()
+                  setPlaying(false)
                   const token = micToken.current + 1
                   micToken.current = token
                   setMicNote(false)

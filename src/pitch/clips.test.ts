@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { readFileSync as readBytes } from 'fs'
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -23,8 +24,9 @@ import { bandShape, closestBands } from './spectrum'
  * stay, including 35 % at ±3 semitones, until a harmonic repair can do
  * better without praising a tone or a reversed take. A hum on a fixed 4 Hz
  * pulse, other speech and reversed audio stay at no stars. A hum whose
- * loudness follows the file, and singing its melody, still receive stars.
- * Those two are reported, not gated, while the score stays as it is.
+ * loudness follows the file, singing its melody, and humming that melody
+ * still receive stars. Each rate stays under a ceiling just above the
+ * measured share. A rise fails. The score itself stays as it is.
  * Another voice saying the same sentence keeps stars where the voices are
  * similar. German rejects a different sentence when the other voice is the
  * same speaker. A less similar voice does not separate that case.
@@ -103,8 +105,10 @@ type Counts = {
   hum3: number
   /** At least 2 stars. A hum on the file's own loudness. Reported, not gated. */
   humSyllable: number
-  /** At least 2 stars. The melody sung as a vowel. Reported, not gated. */
+  /** At least 2 stars. The melody sung as a vowel. Reported, not gated below. */
   sing: number
+  /** At least 2 stars. A hum that follows the file's melody. An upper bound gates a rise. */
+  humMelody: number
   background: number
   background3: number
   other: number
@@ -132,6 +136,7 @@ function empty(): Counts {
     hum3: 0,
     humSyllable: 0,
     sing: 0,
+    humMelody: 0,
     background: 0,
     background3: 0,
     other: 0,
@@ -159,6 +164,7 @@ function add(into: Counts, row: Counts): void {
   into.hum3 += row.hum3
   into.humSyllable += row.humSyllable
   into.sing += row.sing
+  into.humMelody += row.humMelody
   into.background += row.background
   into.background3 += row.background3
   into.other += row.other
@@ -188,15 +194,31 @@ function pcm(raw: Uint8Array): Float32Array {
 }
 
 const decoded = new Map<string, Float32Array>()
+const clipCacheDir = process.env.CLIP_CACHE || join(process.cwd(), '.cache', 'tt-clips')
 
-function decode(path: string): Float32Array {
-  const hit = decoded.get(path)
-  if (hit) return hit
-  const samples = pcm(
+function decodeFresh(path: string): Float32Array {
+  return pcm(
     execFileSync('ffmpeg', ['-v', 'error', '-i', path, '-ac', '1', '-ar', '16000', '-f', 'f32le', 'pipe:1'], {
       maxBuffer: 8 * 1024 * 1024,
     }),
   )
+}
+
+function decode(path: string): Float32Array {
+  const hit = decoded.get(path)
+  if (hit) return hit
+  const info = statSync(path)
+  const name = createHash('sha1').update(new TextEncoder().encode(`${path}\0${info.size}`)).digest('hex')
+  const cached = join(clipCacheDir, `${name}.f32`)
+  if (existsSync(cached)) {
+    const samples = pcm(readBytes(cached))
+    decoded.set(path, samples)
+    return samples
+  }
+  const samples = decodeFresh(path)
+  mkdirSync(clipCacheDir, { recursive: true })
+  const view = new Uint8Array(samples.buffer, samples.byteOffset, samples.byteLength)
+  writeFileSync(cached, view as unknown as string)
   decoded.set(path, samples)
   return samples
 }
@@ -274,6 +296,32 @@ function matchPeak(source: Float32Array, rendered: Float32Array): Float32Array {
   const out = new Float32Array(rendered.length)
   for (let index = 0; index < rendered.length; index += 1) out[index] = (rendered[index] ?? 0) * scale
   return out
+}
+
+/**
+ * The same hum as `humOnSyllables`, with the file's melody instead of a
+ * fixed two-semitone fall.
+ */
+function humMelody(signal: Float32Array, contour: Contour): Float32Array {
+  const env = rmsEnvelope(signal)
+  const hop = 160
+  const out = new Float32Array(signal.length)
+  let phase = 0
+  let phase2 = 0
+  let phase3 = 0
+  let held = 0
+  for (let index = 0; index < signal.length; index += 1) {
+    const frame = Math.min(Math.max(0, contour.length - 1), Math.floor(index / hop))
+    const semi = contour[frame]
+    if (semi != null) held = semi
+    const hz = 160 * 2 ** (held / 12)
+    phase += (2 * Math.PI * hz) / 16000
+    phase2 += (2 * Math.PI * hz * 2) / 16000
+    phase3 += (2 * Math.PI * hz * 3) / 16000
+    const tone = Math.sin(phase) + 0.45 * Math.sin(phase2) + 0.2 * Math.sin(phase3)
+    out[index] = tone * (env[index] ?? 0)
+  }
+  return matchPeak(signal, out)
 }
 
 /**
@@ -386,7 +434,7 @@ const ready = ffmpegReady()
 const required = process.env.CI === 'true'
 
 /** Filled by the language tests. The known-failing test reads it afterwards. */
-const reported = new Map<string, { humSyllable: number; sing: number; timed: number }>()
+const reported = new Map<string, { humSyllable: number; sing: number; humMelody: number; timed: number }>()
 const collected: unknown[] = []
 
 if (!ready) console.error('ffmpeg fehlt. npm run test:clips wird übersprungen. In CI wird ffmpeg verlangt.')
@@ -487,6 +535,7 @@ describe('shipped clips', () => {
             if (hummed.stars === 3) row.hum3 += 1
             if (take(humOnSyllables(samples)).stars >= 2) row.humSyllable += 1
             if (take(singMelody(samples, model)).stars >= 2) row.sing += 1
+            if (take(humMelody(samples, model)).stars >= 2) row.humMelody += 1
             const foreign = backgroundOf[line.lang]
             if (foreign) {
               const babble = take(foreign)
@@ -592,6 +641,7 @@ describe('shipped clips', () => {
           hum3: row.hum3,
           humSyllable: `${row.humSyllable}/${row.timed}`,
           sing: `${row.sing}/${row.timed}`,
+          humMelody: `${row.humMelody}/${row.timed}`,
           background: `${row.background}/${row.timed}`,
           background3: row.background3,
           other: `${row.other}/${row.timed}`,
@@ -615,6 +665,7 @@ describe('shipped clips', () => {
           hum3: row.hum3,
           humSyllable: `${row.humSyllable}/${row.timed}`,
           sing: `${row.sing}/${row.timed}`,
+          humMelody: `${row.humMelody}/${row.timed}`,
           background: `${row.background}/${row.timed}`,
           background3: row.background3,
           other: `${row.other}/${row.timed}`,
@@ -625,7 +676,12 @@ describe('shipped clips', () => {
         }))
         const languageRow = byLang.get(only)
         if (languageRow) {
-          reported.set(only, { humSyllable: languageRow.humSyllable, sing: languageRow.sing, timed: languageRow.timed })
+          reported.set(only, {
+            humSyllable: languageRow.humSyllable,
+            sing: languageRow.sing,
+            humMelody: languageRow.humMelody,
+            timed: languageRow.timed,
+          })
         }
         const report = {
           languages,
@@ -634,14 +690,16 @@ describe('shipped clips', () => {
           joeNoise,
           reported: {
             knownFailing: true,
-            gated: false,
+            gated: 'ceiling',
             humSyllableAtLeast2: languageRow ? `${languageRow.humSyllable}/${languageRow.timed}` : '0/0',
             singAtLeast2: languageRow ? `${languageRow.sing}/${languageRow.timed}` : '0/0',
+            humMelodyAtLeast2: languageRow ? `${languageRow.humMelody}/${languageRow.timed}` : '0/0',
           },
         }
         collected.push(report)
         console.error(JSON.stringify(report, null, 2))
-        writeFileSync('/tmp/tt-clip-stats.json', JSON.stringify(collected, null, 2))
+        const statsPath = `/tmp/tt-clip-stats${process.env.CLIP_LANG ? `-${process.env.CLIP_LANG}` : ''}.json`
+        writeFileSync(statsPath, JSON.stringify(collected, null, 2))
         const pitchFloor: Record<string, number> = { joe: 0.55, cadu: 0.4 }
         const tempoFloor: Record<string, number> = { joe: 0.55 }
         const roomFloor: Record<string, number> = { joe: 0.3, vais1000: 0.8 }
@@ -677,6 +735,8 @@ describe('shipped clips', () => {
           expect(share(row.otherVoice, row.otherVoiceTimed), `${id} other voice`).toBeGreaterThanOrEqual(otherVoiceFloor[id] ?? 0.05)
           expect(share(row.reverb, row.varied), `${id} reverb`).toBeGreaterThanOrEqual(0.6)
           expect(share(row.noise, row.varied), `${id} light noise`).toBeGreaterThanOrEqual(0.6)
+          const selfAtLeast2: Record<string, number> = { de: 0.97, en: 0.95, 'pt-BR': 0.97, vi: 0.97 }
+          expect(share(row.varied, row.timed), `${id} file against itself, at least 2 stars`).toBeGreaterThanOrEqual(selfAtLeast2[id] ?? 0.95)
         }
         expect([...reversedStars].sort()).toEqual([...SYMMETRIC_REVERSED])
         for (const file of missing) expect(KNOWN_MISSING.has(file), file).toBe(true)
@@ -685,25 +745,45 @@ describe('shipped clips', () => {
       }
   }
 
-  for (const lang of ['de', 'en', 'pt-BR', 'vi'] as const) {
+  const allLangs = ['de', 'en', 'pt-BR', 'vi'] as const
+  const requested = process.env.CLIP_LANG
+  if (requested && !allLangs.includes(requested as (typeof allLangs)[number])) {
+    throw new Error(`CLIP_LANG must be one of ${allLangs.join(', ')}`)
+  }
+  const clipLangs = requested ? allLangs.filter((lang) => lang === requested) : [...allLangs]
+
+  /**
+   * Share of timed lines with at least 2 stars. A few points above the
+   * measured rate. A rise fails. A drop does not.
+   * Hum on the syllable rhythm, singing, and humming the melody.
+   */
+  const negativeCeiling: Record<string, { humSyllable: number; sing: number; humMelody: number }> = {
+    de: { humSyllable: 0.16, sing: 0.14, humMelody: 0.32 },
+    en: { humSyllable: 0.38, sing: 0.25, humMelody: 0.51 },
+    'pt-BR': { humSyllable: 0.4, sing: 0.37, humMelody: 0.56 },
+    vi: { humSyllable: 0.16, sing: 0.1, humMelody: 0.36 },
+  }
+
+  for (const lang of clipLangs) {
     it.skipIf(!ready)(
       `keeps the score for ${lang}`,
       () => {
         scoreLanguage(lang)
       },
-      900_000,
+      1_080_000,
     )
   }
 
-  // Known failing while the score stays as it is. A pass here would mean the
-  // rates dropped to zero. A failure is the measured count, and it does not
-  // turn the suite red.
-  ;(ready ? it.fails : it.skip)('humming on the file rhythm and singing the melody still get stars', () => {
-    for (const lang of ['de', 'en', 'pt-BR', 'vi'] as const) {
+  it.skipIf(!ready)('keeps humming and singing under the measured ceiling', () => {
+    for (const lang of clipLangs) {
       const row = reported.get(lang)
+      const cap = negativeCeiling[lang]
       expect(row, lang).toBeDefined()
-      expect.soft(row?.humSyllable ?? 0, `${lang} hum on the syllable rhythm`).toBe(0)
-      expect.soft(row?.sing ?? 0, `${lang} singing the melody`).toBe(0)
+      expect(cap, lang).toBeDefined()
+      if (!row || !cap) continue
+      expect(share(row.humSyllable, row.timed), `${lang} hum on the syllable rhythm`).toBeLessThanOrEqual(cap.humSyllable)
+      expect(share(row.sing, row.timed), `${lang} singing the melody`).toBeLessThanOrEqual(cap.sing)
+      expect(share(row.humMelody, row.timed), `${lang} humming the melody`).toBeLessThanOrEqual(cap.humMelody)
     }
   })
 })

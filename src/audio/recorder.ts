@@ -37,10 +37,10 @@ export type CaptureSession = {
 
 export async function startMicrophone(onStop: (recording: Recording) => void): Promise<CaptureSession | null> {
   if (!navigator.mediaDevices?.getUserMedia) return null
-  // Chrome's default processing lifts a clean file less often than the take
-  // it just played. Leave echo, noise and gain to the recording itself.
+  // Noise suppression and automatic gain cost a clean file its stars.
+  // Echo cancellation does not, and it keeps the speaker out of the take.
   const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false },
   })
   const recorder = new MediaRecorder(stream)
   let released = false

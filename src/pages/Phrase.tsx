@@ -4,7 +4,7 @@ import { selectedVoice, spokenFile } from '../audio/voices'
 import { resolvePlayback } from '../content/resolve'
 import { directionId } from '../domain/direction'
 import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
-import { decodeContourFile, playClip } from '../audio/player'
+import { decodeContourFile, playClip, stopClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { SPEED_STEPS, effectiveSpeed, speedPercent, tempoFile, type SpeedStep } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
@@ -192,6 +192,8 @@ export function PhrasePage() {
   }
 
   async function onRecord(): Promise<void> {
+    stopClip()
+    setPlaying(false)
     setMicError(false)
     const token = micToken.current + 1
     micToken.current = token
@@ -278,6 +280,7 @@ export function PhrasePage() {
           type="button"
           className="play-row"
           aria-pressed={playing}
+          disabled={recording}
           onClick={() => void onPlay(tempoFile(spokenFile(settings, targetLang, target.file), step), step)}
         >
           <span className="play-mark" aria-hidden="true" />
@@ -309,6 +312,7 @@ export function PhrasePage() {
           {mineUrl ? (
             <button
               type="button"
+              disabled={recording}
               onClick={() => {
                 const audio = new Audio(mineUrl)
                 void audio.play()

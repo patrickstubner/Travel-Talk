@@ -411,6 +411,38 @@ describe('top bar', () => {
     expect((screen.getByLabelText('Umbenennen') as HTMLInputElement).value).toBe('Ada')
   })
 
+  it('forgets a name discarded with Escape', async () => {
+    const people = [person('p1', 'Ada')]
+    render(
+      <AppContext.Provider
+        value={{
+          catalog: null,
+          catalogOk: true,
+          snapshot: { settings: people[0]!.settings, cards: [], people, activePersonId: 'p1' },
+          storageError: false,
+          saveSettings: async () => undefined,
+          saveCard: async () => undefined,
+          replaceAll: async () => undefined,
+          addPerson: async () => false,
+          renamePerson: async () => false,
+          deletePerson: async () => undefined,
+          switchPerson: async () => undefined,
+          importPerson: async () => 'ok',
+          importAll: async () => undefined,
+          everyone: async () => [],
+        }}
+      >
+        <TopBar />
+      </AppContext.Provider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: Ada' }))
+    fireEvent.change(screen.getByLabelText('Umbenennen'), { target: { value: 'Weg damit' } })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByLabelText('Umbenennen')).toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: Ada' }))
+    expect((screen.getByLabelText('Umbenennen') as HTMLInputElement).value).toBe('Ada')
+  })
+
   it('drops the typed draft when the person changes and the new name arrives later', async () => {
     const initial = [person('p1', 'Ada'), person('p2', 'Bea')]
     function Host() {
