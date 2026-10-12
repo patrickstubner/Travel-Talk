@@ -30,7 +30,8 @@ describe('home onboarding', () => {
         </MemoryRouter>
       </AppProvider>,
     )
-    fireEvent.change(await screen.findByLabelText('Wie sollen wir dich nennen?'), { target: { value: 'A' } })
+    expect(await screen.findByTestId('name-ask')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Wie sollen wir dich nennen?'), { target: { value: 'A' } })
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Deutsch' }))
     fireEvent.click(screen.getByRole('button', { name: /^Sprache, die du lernst/ }))
@@ -56,7 +57,8 @@ describe('home onboarding', () => {
       </AppProvider>
     )
     const first = render(tree)
-    fireEvent.change(await screen.findByLabelText('Wie sollen wir dich nennen?'), { target: { value: 'A' } })
+    expect(await screen.findByTestId('name-ask')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Wie sollen wir dich nennen?'), { target: { value: 'A' } })
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Deutsch' }))
     fireEvent.click(screen.getByRole('button', { name: /^Sprache, die du lernst/ }))

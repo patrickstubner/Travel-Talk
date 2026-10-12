@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto'
 import { freshIndexedDb } from '../test-idb'
+import { useState } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,7 +9,7 @@ import * as offline from '../audio/offline'
 import { Shell } from '../app/shell'
 import { AppContext, AppProvider } from '../app/state'
 import { DexieProgressRepository } from '../storage/dexie-repository'
-import { defaultSettings, LEVEL_PLACEHOLDER, type PersonRecord } from '../storage/types'
+import { defaultSettings, LEVEL_PLACEHOLDER, type PersonRecord, type ProgressSnapshot } from '../storage/types'
 import { SettingsPage } from '../pages/Settings'
 import { TopBar, withTarget } from './TopBar'
 
@@ -54,7 +55,8 @@ describe('top bar', () => {
     expect(ask.compareDocumentPosition(language) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.queryByRole('group', { name: 'Sprache, die du lernst' })).toBeNull()
     fireEvent.click(ask)
-    const name = await screen.findByLabelText('Wie sollen wir dich nennen?')
+    await screen.findByText(/Eine von zehn/)
+    const name = screen.getByLabelText('Wie sollen wir dich nennen?')
     await waitFor(() => expect(document.activeElement).toBe(name))
     fireEvent.change(name, { target: { value: 'A' } })
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
@@ -97,7 +99,8 @@ describe('top bar', () => {
       </AppProvider>,
     )
     fireEvent.click(await screen.findByRole('button', { name: /^Wer lernt\?/ }))
-    fireEvent.change(await screen.findByLabelText('Wie sollen wir dich nennen?'), { target: { value: 'A' } })
+    await screen.findByText(/Eine von zehn/)
+    fireEvent.change(screen.getByLabelText('Wie sollen wir dich nennen?'), { target: { value: 'A' } })
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Wer lernt?: A' }))
     fireEvent.change(screen.getByLabelText('Person hinzufügen'), { target: { value: 'B' } })
@@ -159,7 +162,8 @@ describe('top bar', () => {
     )
     expect(await screen.findByTestId('name-ask')).toBeTruthy()
     expect(screen.queryByText('heute')).toBeNull()
-    const field = await screen.findByLabelText('Wie sollen wir dich nennen?')
+    await screen.findByText(/Eine von zehn/)
+    const field = screen.getByLabelText('Wie sollen wir dich nennen?')
     fireEvent.change(field, { target: { value: 'A' } })
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
     expect(await screen.findByText('heute')).toBeTruthy()
@@ -217,7 +221,8 @@ describe('top bar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: A' }))
     fireEvent.change(screen.getByLabelText('Person hinzufügen'), { target: { value: '\u3164' } })
     fireEvent.click(screen.getByRole('button', { name: 'Person hinzufügen' }))
-    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Die Datei ist kein gültiger Travel-Talk-Export.')
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Der Name braucht ein sichtbares Zeichen.')
+    expect(screen.queryByText('Die Datei ist kein gültiger Travel-Talk-Export.')).toBeNull()
     expect(addPerson).not.toHaveBeenCalled()
     fireEvent.change(screen.getByLabelText('Person hinzufügen'), { target: { value: 'B' } })
     const add = screen.getByRole('button', { name: 'Person hinzufügen' })
@@ -227,5 +232,100 @@ describe('top bar', () => {
     expect((add as HTMLButtonElement).disabled).toBe(true)
     release(true)
     await waitFor(() => expect(screen.queryByLabelText('Person hinzufügen')).toBeNull())
+  })
+
+  it('keeps a name typed before the saved person arrives', async () => {
+    const renamePerson = vi.fn(async () => true)
+    function Host() {
+      const [snapshot, setSnapshot] = useState<ProgressSnapshot | null>(null)
+      const people = [person('p1', '')]
+      return (
+        <AppContext.Provider
+          value={{
+            catalog: null,
+            catalogOk: true,
+            snapshot,
+            storageError: false,
+            saveSettings: async () => undefined,
+            saveCard: async () => undefined,
+            replaceAll: async () => undefined,
+            addPerson: async () => false,
+            renamePerson,
+            deletePerson: async () => undefined,
+            switchPerson: async () => undefined,
+            importPerson: async () => 'ok',
+            importAll: async () => undefined,
+            everyone: async () => [],
+          }}
+        >
+          <button
+            type="button"
+            onClick={() =>
+              setSnapshot({ settings: people[0]!.settings, cards: [], people, activePersonId: 'p1' })
+            }
+          >
+            laden
+          </button>
+          <TopBar askName />
+        </AppContext.Provider>
+      )
+    }
+    render(<Host />)
+    const field = await screen.findByLabelText('Wie sollen wir dich nennen?')
+    fireEvent.change(field, { target: { value: 'Ada' } })
+    fireEvent.click(screen.getByRole('button', { name: 'laden' }))
+    await screen.findByText(/Eine von zehn/)
+    expect((screen.getByLabelText('Wie sollen wir dich nennen?') as HTMLInputElement).value).toBe('Ada')
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
+    await waitFor(() => expect(renamePerson).toHaveBeenCalledWith('p1', 'Ada'))
+    expect(screen.queryByText('Die Datei ist kein gültiger Travel-Talk-Export.')).toBeNull()
+  })
+
+  it('says an empty name needs a visible character', async () => {
+    render(
+      <AppProvider>
+        <TopBar />
+      </AppProvider>,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: /^Wer lernt\?/ }))
+    await screen.findByText(/Eine von zehn/)
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
+    expect(screen.getByRole('alert').textContent).toBe('Der Name braucht ein sichtbares Zeichen.')
+    expect(screen.queryByText('Die Datei ist kein gültiger Travel-Talk-Export.')).toBeNull()
+  })
+
+  it('takes the other person\'s name when that person becomes active', async () => {
+    const people = [person('p1', 'Ada'), person('p2', 'Bea')]
+    function Host() {
+      const [activePersonId, setActivePersonId] = useState('p1')
+      return (
+        <AppContext.Provider
+          value={{
+            catalog: null,
+            catalogOk: true,
+            snapshot: { settings: people[0]!.settings, cards: [], people, activePersonId },
+            storageError: false,
+            saveSettings: async () => undefined,
+            saveCard: async () => undefined,
+            replaceAll: async () => undefined,
+            addPerson: async () => false,
+            renamePerson: async () => false,
+            deletePerson: async () => undefined,
+            switchPerson: async (id) => setActivePersonId(id),
+            importPerson: async () => 'ok',
+            importAll: async () => undefined,
+            everyone: async () => [],
+          }}
+        >
+          <TopBar />
+        </AppContext.Provider>
+      )
+    }
+    render(<Host />)
+    fireEvent.click(screen.getByRole('button', { name: 'Wer lernt?: Ada' }))
+    fireEvent.change(screen.getByLabelText('Umbenennen'), { target: { value: 'Ada tippt' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Bea' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Wer lernt?: Bea' }))
+    expect((screen.getByLabelText('Umbenennen') as HTMLInputElement).value).toBe('Bea')
   })
 })

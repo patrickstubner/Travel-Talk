@@ -230,6 +230,7 @@ export type Dictionary = {
   personAdd: string
   personNameAsk: string
   personNameHint: string
+  personNameEmpty: string
   personSave: string
   personRename: string
   personDelete: string
@@ -410,7 +411,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.7.0',
+  version: 'Version 0.7.1',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   pairNote: 'Hinweis zum Sprachpaar',
   noResults: 'Keine Treffer.',
@@ -504,6 +505,7 @@ export const de: Dictionary = {
   personAdd: 'Person hinzufügen',
   personNameAsk: 'Wie sollen wir dich nennen?',
   personNameHint: 'Ein Kosename reicht. Der Name bleibt auf diesem Gerät.',
+  personNameEmpty: 'Der Name braucht ein sichtbares Zeichen.',
   personSave: 'Weiter',
   personRename: 'Umbenennen',
   personDelete: 'Person löschen',
@@ -773,6 +775,7 @@ export const en: Dictionary = {
   personAdd: 'Add a person',
   personNameAsk: 'What should we call you?',
   personNameHint: 'A short name is enough. It stays on this device.',
+  personNameEmpty: 'The name needs a visible character.',
   personSave: 'Continue',
   personRename: 'Rename',
   personDelete: 'Delete person',
@@ -1044,6 +1047,7 @@ export const pt: Dictionary = {
   personAdd: 'Adicionar pessoa',
   personNameAsk: 'Como devemos chamar você?',
   personNameHint: 'Um nome curto basta. O nome fica neste aparelho.',
+  personNameEmpty: 'O nome precisa de um caractere visível.',
   personSave: 'Continuar',
   personRename: 'Mudar o nome',
   personDelete: 'Apagar pessoa',
@@ -1313,6 +1317,7 @@ export const vi: Dictionary = {
   personAdd: 'Thêm người',
   personNameAsk: 'Chúng tôi nên gọi bạn là gì?',
   personNameHint: 'Một tên ngắn là đủ. Tên ở trên máy này.',
+  personNameEmpty: 'Tên cần một ký tự nhìn thấy được.',
   personSave: 'Tiếp',
   personRename: 'Đổi tên',
   personDelete: 'Xoá người',

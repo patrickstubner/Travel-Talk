@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.1 — 2026-10-12
+
+- Tippt man den Namen, bevor der gespeicherte Stand ankommt, bleibt der getippte Text. «Weiter» speichert diesen Namen. Wechselt die aktive Person, übernimmt das Feld den Namen dieser Person.
+- Ein leerer oder unsichtbarer Name sagt: «Der Name braucht ein sichtbares Zeichen.» Die Meldung über eine ungültige Exportdatei erscheint dabei nicht.
+
 ## 0.7.0 — 2026-10-11
 
 - Neue Situation Transport, nach den bisherigen neun. Zwanzig kurze Sätze, vom kurzen zum längeren: Taxi und Ziel, Preis und Taxameter, Halt, Kennzeichen, Bestellung in der App, Ticket, Haltestelle, Aussteigen, Linie, Gleis, Dauer, Gate, Verspätung, verpasster Anschluss, Fähre und Übelkeit auf dem Schiff. Dieselben vier Sprachen und dieselben Stimmen wie bisher, mit 70 %, 85 % und 100 %, Wortzeiten wo die Zuordnung trägt, und der Wort-für-Wort-Gloss. Der Kann-Satz der Situation sagt, dass man nach Weg, Preis und Ticket fragen kann.
