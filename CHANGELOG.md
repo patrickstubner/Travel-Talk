@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.1 — 2026-10-12
+
+- Nach dem Nachsprechen stehen die Wörter immer da. Jedes Wort zeigt Melodie und Rhythmus, nicht nur die schlechtere Farbe. Grün, gelb und rot bleiben. Ein Wort ohne bewertbare Stimme bleibt grau.
+- Was sich nicht bewerten lässt, sagt einen Satz mit dem nächsten Schritt, in allen vier Sprachen, mit `role="status"`. Das gilt für zu kurz, zu leise, fehlende Wortzeiten, eine Aufnahme, die sich nicht zuordnen lässt, und eine Zeile, von der nur ein Teil eine Farbe hat. Die Balken bleiben nicht als leere Spur stehen. Im Zeigen-Modus ist dieser Satz hell auf dunklem Grund.
+- Die gehörte Datei und eine andere gebündelte Stimme desselben Satzes behalten Wortfarben und beide Balken. Ein grosser Tonhöhenabstand, eine gegenläufige Lautstärke und eine ferne Klangfolge nehmen die Balken nicht mehr weg. Dieselbe Prüfung hatte die andere Stimme des richtigen Satzes mitgetroffen. Ob der Satz der richtige war, sagt diese Fassung weiter nicht.
+- Sechs Clips bleiben ohne Farbe gegen sich selbst und sind im Clip-Test genannt: joe bei «Help!», «I cannot breathe.», «It hurts here.» und «Where is the hospital?», und vais1000 bei «Dạ.» und «Vâng.». Dort fehlt die Stimme in der Datei, oder die Datei ist kürzer als 0,3 Sekunden.
+- `tools/align_clips.py` zieht fünf fehlende Zeitdateien nach, alle vivos-32: «Xin viết ra giúp tôi.», «Chào anh.», «Chào cô.», «Chào ông.» und «Ngon quá.». Das Längenverhältnis darf bis 2,05 reichen, und das Band der Zuordnung ist 0,22 statt 0,18. Die Wortzahl stimmt, die Grenzen liegen unter einer Zehntelsekunde. Die anderen 40 Basisclips bleiben ohne Zeitdatei: der Phonemisierer zieht Funktionswörter zusammen («Es ist», «I am», «for an»), die Wortzahl passt nicht, und die Seite sagt das.
+
 ## 0.9.0 — 2026-10-12
 
 - Vor den neuen Sätzen kommen höchstens sechs Wörter. Jedes Wort ist eine eigene Karte, zum Beispiel `de-vi:w.water`, pro Person. Wörter und Sätze teilen sich die 15 neuen Karten am Tag, über alle Richtungen. Wiederholungen bleiben vorn, höchstens acht. Ab 20 fälligen Karten gibt es keine neuen Wörter und keine neuen Sätze.

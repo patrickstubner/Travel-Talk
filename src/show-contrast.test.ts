@@ -12,7 +12,7 @@ const fixture = `
   <a class="skip" href="#inhalt">Zum Inhalt</a>
   <header class="top">
     <p class="brand">Travel Talk</p>
-    <p class="version">Version 0.8.1</p>
+    <p class="version">Version 0.9.1</p>
   </header>
   <div class="top-switch">
     <button type="button" class="top-trigger">Vietnamesisch</button>
@@ -74,11 +74,12 @@ const fixture = `
         <section class="pitch">
           <h2 class="repeat-word">nhà</h2>
           <div class="repeat-words">
-            <button type="button" class="word-chip">nhà</button>
-            <button type="button" class="word-chip green">thuốc</button>
+            <button type="button" class="word-chip plain">nhà<span class="word-marks"><span class="mark plain">Melodie</span><span class="mark plain">Rhythmus</span></span></button>
+            <button type="button" class="word-chip green">thuốc<span class="word-marks"><span class="mark green">Melodie</span></span></button>
             <button type="button" class="word-chip yellow">ở</button>
             <button type="button" class="word-chip red">đâu</button>
           </div>
+          <p role="status">Zu leise. Geh näher ans Mikrofon und sprich noch einmal.</p>
           <p class="score-bar">
             <span>Melodie</span>
             <span class="score-track passt" aria-hidden="true"><span class="score-fill"></span></span>
@@ -234,6 +235,10 @@ describe('show mode contrast', () => {
       'summary',
       'details > p',
       '.repeat-word',
+      '.pitch [role="status"]',
+      '.word-chip.plain',
+      '.word-chip.plain .mark.plain',
+      '.word-chip.green .mark.green',
       '.word-chip',
       '.word-chip.green',
       '.word-chip.yellow',

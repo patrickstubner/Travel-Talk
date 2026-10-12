@@ -5,8 +5,8 @@ import { bandDistance } from './spectrum'
 /**
  * Bands for the first version. They are a starting point set by the author,
  * not a learner study. The fixtures in feedback.test.ts are what they have
- * to survive. A mean path distance above UNCLEAR_SEMITONES is «unklar»:
- * the curves stay, the words stay uncoloured. That cutoff is a choice.
+ * to survive. A mean path distance above UNCLEAR_SEMITONES stays on the
+ * curve as a colour. It no longer drops the words. That cutoff is a choice.
  *
  * Rhythm colour of a word uses the local scale after the linear map, so a
  * uniform slow take is not red on every word. The rhythm bar is the worse
@@ -14,20 +14,27 @@ import { bandDistance } from './spectrum'
  * against the file that was heard.
  *
  * A take is «unklar» when its voiced range stays under FLAT_RANGE and the
- * reference moves by at least that much more. A short flat phrase matched
- * to itself is not unklar. A take is also «unklar» when every measured
- * word runs the other way (Pearson under DIRECTION_OPPOSED), or when the
- * loudness envelope does not follow the file. One mirrored syllable stays
- * a partial score. A take that matches the file better backwards than
- * forwards is «unklar». A steady tone against a spoken file is «unklar»
- * when the file's loudness moves and the tone's does not. Bars need at least
- * COLOURED_SHARE of the words that have enough voice in the model. A word
- * whose model moves by MOVING_RANGE needs that movement in the same
- * direction, otherwise it stays at most yellow. The band shape has to follow
- * the file before the bars appear. That is not a sentence grade: 0.8.0 does
- * not say whether the spoken line was the right one. The old 1–3 grade is
- * in sentence-grade.ts, which the app does not import. Local stretch stays
- * inside about 0.75–1.33.
+ * reference moves by at least that much more, and the take is not itself
+ * speech-loud. A short flat phrase matched to itself is not unklar. A take
+ * is also «unklar» when every measured word runs the other way (Pearson
+ * under DIRECTION_OPPOSED) and none of those words has a colour. One
+ * mirrored syllable stays a partial score. A take that matches the file
+ * better backwards is «unklar» only when no band shape was measured, or
+ * when the band shape agrees with the flip. Another bundled voice can
+ * mirror the pitch and still run forwards in the bands, so that voice
+ * keeps its colours. A steady tone against a spoken file is «unklar» when
+ * the file's loudness moves and the tone's pitch does not. A large pitch
+ * offset, a loudness envelope that runs the other way, and a band shape
+ * far from the file do not hide the bars. 0.8.3 does not say whether the
+ * spoken line was the right one. The old 1–3 grade is in sentence-grade.ts,
+ * which the app does not import. Bars stay when at least one word has a
+ * colour. Under COLOURED_SHARE the words still show, the bars cover the
+ * coloured part, and the page says so. A word whose model moves by
+ * MOVING_RANGE needs that movement in the same direction, otherwise it
+ * stays at most yellow. Local stretch stays inside about 0.75–1.33.
+ * When the local window misses every word but the model word has enough
+ * voice, the whole-path distance still colours those words. A second voice
+ * often sits outside the four-frame window.
  */
 export const MELODY_GREEN = 1.5
 export const MELODY_YELLOW = 3
@@ -120,6 +127,8 @@ export type RepeatScore = {
   tooShort: boolean
   fewWords: boolean
   globalRatio: number | null
+  /** Why the take cannot be scored as a whole. Null when the bars stand. */
+  reason: 'short' | 'quiet' | 'noTimes' | 'unclear' | 'few' | null
 }
 
 export function melodyBand(distance: number): Band {
@@ -718,15 +727,16 @@ export function scoreRepeat(input: {
     tooShort,
     fewWords: false,
     globalRatio: null,
+    reason: tooShort ? 'short' : tooLittleVoice ? 'quiet' : null,
   }
   if (tooShort || tooLittleVoice) return empty
   const modelSpan = sustained(model)
   const userSpan = sustained(user)
-  if (!modelSpan || !userSpan) return { ...empty, tooLittleVoice: true }
+  if (!modelSpan || !userSpan) return { ...empty, tooLittleVoice: true, reason: 'quiet' }
   const path = linearPath(modelSpan, userSpan)
   let heard = user
   let meanDistance = pathMean(model, heard, path)
-  if (meanDistance == null) return { ...empty, tooLittleVoice: true }
+  if (meanDistance == null) return { ...empty, tooLittleVoice: true, reason: 'quiet' }
   const content = contentMismatch(input.modelBands, input.userBands, input.lang)
   const flipped = spectralReversed(input.modelBands, input.userBands)
   const bandsKnown = Boolean(input.modelBands && input.userBands && input.modelBands.length > 0 && input.userBands.length > 0)
@@ -743,9 +753,16 @@ export function scoreRepeat(input: {
   const modelEnergy = thinEnergy(input.modelEnergy, input.model.length)
   const userEnergy = thinEnergy(input.userEnergy, input.user.length)
   const forward = contourCorrelation(model, heard, path)
-  const envelope = envelopeMismatch(path, userEnergy, modelEnergy)
-  const reversed = reversedTake(model, heard, forward, path, modelEnergy, userEnergy)
-  if (meanDistance > UNCLEAR_SEMITONES || flatContour(heard, model) || envelope || reversed) {
+  // A far pitch and a loudness envelope that runs the other way stay on the
+  // curve. Another bundled voice can also mirror the pitch while the band
+  // shape still runs forwards, so that voice is not treated as reversed.
+  const reversed = bandsKnown
+    ? flipped && matchesBetterBackwards(model, heard, forward)
+    : reversedTake(model, heard, forward, path, modelEnergy, userEnergy)
+  const spoken = (energyVariation(userEnergy) ?? 0) >= SPEECH_ENERGY
+  const flat = flatContour(heard, model) && !spoken
+  const drone = droneAgainstSpeech(userEnergy, modelEnergy) && (voicedRange(heard) ?? 0) < FLAT_RANGE
+  if (flat || drone || reversed) {
     return {
       ...empty,
       userOnModel,
@@ -754,6 +771,7 @@ export function scoreRepeat(input: {
       globalRatio,
       unclear: true,
       tooLittleVoice: false,
+      reason: 'unclear',
     }
   }
   if (!input.words || input.words.length === 0) {
@@ -764,6 +782,7 @@ export function scoreRepeat(input: {
       meanDistance,
       globalRatio,
       tooLittleVoice: false,
+      reason: 'noTimes',
     }
   }
   const directions: WordDirection[] = []
@@ -832,25 +851,59 @@ export function scoreRepeat(input: {
       sentence: toneSentence(word.text, userShape, input.lang, input.region),
     }
   })
-  if (takeRunsBackwards(directions)) {
+  const anyColour = words.some((word) => word.color != null)
+  const scoredWords =
+    anyColour || meanDistance == null
+      ? words
+      : words.map((word) => {
+          if (!word.scorable) return word
+          const melody = melodyBand(meanDistance)
+          const rhythm = rhythmBand(globalRatio)
+          return {
+            ...word,
+            color: worseBand(melody, rhythm),
+            melody,
+            rhythm,
+            melodyDistance: meanDistance,
+            rawRatio: globalRatio,
+          }
+        })
+  const melodyColours = barFromColours(scoredWords.map((word) => word.melody))
+  const rhythmWords = barFromColours(scoredWords.map((word) => word.rhythm))
+  const rhythmColours = rhythmWords ? worseBar(globalBar(globalRatio), rhythmWords) : null
+  const hasColour = scoredWords.some((word) => word.color != null)
+  if (takeRunsBackwards(directions) && !hasColour) {
     return {
-      ...empty,
+      model,
+      user: heard,
       userOnModel,
+      modelHop,
+      userHop,
       path,
       meanDistance,
-      globalRatio,
+      words: scoredWords,
+      melodyBar: null,
+      rhythmBar: null,
+      fewWords: false,
       unclear: true,
       tooLittleVoice: false,
+      tooShort: false,
+      globalRatio,
+      reason: 'unclear',
     }
   }
-  const melodyBar = barFromColours(words.map((word) => word.melody))
-  const rhythmWords = barFromColours(words.map((word) => word.rhythm))
-  const rhythmBar = rhythmWords ? worseBar(globalBar(globalRatio), rhythmWords) : null
-  const scorable = words.filter((word) => word.scorable)
+  const melodyBar = melodyColours
+  const rhythmBar = rhythmColours
+  const scorable = scoredWords.filter((word) => word.scorable)
   const coloured = scorable.filter((word) => word.color != null).length
   const allowed = scorable.length > 0 && coloured / scorable.length >= COLOURED_SHARE
   const fewWords = !allowed
-  const rejected = content || flipped
+  // content and flipped still decide whether a harmonic may be folded onto the
+  // file. They do not remove the bars: another voice of the same sentence sits
+  // past the old limit, and 0.8.3 does not grade the sentence.
+  void content
+  void flipped
+  const backwards = takeRunsBackwards(directions)
   return {
     model,
     user: heard,
@@ -859,13 +912,14 @@ export function scoreRepeat(input: {
     userHop,
     path,
     meanDistance,
-    words,
-    melodyBar: fewWords || rejected ? null : melodyBar,
-    rhythmBar: fewWords || rejected ? null : rhythmBar,
+    words: scoredWords,
+    melodyBar: hasColour ? melodyBar : null,
+    rhythmBar: hasColour ? rhythmBar : null,
     fewWords,
-    unclear: rejected,
+    unclear: backwards,
     tooLittleVoice: false,
     tooShort: false,
     globalRatio,
+    reason: hasColour && !fewWords ? null : 'few',
   }
 }

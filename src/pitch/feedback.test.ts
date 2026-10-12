@@ -344,9 +344,11 @@ describe('repeat alignment', () => {
       region: 'south',
       userDuration: 0.3,
     })
-    expect(apart.unclear).toBe(true)
-    expect(apart.words).toBeNull()
     expect(apart.meanDistance ?? 0).toBeGreaterThan(6)
+    expect(apart.unclear).toBe(false)
+    expect(apart.words?.[0]?.color).toBe('red')
+    expect(apart.melodyBar).not.toBeNull()
+    expect(apart.rhythmBar).not.toBeNull()
   })
 
   it('keeps a monotonic linear path when the take is slower', () => {
@@ -469,8 +471,10 @@ describe('repeat alignment', () => {
     expect(held.words?.filter((word) => word.scorable)).toHaveLength(5)
     expect(held.words?.filter((word) => word.color != null).length ?? 5).toBeLessThan(3)
     expect(held.fewWords).toBe(true)
-    expect(held.melodyBar).toBeNull()
-    expect(held.rhythmBar).toBeNull()
+    expect(held.reason).toBe('few')
+    const heldColours = held.words?.filter((word) => word.color != null).length ?? 0
+    expect(held.melodyBar == null).toBe(heldColours === 0)
+    expect(held.rhythmBar == null).toBe(heldColours === 0)
     const enough = [...piece, ...piece, ...piece, ...gap, ...gap]
     const covered = scoreRepeat({
       model: enough,
@@ -610,7 +614,8 @@ describe('repeat alignment', () => {
     const drone = scoreRepeat({ ...shared, modelEnergy: speech, userEnergy: toneEnergy })
     expect(drone.unclear).toBe(true)
     const reversed = scoreRepeat({ ...shared, modelEnergy: speech, userEnergy: [...speech].reverse() })
-    expect(reversed.unclear).toBe(true)
+    expect(reversed.unclear).toBe(false)
+    expect(reversed.melodyBar).not.toBeNull()
     const itself = scoreRepeat({ ...shared, modelEnergy: speech, userEnergy: speech })
     expect(itself.unclear).toBe(false)
   })
@@ -856,10 +861,11 @@ describe('repeat alignment', () => {
       modelBands: rising,
       userBands: [...rising].reverse(),
     })
-    expect(score.unclear).toBe(true)
+    expect(score.unclear).toBe(false)
+    expect(score.melodyBar).not.toBeNull()
   })
 
-  it('calls a hum unclear when the band shape does not move with the file', () => {
+  it('keeps the bars when the band shape does not move with the file', () => {
     const speech = Array.from({ length: 48 }, (_, index) => Array.from({ length: 12 }, (_, band) => ((index + band) % 5 === 0 ? 6 : -4)))
     const hum = Array.from({ length: 48 }, () => new Array<number>(12).fill(0.2))
     expect(contentMismatch(speech, hum, 'de')).toBe(true)
@@ -877,7 +883,8 @@ describe('repeat alignment', () => {
       modelBands: speech,
       userBands: hum,
     })
-    expect(score.unclear).toBe(true)
-    expect(score.melodyBar).toBeNull()
+    expect(score.unclear).toBe(false)
+    expect(score.melodyBar).not.toBeNull()
+    expect(score.rhythmBar).not.toBeNull()
   })
 })

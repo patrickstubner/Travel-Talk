@@ -6,7 +6,9 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppProvider, useApp } from '../app/state'
-import { stopClip } from '../audio/player'
+import { splitWords } from '../../content/gloss'
+import { loadAlignment } from '../audio/align'
+import { decodeContourFile, stopClip } from '../audio/player'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import * as slice from '../audio/slice'
 import { PhrasePage } from './Phrase'
@@ -16,6 +18,11 @@ vi.mock('../audio/player', () => ({
   stopClip: vi.fn(),
   decodeContourFile: vi.fn(async () => null),
 }))
+
+vi.mock('../audio/align', async () => {
+  const actual = await vi.importActual<typeof import('../audio/align')>('../audio/align')
+  return { ...actual, loadAlignment: vi.fn(async () => null) }
+})
 
 vi.mock('../audio/recorder', () => ({
   startMicrophone: vi.fn(),
@@ -46,6 +53,10 @@ function sine(): Float32Array {
 beforeEach(() => {
   freshIndexedDb()
   vi.mocked(startMicrophone).mockReset()
+  vi.mocked(decodeContourFile).mockReset()
+  vi.mocked(decodeContourFile).mockResolvedValue(null)
+  vi.mocked(loadAlignment).mockReset()
+  vi.mocked(loadAlignment).mockResolvedValue(null)
 })
 
 afterEach(() => {
@@ -83,7 +94,60 @@ async function record(lang: 'en' | 'pt-BR' | 'de'): Promise<void> {
   fireEvent.click(await screen.findByRole('button', { name: stopName }))
 }
 
+function glide(seconds: number): Float32Array {
+  const sampleRate = 16000
+  const length = Math.floor(sampleRate * seconds)
+  const samples = new Float32Array(length)
+  let phase = 0
+  for (let index = 0; index < length; index += 1) {
+    const hz = 140 + 140 * (index / length)
+    phase += (2 * Math.PI * hz) / sampleRate
+    samples[index] = Math.sin(phase) * 0.8
+  }
+  return samples
+}
+
 describe('phrase repeat feedback', () => {
+  it('keeps colours and both bars across three takes of Nochmal', async () => {
+    const samples = glide(1.2)
+    vi.mocked(decodeContourFile).mockResolvedValue({ samples, sampleRate: 16000 })
+    vi.mocked(loadAlignment).mockImplementation(async (_file, speech) => {
+      const count = Math.max(1, splitWords(speech).length)
+      const width = 1.05 / count
+      return Array.from({ length: count }, (_, index) => ({ start: 0.05 + index * width, end: 0.05 + (index + 1) * width - 0.02 }))
+    })
+    vi.mocked(startMicrophone).mockImplementation(async (onStop) => {
+      const session = {
+        recorder: {
+          stop: () => onStop({ url: 'blob:phrase-again', samples, sampleRate: 16000 }),
+          state: 'recording',
+          stream: { getTracks: () => [] },
+        },
+        release: vi.fn(),
+      }
+      return session as unknown as CaptureSession
+    })
+    render(
+      <AppProvider>
+        <ReadyPhrase lang="en">
+          <MemoryRouter initialEntries={['/phrase/emergency.doctor']}>
+            <Routes>
+              <Route path="/phrase/:conceptId" element={<PhrasePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPhrase>
+      </AppProvider>,
+    )
+    for (let take = 0; take < 3; take += 1) {
+      fireEvent.click(await screen.findByRole('button', { name: take === 0 ? 'Aufnehmen' : 'Nochmal' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+      const melody = await screen.findByTestId('melody-bar')
+      expect(melody.getAttribute('data-state')).toBeTruthy()
+      expect(screen.getByTestId('rhythm-bar').getAttribute('data-state')).toBeTruthy()
+      expect(document.querySelector('.word-chip[data-color="green"], .word-chip[data-color="yellow"], .word-chip[data-color="red"]')).toBeTruthy()
+    }
+  })
+
   it('shows the result for English, Portuguese and German', async () => {
     await record('en')
     const english = await screen.findByTestId('repeat-feedback')

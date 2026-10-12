@@ -323,10 +323,17 @@ a.menu-card span { color: var(--muted); }
 .repeat-plots, .repeat-words, .repeat-pair { display: flex; gap: 0.45rem; align-items: stretch; }
 .repeat-plots > div, .repeat-words > button { min-width: 0; }
 .repeat-words { margin: 0.35rem 0 0.2rem; }
-.word-chip { width: 100%; border-radius: 999px; background: var(--card); }
+.word-chip { width: 100%; border-radius: 1rem; background: var(--card); display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.35rem 0.3rem; }
+.word-chip-text { font-weight: 650; }
+.word-marks { display: flex; flex-direction: column; align-items: center; font-size: 0.72rem; line-height: 1.25; }
+.word-chip .mark.green { color: #1d7a46; }
+.word-chip .mark.yellow { color: #8a5a12; }
+.word-chip .mark.red { color: var(--clay); }
+.word-chip .mark.plain { color: var(--muted); }
 .word-chip.green { color: #1d7a46; border-color: #1d7a46; }
 .word-chip.yellow { color: #8a5a12; border-color: #c4922a; }
 .word-chip.red { color: var(--clay); border-color: var(--clay); background: #f8e4df; }
+.word-chip.plain { color: var(--ink); }
 .repeat-pair > article { flex: 1; min-width: 0; }
 .repeat-word { font-family: var(--serif); font-size: 2.4rem; margin: 0; }
 .score-bar { display: grid; grid-template-columns: 5.2rem 1fr auto; gap: 0.45rem; align-items: center; margin: 0.2rem 0; }
@@ -341,10 +348,15 @@ a.menu-card span { color: var(--muted); }
 .tone-tile span { color: var(--muted); font-size: 0.85rem; }
 .tone-tile.on { background: #f8e4df; border-color: var(--clay); }
 .tone-you { background: #f8e4df; }
-.show-mode .word-chip { background: #24303a; color: #f4efe6; }
+.show-mode .word-chip,
+.show-mode .word-chip.plain { background: #24303a; color: #f4efe6; }
 .show-mode .word-chip.green { background: #1a3330; color: #9be7b8; border-color: #9be7b8; }
 .show-mode .word-chip.yellow { background: #3a3220; color: #f0c27a; border-color: #f0c27a; }
 .show-mode .word-chip.red { background: #3a2a22; color: #ffd0c6; border-color: #e7a090; }
+.show-mode .word-chip .mark.green { color: #9be7b8; }
+.show-mode .word-chip .mark.yellow { color: #f0c27a; }
+.show-mode .word-chip .mark.red { color: #ffd0c6; }
+.show-mode .word-chip .mark.plain { color: #d4c8b6; }
 .show-mode .score-track { background: #1a222a; }
 .show-mode .score-track.passt .score-fill { background: #5ee0d4; }
 .show-mode .score-track.teilweise .score-fill { background: #f0c27a; }

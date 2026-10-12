@@ -11,7 +11,7 @@ import { alignmentFitsDuration, parseAlignment } from '../audio/align'
 import { VOICES } from '../audio/voices'
 import { allSpeechLines, voiceFile } from '../content/resolve'
 import { contourFromSamples, frameEnergy } from './contour'
-import { scoreRepeat } from './feedback'
+import { scoreRepeat, type RepeatScore } from './feedback'
 import { bandShape } from './spectrum'
 
 /**
@@ -19,6 +19,22 @@ import { bandShape } from './spectrum'
  * timed line. Version 0.8.0 does not grade the sentence, so this file does
  * not count stars. ffmpeg is required in CI and skipped locally when absent.
  */
+
+/**
+ * The file against itself has no usable pitch, so test (a) does not ask it
+ * for colours. joe «Help!» and «I cannot breathe.» have no voiced frame at
+ * clarity 0.6. joe «It hurts here.» and «Where is the hospital?» have no
+ * word with three voiced frames in the model. vais1000 «Dạ.» and «Vâng.»
+ * are shorter than 0.3 seconds.
+ */
+const SELF_THIN = new Set([
+  'en/joe/emergency.help__any__base.m4a',
+  'en/joe/emergency.breathe__any__base.m4a',
+  'en/joe/emergency.hurt__any__base.m4a',
+  'en/joe/emergency.hospital__any__base.m4a',
+  'vi/meet.yes__south__base.m4a',
+  'vi/meet.yes__north__base.m4a',
+])
 
 const KNOWN_MISSING = new Set([
   'de/stay.noisy__any__base.m4a',
@@ -61,11 +77,6 @@ const KNOWN_MISSING = new Set([
   'en/stay.problem__any__base.m4a',
   'en/transport.09.app__any__base.m4a',
   'en/visa.evisa__any__base.m4a',
-  'vi/vivos-32/emergency.write__any__base.m4a',
-  'vi/vivos-32/food.good__any__base.m4a',
-  'vi/vivos-32/meet.hello__any__anh.m4a',
-  'vi/vivos-32/meet.hello__any__co.m4a',
-  'vi/vivos-32/meet.hello__any__ong.m4a',
 ])
 
 function ffmpegReady(): boolean {
@@ -175,11 +186,62 @@ describe('shipped clips', () => {
         })
         expect(score.model.length, file).toBeGreaterThan(0)
         expect(score, file).not.toHaveProperty('stars')
+        if (!SELF_THIN.has(file)) expectAssessed(score, file)
         timed += 1
       }
     }
     expect(timed, only).toBeGreaterThan(0)
     for (const file of missing) expect(KNOWN_MISSING.has(file), file).toBe(true)
+    expectOtherVoice(only)
+  }
+
+  function expectAssessed(score: RepeatScore, file: string): void {
+    expect(score.words?.some((word) => word.color != null), file).toBe(true)
+    expect(score.melodyBar, file).not.toBeNull()
+    expect(score.rhythmBar, file).not.toBeNull()
+  }
+
+  function expectOtherVoice(only: string): void {
+    const lines = allSpeechLines(rawCatalog.concepts).filter((line) => line.lang === only)
+    const voices = VOICES.filter((item) => item.bundled && item.lang === only)
+    for (const line of lines) {
+      const ready = voices.flatMap((voice) => {
+        const file = voiceFile(line.file, voice.id, voice.legacy)
+        const audio = `public/audio/${file}`
+        const alignPath = audio.replace(/\.m4a$/, '.align.json')
+        if (!existsSync(audio) || !existsSync(alignPath)) return []
+        const times = parseAlignment(JSON.parse(readFileSync(alignPath, 'utf8')), splitWords(line.text).length)
+        if (!times) return []
+        return [{ file, audio, times }]
+      })
+      for (const modelVoice of ready) {
+        for (const userVoice of ready) {
+          if (modelVoice.file === userVoice.file) continue
+          if (SELF_THIN.has(modelVoice.file) || SELF_THIN.has(userVoice.file)) continue
+          const modelSamples = decode(modelVoice.audio)
+          const userSamples = decode(userVoice.audio)
+          const duration = userSamples.length / 16000
+          if (!alignmentFitsDuration(modelVoice.times, modelSamples.length / 16000)) continue
+          const words = modelVoice.times.map((word, index) => ({ ...word, text: splitWords(line.text)[index] ?? '' }))
+          const region: 'south' | 'north' = modelVoice.file.includes('__north__') ? 'north' : 'south'
+          const score = scoreRepeat({
+            model: contourFromSamples(modelSamples, 16000),
+            user: contourFromSamples(userSamples, 16000),
+            modelHop: 0.01,
+            userHop: 0.01,
+            words,
+            lang: line.lang,
+            region,
+            userDuration: duration,
+            modelEnergy: frameEnergy(modelSamples, 16000),
+            userEnergy: frameEnergy(userSamples, 16000),
+            modelBands: bandShape(modelSamples, 16000),
+            userBands: bandShape(userSamples, 16000),
+          })
+          expectAssessed(score, `${modelVoice.file} <- ${userVoice.file}`)
+        }
+      }
+    }
   }
 
   const allLangs = ['de', 'en', 'pt-BR', 'vi'] as const

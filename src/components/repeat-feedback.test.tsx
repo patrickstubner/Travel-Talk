@@ -151,15 +151,17 @@ describe('repeat feedback view', () => {
     cleanup()
     renderFeedback('de', tone(220, 220, 1.2), null)
     expect(screen.getByTestId('repeat-feedback').querySelector('canvas')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'qua' })).toBeNull()
-    expect(screen.queryByTestId('repeat-stars')).toBeNull()
-    expect(screen.getByText('Keine Wortzeiten für diese Stimme.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('none')
+    expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-melody')).toBe('none')
+    expect(screen.queryByTestId('melody-bar')).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.')
   })
 
   it('names a short take and a quiet take', () => {
     renderFeedback('de', tone(220, 220, 0.2), [{ start: 0, end: 0.2 }])
-    expect(screen.getByText('Die Aufnahme ist zu kurz.')).toBeTruthy()
-    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('Zu kurz. Sprich den ganzen Satz.')
+    expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('none')
+    expect(screen.queryByTestId('melody-bar')).toBeNull()
     cleanup()
     render(
       <RepeatFeedback
@@ -176,11 +178,12 @@ describe('repeat feedback view', () => {
         modelMissing={false}
       />,
     )
-    expect(screen.getByText('In der Aufnahme war zu wenig stimmhafte Tonhöhe.')).toBeTruthy()
-    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('Zu leise. Geh näher ans Mikrofon und sprich noch einmal.')
+    expect(screen.getByRole('button', { name: 'qua' })).toBeTruthy()
+    expect(screen.queryByTestId('melody-bar')).toBeNull()
   })
 
-  it('leaves the bars empty when too little of the line has a colour', () => {
+  it('explains a thin colouring instead of leaving the bars empty', () => {
     const model = tone(140, 280, 1.6)
     const user = new Float32Array(model.length)
     let phase = 0
@@ -212,9 +215,34 @@ describe('repeat feedback view', () => {
         voiceId="thorsten-high"
       />,
     )
-    expect(screen.queryByText('Zu wenige Wörter erkannt.')).toBeNull()
-    expect(screen.queryByText('Too few words were recognized.')).toBeNull()
-    expect(screen.queryByText('passt')).toBeNull()
+    const status = screen.getByRole('status')
+    expect(status.textContent).toBe('Nur ein Teil der Wörter ist bewertet. Die Balken gelten für diesen Teil.')
+    for (const bar of screen.queryAllByTestId(/bar$/)) {
+      expect(bar.getAttribute('data-state')).toBeTruthy()
+    }
     expect(screen.queryByTestId('repeat-stars')).toBeNull()
+  })
+
+  it('keeps the not-assessable sentence readable in show mode', () => {
+    render(
+      <div className="show-mode">
+        <RepeatFeedback
+          copy={de}
+          lang="de"
+          region="south"
+          speech="qua"
+          words={null}
+          modelSamples={tone(220, 220, 1)}
+          modelRate={16000}
+          userSamples={tone(220, 220, 1)}
+          userRate={16000}
+          modelMissing={false}
+          voiceId="thorsten-high"
+        />
+      </div>,
+    )
+    const status = screen.getByRole('status')
+    expect(status.textContent).toBe('Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.')
+    expect(status.closest('.show-mode')).toBeTruthy()
   })
 })

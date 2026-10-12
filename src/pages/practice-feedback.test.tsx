@@ -236,4 +236,42 @@ describe('practice repeat feedback', () => {
     expect(await screen.findByRole('button', { name: 'Stopp' })).toBeTruthy()
     expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true)
   })
+
+  it('keeps colours and both bars across three takes of Nochmal', async () => {
+    const sampleRate = 16000
+    const length = Math.floor(sampleRate * 1.2)
+    const samples = new Float32Array(length)
+    let phase = 0
+    for (let index = 0; index < length; index += 1) {
+      const hz = 140 + 140 * (index / length)
+      phase += (2 * Math.PI * hz) / sampleRate
+      samples[index] = Math.sin(phase) * 0.8
+    }
+    vi.mocked(decodeContourFile).mockResolvedValue({ samples, sampleRate })
+    vi.mocked(loadAlignment).mockImplementation(async (_file, speech) => {
+      const count = Math.max(1, splitWords(speech).length)
+      const width = 1.05 / count
+      return Array.from({ length: count }, (_, index) => ({ start: 0.05 + index * width, end: 0.05 + (index + 1) * width - 0.02 }))
+    })
+    vi.mocked(startMicrophone).mockImplementation(async (onStop) => {
+      const session = {
+        recorder: {
+          stop: () => onStop({ url: 'blob:practice-again', samples, sampleRate }),
+          state: 'recording',
+          stream: { getTracks: () => [] },
+        },
+        release: vi.fn(),
+      }
+      return session as unknown as CaptureSession
+    })
+    await openRepeat()
+    for (let take = 0; take < 3; take += 1) {
+      fireEvent.click(await screen.findByRole('button', { name: take === 0 ? 'Aufnehmen' : 'Nochmal' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Stopp' }))
+      const melody = await screen.findByTestId('melody-bar')
+      expect(melody.getAttribute('data-state')).toBeTruthy()
+      expect(screen.getByTestId('rhythm-bar').getAttribute('data-state')).toBeTruthy()
+      expect(document.querySelector('.word-chip[data-color="green"], .word-chip[data-color="yellow"], .word-chip[data-color="red"]')).toBeTruthy()
+    }
+  })
 })
