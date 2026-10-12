@@ -1,4 +1,4 @@
-import { samplesForAnalysis } from './contour'
+import { centerDelayFrames, samplesForAnalysis } from './contour'
 
 const FRAME = 2048
 const MEL_BANDS = 26
@@ -64,7 +64,7 @@ function framePowers(input: Float32Array, rate: number): { powers: Array<Float32
   const hop = Math.max(1, Math.round(sampleRate * 0.01))
   const real = new Float32Array(FRAME)
   const imag = new Float32Array(FRAME)
-  const powers: Array<Float32Array | null> = []
+  const powers: Array<Float32Array | null> = Array.from({ length: centerDelayFrames(hop) }, () => null)
   for (let index = 0; index + FRAME < samples.length; index += hop) {
     for (let cursor = 0; cursor < FRAME; cursor += 1) {
       real[cursor] = (samples[index + cursor] ?? 0) * (hann[cursor] ?? 0)

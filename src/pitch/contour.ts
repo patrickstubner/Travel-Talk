@@ -5,6 +5,21 @@ export type Contour = Array<number | null>
 const FRAME = 2048
 export const ANALYSIS_RATE = 16000
 /**
+ * Frames are dated at the centre of the analysis window. Dating them at
+ * the start puts a vowel about 64 ms before the sound the aligner measured,
+ * and a short word then has fewer than three voiced frames.
+ */
+export function centerDelayFrames(hop: number): number {
+  if (!Number.isFinite(hop) || hop <= 0) return 0
+  return Math.round(FRAME / 2 / hop)
+}
+
+/** How many contour frames the analysis centre sits after the window start. */
+export function centerSlackFrames(hopSeconds: number): number {
+  if (!Number.isFinite(hopSeconds) || hopSeconds <= 0) return 0
+  return Math.max(0, Math.round(FRAME / 2 / ANALYSIS_RATE / hopSeconds))
+}
+/**
  * Pitchy frames below this are left unvoiced. 0.8 dropped most of the
  * low English voice (joe): the pitch was around 110 Hz, not under 70.
  * 0.6 keeps those frames. Noise and a 50/100/150 Hz hum still stay empty.
@@ -54,7 +69,7 @@ export function contourFromSamples(input: Float32Array, rate: number): Contour {
   detector.minVolumeDecibels = -45
   const hop = Math.max(1, Math.round(sampleRate * 0.01))
   const frame = new Float32Array(FRAME)
-  const pitches: Contour = []
+  const pitches: Contour = Array.from({ length: centerDelayFrames(hop) }, () => null)
   for (let index = 0; index + FRAME < samples.length; index += hop) {
     frame.set(samples.subarray(index, index + FRAME))
     const [hz, clarity] = detector.findPitch(frame, sampleRate)
@@ -125,7 +140,7 @@ export function frameEnergy(input: Float32Array, rate: number): number[] {
   const sampleRate = prepared.sampleRate
   if (samples.length < FRAME) return []
   const hop = Math.max(1, Math.round(sampleRate * 0.01))
-  const energy: number[] = []
+  const energy: number[] = Array.from({ length: centerDelayFrames(hop) }, () => 0)
   for (let index = 0; index + FRAME < samples.length; index += hop) {
     let sum = 0
     const end = index + FRAME

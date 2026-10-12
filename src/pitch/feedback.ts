@@ -1,5 +1,5 @@
 import type { Lang } from '../../content/phrase'
-import { describeShape, voicedValues, type Contour, type ShapeName } from './contour'
+import { centerSlackFrames, describeShape, voicedValues, type Contour, type ShapeName } from './contour'
 import { bandDistance } from './spectrum'
 
 /**
@@ -8,13 +8,14 @@ import { bandDistance } from './spectrum'
  * to survive. A mean path distance above UNCLEAR_SEMITONES stays on the
  * curve as a colour. It no longer drops the words. That cutoff is a choice.
  *
- * Rhythm colour of a word is the local tempo: the whole-span ratio times
- * the local scale. The frame window is left out, so a word compared with
- * its own file stays at 1 and inside the green band. That band is the
- * self-comparison tolerance: the local search (about 0.75–1.33) fits in
- * it when the take has the file's length. A uniform 0.7 take stays
- * yellow. The rhythm bar is the worse of that word bar and the band of
- * the whole-span ratio. Comparison is against the file that was heard.
+ * Rhythm colour of a word is that word's duration against the file,
+ * divided by the tempo of the whole take, times the local scale. A take
+ * that is only slower still has the file's proportions, so the words stay
+ * green. The rhythm bar is the worse of that word bar and the band of the
+ * whole-span ratio, so a uniform 0.7 take is not a perfect bar. The local
+ * search (about 0.75–1.33) is part of the word ratio: without it a word
+ * that moved against the rest looks like the global tempo. Comparison is
+ * against the file that was heard.
  *
  * A take is «unklar» when its voiced range stays under FLAT_RANGE and the
  * reference moves by at least that much more, and the take is not itself
@@ -35,7 +36,10 @@ import { bandDistance } from './spectrum'
  * take was quiet. The old 1–3 grade is in sentence-grade.ts, which the
  * app does not import. Bars stay when at least one word has a colour.
  * Under COLOURED_SHARE the words still show, the bars cover the coloured
- * part, and the page says so. A word whose model moves by MOVING_RANGE
+ * part, and the page says so. The timed span ends on the last run of at
+ * least three frames that rises above the loudness floor. A near-silent
+ * tail, or one or two leftover frames, would stretch the map and drop
+ * later words into the gaps. A word whose model moves by MOVING_RANGE
  * needs that movement in the same direction, otherwise it stays at most
  * yellow. Local stretch stays inside about 0.75–1.33. When the local
  * window misses every word but the model word has enough voice, the
@@ -226,7 +230,17 @@ export function thin(contour: Contour, hop: number): { contour: Contour; hop: nu
   return { contour: next, hop: hop * step }
 }
 
-function sustained(contour: Contour): { start: number; end: number } | null {
+/** Quiet pitch after the last loud frame of a run may be the syllable dying away. */
+const DECAY_FRAMES = 6
+
+/**
+ * First run of three voiced frames, and the last voiced frame. When
+ * loudness is known, the end is the last run of at least three frames
+ * that rises above the floor. A near-silent continuation, or one or two
+ * leftover frames, does not stretch the map. Later words would otherwise
+ * land in the gaps.
+ */
+function sustained(contour: Contour, energy?: readonly number[] | null): { start: number; end: number } | null {
   let start = -1
   for (let index = 0; index <= contour.length - 3; index += 1) {
     if (contour[index] != null && contour[index + 1] != null && contour[index + 2] != null) {
@@ -236,13 +250,45 @@ function sustained(contour: Contour): { start: number; end: number } | null {
   }
   if (start < 0) return null
   let end = start + 1
-  for (let index = contour.length - 1; index >= start; index -= 1) {
-    if (contour[index] != null) {
-      end = index + 1
-      break
+  const levels = loudLevels(energy, contour.length)
+  if (levels == null) {
+    for (let index = contour.length - 1; index >= start; index -= 1) {
+      if (contour[index] != null) {
+        end = index + 1
+        break
+      }
     }
+    return { start, end }
+  }
+  let index = start
+  while (index < contour.length) {
+    if (contour[index] == null) {
+      index += 1
+      continue
+    }
+    const runStart = index
+    let lastLoud = -1
+    while (index < contour.length && contour[index] != null) {
+      const level = levels[index] ?? 0
+      if (level >= LOUD_FRACTION) lastLoud = index
+      index += 1
+    }
+    const runEnd = index - 1
+    const length = runEnd - runStart + 1
+    if (lastLoud < 0 || length < 3) continue
+    const decayEnd = Math.min(runEnd, lastLoud + DECAY_FRAMES)
+    end = Math.max(end, decayEnd + 1)
   }
   return { start, end }
+}
+
+/** Loudness of each frame as a fraction of the peak. Null when loudness is missing. */
+function loudLevels(energy: readonly number[] | null | undefined, length: number): number[] | null {
+  if (!energy || energy.length !== length) return null
+  let peak = 0
+  for (const value of energy) if (value > peak) peak = value
+  if (!(peak > 0)) return null
+  return energy.map((value) => value / peak)
 }
 
 function warp(model: Contour, user: Contour, path: PathPoint[]): Contour {
@@ -293,6 +339,32 @@ function mappedFrame(
   const modelLength = Math.max(1, modelSpan.end - modelSpan.start - 1)
   const rel = (modelFrame - modelSpan.start) / modelLength
   return userSpan.start + rel * Math.max(0, userSpan.end - userSpan.start - 1)
+}
+
+/**
+ * How long the word lasts in the take, once the global map has lined the
+ * two spans up. A uniform stretch cancels when this is divided by the
+ * span ratio. The local scale then keeps a word that moved against the rest.
+ */
+function wordRhythmRatio(
+  start: number,
+  end: number,
+  scale: number,
+  globalRatio: number,
+  modelSpan: { start: number; end: number },
+  userSpan: { start: number; end: number },
+  modelHop: number,
+  userHop: number,
+): number {
+  const fileDuration = end - start
+  if (!(fileDuration > 0) || !(globalRatio > 0) || !(scale > 0)) return scale
+  const modelStart = modelSpan.start * modelHop
+  const modelLength = Math.max(modelHop, (modelSpan.end - 1) * modelHop - modelStart)
+  const userStart = userSpan.start * userHop
+  const userLength = Math.max(0, (userSpan.end - 1) * userHop - userStart)
+  const userDuration = ((end - start) / modelLength) * userLength * scale
+  const ratio = userDuration / fileDuration / globalRatio
+  return Number.isFinite(ratio) && ratio > 0 ? ratio : scale
 }
 
 /**
@@ -464,13 +536,16 @@ function wordCorrelation(model: Contour, user: Contour, path: readonly PathPoint
   return correlation(left, right)
 }
 
+/** Pitch quieter than this share of the peak does not move the timed span. */
+const LOUD_FRACTION = 0.08
+
 /** Coefficient of variation of a loudness curve. A pure tone sits near 0. */
 export function energyVariation(energy: readonly number[] | null | undefined): number | null {
   if (!energy || energy.length < 8) return null
   let peak = 0
   for (const value of energy) if (value > peak) peak = value
   if (peak <= 0) return null
-  const used = energy.filter((value) => value >= peak * 0.08)
+  const used = energy.filter((value) => value >= peak * LOUD_FRACTION)
   if (used.length < 8) return null
   let sum = 0
   for (const value of used) sum += value
@@ -774,8 +849,10 @@ export function scoreRepeat(input: {
   // A reversed file can lose its tracked pitch. That is still «unklar», not a quiet take.
   if (bandReversed) return { ...empty, tooLittleVoice: false, unclear: true, reason: 'unclear' }
   if (tooLittleVoice) return empty
-  const modelSpan = sustained(model)
-  const userSpan = sustained(user)
+  const modelEnergy = thinEnergy(input.modelEnergy, input.model.length)
+  const userEnergy = thinEnergy(input.userEnergy, input.user.length)
+  const modelSpan = sustained(model, modelEnergy)
+  const userSpan = sustained(user, userEnergy)
   if (!modelSpan || !userSpan) return { ...empty, tooLittleVoice: true, reason: 'quiet' }
   const path = linearPath(modelSpan, userSpan)
   let heard = user
@@ -794,8 +871,6 @@ export function scoreRepeat(input: {
   }
   const userOnModel = warp(model, heard, path)
   const globalRatio = ((userSpan.end - userSpan.start) * userHop) / ((modelSpan.end - modelSpan.start) * modelHop)
-  const modelEnergy = thinEnergy(input.modelEnergy, input.model.length)
-  const userEnergy = thinEnergy(input.userEnergy, input.user.length)
   const forward = contourCorrelation(model, heard, path)
   // With bands, the hard lock already returned above. The loose contour
   // lock stays only for fixtures that have no bands, so another voice is
@@ -828,11 +903,25 @@ export function scoreRepeat(input: {
     }
   }
   const directions: WordDirection[] = []
-  const words = input.words.map((word) => {
+  const words = input.words.map((word, wordIndex) => {
     const frame = Math.max(0, Math.min(model.length - 1, Math.floor(word.start / modelHop)))
-    const frameEnd = Math.max(frame + 1, Math.min(model.length, Math.ceil(word.end / modelHop)))
+    let frameEnd = Math.max(frame + 1, Math.min(model.length, Math.ceil(word.end / modelHop)))
     let modelVoiced = 0
     for (let index = frame; index < frameEnd; index += 1) if (model[index] != null) modelVoiced += 1
+    // The centre of the analysis window can fall a few frames after the
+    // aligner closed the word, still before the next one. A short word
+    // otherwise keeps one or two frames and stays grey.
+    if (modelVoiced < MIN_WORD_VOICED) {
+      const next = input.words?.[wordIndex + 1]
+      const nextFrame = next ? Math.floor(next.start / modelHop) : model.length
+      const extended = Math.max(frameEnd, Math.min(nextFrame, model.length, frameEnd + centerSlackFrames(modelHop)))
+      let added = modelVoiced
+      for (let index = frameEnd; index < extended; index += 1) if (model[index] != null) added += 1
+      if (added >= MIN_WORD_VOICED) {
+        frameEnd = extended
+        modelVoiced = added
+      }
+    }
     const scorable = modelVoiced >= MIN_WORD_VOICED
     const matched = scorable && word.end > word.start ? matchLocal(model, heard, frame, frameEnd, modelSpan, userSpan) : null
     const plainStart = mappedFrame(frame, modelSpan, userSpan)
@@ -879,10 +968,12 @@ export function scoreRepeat(input: {
     if (scorable && modelRange >= MOVING_RANGE && pitchCorr != null && !follows && melody === 'green') {
       melody = 'yellow'
     }
-    // Frame rounding made short words look fast or slow against their own
-    // file. The tempo is the span ratio times the local scale.
-    const rawRatio = globalRatio * matched.scale
-    const rhythm = Number.isFinite(rawRatio) && rawRatio > 0 ? rhythmBand(rawRatio) : rhythmBand(matched.scale)
+    // The word's own duration against the file, with the whole-take tempo
+    // divided out. The local scale stays in, so one word can still move
+    // against the rest. The span ratio alone would paint every word with
+    // the global tempo, and that scale by itself never leaves the green band.
+    const rawRatio = wordRhythmRatio(word.start, word.end, matched.scale, globalRatio, modelSpan, userSpan, modelHop, userHop)
+    const rhythm = rhythmBand(rawRatio)
     return {
       ...base,
       color: worseBand(melody, rhythm),
@@ -901,14 +992,15 @@ export function scoreRepeat(input: {
       : words.map((word) => {
           if (!word.scorable) return word
           const melody = melodyBand(meanDistance)
-          const rhythm = rhythmBand(globalRatio)
+          const rawRatio = wordRhythmRatio(word.start, word.end, 1, globalRatio, modelSpan, userSpan, modelHop, userHop)
+          const rhythm = rhythmBand(rawRatio)
           return {
             ...word,
             color: worseBand(melody, rhythm),
             melody,
             rhythm,
             melodyDistance: meanDistance,
-            rawRatio: globalRatio,
+            rawRatio,
           }
         })
   const melodyColours = barFromColours(scoredWords.map((word) => word.melody))

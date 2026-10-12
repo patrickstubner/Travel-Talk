@@ -7,6 +7,7 @@ import {
   MELODY_GREEN,
   MOVING_RANGE,
   RHYTHM_GREEN_MAX,
+  RHYTHM_GREEN_MIN,
   SPECTRAL_DISTANCE_MAX,
   contentMismatch,
   reversedRecording,
@@ -174,10 +175,10 @@ describe('repeat alignment', () => {
     })
     expect(factor).toBeGreaterThan(1.4)
     expect(factor).toBeLessThan(1.8)
+    expect(againstNormal.globalRatio ?? 0).toBeGreaterThan(RHYTHM_GREEN_MAX)
     expect(againstNormal.words?.every((word) => word.melody === 'green')).toBe(true)
-    expect(againstNormal.words?.every((word) => word.color !== 'red')).toBe(true)
-    expect(againstNormal.words?.every((word) => (word.rawRatio ?? 0) > RHYTHM_GREEN_MAX)).toBe(true)
-    expect(againstNormal.words?.every((word) => word.rhythm === 'yellow')).toBe(true)
+    expect(againstNormal.words?.every((word) => word.rhythm === 'green')).toBe(true)
+    expect(againstNormal.words?.every((word) => (word.rawRatio ?? 0) >= RHYTHM_GREEN_MIN && (word.rawRatio ?? 0) <= RHYTHM_GREEN_MAX)).toBe(true)
     expect(againstNormal.rhythmBar).not.toBe('passt')
     expect(againstNormal.melodyBar).toBe('passt')
     const heard = scoreRepeat({
@@ -196,6 +197,128 @@ describe('repeat alignment', () => {
     })
     expect(heard.rhythmBar).toBe('passt')
     expect(heard.melodyBar).toBe('passt')
+  })
+
+  it('keeps word rhythm green on a 48 kHz take with a lead-in and a tail', () => {
+    const rate = 48000
+    const seconds = 1.2
+    const model = new Float32Array(Math.floor(rate * seconds))
+    let phase = 0
+    for (let index = 0; index < model.length; index += 1) {
+      const hz = 140 + (120 * index) / model.length
+      phase += (2 * Math.PI * hz) / rate
+      model[index] = Math.sin(phase) * 0.8
+    }
+    const factor = 1 / 0.7
+    const stretched = new Float32Array(Math.floor(model.length * factor))
+    for (let index = 0; index < stretched.length; index += 1) {
+      const source = index / factor
+      const left = Math.floor(source)
+      const frac = source - left
+      const a = model[Math.min(left, model.length - 1)] ?? 0
+      const b = model[Math.min(left + 1, model.length - 1)] ?? a
+      stretched[index] = a + (b - a) * frac
+    }
+    const lead = Math.floor(rate * 0.45)
+    const tail = Math.floor(rate * 0.7)
+    const user = new Float32Array(lead + stretched.length + tail)
+    user.set(stretched, lead)
+    const words = [
+      { text: 'Could', start: 0.12, end: 0.4 },
+      { text: 'you', start: 0.4, end: 0.7 },
+      { text: 'down,', start: 0.7, end: 1.05 },
+    ]
+    const score = scoreRepeat({
+      model: contourFromSamples(model, rate),
+      user: contourFromSamples(user, rate),
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'en',
+      region: 'south',
+      userDuration: user.length / rate,
+    })
+    expect(score.globalRatio ?? 0).toBeGreaterThan(RHYTHM_GREEN_MAX)
+    expect(score.words?.filter((word) => word.scorable).length).toBe(words.length)
+    expect(score.words?.every((word) => word.rhythm === 'green')).toBe(true)
+    expect(score.rhythmBar).not.toBe('passt')
+    expect(score.melodyBar).toBe('passt')
+  })
+
+  it('uses the local scale in a word that moved against the rest', () => {
+    // Twelve frames is as long as scale 1.33 can see: the search only looks
+    // four frames past the global map. A wider word would stay on scale 1.
+    const model: Contour = Array.from({ length: 40 }, (_, index) => {
+      if (index < 10) return -1
+      if (index < 22) return -12 + (24 * (index - 10)) / 11
+      return 2
+    })
+    const user: Contour = model.map((value, index) => {
+      if (index < 10 || index >= 26) return value
+      return -12 + (24 * (index - 10)) / 15
+    })
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [
+        { text: 'Could', start: 0, end: 0.1 },
+        { text: 'down,', start: 0.1, end: 0.22 },
+        { text: 'please?', start: 0.26, end: 0.4 },
+      ],
+      lang: 'en',
+      region: 'south',
+      userDuration: 0.4,
+    })
+    const moved = score.words?.[1]
+    expect(moved?.melody).toBe('green')
+    expect(moved?.rawRatio ?? 0).toBeGreaterThan(1.25)
+    expect(moved?.rhythm).toBe('green')
+  })
+
+  it('keeps later words green when a near-silent tail still has a pitch', () => {
+    const model: Contour = [
+      ...flat(10, null),
+      ...ramp(30, -4, 4),
+      ...flat(10, null),
+      ...flat(16, -6),
+      ...flat(20, null),
+      ...flat(20, 5),
+      ...flat(10, null),
+      ...ramp(24, 3, -3),
+    ]
+    const delay = 20
+    const speech = [...flat(delay, null), ...model]
+    // A near-silent pitched tail, then one leftover frame that is still
+    // loud enough to pass the 8 % gate. Either one stretches the map.
+    const user = [...speech, ...flat(50, 0), ...flat(5, null), 0]
+    const energyOf = (contour: Contour, quietFrom: number) =>
+      contour.map((value, index) => {
+        if (index === contour.length - 1 && quietFrom < contour.length) return 0.05
+        return value == null || index >= quietFrom ? 0 : 0.4
+      })
+    const words = [
+      { text: 'Você', start: 0.1, end: 0.4 },
+      { text: 'isso,', start: 0.5, end: 0.66 },
+      { text: 'por', start: 0.86, end: 1.06 },
+      { text: 'favor?', start: 1.16, end: 1.4 },
+    ]
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'pt-BR',
+      region: 'south',
+      userDuration: user.length * 0.01,
+      modelEnergy: energyOf(model, model.length),
+      userEnergy: energyOf(user, speech.length),
+    })
+    expect(score.globalRatio ?? 0).toBeGreaterThan(0.9)
+    expect(score.globalRatio ?? 9).toBeLessThan(1.15)
+    expect(score.words?.every((word) => word.color === 'green')).toBe(true)
   })
 
   it('finds the voice after a leading silence and still lines the words up', () => {

@@ -23,7 +23,7 @@ describe('pitch analysis', () => {
     expect(second).toBe(first)
     const features = await first
     expect(features.contour.length).toBeGreaterThan(8)
-    expect(features.bands[0]?.length).toBe(12)
+    expect(features.bands.find((frame) => frame.length > 0)?.length).toBe(12)
     expect(analyzeModelCached(tone(180), 16000)).not.toBe(first)
   })
 

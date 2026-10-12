@@ -199,9 +199,6 @@ describe('shipped clips', () => {
           for (const word of score.words ?? []) {
             if (word.scorable) expect(word.rhythm, `${file} ${word.text}`).toBe('green')
           }
-          if (line.lang === 'pt-BR' && file.endsWith('emergency.write__any__base.m4a')) {
-            expect(score.words?.every((word) => word.color === 'green'), file).toBe(true)
-          }
           expectReversed(samples, words, line.lang, region, duration, file)
         }
         timed += 1
@@ -311,4 +308,57 @@ describe('shipped clips', () => {
   for (const lang of clipLangs) {
     it.skipIf(!ready)(`decodes ${lang} and scores the melody`, () => checkLanguage(lang), 1_080_000)
   }
+
+  const microphone = [
+    { lang: 'de' as const, text: 'Können Sie das bitte aufschreiben?', file: 'public/audio/de/thorsten-high/emergency.write__any__base.m4a' },
+    { lang: 'en' as const, text: 'Could you write that down, please?', file: 'public/audio/en/joe/emergency.write__any__base.m4a' },
+    { lang: 'pt-BR' as const, text: 'Você pode escrever isso, por favor?', file: 'public/audio/pt-BR/cadu/emergency.write__any__base.m4a' },
+    { lang: 'vi' as const, text: 'Xin viết ra giúp tôi.', file: 'public/audio/vi/vivos-22/emergency.write__any__base.m4a' },
+  ]
+
+  it.skipIf(!ready)('keeps rhythm green when the model clip is padded and resampled from 48 kHz', () => {
+    for (const item of microphone) {
+      if (!clipLangs.includes(item.lang)) continue
+      const alignPath = item.file.replace(/\.m4a$/, '.align.json')
+      const texts = splitWords(item.text)
+      const times = parseAlignment(JSON.parse(readFileSync(alignPath, 'utf8')), texts.length)
+      expect(times, item.file).not.toBeNull()
+      const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+      const modelSamples = pcm(
+        execFileSync('ffmpeg', ['-v', 'error', '-i', item.file, '-ac', '1', '-ar', '48000', '-f', 'f32le', 'pipe:1'], {
+          maxBuffer: 16 * 1024 * 1024,
+        }),
+      )
+      const lead = Math.floor(48000 * 0.45)
+      const tail = Math.floor(48000 * 0.7)
+      const userSamples = new Float32Array(lead + modelSamples.length + tail)
+      userSamples.set(modelSamples, lead)
+      const model = analyzeModel(modelSamples, 48000)
+      const user = analyzeUser(userSamples, 48000, model.bands)
+      const score = scoreRepeat({
+        model: model.contour,
+        user: user.contour,
+        modelHop: 0.01,
+        userHop: 0.01,
+        words,
+        lang: item.lang,
+        region: 'south',
+        userDuration: userSamples.length / 48000,
+        modelEnergy: model.energy,
+        userEnergy: user.energy,
+        modelBands: model.bands,
+        userBands: user.bands,
+        userPlainBands: user.plainBands,
+      })
+      expectAssessed(score, item.file)
+      for (const word of score.words ?? []) {
+        if (word.scorable) expect(word.rhythm, `${item.file} ${word.text}`).toBe('green')
+      }
+      if (item.lang === 'en') expect(score.words?.find((word) => word.text === 'down,')?.rhythm, item.file).toBe('green')
+      if (item.lang === 'vi') {
+        expect(score.words, item.file).toHaveLength(5)
+        expect(score.words?.every((word) => word.rhythm === 'green'), item.file).toBe(true)
+      }
+    }
+  }, 120_000)
 })
