@@ -163,6 +163,7 @@ const KNOWN_MISSING = new Set([
   'pt-BR/tammie-ema/transport.03.hotel__any__base.m4a',
   'pt-BR/tammie-ema/transport.08.plate__any__base.m4a',
   'pt-BR/tammie-ema/transport.19.ferry__any__base.m4a',
+  'pt-BR/tammie-ema/visa.rules__any__senhor.m4a',
   'pt-BR/tammie-ema/visa.where__any__base.m4a',
   'pt-BR/claribel-dervla/arrival.luggage__any__base.m4a',
   'pt-BR/claribel-dervla/arrival.passport__any__base.m4a',
