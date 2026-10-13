@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie'
+import { isSpeedStep } from '../audio/speed'
 import { capDueIso, emptyCard, toStored } from '../srs/scheduler'
 import { storedCardSchema } from './import'
 import {
@@ -288,6 +289,7 @@ function mergeLocal(incoming: Settings, local: Settings | undefined): Settings {
     voices: incoming.voices ?? local.voices,
     ...(local.voiceHintSeen ? { voiceHintSeen: true } : {}),
     ...(local.highlightWords === false ? { highlightWords: false } : {}),
+    ...(isSpeedStep(local.learnTempo) ? { learnTempo: local.learnTempo } : {}),
   }
 }
 

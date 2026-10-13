@@ -116,7 +116,7 @@ describe('new and due', () => {
 
 describe('target text', () => {
   it('keeps the script visible for a new phrase and hides it on a later check until the answer', () => {
-    expect(stepsFor(true)).toEqual(['slow', 'normal', 'repeat', 'understand', 'recall'])
+    expect(stepsFor(true)).toEqual(['slow', 'repeat', 'understand', 'recall'])
     expect(stepsFor(false)).toEqual(['understand', 'recall'])
     for (const step of ['slow', 'normal', 'repeat'] as const) {
       expect(targetTextVisible(step, true, false)).toBe(true)

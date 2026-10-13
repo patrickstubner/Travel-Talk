@@ -22,6 +22,8 @@ export type Dictionary = {
   speed70: string
   speed85: string
   speed100: string
+  tempoSlow: string
+  tempoNormal: string
   speedAutoHint: (percent: number) => string
   speedFixedHint: (percent: number) => string
   speedShown: (percent: number) => string
@@ -332,6 +334,8 @@ export const de: Dictionary = {
   speed70: '70 %',
   speed85: '85 %',
   speed100: '100 %',
+  tempoSlow: 'Langsam',
+  tempoNormal: 'Normal',
   speedAutoHint: (percent) =>
     `Automatisch, dieser Satz mit ${percent} %. Neue und unsichere Sätze starten bei 70 % und steigen nach sicheren Wiederholungen auf 85 % und dann auf 100 %. Eine feste Stufe hier gilt für alles Audio, bis du wieder Automatisch wählst.`,
   speedFixedHint: (percent) => `Fest ${percent} % für alles Audio, bis du wieder Automatisch wählst.`,
@@ -507,7 +511,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.9.6',
+  version: 'Version 0.9.7',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   aboutLine: 'Zum Satz',
   infoOpen: 'Erklärungen zum Satz',
@@ -568,7 +572,7 @@ export const de: Dictionary = {
   ifThen: 'Wenn ich morgens Kaffee trinke, öffne ich Heute lernen. Das kannst du überspringen.',
   everyPair: 'Sätze gibt es für jede Kombination aus zwei verschiedenen Sprachen.',
   missingLine: 'Für diese Kombination gibt es den Satz noch nicht.',
-  stepSlow: (index, total) => `Neuer Satz · ${index} von ${total} · langsam`,
+  stepSlow: (index, total) => `Neuer Satz · ${index} von ${total}`,
   stepNormal: (index, total) => `Neuer Satz · ${index} von ${total} · normal`,
   stepRepeat: (index, total) => `Nachsprechen · ${index} von ${total}`,
   stepUnderstand: (index, total) => `Hören · ${index} von ${total}`,
@@ -672,6 +676,8 @@ export const en: Dictionary = {
   speed70: '70 %',
   speed85: '85 %',
   speed100: '100 %',
+  tempoSlow: 'Slow',
+  tempoNormal: 'Normal',
   speedAutoHint: (percent) =>
     `Automatic, this line at ${percent} %. New and shaky lines start at 70 % and step up to 85 % and then 100 % after reliable reviews. A fixed step here applies to all audio until you choose Automatic again.`,
   speedFixedHint: (percent) => `Fixed at ${percent} % for all audio until you choose Automatic again.`,
@@ -843,7 +849,7 @@ export const en: Dictionary = {
   privacy: 'Progress, recordings and the note stay on this device. No account, no tracking, no font from the network.',
   loading: 'One moment.',
   storageError: 'Local storage is not available.',
-  version: 'Version 0.9.6',
+  version: 'Version 0.9.7',
   exampleAudio: 'The audio speaks the example sentence.',
   aboutLine: 'About this line',
   infoOpen: 'Notes about this line',
@@ -904,7 +910,7 @@ export const en: Dictionary = {
   ifThen: 'When I have coffee in the morning, I open Learn today. You can skip this.',
   everyPair: 'There is a line for every combination of two different languages.',
   missingLine: 'This line is not available for this combination yet.',
-  stepSlow: (index, total) => `New line · ${index} of ${total} · slow`,
+  stepSlow: (index, total) => `New line · ${index} of ${total}`,
   stepNormal: (index, total) => `New line · ${index} of ${total} · normal`,
   stepRepeat: (index, total) => `Repeat aloud · ${index} of ${total}`,
   stepUnderstand: (index, total) => `Listen · ${index} of ${total}`,
@@ -1008,6 +1014,8 @@ export const pt: Dictionary = {
   speed70: '70 %',
   speed85: '85 %',
   speed100: '100 %',
+  tempoSlow: 'Devagar',
+  tempoNormal: 'Normal',
   speedAutoHint: (percent) =>
     `Automático, esta frase em ${percent} %. Frases novas ou pouco firmes começam em 70 % e sobem para 85 % e depois 100 % depois de revisões seguras. Um passo fixo aqui vale para todo o áudio, até você escolher Automático de novo.`,
   speedFixedHint: (percent) => `Fixo em ${percent} % para todo o áudio, até você escolher Automático de novo.`,
@@ -1181,7 +1189,7 @@ export const pt: Dictionary = {
   privacy: 'Progresso, gravações e a nota ficam neste aparelho. Sem conta, sem rastreamento, sem fonte da rede.',
   loading: 'Um momento.',
   storageError: 'O armazenamento local não está disponível.',
-  version: 'Version 0.9.6',
+  version: 'Version 0.9.7',
   exampleAudio: 'O áudio fala a frase de exemplo.',
   aboutLine: 'Sobre a frase',
   infoOpen: 'Notas sobre a frase',
@@ -1242,7 +1250,7 @@ export const pt: Dictionary = {
   ifThen: 'Quando tomo café de manhã, abro Aprender hoje. Você pode pular isso.',
   everyPair: 'Há frases para cada combinação de duas línguas diferentes.',
   missingLine: 'Esta frase ainda não existe para esta combinação.',
-  stepSlow: (index, total) => `Frase nova · ${index} de ${total} · devagar`,
+  stepSlow: (index, total) => `Frase nova · ${index} de ${total}`,
   stepNormal: (index, total) => `Frase nova · ${index} de ${total} · normal`,
   stepRepeat: (index, total) => `Repetir em voz alta · ${index} de ${total}`,
   stepUnderstand: (index, total) => `Ouvir · ${index} de ${total}`,
@@ -1346,6 +1354,8 @@ export const vi: Dictionary = {
   speed70: '70 %',
   speed85: '85 %',
   speed100: '100 %',
+  tempoSlow: 'Chậm',
+  tempoNormal: 'Bình thường',
   speedAutoHint: (percent) =>
     `Tự động, câu này ở ${percent} %. Câu mới hoặc chưa chắc bắt đầu ở 70 % và tăng lên 85 % rồi 100 % sau các lần nhớ chắc. Một mức cố định ở đây áp dụng cho mọi audio, cho đến khi bạn chọn Tự động.`,
   speedFixedHint: (percent) => `Cố định ${percent} % cho mọi audio, cho đến khi bạn chọn lại Tự động.`,
@@ -1517,7 +1527,7 @@ export const vi: Dictionary = {
   privacy: 'Tiến độ, bản ghi và ghi chú ở trên máy này. Không tài khoản, không theo dõi, không phông từ mạng.',
   loading: 'Một lát.',
   storageError: 'Bộ nhớ trên máy không dùng được.',
-  version: 'Version 0.9.6',
+  version: 'Version 0.9.7',
   exampleAudio: 'Audio đọc câu ví dụ.',
   aboutLine: 'Về câu này',
   infoOpen: 'Giải thích về câu này',
@@ -1578,7 +1588,7 @@ export const vi: Dictionary = {
   ifThen: 'Khi sáng uống cà phê, tôi mở Học hôm nay. Bạn có thể bỏ qua.',
   everyPair: 'Có câu cho mỗi cặp hai ngôn ngữ khác nhau.',
   missingLine: 'Câu này chưa có cho cặp ngôn ngữ này.',
-  stepSlow: (index, total) => `Câu mới · ${index} / ${total} · chậm`,
+  stepSlow: (index, total) => `Câu mới · ${index} / ${total}`,
   stepNormal: (index, total) => `Câu mới · ${index} / ${total} · bình thường`,
   stepRepeat: (index, total) => `Nhắc lại · ${index} / ${total}`,
   stepUnderstand: (index, total) => `Nghe · ${index} / ${total}`,

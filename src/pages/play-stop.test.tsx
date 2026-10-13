@@ -63,8 +63,8 @@ describe('stop signal on sentence playback', () => {
     )
     await waitFor(() => expect(vi.mocked(playClip).mock.calls.length).toBeGreaterThan(0))
     expect(vi.mocked(playClip).mock.calls.every((call) => typeof call[7] === 'function')).toBe(true)
-    expect(screen.queryByRole('button', { name: 'Läuft langsam.' })).toBeNull()
-    const idle = screen.queryByRole('button', { name: 'Langsam anhören' }) ?? screen.getByRole('button', { name: 'Noch einmal langsam' })
+    expect(screen.queryByRole('button', { name: 'Läuft' })).toBeNull()
+    const idle = screen.getByRole('button', { name: 'Anhören' })
     expect(idle.getAttribute('aria-pressed')).not.toBe('true')
   })
 

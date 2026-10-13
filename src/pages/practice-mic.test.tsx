@@ -54,7 +54,6 @@ function renderPractice(): void {
 
 async function openRepeat(): Promise<void> {
   renderPractice()
-  fireEvent.click(await screen.findByRole('button', { name: 'Jetzt in normalem Tempo' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
   await screen.findByRole('button', { name: 'Aufnehmen' })
 }

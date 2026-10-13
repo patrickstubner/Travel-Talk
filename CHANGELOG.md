@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.7 — 2026-10-13
+
+- Ein neuer Satz hat die Tempo-Wahl direkt neben «Anhören»: Langsam, 85 % und Normal. Langsam ist der Anfang. Die Wahl bleibt für diese Person, auch beim nächsten Satz und nach einem Neuladen. «Anhören» spielt immer das gewählte Tempo, so oft man will. «Weiter» steht immer da, auch während der Wiedergabe und unabhängig vom Tempo.
+- Nach «Normal» kann man wieder «Langsam» wählen. Die beiden Schritte langsam und dann normal gibt es nicht mehr. Pfeiltasten bewegen die Wahl. Der Schalter ist eine Gruppe mit `aria-pressed`.
+- Die Wahl liegt nur auf dem Gerät, in den Einstellungen dieser Person. Sie geht nicht in den Export. Ein anderer Wert als 70 %, 85 % oder 100 % wird verworfen, dann gilt Langsam. Es entsteht keine Adresse, und `playbackRate` bleibt 1.
+- Zieltext, Übersetzung, Anhören mit Tempo, dann Aufnahme. Erklärungen bleiben hinter dem Info-Knopf.
+
 ## 0.9.6 — 2026-10-13
 
 - Beim Nachsprechen auf Portugiesisch (Brasilien) wird ein Wort seltener rot, wenn die Melodie nur etwas anders ist als die Vorlage. Unter 2,5 Halbtönen bleibt es grün, bis 5 gelb, darüber rot. Vietnamesisch, Deutsch und Englisch bleiben bei 1,5 und 3.

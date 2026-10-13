@@ -6,7 +6,7 @@ import { resolvePlayback } from '../content/resolve'
 import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
 import { decodeContourFile, playClip, stopClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
-import { tempoFile } from '../audio/speed'
+import { storedLearnTempo, tempoFile, type SpeedStep } from '../audio/speed'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { stopSlices } from '../audio/slice'
 import { useApp } from '../app/state'
@@ -15,6 +15,7 @@ import type { ExplainPart } from '../audio/explain'
 import { fixedPart, lineContext } from '../audio/notes'
 import { KaraokeLine } from '../components/KaraokeLine'
 import { LearnCard } from '../components/LearnCard'
+import { TempoSwitch } from '../components/TempoSwitch'
 import { RepeatFeedback } from '../components/RepeatFeedback'
 import { RichText } from '../components/RichText'
 import { spokenCitation, wordAudioFile, wordById } from '../../content/words'
@@ -35,13 +36,17 @@ import {
 } from '../srs/session'
 import { prefsFromSettings } from '../storage/types'
 
+function practiceRate(step: LearnStep | undefined, tempo: SpeedStep): SpeedStep {
+  return step === 'slow' || step === 'repeat' ? tempo : 1
+}
+
 function kindFrom(value: string | null): SessionKind {
   if (value === 'review' || value === 'new') return value
   return 'mix'
 }
 
 export function PracticePage() {
-  const { catalog, snapshot, saveCard } = useApp()
+  const { catalog, snapshot, saveCard, saveSettings } = useApp()
   const settings = useSettings()
   const copy = useCopy()
   const [params] = useSearchParams()
@@ -144,7 +149,7 @@ export function PracticePage() {
     const line = resolvePlayback(concept, settings.targetLang, settings.viRegion, prefsFromSettings(settings.targetLang, settings))
     if (!line) return
     let live = true
-    const rate = step === 'slow' ? 0.7 : 1
+    const rate = practiceRate(step, storedLearnTempo(settings.learnTempo))
     lockedFile.current = tempoFile(spokenFile(settings, settings.targetLang, line.file), rate)
     setPlaying(true)
     setSeconds(0)
@@ -191,7 +196,7 @@ export function PracticePage() {
     }
     const line = resolvePlayback(concept, settings.targetLang, settings.viRegion, prefsFromSettings(settings.targetLang, settings))
     if (!line) return
-    const rate = step === 'slow' ? 0.7 : 1
+    const rate = practiceRate(step, storedLearnTempo(settings.learnTempo))
     const file = tempoFile(spokenFile(settings, settings.targetLang, line.file), rate)
     const timing = playing && lockedFile.current ? lockedFile.current : file
     let live = true
@@ -213,7 +218,7 @@ export function PracticePage() {
     }
     const line = resolvePlayback(concept, settings.targetLang, settings.viRegion, prefsFromSettings(settings.targetLang, settings))
     if (!line) return
-    const file = tempoFile(spokenFile(settings, settings.targetLang, line.file), 1)
+    const file = tempoFile(spokenFile(settings, settings.targetLang, line.file), storedLearnTempo(settings.learnTempo))
     let live = true
     setTimingsPending(true)
     void decodeContourFile(file).then(async (decoded) => {
@@ -329,7 +334,12 @@ export function PracticePage() {
     setFinished(true)
   }
 
-  async function hear(file: string, speech: string, rate: 0.7 | 1): Promise<void> {
+  function chooseTempo(next: SpeedStep): void {
+    if (next === storedLearnTempo(settings.learnTempo)) return
+    void saveSettings({ ...settings, learnTempo: next })
+  }
+
+  async function hear(file: string, speech: string, rate: SpeedStep): Promise<void> {
     if (!targetLang) return
     const bare = file.slice(file.lastIndexOf('/') + 1)
     const resolved = bare.startsWith('w.') ? spokenWordFile(settings, targetLang, file) : spokenFile(settings, targetLang, file)
@@ -530,7 +540,8 @@ export function PracticePage() {
   const followWords = settings.highlightWords !== false
   const revealGloss = step !== 'understand' || answered
   const links = followWords && revealGloss ? linksFor(concept.id, targetLang, app, target.speech, source.speech, settings) : []
-  const playRate = step === 'slow' ? 0.7 : 1
+  const chosen = storedLearnTempo(settings.learnTempo)
+  const playRate = practiceRate(step, chosen)
   const heardFile = tempoFile(spokenFile(settings, targetLang, target.file), playRate)
   const timingFile = playing && lockedFile.current ? lockedFile.current : heardFile
   const markTimes =
@@ -614,29 +625,16 @@ export function PracticePage() {
             {sentence}
             {glossLine}
           </LearnCard>
-          <button
-            type="button"
-            className="play-row"
-            aria-pressed={playing}
-            onClick={() => void hear(target.file, target.speech, step === 'slow' ? 0.7 : 1)}
-          >
-            <span className="play-mark" aria-hidden="true" />
-            {playing ? (step === 'slow' ? copy.playingSlow : copy.playingNormal) : step === 'slow' ? copy.playSlow : copy.playNormal}
-          </button>
-          {step === 'slow' ? (
-            <>
-              <button type="button" className="button wide" onClick={() => void hear(target.file, target.speech, 0.7)}>
-                {copy.replaySlow}
-              </button>
-              <button type="button" className="button primary" onClick={goNext}>
-                {copy.playNormal}
-              </button>
-            </>
-          ) : (
-            <button type="button" className="button primary" onClick={goNext}>
-              {copy.next}
+          <div className="tempo-bar" data-testid="learn-actions">
+            <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(target.file, target.speech, chosen)}>
+              <span className="play-mark" aria-hidden="true" />
+              {playing ? copy.playing : copy.play}
             </button>
-          )}
+            <TempoSwitch value={chosen} onChange={chooseTempo} label={copy.speedTitle} slow={copy.tempoSlow} mid={copy.speed85} normal={copy.tempoNormal} />
+          </div>
+          <button type="button" className="button primary" onClick={goNext}>
+            {copy.next}
+          </button>
         </>
       ) : null}
       {step === 'repeat' ? (
@@ -645,16 +643,19 @@ export function PracticePage() {
             {sentence}
             {glossLine}
           </LearnCard>
-          <button
-            type="button"
-            className="play-row"
-            aria-pressed={playing}
-            disabled={recording || micStarting}
-            onClick={() => void hear(target.file, target.speech, 1)}
-          >
-            <span className="play-mark" aria-hidden="true" />
-            {playing ? copy.playing : copy.play}
-          </button>
+          <div className="tempo-bar" data-testid="learn-actions">
+            <button
+              type="button"
+              className="play-row"
+              aria-pressed={playing}
+              disabled={recording || micStarting}
+              onClick={() => void hear(target.file, target.speech, chosen)}
+            >
+              <span className="play-mark" aria-hidden="true" />
+              {playing ? copy.playing : copy.play}
+            </button>
+            <TempoSwitch value={chosen} onChange={chooseTempo} label={copy.speedTitle} slow={copy.tempoSlow} mid={copy.speed85} normal={copy.tempoNormal} />
+          </div>
           {micNote ? <p className="voice-note">{copy.micSkipped}</p> : null}
           <div className="learn-speak" data-testid="learn-record">
           <div className="row">

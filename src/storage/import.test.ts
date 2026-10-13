@@ -144,6 +144,10 @@ describe('import', () => {
     expect(coerceSettings({ voices: { vi: 'not-a-bundled-voice', de: 'thorsten' } }).voices).toEqual({ de: 'thorsten' })
     expect(coerceSettings({ highlightWords: false }).highlightWords).toBe(false)
     expect(coerceSettings({ highlightWords: true }).highlightWords).toBeUndefined()
+    expect(coerceSettings({ learnTempo: 0.85 }).learnTempo).toBe(0.85)
+    expect(coerceSettings({ learnTempo: 1 }).learnTempo).toBe(1)
+    expect(coerceSettings({ learnTempo: 0.5 as never }).learnTempo).toBeUndefined()
+    expect(coerceSettings({ learnTempo: 'slow' as never }).learnTempo).toBeUndefined()
   })
 
   it('rejects a settings object that carries an unknown field', () => {
@@ -319,6 +323,8 @@ describe('import', () => {
     expect(text).not.toContain('voiceHintSeen')
     const withHighlight = toExport({ settings: { ...current, highlightWords: false }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
     expect(withHighlight).not.toContain('highlightWords')
+    const withTempo = toExport({ settings: { ...current, learnTempo: 0.7 }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
+    expect(withTempo).not.toContain('learnTempo')
   })
 
   it('caps last review and due in a format 4 file', () => {

@@ -2,6 +2,14 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## 0.9.7 Tempo beim neuen Satz
+
+Geprüft am 13. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` am 13. Oktober 2026: 0 Schwachstellen.
+
+Die Tempo-Wahl eines neuen Satzes ist nur 0.7, 0.85 oder 1. Fehlt sie oder ist der Wert ein anderer, gilt 0.7. Sie liegt in den Einstellungen dieser Person und geht nicht in den Export. Ein Import lässt sie auf dem Gerät stehen, `mergeLocal` übernimmt nur einen der drei Werte. `coerceSettings` verwirft einen anderen Wert. Daraus wird keine Adresse gebaut. `playbackRate` bleibt 1. Das Tempo ist der Dateiname, und der Name muss weiter `AUDIO_FILE` und `manifest.json` erfüllen. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Die CSP bleibt. Aufnahmen bleiben auf dem Gerät.
+
+Die offenen Punkte bleiben offen: kein `frame-ancestors` auf GitHub Pages, Mikrofon-Freigabe im Browser, Notiz unverschlüsselt in IndexedDB.
+
 ## 0.9.4 Erklärungen
 
 Kein neues Paket, kein neues Netz, kein externer Sprachdienst. Die Info-Blätter lesen vorerzeugte Dateien unter `/Travel-Talk/audio/{sprache}/help/`. Der Name muss `AUDIO_FILE` und `manifest.json` erfüllen, derselbe Weg wie das Satz-Audio. Diese Hilfedateien liegen zusätzlich im Precache, Satz-Audio nicht. Der Erzeuger speichert den SHA-256 des Textes und baut die Datei neu, wenn der Text sich ändert. `speechSynthesis` spricht nur den Absatz, dessen Datei fehlt oder offline nicht im Cache liegt, und nur in der App-Sprache (`de-CH`, `en-US`, `pt-BR`, `vi`). Ein Abbruch, eine Pause oder anderes Audio beendet «Vorlesen», statt den nächsten Absatz zu starten. Es wird keine URL gebaut und kein Text gesendet. Die CSP bleibt. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Aufnahmen bleiben auf dem Gerät.

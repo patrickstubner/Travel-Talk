@@ -2,7 +2,7 @@
 
 **Live:** [patrickstubner.github.io/Travel-Talk](https://patrickstubner.github.io/Travel-Talk/)
 
-Reise-Sprachhilfe für eine Familie. Version 0.9.6. Ohne Konto, ohne Tracking. Mehrere Personen können auf einem Gerät lernen. Lernstand und Sätze bleiben auf dem Gerät. Eine Stimme ist lokal, nachdem sie geladen wurde. Stimmen und Audiodateien sind gemeinsam. Nach dem Nachsprechen liegen die eigene Tonhöhe und die der gehörten Datei auf einer Achse, mit Farben an den Wörtern und Balken für Melodie und Rhythmus. Eine Note zum Satz gibt es in dieser Fassung nicht.
+Reise-Sprachhilfe für eine Familie. Version 0.9.7. Ohne Konto, ohne Tracking. Mehrere Personen können auf einem Gerät lernen. Lernstand und Sätze bleiben auf dem Gerät. Eine Stimme ist lokal, nachdem sie geladen wurde. Stimmen und Audiodateien sind gemeinsam. Nach dem Nachsprechen liegen die eigene Tonhöhe und die der gehörten Datei auf einer Achse, mit Farben an den Wörtern und Balken für Melodie und Rhythmus. Eine Note zum Satz gibt es in dieser Fassung nicht.
 
 Die App hilft beim Üben kurzer Sätze entlang einer Reise: Notfall, Menschen treffen, Ankunft, Restaurant, Transport und ein Anfang für Visum, Unterkunft, Einkaufen, Sehenswürdigkeiten und Alltag. Die Sprache der App und die Lernsprache sind zwei getrennte Wahlen. Hören, Verstehen und Sprechen kommen zuerst. Lesen stützt das Hören. Schreiben ist nicht der Weg durch die Sitzung. Vor den neuen Sätzen kommen höchstens sechs Wörter am Tag, auch über mehrere Sitzungen. Ein Satz ohne geprüftes Wort ist sofort offen. Sonst geht er auf, wenn jedes geprüfte Wort einmal richtig war. Freie Satzplätze gehen zuerst an die Sätze, deren Wörter heute richtig waren. Höchstens 15 neue Karten am Tag, Wörter und Sätze zusammen, über alle Richtungen.
 

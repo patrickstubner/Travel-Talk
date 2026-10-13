@@ -47,7 +47,6 @@ describe('meaning step', () => {
         </ReadyPractice>
       </AppProvider>,
     )
-    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt in normalem Tempo' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
     expect(await screen.findByText('Was bedeutet der Satz?')).toBeTruthy()

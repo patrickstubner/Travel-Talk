@@ -95,7 +95,6 @@ async function openRepeat(voice?: string): Promise<void> {
       </ReadyPractice>
     </AppProvider>,
   )
-  fireEvent.click(await screen.findByRole('button', { name: 'Jetzt in normalem Tempo' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
   await screen.findByRole('button', { name: 'Aufnehmen' })
 }

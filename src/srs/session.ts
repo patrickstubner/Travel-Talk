@@ -47,9 +47,12 @@ export function newCardBudget(dueCount: number, introduced: number): number {
   return Math.min(take, room)
 }
 
-/** Rating sits on the recall screen, so it is not a separate step in the queue. */
+/**
+ * Rating sits on the recall screen, so it is not a separate step in the queue.
+ * A new sentence is heard once. The tempo is a control on that step, not a second step.
+ */
 export function stepsFor(isNew: boolean): LearnStep[] {
-  if (isNew) return ['slow', 'normal', 'repeat', 'understand', 'recall']
+  if (isNew) return ['slow', 'repeat', 'understand', 'recall']
   return ['understand', 'recall']
 }
 

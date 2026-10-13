@@ -1,5 +1,5 @@
 import type { Lang } from '../../content/phrase'
-import type { SpeedChoice } from '../audio/speed'
+import { isSpeedStep, type SpeedChoice, type SpeedStep } from '../audio/speed'
 import { isBundledVoiceId } from '../audio/voices'
 import { isLang, legacyDirection } from '../domain/direction'
 
@@ -28,6 +28,11 @@ export type Settings = {
   personalNote: string
   /** `auto` follows the card on the phrase page. A number is kept until automatic is chosen again. */
   speed: SpeedChoice
+  /**
+   * Tempo for a new sentence while practising. Local only, not exported.
+   * Missing means slow. Only 0.7, 0.85 and 1 are kept.
+   */
+  learnTempo?: SpeedStep
   /**
    * Other learning languages besides `targetLang`.
    * Today still practises one. The daily cap counts every direction of this person.
@@ -193,6 +198,7 @@ export function coerceSettings(raw: Partial<Settings> & { slow?: boolean; pairId
     retention: typeof raw.retention === 'number' && raw.retention >= 0.8 && raw.retention <= 0.97 ? raw.retention : defaultSettings.retention,
     personalNote: cleanPersonalNote(raw.personalNote),
     speed: normalizeSpeed(raw.speed, raw.slow),
+    ...(isSpeedStep(raw.learnTempo) ? { learnTempo: raw.learnTempo } : {}),
     ...(cleanMoreTargets(raw.moreTargets, appLang, targetLang).length > 0
       ? { moreTargets: cleanMoreTargets(raw.moreTargets, appLang, targetLang) }
       : {}),
