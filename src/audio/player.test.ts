@@ -179,4 +179,88 @@ describe('playClip', () => {
     expect(onTime).not.toHaveBeenCalled()
     expect(frame).not.toHaveBeenCalled()
   })
+
+  it('ends the clip on error, pause, or a newer playback', async () => {
+    clearManifestCache()
+    const created: Array<FakeAudio & { onerror: (() => void) | null; onpause: (() => void) | null }> = []
+    vi.stubGlobal(
+      'Audio',
+      class extends FakeAudio {
+        onerror: (() => void) | null = null
+        onpause: (() => void) | null = null
+        constructor(src: string) {
+          super(src)
+          created.push(this)
+        }
+        override pause(): void {
+          this.onpause?.()
+        }
+      },
+    )
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ['vi/emergency.help__any__base.m4a', 'vi/emergency.help__any__base.r70.m4a'],
+      })),
+    )
+    const onEnd = vi.fn()
+    const onStop = vi.fn()
+    await playClip('vi/emergency.help__any__base.m4a', 'Hilfe', 'vi', 1, onEnd, undefined, undefined, onStop)
+    created[0]?.onerror?.()
+    expect(onStop).toHaveBeenCalledOnce()
+    expect(onEnd).toHaveBeenCalledOnce()
+
+    clearManifestCache()
+    onStop.mockClear()
+    onEnd.mockClear()
+    created.length = 0
+    await playClip('vi/emergency.help__any__base.m4a', 'Hilfe', 'vi', 1, onEnd, undefined, undefined, onStop)
+    await playClip('vi/emergency.help__any__base.r70.m4a', 'Hilfe', 'vi', 0.7)
+    expect(onStop).toHaveBeenCalled()
+    expect(onEnd).not.toHaveBeenCalled()
+  })
+
+  it('resets through the end and stop signals when a cached play() is refused', async () => {
+    clearManifestCache()
+    const created: Array<FakeAudio & { onerror: (() => void) | null }> = []
+    vi.stubGlobal(
+      'Audio',
+      class extends FakeAudio {
+        onerror: (() => void) | null = null
+        constructor(src: string) {
+          super(src)
+          created.push(this)
+        }
+        override play(): Promise<void> {
+          return Promise.reject(new DOMException('not allowed', 'NotAllowedError'))
+        }
+      },
+    )
+    vi.stubGlobal('caches', {
+      keys: async () => ['travel-talk-audio'],
+      open: async () => ({ match: async () => new Response('audio') }),
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ['vi/emergency.help__any__base.m4a'],
+      })),
+    )
+    const onEnd = vi.fn()
+    const onStop = vi.fn()
+    const result = await playClip('vi/emergency.help__any__base.m4a', 'Hilfe', 'vi', 1, onEnd, undefined, undefined, onStop)
+    expect(result).toBe('file')
+    expect(created).toHaveLength(1)
+    expect(onStop).toHaveBeenCalledOnce()
+    expect(onEnd).toHaveBeenCalledOnce()
+
+    clearManifestCache()
+    onEnd.mockClear()
+    created.length = 0
+    const onlyEnd = await playClip('vi/emergency.help__any__base.m4a', 'Hilfe', 'vi', 1, onEnd)
+    expect(onlyEnd).toBe('file')
+    expect(onEnd).toHaveBeenCalledOnce()
+  })
 })

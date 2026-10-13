@@ -57,5 +57,6 @@ describe('karaoke line', () => {
     )
     expect(screen.queryByTestId('word-now')).toBeNull()
     expect(screen.getByRole('button', { name: 'Help!' }).className).not.toContain('now')
+    expect(screen.getByTestId('target-line').tagName).toBe('P')
   })
 })

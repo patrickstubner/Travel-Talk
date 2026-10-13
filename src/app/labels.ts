@@ -34,5 +34,6 @@ export function interfaceLang(settings: Settings): Lang {
 
 export function htmlLang(lang: Lang): string {
   if (lang === 'de') return 'de-CH'
+  if (lang === 'en') return 'en-US'
   return lang
 }

@@ -167,23 +167,25 @@ export function PhrasePage() {
     setPlaying(true)
     setSeconds(0)
     setClipDuration(null)
+    const release = (): void => {
+      if (!aliveRef.current) return
+      lockedFile.current = ''
+      setPlaying(false)
+      setSeconds(null)
+    }
     const result = await playClip(
       file,
       target?.speech ?? '',
       targetLang ?? 'de',
       rate,
-      () => {
-        if (!aliveRef.current) return
-        lockedFile.current = ''
-        setPlaying(false)
-        setSeconds(null)
-      },
+      release,
       (time) => {
         if (aliveRef.current) setSeconds(time)
       },
       (duration) => {
         if (aliveRef.current) setClipDuration(duration)
       },
+      release,
     )
     if (!aliveRef.current) return
     if (result === 'offline') {

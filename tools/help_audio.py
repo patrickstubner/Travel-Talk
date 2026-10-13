@@ -8,6 +8,7 @@ from piper import PiperVoice
 from piper.config import SynthesisConfig
 
 from generate_audio import encode, require_model, require_piper, write_manifest
+from help_stamp import clip_is_current, load_hashes, save_hashes, text_hash
 
 ROOT = Path(__file__).resolve().parents[1]
 MODELS = {
@@ -22,10 +23,11 @@ def main() -> None:
     require_piper()
     lines = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
     model_dir = Path(sys.argv[2])
+    hashes = load_hashes()
     pending = []
     for row in lines:
         dest = ROOT / "public" / "audio" / row["file"]
-        if dest.exists() and dest.stat().st_size > 0:
+        if clip_is_current(dest, row["text"], hashes.get(row["file"])):
             continue
         pending.append(row)
     by_lang: dict[str, list[dict[str, str]]] = {}
@@ -46,6 +48,8 @@ def main() -> None:
                 loaded.synthesize_wav(row["text"], handle, syn_config=syn)
             encode(wav, dest, None)
             wav.unlink(missing_ok=True)
+            hashes[row["file"]] = text_hash(row["text"])
+            save_hashes(hashes)
             if index % 20 == 0:
                 print(f"{lang} {index}/{len(rows)}", flush=True)
         print(f"{lang} done {len(rows)}", flush=True)

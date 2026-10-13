@@ -1,5 +1,6 @@
 import type { Lang } from '../../content/phrase'
 import { publicUrl } from '../public-url'
+import { HELP_CACHE } from '../pwa/cache-policy'
 import { CLIP_REVISION, replacedClipPaths } from './clip-revision'
 import { loadManifest } from './player'
 import type { Settings } from '../storage/types'
@@ -7,6 +8,8 @@ import { filesForVoice, selectedVoice, voicesFor, voicesKeptByOthers, type Catal
 
 /** Runtime cache filled by «Für offline laden». Install does not write it. */
 export const AUDIO_CACHE = 'travel-talk-audio'
+
+export { HELP_CACHE }
 
 /** Voice buttons re-read their progress after a delete. */
 export const AUDIO_CHANGED = 'travel-talk-audio-changed'
@@ -46,6 +49,8 @@ function isOtherVoice(url: string, lang: Lang, keepIds: ReadonlySet<string>): bo
   if (!rest.includes('.m4a') && !rest.includes('.align.json')) return false
   const slash = rest.indexOf('/')
   const folder = slash < 0 ? '' : rest.slice(0, slash)
+  // Explanation clips are not a voice. Dropping a voice must leave them.
+  if (folder === 'help') return false
   if (folder === '') {
     const legacy = voicesFor(lang).find((voice) => voice.legacy)
     return legacy != null && !keepIds.has(legacy.id)
@@ -73,15 +78,65 @@ export async function voiceProgress(lang: Lang, voice: CatalogVoice): Promise<{ 
   }
 }
 
+function helpFilesFor(listed: Iterable<string>, lang: Lang): string[] {
+  const prefix = `${lang}/help/`
+  const files: string[] = []
+  for (const file of listed) {
+    if (file.startsWith(prefix) && file.endsWith('.m4a')) files.push(file)
+  }
+  return files
+}
+
+/**
+ * Stores explanation clips for one app language. Other languages in this cache are removed
+ * only after this language is complete. A network miss does not delete them.
+ */
+async function cacheHelpLanguage(lang: Lang, added: string[]): Promise<'ready' | 'error' | 'full'> {
+  let files: string[]
+  try {
+    files = helpFilesFor(await loadManifest(), lang)
+  } catch {
+    return 'error'
+  }
+  if (!('caches' in globalThis)) return 'error'
+  const cache = await caches.open(HELP_CACHE)
+  for (const file of files) {
+    const url = audioRequest(file)
+    if (await cache.match(url)) continue
+    let response: Response
+    try {
+      response = await fetch(url)
+    } catch {
+      return 'error'
+    }
+    if (response.status === 404) continue
+    if (!response.ok) return 'error'
+    try {
+      await cache.put(url, response)
+    } catch (error) {
+      if (isQuota(error)) return 'full'
+      return 'error'
+    }
+    added.push(url)
+  }
+  for (const request of await cache.keys()) {
+    const url = requestUrl(request)
+    if (!url.includes('/help/') || url.includes(`/audio/${lang}/help/`)) continue
+    await cache.delete(request)
+  }
+  return 'ready'
+}
+
 /**
  * Downloads one voice. A network or quota failure leaves what is already stored
  * and does not remove another voice. `dropOthers` is read only after every file is in.
+ * `helpLang` also stores that app language's explanation clips. They are not part of the voice count.
  */
 export async function loadVoiceOffline(
   lang: Lang,
   voice: CatalogVoice,
   onProgress: (have: number, total: number) => void,
-  options: { dropOthers: () => boolean; retainIds?: readonly string[] },
+  options: { dropOthers: () => boolean; retainIds?: readonly string[]; helpLang?: Lang },
 ): Promise<LoadResult> {
   const empty: LoadResult = { status: 'error', missing: 0, added: [] }
   let files: string[]
@@ -139,6 +194,10 @@ export async function loadVoiceOffline(
     onProgress(have, total)
   }
   if (missing === 0 && options.dropOthers()) await dropOtherVoices(lang, voice, options.retainIds ?? [])
+  if (options.helpLang) {
+    const help = await cacheHelpLanguage(options.helpLang, added)
+    if (help === 'full') return { status: 'full', missing, added }
+  }
   return { status: 'ready', missing, added }
 }
 
@@ -194,8 +253,10 @@ export async function discardAdded(urls: readonly string[]): Promise<void> {
     notifyAudioChanged()
     return
   }
-  const cache = await caches.open(AUDIO_CACHE)
-  for (const url of urls) await cache.delete(url)
+  for (const name of [AUDIO_CACHE, HELP_CACHE]) {
+    const cache = await caches.open(name)
+    for (const url of urls) await cache.delete(url)
+  }
   notifyAudioChanged()
 }
 

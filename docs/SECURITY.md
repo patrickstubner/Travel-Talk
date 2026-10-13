@@ -4,7 +4,7 @@ Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, ke
 
 ## 0.9.4 Erklärungen
 
-Kein neues Paket, kein neues Netz, kein externer Sprachdienst. Die Info-Blätter lesen vorerzeugte Dateien unter `/Travel-Talk/audio/{sprache}/help/`. Der Name muss `AUDIO_FILE` und `manifest.json` erfüllen, derselbe Weg wie das Satz-Audio. `speechSynthesis` spricht nur den Absatz, dessen Datei fehlt oder offline nicht im Cache liegt, und nur in der App-Sprache. Es wird keine URL gebaut und kein Text gesendet. Die CSP bleibt. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Aufnahmen bleiben auf dem Gerät.
+Kein neues Paket, kein neues Netz, kein externer Sprachdienst. Die Info-Blätter lesen vorerzeugte Dateien unter `/Travel-Talk/audio/{sprache}/help/`. Der Name muss `AUDIO_FILE` und `manifest.json` erfüllen, derselbe Weg wie das Satz-Audio. Diese Hilfedateien liegen zusätzlich im Precache, Satz-Audio nicht. Der Erzeuger speichert den SHA-256 des Textes und baut die Datei neu, wenn der Text sich ändert. `speechSynthesis` spricht nur den Absatz, dessen Datei fehlt oder offline nicht im Cache liegt, und nur in der App-Sprache (`de-CH`, `en-US`, `pt-BR`, `vi`). Ein Abbruch, eine Pause oder anderes Audio beendet «Vorlesen», statt den nächsten Absatz zu starten. Es wird keine URL gebaut und kein Text gesendet. Die CSP bleibt. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Aufnahmen bleiben auf dem Gerät.
 
 ## Quellen
 

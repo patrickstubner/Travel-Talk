@@ -16,28 +16,34 @@ export function stopExplanation(): void {
   globalThis.speechSynthesis?.cancel()
 }
 
-function playOne(file: string, lang: Lang): Promise<'file' | 'offline'> {
+function playOne(file: string, lang: Lang): Promise<'file' | 'offline' | 'stopped'> {
   return new Promise((resolve) => {
     let settled = false
-    const finish = (result: 'file' | 'offline') => {
+    const finish = (result: 'file' | 'offline' | 'stopped') => {
       if (settled) return
       settled = true
       resolve(result)
     }
-    void playClip(file, '', lang, 1, () => finish('file')).then((result) => {
-      if (result !== 'file') finish('offline')
+    void playClip(file, '', lang, 1, () => finish('file'), undefined, undefined, () => finish('stopped')).then((result) => {
+      if (result === 'offline') finish('offline')
     })
   })
 }
 
-function speakOne(text: string, lang: Lang): Promise<void> {
+function speakOne(text: string, lang: Lang): Promise<'spoken' | 'stopped'> {
   const synth = globalThis.speechSynthesis
-  if (!synth || typeof SpeechSynthesisUtterance === 'undefined') return Promise.resolve()
+  if (!synth || typeof SpeechSynthesisUtterance === 'undefined') return Promise.resolve('spoken')
   return new Promise((resolve) => {
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = htmlLang(lang)
-    utterance.onend = () => resolve()
-    utterance.onerror = () => resolve()
+    let settled = false
+    const finish = (result: 'spoken' | 'stopped') => {
+      if (settled) return
+      settled = true
+      resolve(result)
+    }
+    utterance.onend = () => finish('spoken')
+    utterance.onerror = () => finish('stopped')
     synth.cancel()
     synth.speak(utterance)
   })
@@ -54,9 +60,10 @@ export async function speakExplanation(lang: Lang, parts: ExplainPart[], token: 
     if (!text) continue
     if (part.clip) {
       const played = await playOne(part.clip, lang)
-      if (token.current !== mine) return
+      if (token.current !== mine || played === 'stopped') return
       if (played === 'file') continue
     }
-    await speakOne(text, lang)
+    const spoken = await speakOne(text, lang)
+    if (token.current !== mine || spoken === 'stopped') return
   }
 }

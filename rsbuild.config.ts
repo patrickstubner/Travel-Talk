@@ -1,8 +1,9 @@
-import { copyFileSync } from 'node:fs'
+import { copyFileSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { defineConfig, type RsbuildPluginAPI } from '@rsbuild/core'
 import { pluginReact } from '@rsbuild/plugin-react'
 import { generateSW } from 'workbox-build'
+import { HELP_CACHE, HELP_CACHE_LIMIT, PRECACHE_BYTE_BUDGET, PRECACHE_ENTRY_BUDGET, PRECACHE_GLOBS, PRECACHE_IGNORES } from './src/pwa/cache-policy'
 
 const BASE = '/Travel-Talk/'
 
@@ -42,8 +43,8 @@ export default defineConfig({
           // An Rspack plugin would only see compilation assets, not those files.
           const result = await generateSW({
             globDirectory: dist,
-            globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,json,txt}'],
-            globIgnores: ['**/sw.js', '**/workbox-*.js', '**/*.align.json'],
+            globPatterns: [...PRECACHE_GLOBS],
+            globIgnores: [...PRECACHE_IGNORES],
             swDest: join(dist, 'sw.js'),
             modifyURLPrefix: { '': BASE },
             maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
@@ -53,15 +54,25 @@ export default defineConfig({
             cacheId: 'travel-talk',
             skipWaiting: true,
             clientsClaim: true,
-            // Audio is not part of install. A full disk must not block the update.
+            // Sentence audio and help clips are not part of install. A full disk must not block the update.
             // Activate still drops precache URLs that left the manifest, including old audio.
             // The start page asks for one reload of the voice after that.
             cleanupOutdatedCaches: false,
             disableDevLogs: true,
             sourcemap: false,
             mode: 'production',
-            // Audio and its timing files are not precached. The selected voice is fetched into this cache.
+            // Help clips are cached on demand, one app language, in their own cache.
+            // Sentence audio and timing files use the voice cache. «Für offline laden» fills both.
             runtimeCaching: [
+              {
+                urlPattern: /\/Travel-Talk\/audio\/[^/]+\/help\/.+\.m4a$/,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: HELP_CACHE,
+                  cacheableResponse: { statuses: [200] },
+                  expiration: { maxEntries: HELP_CACHE_LIMIT, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                },
+              },
               {
                 urlPattern: /\/Travel-Talk\/audio\/.+\.(?:m4a|align\.json)$/,
                 handler: 'CacheFirst',
@@ -74,6 +85,11 @@ export default defineConfig({
             ],
           })
           if (result.warnings.length > 0) throw new Error(result.warnings.join('\n'))
+          if (result.count > PRECACHE_ENTRY_BUDGET || result.size > PRECACHE_BYTE_BUDGET) {
+            throw new Error(`PRECACHE_TOO_BIG count=${result.count} size=${result.size}`)
+          }
+          const sw = readFileSync(join(dist, 'sw.js'), 'utf8')
+          if (/\/help\/[a-z0-9][^"'\\\s]*\.m4a/.test(sw)) throw new Error('HELP_IN_PRECACHE')
         })
       },
     },
