@@ -46,6 +46,24 @@ describe('pitch contour', () => {
     expect(Math.abs(contour[burst] ?? 99)).toBeLessThan(3)
   })
 
+  it('dates a voiced frame at the centre of the analysis window', () => {
+    const rate = 16000
+    const samples = new Float32Array(rate)
+    let phase = 0
+    const burstStart = Math.floor(0.4 * rate)
+    const burstEnd = Math.floor(0.7 * rate)
+    for (let index = burstStart; index < burstEnd; index += 1) {
+      phase += (2 * Math.PI * 180) / rate
+      samples[index] = Math.sin(phase) * 0.8
+    }
+    const contour = contourFromSamples(samples, rate)
+    const times = contour.flatMap((value, index) => (value == null ? [] : [index * 0.01]))
+    expect(times.length).toBeGreaterThan(8)
+    const mid = times[Math.floor(times.length / 2)] ?? 0
+    expect(mid).toBeGreaterThan(0.48)
+    expect(mid).toBeLessThan(0.62)
+  })
+
   it('reads a steady sine near its own median', () => {
     const contour = contourFromSamples(tone(220, 220), 16000)
     const voiced = voicedValues(contour)

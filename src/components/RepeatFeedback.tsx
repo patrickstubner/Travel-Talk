@@ -178,6 +178,7 @@ export function RepeatFeedback({
       userEnergy: userFeatures.energy,
       modelBands: modelFeatures.bands,
       userBands: userFeatures.bands,
+      userPlainBands: userFeatures.plainBands,
     })
   }, [lang, modelFeatures, modelRate, region, speech, userFeatures, userRate, userSamples, words])
 
@@ -210,6 +211,7 @@ export function RepeatFeedback({
         <Result
           copy={copy}
           lang={lang}
+          speech={speech}
           voiceId={voiceId}
           score={score}
           modelMissing={modelMissing}
@@ -285,6 +287,7 @@ export function RepeatFeedback({
 function Result({
   copy,
   lang,
+  speech,
   voiceId,
   score,
   modelMissing,
@@ -295,6 +298,7 @@ function Result({
 }: {
   copy: Dictionary
   lang: Lang
+  speech: string
   voiceId: string
   score: RepeatScore | null
   modelMissing: boolean
@@ -304,17 +308,44 @@ function Result({
   onWord: (index: number) => void
 }) {
   const feedback = copy.repeatFeedback
-  const coloured = score?.words?.some((word) => word.color) ?? false
+  const scored = score?.words ?? null
+  const chips =
+    scored ??
+    splitWords(speech).map((text) => ({
+      text,
+      color: null as Band | null,
+      melody: null as Band | null,
+      rhythm: null as Band | null,
+      start: 0,
+      end: 0,
+    }))
+  const coloured = chips.some((word) => word.color != null)
+  const melodyBar = score?.melodyBar ?? null
+  const rhythmBar = score?.rhythmBar ?? null
+  const showBars = Boolean(melodyBar && rhythmBar && coloured)
+  const gapWord = scored?.find((word) => !word.scorable)
+  const notice = tooShort
+    ? feedback.tooShort
+    : score?.reason === 'file'
+      ? feedback.file
+      : tooQuiet
+        ? feedback.quiet
+        : timingMissing
+          ? feedback.noWordTimes
+          : !showBars && score?.unclear
+            ? feedback.unclear
+            : score?.fewWords
+              ? feedback.few
+              : gapWord
+                ? feedback.modelGap(gapWord.text)
+                : null
   return (
     <div className="stack">
       <p className="legend">
         <span className="swatch model">{copy.pitchModel}</span>
         <span className="swatch you">{copy.pitchYou}</span>
       </p>
-      {tooShort ? <p role="status">{feedback.tooShort}</p> : null}
-      {tooQuiet ? <p role="status">{copy.pitchEmpty}</p> : null}
-      {score?.unclear ? <p role="status">{feedback.unclear}</p> : null}
-      {timingMissing ? <p role="status">{feedback.noWordTimes}</p> : null}
+      {notice ? <p role="status">{notice}</p> : null}
       {modelMissing ? <p>{copy.pitchNoModel}</p> : null}
       {score && !score.tooShort && !score.tooLittleVoice ? (
         score.words && score.words.length > 0 ? (
@@ -333,26 +364,35 @@ function Result({
           <Curve model={score.model} user={score.userOnModel} color={null} />
         )
       ) : null}
-      {coloured && score?.words ? (
+      {chips.length > 0 ? (
         <div className="repeat-words">
-          {score.words.map((word, index) => (
+          {chips.map((word, index) => (
             <button
-              key={`${word.text}-${word.start}`}
+              key={`${word.text}-${word.start}-${index}`}
               type="button"
               className={`word-chip ${word.color ?? 'plain'}`}
+              aria-label={word.text}
               data-color={word.color ?? 'none'}
+              data-melody={word.melody ?? 'none'}
+              data-rhythm={word.rhythm ?? 'none'}
               style={{ flex: Math.max(0.2, word.end - word.start) }}
-              onClick={() => onWord(index)}
+              onClick={() => {
+                if (scored?.[index]) onWord(index)
+              }}
             >
-              {word.text}
+              <span className="word-chip-text">{word.text}</span>
+              <span className="word-marks" aria-hidden="true">
+                <span className={`mark ${word.melody ?? 'plain'}`}>{feedback.melody}</span>
+                <span className={`mark ${word.rhythm ?? 'plain'}`}>{feedback.rhythm}</span>
+              </span>
             </button>
           ))}
         </div>
       ) : null}
-      {score?.melodyBar && score.rhythmBar ? (
+      {showBars && melodyBar && rhythmBar ? (
         <div className="repeat-bars">
-          <ScoreBar label={feedback.melody} state={score.melodyBar} copy={copy} testId="melody-bar" />
-          <ScoreBar label={feedback.rhythm} state={score.rhythmBar} copy={copy} testId="rhythm-bar" />
+          <ScoreBar label={feedback.melody} state={melodyBar} copy={copy} testId="melody-bar" />
+          <ScoreBar label={feedback.rhythm} state={rhythmBar} copy={copy} testId="rhythm-bar" />
         </div>
       ) : null}
       {lang === 'vi' && voiceId === 'vais1000' ? <p className="hint">{feedback.northern}</p> : null}

@@ -1,33 +1,52 @@
 import type { Lang } from '../../content/phrase'
-import { describeShape, voicedValues, type Contour, type ShapeName } from './contour'
+import { centerSlackFrames, describeShape, voicedValues, type Contour, type ShapeName } from './contour'
 import { bandDistance } from './spectrum'
 
 /**
  * Bands for the first version. They are a starting point set by the author,
  * not a learner study. The fixtures in feedback.test.ts are what they have
- * to survive. A mean path distance above UNCLEAR_SEMITONES is «unklar»:
- * the curves stay, the words stay uncoloured. That cutoff is a choice.
+ * to survive. A mean path distance above UNCLEAR_SEMITONES stays on the
+ * curve as a colour. It no longer drops the words. That cutoff is a choice.
  *
- * Rhythm colour of a word uses the local scale after the linear map, so a
- * uniform slow take is not red on every word. The rhythm bar is the worse
- * of that word bar and the band of the whole-span ratio. Comparison is
- * against the file that was heard.
+ * Rhythm colour of a word is how long that word lasts in the recording,
+ * read from the DTW path of the band shape, divided by the same span in
+ * the file and by the tempo of the whole take. A take that is only slower
+ * still has the file's proportions, so the words stay green. The loud span
+ * inside a linearly mapped window is only the fallback when the band shape
+ * is missing: inside continuous speech that window is full, so the ratio
+ * would stay near 1. The local scale (about 0.75–1.33) is the fallback
+ * when loudness is missing too. The rhythm bar is the worse of that word
+ * bar and the band of the whole-span ratio, so a uniform 0.7 take is not a
+ * perfect bar. Comparison is against the file that was heard.
  *
  * A take is «unklar» when its voiced range stays under FLAT_RANGE and the
- * reference moves by at least that much more. A short flat phrase matched
- * to itself is not unklar. A take is also «unklar» when every measured
- * word runs the other way (Pearson under DIRECTION_OPPOSED), or when the
- * loudness envelope does not follow the file. One mirrored syllable stays
- * a partial score. A take that matches the file better backwards than
- * forwards is «unklar». A steady tone against a spoken file is «unklar»
- * when the file's loudness moves and the tone's does not. Bars need at least
- * COLOURED_SHARE of the words that have enough voice in the model. A word
- * whose model moves by MOVING_RANGE needs that movement in the same
- * direction, otherwise it stays at most yellow. The band shape has to follow
- * the file before the bars appear. That is not a sentence grade: 0.8.0 does
- * not say whether the spoken line was the right one. The old 1–3 grade is
- * in sentence-grade.ts, which the app does not import. Local stretch stays
- * inside about 0.75–1.33.
+ * reference moves by at least that much more, and the take is not itself
+ * speech-loud. A short flat phrase matched to itself is not unklar. A take
+ * is also «unklar» when every measured word runs the other way (Pearson
+ * under DIRECTION_OPPOSED) and none of those words has a colour. One
+ * mirrored syllable stays a partial score. When a band shape was measured,
+ * the take is «unklar» when the file fits better backwards by
+ * REVERSE_BAND_GAP. That gap sits between a reversed clip and another
+ * voice of the same sentence, so the other voice keeps its colours.
+ * Without bands, a contour that matches better backwards is still
+ * «unklar». A steady tone against a spoken file is «unklar» when the
+ * file's loudness moves and the tone's pitch does not. A large pitch
+ * offset and a loudness envelope that runs the other way do not hide the
+ * bars. This release does not hint that the sentence was a different one.
+ * «unklar» is set only when the bars are absent. A model file
+ * with fewer than MIN_VOICED frames says the file is thin, not that the
+ * take was quiet. The old 1–3 grade is in sentence-grade.ts, which the
+ * app does not import. Bars stay when at least one word has a colour.
+ * Under COLOURED_SHARE the words still show, the bars cover the coloured
+ * part, and the page says so. The timed span ends on the last run of at
+ * least three frames that rises above the loudness floor. A near-silent
+ * tail, or one or two leftover frames, would stretch the map and drop
+ * later words into the gaps. A word whose model moves by MOVING_RANGE
+ * needs that movement in the same direction, otherwise it stays at most
+ * yellow. Local stretch stays inside about 0.75–1.33. When the local
+ * window misses every word but the model word has enough voice, the
+ * whole-path distance still colours those words. A second voice often
+ * sits outside the four-frame window.
  */
 export const MELODY_GREEN = 1.5
 export const MELODY_YELLOW = 3
@@ -51,6 +70,12 @@ export const DRONE_ENERGY = 0.12
 export const SPEECH_ENERGY = 0.15
 /** A negative loudness correlation means the envelope runs the other way. */
 export const ENERGY_ALIGN_MIN = 0
+/**
+ * Band-distance gap that means the take is the file played backwards.
+ * Reversed clips sit above 0.26. Another bundled voice of the same sentence
+ * stays under 0.05. 0.12 is the space between those two.
+ */
+export const REVERSE_BAND_GAP = 0.12
 /** A model word that moves by this much needs the same movement in the take. */
 export const MOVING_RANGE = 1
 /**
@@ -120,6 +145,10 @@ export type RepeatScore = {
   tooShort: boolean
   fewWords: boolean
   globalRatio: number | null
+  /** Why the take cannot be scored as a whole. Null when the bars stand. */
+  reason: 'short' | 'quiet' | 'file' | 'noTimes' | 'unclear' | 'few' | null
+  /** The band shape is closer to a different sentence. The bars can stay. */
+  otherSentence: boolean
 }
 
 export function melodyBand(distance: number): Band {
@@ -203,23 +232,92 @@ export function thin(contour: Contour, hop: number): { contour: Contour; hop: nu
   return { contour: next, hop: hop * step }
 }
 
-function sustained(contour: Contour): { start: number; end: number } | null {
-  let start = -1
-  for (let index = 0; index <= contour.length - 3; index += 1) {
-    if (contour[index] != null && contour[index + 1] != null && contour[index + 2] != null) {
-      start = index
-      break
+/** Quiet pitch after the last loud frame of a run may be the syllable dying away. */
+const DECAY_FRAMES = 6
+
+/**
+ * First run of three voiced frames, and the last voiced frame. A run
+ * under eleven frames is stepped over when a run of at least twelve
+ * frames follows and is clearly louder. Eleven keeps a short first
+ * syllable that the microphone shortens by a frame or two; ten still
+ * drops the quiet blip a lead-in stretches in front of the sentence.
+ * Only that one run: the onset just after a soft splinter stays. The
+ * analysis window leans into a microphone lead-in and opens a brief
+ * pitch there. A real onset is about as loud as what follows, so it
+ * stays. The quiet splinter would otherwise stretch the whole-take tempo.
+ * When loudness is known, the end is the last run of at least three
+ * frames that rises above the floor. A near-silent continuation, or one
+ * or two leftover frames, does not stretch the map. Later words would
+ * otherwise land in the gaps.
+ */
+function sustained(contour: Contour, energy?: readonly number[] | null): { start: number; end: number } | null {
+  const levels = loudLevels(energy, contour.length)
+  const runs: Array<{ start: number; end: number; peak: number }> = []
+  let cursor = 0
+  while (cursor < contour.length) {
+    if (contour[cursor] == null) {
+      cursor += 1
+      continue
     }
+    const runStart = cursor
+    let peak = 0
+    while (cursor < contour.length && contour[cursor] != null) {
+      const level = levels?.[cursor] ?? 0
+      if (level > peak) peak = level
+      cursor += 1
+    }
+    runs.push({ start: runStart, end: cursor, peak })
   }
-  if (start < 0) return null
+  const body = runs.filter((run) => run.end - run.start >= 3)
+  let chosen = body[0]
+  if (!chosen) return null
+  while (chosen.end - chosen.start < 11 && chosen.peak > 0) {
+    const louderLater = body.some((run) => run.start >= chosen.end && run.end - run.start >= 12 && run.peak > chosen.peak + 0.12)
+    if (!louderLater) break
+    const next = body.find((run) => run.start >= chosen.end)
+    if (!next) break
+    chosen = next
+  }
+  const start = chosen.start
   let end = start + 1
-  for (let index = contour.length - 1; index >= start; index -= 1) {
-    if (contour[index] != null) {
-      end = index + 1
-      break
+  if (levels == null) {
+    for (let index = contour.length - 1; index >= start; index -= 1) {
+      if (contour[index] != null) {
+        end = index + 1
+        break
+      }
     }
+    return { start, end }
+  }
+  let index = start
+  while (index < contour.length) {
+    if (contour[index] == null) {
+      index += 1
+      continue
+    }
+    const runStart = index
+    let lastLoud = -1
+    while (index < contour.length && contour[index] != null) {
+      const level = levels[index] ?? 0
+      if (level >= LOUD_FRACTION) lastLoud = index
+      index += 1
+    }
+    const runEnd = index - 1
+    const length = runEnd - runStart + 1
+    if (lastLoud < 0 || length < 3) continue
+    const decayEnd = Math.min(runEnd, lastLoud + DECAY_FRAMES)
+    end = Math.max(end, decayEnd + 1)
   }
   return { start, end }
+}
+
+/** Loudness of each frame as a fraction of the peak. Null when loudness is missing. */
+function loudLevels(energy: readonly number[] | null | undefined, length: number): number[] | null {
+  if (!energy || energy.length !== length) return null
+  let peak = 0
+  for (const value of energy) if (value > peak) peak = value
+  if (!(peak > 0)) return null
+  return energy.map((value) => value / peak)
 }
 
 function warp(model: Contour, user: Contour, path: PathPoint[]): Contour {
@@ -270,6 +368,287 @@ function mappedFrame(
   const modelLength = Math.max(1, modelSpan.end - modelSpan.start - 1)
   const rel = (modelFrame - modelSpan.start) / modelLength
   return userSpan.start + rel * Math.max(0, userSpan.end - userSpan.start - 1)
+}
+
+/** Where `time` lands once the two spans have been lined up. */
+function mapSpanTime(
+  time: number,
+  modelSpan: { start: number; end: number },
+  userSpan: { start: number; end: number },
+  modelHop: number,
+  userHop: number,
+): number {
+  const modelStart = modelSpan.start * modelHop
+  const modelLength = Math.max(modelHop, (modelSpan.end - modelSpan.start) * modelHop)
+  const rel = (time - modelStart) / modelLength
+  return userSpan.start * userHop + rel * (userSpan.end - userSpan.start) * userHop
+}
+
+/**
+ * Seconds from the first loud frame of a word to the last. The floor is
+ * the same share of the peak that limits the timed span. Fewer than two
+ * loud frames is not a duration.
+ */
+function loudSpanSeconds(energy: readonly number[] | null, timeStart: number, timeEnd: number, hop: number): number | null {
+  if (!energy || !(hop > 0) || !(timeEnd > timeStart)) return null
+  let peak = 0
+  for (const value of energy) if (value > peak) peak = value
+  if (!(peak > 0)) return null
+  const floor = peak * LOUD_FRACTION
+  const from = Math.max(0, Math.floor(timeStart / hop))
+  const to = Math.min(energy.length, Math.ceil(timeEnd / hop))
+  let first = -1
+  let last = -1
+  for (let index = from; index < to; index += 1) {
+    if ((energy[index] ?? 0) >= floor) {
+      if (first < 0) first = index
+      last = index
+    }
+  }
+  if (first < 0 || last <= first) return null
+  return (last - first + 1) * hop
+}
+
+/**
+ * The word's own duration in the recording, divided by the same span in
+ * the file and by the tempo of the whole take. The local scale is only
+ * the fallback when loudness is missing, as in the synthetic fixtures.
+ * Multiplying a measured duration by that scale would paint every word
+ * green: every scale sits inside the green band.
+ */
+function wordRhythmRatio(
+  start: number,
+  end: number,
+  scale: number,
+  globalRatio: number,
+  modelSpan: { start: number; end: number },
+  userSpan: { start: number; end: number },
+  modelHop: number,
+  userHop: number,
+  modelEnergy: readonly number[] | null,
+  userEnergy: readonly number[] | null,
+): number {
+  if (!(scale > 0)) return scale
+  const modelSeconds = loudSpanSeconds(modelEnergy, start, end, modelHop)
+  const userFrom = mapSpanTime(start, modelSpan, userSpan, modelHop, userHop)
+  const userTo = mapSpanTime(end, modelSpan, userSpan, modelHop, userHop)
+  const userSeconds = loudSpanSeconds(userEnergy, Math.min(userFrom, userTo), Math.max(userFrom, userTo), userHop)
+  if (modelSeconds == null || userSeconds == null || !(globalRatio > 0)) return scale
+  const ratio = userSeconds / modelSeconds / globalRatio
+  return Number.isFinite(ratio) && ratio > 0 ? ratio : scale
+}
+
+type FrameSpan = { start: number; end: number }
+
+function vectorDistance(left: readonly number[], right: readonly number[]): number {
+  const count = Math.min(left.length, right.length)
+  if (count === 0) return 0
+  let sum = 0
+  for (let index = 0; index < count; index += 1) {
+    const delta = (left[index] ?? 0) - (right[index] ?? 0)
+    sum += delta * delta
+  }
+  return Math.sqrt(sum / count)
+}
+
+/**
+ * Band frames on the contour grid, with the span mean taken out.
+ * A thinned contour is no longer on that grid, so the path is refused
+ * and the loud-span fallback stays.
+ */
+function centredBands(
+  bands: readonly (readonly number[])[] | null | undefined,
+  contourLength: number,
+  span: FrameSpan,
+): number[][] | null {
+  if (!bands || bands.length < 8 || contourLength < 8) return null
+  if (Math.abs(bands.length - contourLength) > 24) return null
+  const width = bands.find((frame) => frame.length > 0)?.length ?? 0
+  if (width < 2) return null
+  const mean = new Array<number>(width).fill(0)
+  let count = 0
+  const from = Math.max(0, span.start)
+  const to = Math.min(bands.length, span.end, contourLength)
+  for (let index = from; index < to; index += 1) {
+    const frame = bands[index]
+    if (!frame || frame.length === 0) continue
+    count += 1
+    for (let band = 0; band < width; band += 1) mean[band] = (mean[band] ?? 0) + (frame[band] ?? 0)
+  }
+  if (count < 8) return null
+  for (let band = 0; band < width; band += 1) mean[band] = (mean[band] ?? 0) / count
+  return Array.from({ length: contourLength }, (_, index) => {
+    const frame = bands[index]
+    if (!frame || frame.length === 0) return []
+    return frame.map((value, band) => value - (mean[band] ?? 0))
+  })
+}
+
+function bandDeltas(frames: readonly (readonly number[])[]): number[][] {
+  return frames.map((frame, index) => {
+    const previous = frames[index - 1]
+    if (frame.length === 0 || !previous || previous.length === 0) return []
+    return frame.map((value, band) => value - (previous[band] ?? 0))
+  })
+}
+
+/** Sakoe-Chiba DTW. Steps off the diagonal pay a small slope cost, so a path can still follow one stretched word. */
+function dtwPath(costAt: (modelIndex: number, userIndex: number) => number, modelSpan: FrameSpan, userSpan: FrameSpan): PathPoint[] | null {
+  const rows = modelSpan.end - modelSpan.start
+  const cols = userSpan.end - userSpan.start
+  if (rows < 4 || cols < 4) return null
+  const window = Math.max(8, Math.ceil(Math.max(rows, cols) * 0.28))
+  const slope = 0.04
+  const inf = 1e12
+  let previous = new Float64Array(cols).fill(inf)
+  let current = new Float64Array(cols).fill(inf)
+  const fromRow = new Int16Array(rows * cols).fill(-1)
+  const fromCol = new Int16Array(rows * cols).fill(-1)
+  const slotAt = (row: number, col: number) => row * cols + col
+  for (let row = 0; row < rows; row += 1) {
+    current.fill(inf)
+    const center = Math.round((row * (cols - 1)) / Math.max(1, rows - 1))
+    const from = Math.max(0, center - window)
+    const to = Math.min(cols - 1, center + window)
+    for (let col = from; col <= to; col += 1) {
+      const cost = costAt(modelSpan.start + row, userSpan.start + col)
+      if (row === 0 && col === 0) {
+        current[0] = cost
+        continue
+      }
+      let best = inf
+      let backRow = -1
+      let backCol = -1
+      if (row > 0 && col > 0) {
+        const diagonal = previous[col - 1] ?? inf
+        if (diagonal < best) {
+          best = diagonal
+          backRow = row - 1
+          backCol = col - 1
+        }
+      }
+      if (row > 0) {
+        const up = (previous[col] ?? inf) + slope
+        if (up < best) {
+          best = up
+          backRow = row - 1
+          backCol = col
+        }
+      }
+      if (col > 0) {
+        const left = (current[col - 1] ?? inf) + slope
+        if (left < best) {
+          best = left
+          backRow = row
+          backCol = col - 1
+        }
+      }
+      if (best >= inf / 2) continue
+      current[col] = cost + best
+      const slot = slotAt(row, col)
+      fromRow[slot] = backRow
+      fromCol[slot] = backCol
+    }
+    const swap = previous
+    previous = current
+    current = swap
+  }
+  if ((previous[cols - 1] ?? inf) >= inf / 2) return null
+  const path: PathPoint[] = []
+  let row = rows - 1
+  let col = cols - 1
+  for (let guard = 0; guard < rows + cols + 2; guard += 1) {
+    path.push({ model: modelSpan.start + row, user: userSpan.start + col })
+    if (row === 0 && col === 0) break
+    const slot = slotAt(row, col)
+    const nextRow = fromRow[slot] ?? -1
+    const nextCol = fromCol[slot] ?? -1
+    if (nextRow < 0 || (nextRow === row && nextCol === col)) return null
+    row = nextRow
+    col = nextCol
+  }
+  path.reverse()
+  const first = path[0]
+  const last = path[path.length - 1]
+  if (!first || !last || first.model !== modelSpan.start || first.user !== userSpan.start) return null
+  if (last.model !== modelSpan.end - 1 || last.user !== userSpan.end - 1) return null
+  return path
+}
+
+/**
+ * Where each file frame lands in the recording. The cost is the band
+ * shape, so a word that is actually longer pulls more recording frames
+ * even when the speech never goes quiet. Without bands the linear
+ * fallback in `wordRhythmRatio` remains.
+ */
+function rhythmPath(
+  modelBands: readonly (readonly number[])[] | null | undefined,
+  userBands: readonly (readonly number[])[] | null | undefined,
+  modelLength: number,
+  userLength: number,
+  modelSpan: FrameSpan,
+  userSpan: FrameSpan,
+): PathPoint[] | null {
+  const modelRaw = centredBands(modelBands, modelLength, modelSpan)
+  const userRaw = centredBands(userBands, userLength, userSpan)
+  if (!modelRaw || !userRaw) return null
+  const modelDelta = bandDeltas(modelRaw)
+  const userDelta = bandDeltas(userRaw)
+  return dtwPath((modelIndex, userIndex) => {
+    const left = modelRaw[modelIndex] ?? []
+    const right = userRaw[userIndex] ?? []
+    if (left.length === 0 && right.length === 0) return 0.2
+    if (left.length === 0 || right.length === 0) return 1.1
+    const raw = vectorDistance(left, right)
+    const leftDelta = modelDelta[modelIndex] ?? []
+    const rightDelta = userDelta[userIndex] ?? []
+    const delta = leftDelta.length > 0 && rightDelta.length > 0 ? vectorDistance(leftDelta, rightDelta) : raw
+    return 0.45 * raw + 0.55 * delta
+  }, modelSpan, userSpan)
+}
+
+type WordRange = { modelStart: number; modelEnd: number; userStart: number; userEnd: number }
+
+function rangeOnPath(path: readonly PathPoint[] | null, frame: number, frameEnd: number): WordRange | null {
+  if (!path) return null
+  const usersByModel = new Map<number, number[]>()
+  for (const point of path) {
+    if (point.model < frame || point.model >= frameEnd) continue
+    const bucket = usersByModel.get(point.model)
+    if (bucket) bucket.push(point.user)
+    else usersByModel.set(point.model, [point.user])
+  }
+  if (usersByModel.size < 2) return null
+  let modelStart = Number.POSITIVE_INFINITY
+  let modelEnd = -1
+  for (const modelIndex of usersByModel.keys()) {
+    if (modelIndex < modelStart) modelStart = modelIndex
+    if (modelIndex > modelEnd) modelEnd = modelIndex
+  }
+  const median = (values: readonly number[]) => {
+    const sorted = [...values].sort((left, right) => left - right)
+    return sorted[Math.floor(sorted.length / 2)] ?? 0
+  }
+  // One file frame can sit on several recording frames where the window
+  // smears an onset. The middle of that step is the frame that belongs
+  // to the word; the outer ones would paint a short word yellow.
+  const first = usersByModel.get(modelStart)
+  const last = usersByModel.get(modelEnd)
+  if (!first || !last) return null
+  const userStart = median(first)
+  const userEnd = median(last)
+  if (!Number.isFinite(modelStart) || modelEnd <= modelStart || userEnd <= userStart) return null
+  return { modelStart, modelEnd: modelEnd + 1, userStart, userEnd: userEnd + 1 }
+}
+
+/** Recording frames on the path, divided by the file frames and by the tempo of the whole take. */
+function ratioFromRange(range: WordRange, globalRatio: number, modelHop: number, userHop: number): number | null {
+  const modelFrames = range.modelEnd - range.modelStart
+  const userFrames = range.userEnd - range.userStart
+  if (modelFrames < 2 || userFrames < 2 || !(globalRatio > 0) || !(modelHop > 0)) return null
+  const ratio = (userFrames * userHop) / (modelFrames * modelHop) / globalRatio
+  if (!Number.isFinite(ratio) || !(ratio > 0)) return null
+  return ratio
 }
 
 /**
@@ -441,13 +820,16 @@ function wordCorrelation(model: Contour, user: Contour, path: readonly PathPoint
   return correlation(left, right)
 }
 
+/** Pitch quieter than this share of the peak does not move the timed span. */
+const LOUD_FRACTION = 0.08
+
 /** Coefficient of variation of a loudness curve. A pure tone sits near 0. */
 export function energyVariation(energy: readonly number[] | null | undefined): number | null {
   if (!energy || energy.length < 8) return null
   let peak = 0
   for (const value of energy) if (value > peak) peak = value
   if (peak <= 0) return null
-  const used = energy.filter((value) => value >= peak * 0.08)
+  const used = energy.filter((value) => value >= peak * LOUD_FRACTION)
   if (used.length < 8) return null
   let sum = 0
   for (const value of used) sum += value
@@ -528,6 +910,21 @@ export function spectralReversed(
   // A short symmetric phrase is only a little closer backwards. 0.03 still
   // leaves a forward imitation, whose backward cost is higher, alone.
   return backward + 0.03 < forward
+}
+
+/**
+ * The file played backwards. The gap is wider than spectralReversed, so a
+ * second voice that is only a little closer backwards is not locked.
+ */
+export function reversedRecording(
+  modelBands: readonly (readonly number[])[] | null | undefined,
+  userBands: readonly (readonly number[])[] | null | undefined,
+): boolean {
+  if (!modelBands || !userBands || modelBands.length < 8 || userBands.length < 8) return false
+  const forward = bandDistance(modelBands, userBands)
+  const backward = bandDistance([...modelBands].reverse(), userBands)
+  if (forward == null || backward == null) return false
+  return backward + REVERSE_BAND_GAP < forward
 }
 
 function thinEnergy(energy: readonly number[] | null | undefined, contourLength: number): number[] | null {
@@ -692,6 +1089,11 @@ export function scoreRepeat(input: {
   /** Loudness-free band shape, one vector per contour frame. */
   modelBands?: readonly (readonly number[])[] | null
   userBands?: readonly (readonly number[])[] | null
+  /**
+   * Unshifted user bands. A frequency warp can hide a reversed recording,
+   * so the reverse lock uses these when they are present.
+   */
+  userPlainBands?: readonly (readonly number[])[] | null
 }): RepeatScore {
   const modelThin = thin(input.model, input.modelHop > 0 ? input.modelHop : 0.01)
   const userThin = thin(input.user, input.userHop > 0 ? input.userHop : 0.01)
@@ -700,7 +1102,9 @@ export function scoreRepeat(input: {
   const modelHop = modelThin.hop
   const userHop = userThin.hop
   const voiced = voicedValues(user).length
+  const modelVoiced = voicedValues(model).length
   const tooShort = input.userDuration < SHORT_SECONDS
+  const fileThin = modelVoiced < MIN_VOICED
   const tooLittleVoice = voiced < MIN_VOICED
   const empty: RepeatScore = {
     model,
@@ -718,15 +1122,26 @@ export function scoreRepeat(input: {
     tooShort,
     fewWords: false,
     globalRatio: null,
+    otherSentence: false,
+    reason: tooShort ? 'short' : fileThin ? 'file' : tooLittleVoice ? 'quiet' : null,
   }
-  if (tooShort || tooLittleVoice) return empty
-  const modelSpan = sustained(model)
-  const userSpan = sustained(user)
-  if (!modelSpan || !userSpan) return { ...empty, tooLittleVoice: true }
+  const lockBands = input.userPlainBands && input.userPlainBands.length > 0 ? input.userPlainBands : input.userBands
+  const lockKnown = Boolean(input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0)
+  const bandReversed = reversedRecording(input.modelBands, lockBands)
+  if (tooShort) return empty
+  if (fileThin) return { ...empty, tooLittleVoice: false, reason: 'file' }
+  // A reversed file can lose its tracked pitch. That is still «unklar», not a quiet take.
+  if (bandReversed) return { ...empty, tooLittleVoice: false, unclear: true, reason: 'unclear' }
+  if (tooLittleVoice) return empty
+  const modelEnergy = thinEnergy(input.modelEnergy, input.model.length)
+  const userEnergy = thinEnergy(input.userEnergy, input.user.length)
+  const modelSpan = sustained(model, modelEnergy)
+  const userSpan = sustained(user, userEnergy)
+  if (!modelSpan || !userSpan) return { ...empty, tooLittleVoice: true, reason: 'quiet' }
   const path = linearPath(modelSpan, userSpan)
   let heard = user
   let meanDistance = pathMean(model, heard, path)
-  if (meanDistance == null) return { ...empty, tooLittleVoice: true }
+  if (meanDistance == null) return { ...empty, tooLittleVoice: true, reason: 'quiet' }
   const content = contentMismatch(input.modelBands, input.userBands, input.lang)
   const flipped = spectralReversed(input.modelBands, input.userBands)
   const bandsKnown = Boolean(input.modelBands && input.userBands && input.modelBands.length > 0 && input.userBands.length > 0)
@@ -740,12 +1155,15 @@ export function scoreRepeat(input: {
   }
   const userOnModel = warp(model, heard, path)
   const globalRatio = ((userSpan.end - userSpan.start) * userHop) / ((modelSpan.end - modelSpan.start) * modelHop)
-  const modelEnergy = thinEnergy(input.modelEnergy, input.model.length)
-  const userEnergy = thinEnergy(input.userEnergy, input.user.length)
   const forward = contourCorrelation(model, heard, path)
-  const envelope = envelopeMismatch(path, userEnergy, modelEnergy)
-  const reversed = reversedTake(model, heard, forward, path, modelEnergy, userEnergy)
-  if (meanDistance > UNCLEAR_SEMITONES || flatContour(heard, model) || envelope || reversed) {
+  // With bands, the hard lock already returned above. The loose contour
+  // lock stays only for fixtures that have no bands, so another voice is
+  // not caught by it.
+  const reversed = lockKnown ? false : reversedTake(model, heard, forward, path, modelEnergy, userEnergy)
+  const spoken = (energyVariation(userEnergy) ?? 0) >= SPEECH_ENERGY
+  const flat = flatContour(heard, model) && !spoken
+  const drone = droneAgainstSpeech(userEnergy, modelEnergy) && (voicedRange(heard) ?? 0) < FLAT_RANGE
+  if (flat || drone || reversed) {
     return {
       ...empty,
       userOnModel,
@@ -754,6 +1172,7 @@ export function scoreRepeat(input: {
       globalRatio,
       unclear: true,
       tooLittleVoice: false,
+      reason: 'unclear',
     }
   }
   if (!input.words || input.words.length === 0) {
@@ -764,20 +1183,40 @@ export function scoreRepeat(input: {
       meanDistance,
       globalRatio,
       tooLittleVoice: false,
+      reason: 'noTimes',
     }
   }
   const directions: WordDirection[] = []
-  const words = input.words.map((word) => {
+  const rhythmAlign = rhythmPath(input.modelBands, input.userBands, model.length, heard.length, modelSpan, userSpan)
+  const words = input.words.map((word, wordIndex) => {
     const frame = Math.max(0, Math.min(model.length - 1, Math.floor(word.start / modelHop)))
-    const frameEnd = Math.max(frame + 1, Math.min(model.length, Math.ceil(word.end / modelHop)))
+    let frameEnd = Math.max(frame + 1, Math.min(model.length, Math.ceil(word.end / modelHop)))
     let modelVoiced = 0
     for (let index = frame; index < frameEnd; index += 1) if (model[index] != null) modelVoiced += 1
+    // The centre of the analysis window can fall a few frames after the
+    // aligner closed the word, still before the next one. A short word
+    // otherwise keeps one or two frames and stays grey.
+    if (modelVoiced < MIN_WORD_VOICED) {
+      const next = input.words?.[wordIndex + 1]
+      const nextFrame = next ? Math.floor(next.start / modelHop) : model.length
+      const extended = Math.max(frameEnd, Math.min(nextFrame, model.length, frameEnd + centerSlackFrames(modelHop)))
+      let added = modelVoiced
+      for (let index = frameEnd; index < extended; index += 1) if (model[index] != null) added += 1
+      if (added >= MIN_WORD_VOICED) {
+        frameEnd = extended
+        modelVoiced = added
+      }
+    }
     const scorable = modelVoiced >= MIN_WORD_VOICED
+    const aligned = rangeOnPath(rhythmAlign, frame, frameEnd)
     const matched = scorable && word.end > word.start ? matchLocal(model, heard, frame, frameEnd, modelSpan, userSpan) : null
     const plainStart = mappedFrame(frame, modelSpan, userSpan)
     const plainEnd = mappedFrame(Math.max(frame, frameEnd - 1), modelSpan, userSpan)
-    const userFrame = Math.max(0, Math.round(Math.min(plainStart, plainEnd)))
-    const userFrameEnd = Math.min(heard.length, Math.max(userFrame + 1, Math.round(Math.max(plainStart, plainEnd)) + 1))
+    const userFrame = aligned ? aligned.userStart : Math.max(0, Math.round(Math.min(plainStart, plainEnd)))
+    const userFrameEnd = aligned
+      ? Math.min(heard.length, Math.max(userFrame + 1, aligned.userEnd))
+      : Math.min(heard.length, Math.max(userFrame + 1, Math.round(Math.max(plainStart, plainEnd)) + 1))
+    const fromPath = aligned ? ratioFromRange(aligned, globalRatio, modelHop, userHop) : null
     const base: FeedbackWord = {
       text: word.text,
       start: word.start,
@@ -800,7 +1239,19 @@ export function scoreRepeat(input: {
     }
     if (!matched || word.end <= word.start) {
       directions.push('unknown')
-      return base
+      // The pitch window missed, but the path still times the word. A short
+      // vowel that the local search stepped over keeps a rhythm colour.
+      // A stretch of the take with no voice stays grey: the path still
+      // walks through a gap, and that gap is not a spoken word.
+      let userVoiced = 0
+      for (let index = userFrame; index < userFrameEnd; index += 1) if (heard[index] != null) userVoiced += 1
+      // A rhythm colour with no melody is only kept when the path agrees
+      // with the file. A warped path and a missed pitch window used to
+      // paint the word yellow; that word stays grey.
+      const reliable = fromPath != null && fromPath >= RHYTHM_GREEN_MIN && fromPath <= RHYTHM_GREEN_MAX
+      if (!scorable || !reliable || userVoiced < MIN_WORD_VOICED) return base
+      const rhythm = rhythmBand(fromPath)
+      return { ...base, color: rhythm, rhythm, rawRatio: fromPath }
     }
     const pitchCorr = wordCorrelation(model, heard, path, frame, frameEnd)
     const modelShape = describeShape(model.slice(frame, frameEnd))
@@ -818,9 +1269,24 @@ export function scoreRepeat(input: {
     if (scorable && modelRange >= MOVING_RANGE && pitchCorr != null && !follows && melody === 'green') {
       melody = 'yellow'
     }
-    const rawRatio = (globalRatio * matched.scale * (frameEnd - frame) * modelHop) / (word.end - word.start)
-    const relative = matched.scale
-    const rhythm = rhythmBand(relative)
+    // The path says how many recording frames this word took. The loud span
+    // of a linearly mapped window is only the fallback, and the scale is
+    // only the fallback after that: the scale never leaves the green band.
+    const rawRatio =
+      fromPath ??
+      wordRhythmRatio(
+        word.start,
+        word.end,
+        matched.scale,
+        globalRatio,
+        modelSpan,
+        userSpan,
+        modelHop,
+        userHop,
+        modelEnergy,
+        userEnergy,
+      )
+    const rhythm = rhythmBand(rawRatio)
     return {
       ...base,
       color: worseBand(melody, rhythm),
@@ -832,25 +1298,63 @@ export function scoreRepeat(input: {
       sentence: toneSentence(word.text, userShape, input.lang, input.region),
     }
   })
-  if (takeRunsBackwards(directions)) {
+  // A rhythm colour from the path is not a melody. When every local
+  // window missed, the whole-path distance still colours the melody.
+  const anyMelody = words.some((word) => word.melody != null)
+  const scoredWords =
+    anyMelody || meanDistance == null
+      ? words
+      : words.map((word) => {
+          if (!word.scorable) return word
+          const melody = melodyBand(meanDistance)
+          const aligned = rangeOnPath(rhythmAlign, word.modelFrame, word.modelFrameEnd)
+          const fromPath = aligned ? ratioFromRange(aligned, globalRatio, modelHop, userHop) : null
+          const rawRatio =
+            fromPath ?? wordRhythmRatio(word.start, word.end, 1, globalRatio, modelSpan, userSpan, modelHop, userHop, modelEnergy, userEnergy)
+          const rhythm = rhythmBand(rawRatio)
+          return {
+            ...word,
+            color: worseBand(melody, rhythm),
+            melody,
+            rhythm,
+            melodyDistance: meanDistance,
+            rawRatio,
+          }
+        })
+  const melodyColours = barFromColours(scoredWords.map((word) => word.melody))
+  const rhythmWords = barFromColours(scoredWords.map((word) => word.rhythm))
+  const rhythmColours = rhythmWords ? worseBar(globalBar(globalRatio), rhythmWords) : null
+  const hasColour = scoredWords.some((word) => word.color != null)
+  if (takeRunsBackwards(directions) && !hasColour) {
     return {
-      ...empty,
+      model,
+      user: heard,
       userOnModel,
+      modelHop,
+      userHop,
       path,
       meanDistance,
-      globalRatio,
+      words: scoredWords,
+      melodyBar: null,
+      rhythmBar: null,
+      fewWords: false,
       unclear: true,
       tooLittleVoice: false,
+      tooShort: false,
+      globalRatio,
+      otherSentence: false,
+      reason: 'unclear',
     }
   }
-  const melodyBar = barFromColours(words.map((word) => word.melody))
-  const rhythmWords = barFromColours(words.map((word) => word.rhythm))
-  const rhythmBar = rhythmWords ? worseBar(globalBar(globalRatio), rhythmWords) : null
-  const scorable = words.filter((word) => word.scorable)
+  const melodyBar = melodyColours
+  const rhythmBar = rhythmColours
+  const scorable = scoredWords.filter((word) => word.scorable)
   const coloured = scorable.filter((word) => word.color != null).length
   const allowed = scorable.length > 0 && coloured / scorable.length >= COLOURED_SHARE
   const fewWords = !allowed
-  const rejected = content || flipped
+  // A far band shape does not take the bars, and this release does not
+  // turn it into a sentence hint. Another voice of the right sentence
+  // often sits past the old limit.
   return {
     model,
     user: heard,
@@ -859,13 +1363,15 @@ export function scoreRepeat(input: {
     userHop,
     path,
     meanDistance,
-    words,
-    melodyBar: fewWords || rejected ? null : melodyBar,
-    rhythmBar: fewWords || rejected ? null : rhythmBar,
+    words: scoredWords,
+    melodyBar: hasColour ? melodyBar : null,
+    rhythmBar: hasColour ? rhythmBar : null,
     fewWords,
-    unclear: rejected,
+    unclear: false,
     tooLittleVoice: false,
     tooShort: false,
     globalRatio,
+    otherSentence: false,
+    reason: hasColour && !fewWords ? null : 'few',
   }
 }

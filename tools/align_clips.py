@@ -44,11 +44,11 @@ JOBS = [
 ]
 
 
-def find_model(name: str, dirs: list[Path]) -> Path:
+def find_model(name: str, dirs: list[Path]) -> Path | None:
     for directory in dirs:
         if (directory / f"{name}.onnx").exists():
             return directory
-    raise SystemExit(f"model not found: {name}")
+    return None
 
 
 def custom_align(voice: PiperVoice, phonemes: list[str], phoneme_ids: list[int], samples: np.ndarray) -> list[PhonemeAlignment] | None:
@@ -133,7 +133,10 @@ def dtw_map(ref_env: np.ndarray, real_env: np.ndarray) -> np.ndarray | None:
     real = (real - real.mean()) / (real.std() + 1e-6)
     rows = len(ref)
     cols = len(real)
-    band = max(6, int(round(0.18 * max(rows, cols))))
+    # 0.22 still refuses a path that sits on the band. 0.18 left one slower
+    # vivos-32 clip (Xin viết ra giúp tôi.) on the edge even though the
+    # word count matched.
+    band = max(6, int(round(0.22 * max(rows, cols))))
     inf = 1e12
     cost = np.full((rows, cols), inf)
     step = np.zeros((rows, cols), dtype=np.uint8)
@@ -258,7 +261,9 @@ def align_row(voice: PiperVoice, text: str, speaker: int | None, audio_path: Pat
     except subprocess.CalledProcessError:
         return None, "decode", {}
     ratio = len(real) / max(1, len(ref))
-    if ratio < 0.55 or ratio > 1.75:
+    # vivos-32 «Chào …» and «Ngon quá.» are the same sentence, spoken slower
+    # than the deterministic reference. 2.05 still rejects a different line.
+    if ratio < 0.55 or ratio > 2.05:
         return None, "duration", {"ratio": ratio}
     hop = max(1, sample_rate // 100)
     ref_env = envelope(ref, hop)
@@ -306,6 +311,9 @@ def main() -> None:
     boundaries: list[float] = []
     for job in JOBS:
         directory = find_model(job["model"], dirs)
+        if directory is None:
+            print(f"skip {job['model']}: model not in the given directories", flush=True)
+            continue
         require_model(directory, job["model"])
         key = (str(directory), job["model"])
         if key not in voices:

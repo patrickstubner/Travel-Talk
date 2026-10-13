@@ -5,6 +5,35 @@ export type Contour = Array<number | null>
 const FRAME = 2048
 export const ANALYSIS_RATE = 16000
 /**
+ * Frames are dated at the centre of the analysis window. Dating them at
+ * the start puts a vowel about 64 ms before the sound the aligner measured,
+ * and a short word then has fewer than three voiced frames.
+ *
+ * The silence before the first sample is a whole number of hops, the same
+ * length as the old empty prefix. The windows that used to be measured
+ * stay on those samples. A microphone lead-in can then open the same
+ * early windows on the file, instead of only on the take.
+ */
+export function centerDelayFrames(hop: number): number {
+  if (!Number.isFinite(hop) || hop <= 0) return 0
+  return Math.round(FRAME / 2 / hop)
+}
+
+/** Silence before and after the clip, a whole number of hops. */
+export function padForCentre(samples: Float32Array, hop: number): Float32Array {
+  const pad = centerDelayFrames(hop) * hop
+  if (pad <= 0) return samples
+  const padded = new Float32Array(samples.length + pad * 2)
+  padded.set(samples, pad)
+  return padded
+}
+
+/** How many contour frames the analysis centre sits after the window start. */
+export function centerSlackFrames(hopSeconds: number): number {
+  if (!Number.isFinite(hopSeconds) || hopSeconds <= 0) return 0
+  return Math.max(0, Math.round(FRAME / 2 / ANALYSIS_RATE / hopSeconds))
+}
+/**
  * Pitchy frames below this are left unvoiced. 0.8 dropped most of the
  * low English voice (joe): the pitch was around 110 Hz, not under 70.
  * 0.6 keeps those frames. Noise and a 50/100/150 Hz hum still stay empty.
@@ -53,10 +82,11 @@ export function contourFromSamples(input: Float32Array, rate: number): Contour {
   detector.clarityThreshold = CLARITY_MIN
   detector.minVolumeDecibels = -45
   const hop = Math.max(1, Math.round(sampleRate * 0.01))
+  const padded = padForCentre(samples, hop)
   const frame = new Float32Array(FRAME)
   const pitches: Contour = []
-  for (let index = 0; index + FRAME < samples.length; index += hop) {
-    frame.set(samples.subarray(index, index + FRAME))
+  for (let index = 0; index + FRAME < padded.length; index += hop) {
+    frame.set(padded.subarray(index, index + FRAME))
     const [hz, clarity] = detector.findPitch(frame, sampleRate)
     if (clarity >= CLARITY_MIN && hz >= PITCH_HZ_MIN && hz <= PITCH_HZ_MAX) pitches.push(hz)
     else pitches.push(null)
@@ -125,12 +155,13 @@ export function frameEnergy(input: Float32Array, rate: number): number[] {
   const sampleRate = prepared.sampleRate
   if (samples.length < FRAME) return []
   const hop = Math.max(1, Math.round(sampleRate * 0.01))
+  const padded = padForCentre(samples, hop)
   const energy: number[] = []
-  for (let index = 0; index + FRAME < samples.length; index += hop) {
+  for (let index = 0; index + FRAME < padded.length; index += hop) {
     let sum = 0
     const end = index + FRAME
     for (let cursor = index; cursor < end; cursor += 1) {
-      const sample = samples[cursor] ?? 0
+      const sample = padded[cursor] ?? 0
       sum += sample * sample
     }
     energy.push(Math.sqrt(sum / FRAME))

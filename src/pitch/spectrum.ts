@@ -1,4 +1,4 @@
-import { samplesForAnalysis } from './contour'
+import { centerDelayFrames, samplesForAnalysis } from './contour'
 
 const FRAME = 2048
 const MEL_BANDS = 26
@@ -37,13 +37,14 @@ export function closestBands(
   modelBands: readonly (readonly number[])[] | null | undefined,
   input: Float32Array,
   rate: number,
-): number[][] {
+): { closest: number[][]; plain: number[][] } {
   const prepared = framePowers(input, rate)
-  if (!prepared) return []
-  if (!modelBands || modelBands.length === 0) return shapeFromPowers(prepared.powers, prepared.sampleRate, 0)
-  let best = shapeFromPowers(prepared.powers, prepared.sampleRate, 1)
+  if (!prepared) return { closest: [], plain: [] }
+  const plain = shapeFromPowers(prepared.powers, prepared.sampleRate, 1)
+  if (!modelBands || modelBands.length === 0) return { closest: shapeFromPowers(prepared.powers, prepared.sampleRate, 0), plain }
+  let best = plain
   let bestDistance = bandDistance(modelBands, best, 48) ?? Number.POSITIVE_INFINITY
-  if (bestDistance <= CLOSE_ENOUGH) return best
+  if (bestDistance <= CLOSE_ENOUGH) return { closest: best, plain }
   for (const scale of WARP_SCALES) {
     const bands = shapeFromPowers(prepared.powers, prepared.sampleRate, scale)
     const distance = bandDistance(modelBands, bands, 48)
@@ -52,7 +53,7 @@ export function closestBands(
       bestDistance = distance
     }
   }
-  return best
+  return { closest: best, plain }
 }
 
 function framePowers(input: Float32Array, rate: number): { powers: Array<Float32Array | null>; sampleRate: number } | null {
@@ -63,7 +64,7 @@ function framePowers(input: Float32Array, rate: number): { powers: Array<Float32
   const hop = Math.max(1, Math.round(sampleRate * 0.01))
   const real = new Float32Array(FRAME)
   const imag = new Float32Array(FRAME)
-  const powers: Array<Float32Array | null> = []
+  const powers: Array<Float32Array | null> = Array.from({ length: centerDelayFrames(hop) }, () => null)
   for (let index = 0; index + FRAME < samples.length; index += hop) {
     for (let cursor = 0; cursor < FRAME; cursor += 1) {
       real[cursor] = (samples[index + cursor] ?? 0) * (hann[cursor] ?? 0)

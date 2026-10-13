@@ -29,7 +29,12 @@ export function pitchWorker(): Worker | null {
       const waiting = pending.get(event.data.id)
       if (!waiting) return
       pending.delete(event.data.id)
-      waiting.resolve({ contour: event.data.contour, energy: event.data.energy, bands: event.data.bands })
+      waiting.resolve({
+        contour: event.data.contour,
+        energy: event.data.energy,
+        bands: event.data.bands,
+        plainBands: event.data.plainBands ?? event.data.bands,
+      })
     }
     created.onerror = () => {
       worker = null

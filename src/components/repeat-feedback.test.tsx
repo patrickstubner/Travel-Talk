@@ -138,8 +138,8 @@ describe('repeat feedback view', () => {
     expect(input?.userEnergy?.some((value) => value > 0)).toBe(true)
     expect(input?.modelBands?.length ?? 0).toBeGreaterThan(8)
     expect(input?.userBands?.length ?? 0).toBeGreaterThan(8)
-    expect(input?.modelBands?.[0]?.length).toBe(12)
-    expect(input?.userBands?.[0]?.length).toBe(12)
+    expect(input?.modelBands?.find((frame) => frame.length > 0)?.length).toBe(12)
+    expect(input?.userBands?.find((frame) => frame.length > 0)?.length).toBe(12)
   })
 
   it('shows the missing-times line only once the timings are known to be absent', () => {
@@ -151,15 +151,17 @@ describe('repeat feedback view', () => {
     cleanup()
     renderFeedback('de', tone(220, 220, 1.2), null)
     expect(screen.getByTestId('repeat-feedback').querySelector('canvas')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'qua' })).toBeNull()
-    expect(screen.queryByTestId('repeat-stars')).toBeNull()
-    expect(screen.getByText('Keine Wortzeiten für diese Stimme.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('none')
+    expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-melody')).toBe('none')
+    expect(screen.queryByTestId('melody-bar')).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.')
   })
 
   it('names a short take and a quiet take', () => {
     renderFeedback('de', tone(220, 220, 0.2), [{ start: 0, end: 0.2 }])
-    expect(screen.getByText('Die Aufnahme ist zu kurz.')).toBeTruthy()
-    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('Zu kurz. Sprich den ganzen Satz.')
+    expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('none')
+    expect(screen.queryByTestId('melody-bar')).toBeNull()
     cleanup()
     render(
       <RepeatFeedback
@@ -176,11 +178,12 @@ describe('repeat feedback view', () => {
         modelMissing={false}
       />,
     )
-    expect(screen.getByText('In der Aufnahme war zu wenig stimmhafte Tonhöhe.')).toBeTruthy()
-    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('Zu leise. Geh näher ans Mikrofon und sprich noch einmal.')
+    expect(screen.getByRole('button', { name: 'qua' })).toBeTruthy()
+    expect(screen.queryByTestId('melody-bar')).toBeNull()
   })
 
-  it('leaves the bars empty when too little of the line has a colour', () => {
+  it('explains a thin colouring instead of leaving the bars empty', () => {
     const model = tone(140, 280, 1.6)
     const user = new Float32Array(model.length)
     let phase = 0
@@ -212,9 +215,170 @@ describe('repeat feedback view', () => {
         voiceId="thorsten-high"
       />,
     )
-    expect(screen.queryByText('Zu wenige Wörter erkannt.')).toBeNull()
-    expect(screen.queryByText('Too few words were recognized.')).toBeNull()
-    expect(screen.queryByText('passt')).toBeNull()
+    const status = screen.getByRole('status')
+    expect(status.textContent).toBe('Nur ein Teil der Wörter ist bewertet. Die Balken gelten für diesen Teil.')
+    for (const bar of screen.queryAllByTestId(/bar$/)) {
+      expect(bar.getAttribute('data-state')).toBeTruthy()
+    }
     expect(screen.queryByTestId('repeat-stars')).toBeNull()
+  })
+
+  it('keeps the not-assessable sentence readable in show mode', () => {
+    render(
+      <div className="show-mode">
+        <RepeatFeedback
+          copy={de}
+          lang="de"
+          region="south"
+          speech="qua"
+          words={null}
+          modelSamples={tone(220, 220, 1)}
+          modelRate={16000}
+          userSamples={tone(220, 220, 1)}
+          userRate={16000}
+          modelMissing={false}
+          voiceId="thorsten-high"
+        />
+      </div>,
+    )
+    const status = screen.getByRole('status')
+    expect(status.textContent).toBe('Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.')
+    expect(status.closest('.show-mode')).toBeTruthy()
+  })
+
+  it('paints the melody mark and the rhythm mark with the word colour', () => {
+    renderFeedback('de')
+    const chip = screen.getByRole('button', { name: 'qua' })
+    expect(chip.getAttribute('data-melody')).toBe('green')
+    expect(chip.getAttribute('data-rhythm')).toBe('green')
+    const marks = chip.querySelectorAll('.mark')
+    expect(marks[0]?.textContent).toBe('Melodie')
+    expect(marks[0]?.className).toBe('mark green')
+    expect(marks[1]?.textContent).toBe('Rhythmus')
+    expect(marks[1]?.className).toBe('mark green')
+  })
+
+  it('draws no bars when every word stays grey', async () => {
+    const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => {
+      const score = actual.scoreRepeat(input)
+      return {
+        ...score,
+        melodyBar: 'passt',
+        rhythmBar: 'passt',
+        unclear: false,
+        otherSentence: false,
+        fewWords: false,
+        words: score.words?.map((word) => ({ ...word, color: null, melody: null, rhythm: null })) ?? null,
+      }
+    })
+    renderFeedback('de')
+    expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('none')
+    expect(screen.queryByTestId('melody-bar')).toBeNull()
+    expect(screen.queryByTestId('rhythm-bar')).toBeNull()
+  })
+
+  it('hides unklar while coloured bars are on the page', async () => {
+    const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
+      ...actual.scoreRepeat(input),
+      unclear: true,
+    }))
+    renderFeedback('de')
+    expect(screen.getByTestId('melody-bar')).toBeTruthy()
+    expect(screen.getByTestId('rhythm-bar')).toBeTruthy()
+    expect(screen.queryByText('Das lässt sich nicht zuordnen. Sprich in derselben Richtung wie die Datei, ohne lange Pause davor.')).toBeNull()
+  })
+
+  it('calls a reversed recording unklar and draws no bars', () => {
+    const sampleRate = 16000
+    const seconds = 1.4
+    const length = Math.floor(sampleRate * seconds)
+    const forward = new Float32Array(length)
+    const freqs = [180, 420, 140, 320, 220, 500]
+    let phase = 0
+    for (let index = 0; index < length; index += 1) {
+      const hz = freqs[Math.floor((index / length) * freqs.length)] ?? 180
+      phase += (2 * Math.PI * hz) / sampleRate
+      const envelope = 0.5 + 0.5 * Math.sin((2 * Math.PI * index) / (sampleRate * 0.07))
+      forward[index] = Math.sin(phase) * 0.8 * envelope
+    }
+    const backward = new Float32Array(forward.length)
+    for (let index = 0; index < forward.length; index += 1) backward[index] = forward[forward.length - 1 - index] ?? 0
+    render(
+      <RepeatFeedback
+        copy={de}
+        lang="de"
+        region="south"
+        speech="eins zwei drei"
+        words={[
+          { start: 0.1, end: 0.45 },
+          { start: 0.5, end: 0.85 },
+          { start: 0.9, end: 1.25 },
+        ]}
+        modelSamples={forward}
+        modelRate={16000}
+        userSamples={backward}
+        userRate={16000}
+        modelMissing={false}
+        voiceId="thorsten-high"
+      />,
+    )
+    expect(screen.getByRole('status').textContent).toBe(
+      'Das lässt sich nicht zuordnen. Sprich in derselben Richtung wie die Datei, ohne lange Pause davor.',
+    )
+    expect(screen.getByRole('button', { name: 'eins' }).getAttribute('data-color')).toBe('none')
+    expect(screen.queryByTestId('melody-bar')).toBeNull()
+    expect(screen.queryByTestId('rhythm-bar')).toBeNull()
+  })
+
+  it('names a thin model file instead of a quiet take', () => {
+    render(
+      <RepeatFeedback
+        copy={de}
+        lang="de"
+        region="south"
+        speech="Hilfe"
+        words={[{ start: 0.1, end: 0.8 }]}
+        modelSamples={new Float32Array(16000)}
+        modelRate={16000}
+        userSamples={tone(160, 220, 1)}
+        userRate={16000}
+        modelMissing={false}
+        voiceId="joe"
+      />,
+    )
+    expect(screen.getByRole('status').textContent).toBe('In dieser Datei ist zu wenig Stimme. Nochmal ändert daran nichts.')
+    expect(screen.queryByText('Zu leise. Geh näher ans Mikrofon und sprich noch einmal.')).toBeNull()
+    expect(screen.queryByTestId('melody-bar')).toBeNull()
+  })
+
+  it('does not hint at another sentence while the bars are coloured', async () => {
+    const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
+      ...actual.scoreRepeat(input),
+      otherSentence: true,
+    }))
+    renderFeedback('de')
+    expect(screen.queryByText('Das klingt nach einem anderen Satz. Hör die Datei noch einmal und sprich denselben.')).toBeNull()
+    expect(screen.getByTestId('melody-bar')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).not.toBe('none')
+  })
+
+  it('names the word that has too little voice in the file', async () => {
+    const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => {
+      const score = actual.scoreRepeat(input)
+      return {
+        ...score,
+        words:
+          score.words?.map((word, index) =>
+            index === 1 ? { ...word, scorable: false, color: null, melody: null, rhythm: null } : word,
+          ) ?? null,
+      }
+    })
+    renderFeedback('de')
+    expect(screen.getByRole('status').textContent).toBe('In der Datei hat «xin» zu wenig Stimme. Nochmal ändert daran nichts.')
+    expect(screen.getByTestId('melody-bar')).toBeTruthy()
   })
 })
