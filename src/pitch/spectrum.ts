@@ -18,6 +18,13 @@ const WARP_SCALES = [0.8, 0.84, 0.88, 0.92, 0.96, 1.04, 1.08, 1.12, 1.16, 1.2]
  */
 const CLOSE_ENOUGH = 0.35
 /**
+ * Skip the frequency warp when the unshifted shape already fits the file
+ * better backwards by this much. Same gap as `REVERSE_BAND_GAP` in
+ * feedback.ts. feedback imports this module, so the number lives here too.
+ * feedback.test.ts checks the two stay equal.
+ */
+export const WARP_REVERSE_GAP = 0.12
+/**
  * A sample quieter than this share of the peak is silence. 0.08, the
  * fraction that moves a timed span, cuts a quiet word such as «Help!»
  * down to a couple of frames, and the pause then has nothing left to
@@ -95,6 +102,13 @@ export function closestBands(
   if (!modelBands || modelBands.length === 0) return { closest: shapeFromPowers(prepared.powers, prepared.sampleRate, 0), plain }
   let best = plain
   let bestDistance = bandDistance(modelBands, best, 48) ?? Number.POSITIVE_INFINITY
+  // A reversed take is closer to the file flipped in time. Warping it
+  // toward the forward file shrinks that gap, and the reverse lock then
+  // misses it after Opus. The comparison uses the same DTW limit as
+  // `reversedRecording` (the default, not the 48-frame warp search).
+  const forwardFull = bandDistance(modelBands, plain)
+  const backwardFull = bandDistance([...modelBands].reverse(), plain)
+  if (forwardFull != null && backwardFull != null && backwardFull + WARP_REVERSE_GAP < forwardFull) return { closest: plain, plain }
   if (bestDistance <= CLOSE_ENOUGH) return { closest: best, plain }
   for (const scale of WARP_SCALES) {
     const bands = shapeFromPowers(prepared.powers, prepared.sampleRate, scale)

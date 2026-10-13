@@ -1110,18 +1110,21 @@ function worseBar(left: BarState, right: BarState): BarState {
 }
 
 /**
- * Above this, the sounds are not the file. A take of the same file through
- * opus stays under it (about 0.23 on the cadu lines that were checked).
- * Every other pt-BR sentence, of any bundled voice, stays above it. The
- * closest is cadu «senhor» against «senhora», about 0.28.
+ * Above this, the sounds are not the file. A take of the same file sits at
+ * 0 before a codec. On half B (odd SHA-1 byte of the line file, measured
+ * once) the closest other pt-BR sentence is cadu «senhor» against «senhora»
+ * on the hobby question, plain distance 0.303. 0.26 stays under that.
  */
 export const SENTENCE_SAME = 0.26
 
 /**
- * Same-speaker other sentences start just above SENTENCE_SAME and crowd
- * the low end. Another voice of the right sentence stays above this
- * (the lowest bundled one, tammie, is about 0.39). In between, the file's
- * own voice is saying something else, and the bar is «daneben».
+ * Same-speaker other sentences start just above SENTENCE_SAME. Against cadu
+ * on half B, another voice of the right sentence stays above this: the
+ * lowest is tammie «Olá, tudo bem?», plain distance 0.388, and the sentence
+ * distance used by the bar is 0.380. Two other voices against each other
+ * can sit lower (tammie against gracie on the job question, 0.290). In
+ * between, the file's own voice is saying something else, and the bar is
+ * «daneben». The numbers are the half-B measurement. The thresholds stay.
  */
 export const SENTENCE_IMPOSTOR = 0.37
 
@@ -1131,8 +1134,18 @@ export const SENTENCE_IMPOSTOR = 0.37
  * file, half B the odd byte.
  */
 export const VERDICT_PASST_CORR = 0.2
-/** A pitch correlation below 0 is already «daneben», in every language. */
+/**
+ * A pitch correlation below this is already «daneben».
+ * German, Portuguese and Vietnamese use 0. English uses −0.4: a mild
+ * negative contour there is still the sentence, and 0 was marking correct
+ * other voices «daneben» too often.
+ */
 export const VERDICT_DANEBEN_CORR = 0
+export const VERDICT_DANEBEN_CORR_EN = -0.4
+
+export function danebenCorrelation(lang: Lang): number {
+  return lang === 'en' ? VERDICT_DANEBEN_CORR_EN : VERDICT_DANEBEN_CORR
+}
 /** joe «wifi» against itself marks half its words opposed. Proposed. */
 export const VERDICT_OPPOSED_PASST = 0.5
 export const VERDICT_OPPOSED_DANEBEN = 0.67
@@ -1170,10 +1183,10 @@ export type SentenceCheck = {
  * the file. A contour below 0, a run of opposed words, a word order that
  * folds back, or a reversed take is «daneben». Everything else is «teilweise».
  */
-export function sentenceVerdict(check: SentenceCheck): BarState {
+export function sentenceVerdict(check: SentenceCheck, lang: Lang = 'de'): BarState {
   if (check.backwards) return 'daneben'
   if (check.order != null && check.order < VERDICT_ORDER_DANEBEN) return 'daneben'
-  if (check.correlation != null && check.correlation < VERDICT_DANEBEN_CORR) return 'daneben'
+  if (check.correlation != null && check.correlation < danebenCorrelation(lang)) return 'daneben'
   if (check.opposedShare >= VERDICT_OPPOSED_DANEBEN) return 'daneben'
   const orderOk = check.order == null || check.order >= VERDICT_ORDER_DANEBEN
   const soundOk = check.bands == null || check.bands <= VERDICT_BAND_PASST
@@ -1186,12 +1199,9 @@ export function sentenceVerdict(check: SentenceCheck): BarState {
  * Star count for a later release. Not stored on the score.
  *
  * 3 only when the sentence is «passt» and both bars are «passt».
- * 2 when the sentence is «passt» or «teilweise», even if both bars are
- * red, and also when the sentence is «daneben» but a bar is still yellow
- * or green. A pitch correlation below 0 marks many correct other voices
- * «daneben»; the bar that still carries the take keeps the second star.
- * 0 when the sentence is «daneben» and neither bar carried it, or the
- * take is reversed. The held-out check counts 0 and 1 together.
+ * «passt» and «teilweise» stay at 2. On «daneben», 2 only when a bar is
+ * «passt», 1 when the better bar is yellow, otherwise 0. A reversed take
+ * is 0. The held-out check counts 0 and 1 together.
  */
 export function starsFromVerdict(
   verdict: BarState,
@@ -1201,10 +1211,14 @@ export function starsFromVerdict(
 ): 0 | 1 | 2 | 3 {
   if (backwards) return 0
   const green = [melody, rhythm].filter((bar) => bar === 'passt').length
-  const carried = [melody, rhythm].filter((bar) => bar === 'passt' || bar === 'teilweise').length
+  const yellow = [melody, rhythm].filter((bar) => bar === 'teilweise').length
   if (verdict === 'passt' && green === 2) return 3
-  if (verdict !== 'daneben' || carried >= 1) return 2
-  return 0
+  if (verdict === 'daneben') {
+    if (green >= 1) return 2
+    if (yellow >= 1) return 1
+    return 0
+  }
+  return 2
 }
 
 /** Share of successive placed words whose recording span still moves forward. */
@@ -1309,7 +1323,11 @@ export function scoreRepeat(input: {
   }
   const lockBands = input.userPlainBands && input.userPlainBands.length > 0 ? input.userPlainBands : input.userBands
   const lockKnown = Boolean(input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0)
-  const bandReversed = reversedRecording(input.modelBands, lockBands)
+  // Plain bands and the silence-trimmed bands. Opus padding can move one
+  // of the two; either one fitting backwards is the file played backwards.
+  const bandReversed =
+    reversedRecording(input.modelBands, lockBands) ||
+    reversedRecording(input.modelSpeechBands, input.userSpeechBands)
   if (tooShort) return empty
   if (fileThin) return { ...empty, tooLittleVoice: false, reason: 'file' }
   // A reversed file can lose its tracked pitch. That is still «unklar», not a quiet take.
@@ -1590,7 +1608,7 @@ export function scoreRepeat(input: {
     bands: takeBands,
     backwards: false,
   }
-  const verdict = sentenceVerdict(sentenceCheck)
+  const verdict = sentenceVerdict(sentenceCheck, input.lang)
   const melodyBar = sentenceMelodyBar(melodyColours, input.lang, forward, takeBands)
   const rhythmBar = rhythmColours
   const scorable = scoredWords.filter((word) => word.scorable)

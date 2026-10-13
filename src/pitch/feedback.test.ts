@@ -13,6 +13,7 @@ import {
   RHYTHM_GREEN_MIN,
   SPECTRAL_DISTANCE_MAX,
   contentMismatch,
+  REVERSE_BAND_GAP,
   reversedRecording,
   spectralReversed,
   SENTENCE_IMPOSTOR,
@@ -34,7 +35,7 @@ import {
   thin,
   toneSentence,
 } from './feedback'
-import { bandDistance } from './spectrum'
+import { WARP_REVERSE_GAP, bandDistance } from './spectrum'
 
 function flat(count: number, value: number | null): Contour {
   return Array.from({ length: count }, () => value)
@@ -137,12 +138,19 @@ describe('scoring bands', () => {
     expect(sentenceVerdict({ ...same, bands: VERDICT_BAND_PASST + 0.02 })).toBe('teilweise')
     expect(sentenceVerdict({ ...same, bands: SENTENCE_SAME + 0.02 })).toBe('teilweise')
     expect(sentenceVerdict({ ...same, correlation: -0.05 })).toBe('daneben')
+    expect(sentenceVerdict({ ...same, correlation: -0.05 }, 'pt-BR')).toBe('daneben')
+    expect(sentenceVerdict({ ...same, correlation: -0.05 }, 'vi')).toBe('daneben')
+    expect(sentenceVerdict({ ...same, correlation: -0.05 }, 'en')).toBe('teilweise')
+    expect(sentenceVerdict({ ...same, correlation: -0.4 }, 'en')).toBe('teilweise')
+    expect(sentenceVerdict({ ...same, correlation: -0.41 }, 'en')).toBe('daneben')
     expect(sentenceVerdict({ ...same, correlation: 0 })).toBe('teilweise')
     expect(starsFromVerdict('teilweise', 'passt', 'teilweise')).toBe(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise')).toBe(2)
     expect(starsFromVerdict('teilweise', 'daneben', 'daneben')).toBe(2)
+    expect(starsFromVerdict('passt', 'daneben', 'daneben')).toBe(2)
     expect(starsFromVerdict('passt', 'teilweise', 'teilweise')).toBe(2)
-    expect(starsFromVerdict('daneben', 'teilweise', 'daneben')).toBe(2)
+    expect(starsFromVerdict('daneben', 'teilweise', 'daneben')).toBe(1)
+    expect(starsFromVerdict('daneben', 'daneben', 'teilweise')).toBe(1)
     expect(starsFromVerdict('daneben', 'daneben', 'passt')).toBe(2)
     expect(sentenceVerdict({ ...same, correlation: -0.5 })).toBe('daneben')
     expect(sentenceVerdict({ ...same, backwards: true })).toBe('daneben')
@@ -150,6 +158,7 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('daneben', 'daneben', 'daneben')).toBe(0)
     expect(starsFromVerdict('daneben', 'passt', 'passt')).toBe(2)
     expect(starsFromVerdict('passt', 'passt', 'passt', true)).toBe(0)
+    expect(WARP_REVERSE_GAP).toBe(REVERSE_BAND_GAP)
     expect(wordOrderScore([{ userStart: 0, userEnd: 0.2 }, { userStart: 0.3, userEnd: 0.5 }])).toBe(1)
     expect(wordOrderScore([{ userStart: 0.4, userEnd: 0.6 }, { userStart: 0.1, userEnd: 0.2 }])).toBe(0)
   })
