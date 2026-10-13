@@ -4,6 +4,7 @@ import { voiceProgress } from '../audio/offline'
 import { selectedVoice, voicesFor, voicesKeptByOthers, withDefaultVoices } from '../audio/voices'
 import { LANG_LABEL } from '../app/labels'
 import { LanguageChoice } from '../components/LanguageChoice'
+import { StudyProgress } from '../components/StudyProgress'
 import { VoiceOfflineButton } from '../components/VoiceOffline'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
@@ -81,6 +82,7 @@ export function HomePage() {
           void saveSettings({ ...settings, voices: { ...settings.voices, [settings.targetLang]: id } })
         }}
       />
+      <StudyProgress cards={snapshot.cards} copy={copy} variant="full" lang={appLang} now={now} />
       <p>{copy.startLead(fresh === 0 ? 0 : coming, due, fresh === 0 ? planned.waiting : 0)}</p>
       {words > 0 ? <p>{copy.todayWords(words)}</p> : null}
       {missing ? <p>{copy.missingWord(missing)}</p> : null}

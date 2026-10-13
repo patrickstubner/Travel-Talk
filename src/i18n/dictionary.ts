@@ -61,6 +61,10 @@ export type Dictionary = {
     pass: string
     part: string
     off: string
+    stars: (count: number) => string
+    starsInfo: string
+    starsTitle: string
+    starsHint: string
     unclear: string
     noWordTimes: string
     tooShort: string
@@ -108,6 +112,16 @@ export type Dictionary = {
   sessionEmpty: string
   needPair: string
   progress: (index: number, total: number) => string
+  study: {
+    info: string
+    title: string
+    learned: (sentences: number, words: number) => string
+    reviewed: (count: number) => string
+    kept: (percent: number) => string
+    learnedHint: string
+    reviewedHint: string
+    keptHint: string
+  }
   forOther: string
   showPurpose: string
   hideGloss: string
@@ -376,6 +390,11 @@ export const de: Dictionary = {
     pass: 'passt',
     part: 'teilweise',
     off: 'daneben',
+    stars: (count) => `${count} von 3 Sternen`,
+    starsInfo: 'Was die Sterne bedeuten',
+    starsTitle: 'Sterne',
+    starsHint:
+      'Die Sterne kommen nur aus den Balken Melodie und Rhythmus. Drei, wenn beide passen. Zwei, wenn keiner daneben ist. Einer, wenn einer daneben ist. Sie sagen nicht, ob der gesprochene Satz der gehörte war.',
     unclear: 'Das lässt sich nicht zuordnen. Sprich in derselben Richtung wie die Datei, ohne lange Pause davor.',
     noWordTimes: 'Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.',
     tooShort: 'Zu kurz. Sprich den ganzen Satz.',
@@ -438,6 +457,20 @@ export const de: Dictionary = {
   sessionEmpty: 'Nichts fällig. Öffne eine Situation oder starte die neuen Sätze später erneut.',
   needPair: 'Bitte zuerst ein Sprachpaar wählen.',
   progress: (index, total) => `${index} von ${total}`,
+  study: {
+    info: 'Was die Balken bedeuten',
+    title: 'Lernstand',
+    learned: (sentences, words) =>
+      `${sentences === 1 ? '1 Satz' : `${sentences} Sätze`} und ${words === 1 ? '1 Wort' : `${words} Wörter`} gelernt`,
+    reviewed: (count) => `${count} heute wiederholt`,
+    kept: (percent) => `${percent} Prozent behalten`,
+    learnedHint:
+      'Der erste Balken zählt Sätze und Wörter, die mindestens einmal bewertet wurden. Türkis sind Sätze, Grün sind Wörter. Die Zahl ist die Summe.',
+    reviewedHint:
+      'Der zweite Balken zählt Karten, die schon bekannt waren und heute noch einmal drankamen. Der erste Kontakt an diesem Tag zählt nicht als Wiederholung.',
+    keptHint:
+      'Der dritte Balken ist der Anteil der gelernten Karten im Wiederholungszustand. Das ist keine Note für die Aussprache. Nichts davon verlässt das Gerät.',
+  },
   forOther: 'Für die andere Person',
   showPurpose:
     'Zeigen stellt einen Satz gross auf den Bildschirm, damit du ihn jemandem hinhältst, zum Beispiel im Notfall oder in der Apotheke, und das Audio lässt sich abspielen.',
@@ -717,6 +750,11 @@ export const en: Dictionary = {
     pass: 'fits',
     part: 'partly',
     off: 'off',
+    stars: (count) => `${count} of 3 stars`,
+    starsInfo: 'What the stars mean',
+    starsTitle: 'Stars',
+    starsHint:
+      'The stars come only from the melody bar and the rhythm bar. Three when both fit. Two when neither is off. One when one is off. They do not say whether the spoken line was the line you heard.',
     unclear: 'This cannot be lined up. Speak in the same direction as the file, without a long pause first.',
     noWordTimes: 'This voice has no word timings. The curve stays, and the words stay grey.',
     tooShort: 'Too short. Say the whole sentence.',
@@ -779,6 +817,19 @@ export const en: Dictionary = {
   sessionEmpty: 'Nothing is due. Open a situation, or start the new lines again later.',
   needPair: 'Choose a language pair first.',
   progress: (index, total) => `${index} of ${total}`,
+  study: {
+    info: 'What the bars mean',
+    title: 'Progress',
+    learned: (sentences, words) =>
+      `${sentences === 1 ? '1 sentence' : `${sentences} sentences`} and ${words === 1 ? '1 word' : `${words} words`} learned`,
+    reviewed: (count) => `${count} reviewed today`,
+    kept: (percent) => `${percent} percent retained`,
+    learnedHint:
+      'The first bar counts sentences and words rated at least once. Teal is sentences, green is words. The number is the sum.',
+    reviewedHint: 'The second bar counts cards that were already known and came up again today. The first meeting that day is not a review.',
+    keptHint:
+      'The third bar is the share of learned cards in the review state. It is not a grade for pronunciation. None of this leaves the device.',
+  },
   forOther: 'For the other person',
   showPurpose:
     'Show puts a phrase large on the screen so you can hold it up to someone else, for example in an emergency or at a pharmacy, and the audio can be played.',
@@ -1055,6 +1106,11 @@ export const pt: Dictionary = {
     pass: 'encaixa',
     part: 'em parte',
     off: 'fora',
+    stars: (count) => `${count} de 3 estrelas`,
+    starsInfo: 'O que as estrelas significam',
+    starsTitle: 'Estrelas',
+    starsHint:
+      'As estrelas vêm só das barras de melodia e de ritmo. Três quando as duas encaixam. Duas quando nenhuma está fora. Uma quando uma está fora. Elas não dizem se a frase falada era a frase ouvida.',
     unclear: 'Não dá para alinhar. Fale na mesma direção do arquivo, sem uma pausa longa antes.',
     noWordTimes: 'Esta voz não tem os tempos das palavras. A curva fica, e as palavras ficam cinza.',
     tooShort: 'Curto demais. Fale a frase inteira.',
@@ -1117,6 +1173,20 @@ export const pt: Dictionary = {
   sessionEmpty: 'Nada para revisar. Abra uma situação ou comece as frases novas de novo mais tarde.',
   needPair: 'Escolha primeiro um par de línguas.',
   progress: (index, total) => `${index} de ${total}`,
+  study: {
+    info: 'O que as barras significam',
+    title: 'Progresso',
+    learned: (sentences, words) =>
+      `${sentences === 1 ? '1 frase' : `${sentences} frases`} e ${words === 1 ? '1 palavra' : `${words} palavras`} aprendidas`,
+    reviewed: (count) => `${count} revisadas hoje`,
+    kept: (percent) => `${percent} por cento retidas`,
+    learnedHint:
+      'A primeira barra conta frases e palavras avaliadas pelo menos uma vez. Verde-azulado são frases, verde são palavras. O número é a soma.',
+    reviewedHint:
+      'A segunda barra conta cartões que já eram conhecidos e voltaram hoje. O primeiro contato nesse dia não conta como revisão.',
+    keptHint:
+      'A terceira barra é a parte dos cartões aprendidos no estado de revisão. Não é uma nota de pronúncia. Nada disso sai do aparelho.',
+  },
   forOther: 'Para a outra pessoa',
   showPurpose:
     'Mostrar põe uma frase grande na tela para você mostrar a outra pessoa, por exemplo numa emergência ou na farmácia, e o áudio pode ser tocado.',
@@ -1395,6 +1465,11 @@ export const vi: Dictionary = {
     pass: 'ổn',
     part: 'một phần',
     off: 'lệch',
+    stars: (count) => `${count} trên 3 sao`,
+    starsInfo: 'Sao có nghĩa là gì',
+    starsTitle: 'Sao',
+    starsHint:
+      'Sao chỉ lấy từ cột giai điệu và cột nhịp. Ba sao khi cả hai ổn. Hai sao khi không cái nào lệch. Một sao khi một cái lệch. Sao không nói câu bạn nói có phải câu đã nghe hay không.',
     unclear: 'Không xếp được. Nói cùng hướng với tệp, đừng dừng lâu trước khi nói.',
     noWordTimes: 'Giọng này không có thời điểm từng từ. Đường cong vẫn còn, các từ vẫn xám.',
     tooShort: 'Quá ngắn. Nói cả câu.',
@@ -1457,6 +1532,16 @@ export const vi: Dictionary = {
   sessionEmpty: 'Chưa có câu đến hạn. Mở một tình huống hoặc bắt đầu câu mới sau.',
   needPair: 'Hãy chọn một cặp ngôn ngữ trước.',
   progress: (index, total) => `${index} trên ${total}`,
+  study: {
+    info: 'Các cột có nghĩa là gì',
+    title: 'Tiến độ',
+    learned: (sentences, words) => `${sentences} câu và ${words} từ đã học`,
+    reviewed: (count) => `${count} ôn hôm nay`,
+    kept: (percent) => `${percent} phần trăm còn nhớ`,
+    learnedHint: 'Cột thứ nhất đếm câu và từ đã được chấm ít nhất một lần. Xanh lam là câu, xanh lục là từ. Số là tổng.',
+    reviewedHint: 'Cột thứ hai đếm thẻ đã biết và được ôn lại hôm nay. Lần gặp đầu trong ngày không tính là ôn.',
+    keptHint: 'Cột thứ ba là phần thẻ đã học đang ở trạng thái ôn. Đó không phải điểm phát âm. Không có gì rời khỏi máy.',
+  },
   forOther: 'Cho người kia đọc',
   showPurpose:
     'Đưa hiện một câu lớn trên màn hình để đưa cho người khác xem, ví dụ khi cấp cứu hoặc ở nhà thuốc, và có thể phát âm thanh.',

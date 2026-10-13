@@ -5,6 +5,8 @@ import type { WordTime } from '../audio/align'
 import { playSequence, stopSlices } from '../audio/slice'
 import type { Dictionary } from '../i18n/dictionary'
 import { analyzeModelCached, analyzeUserOnce, pitchWorker } from '../pitch/analyze-client'
+import { takeStars } from '../pitch/take-stars'
+import { InfoButton } from './InfoButton'
 import { analyzeModel, analyzeUser, type ClipFeatures } from '../pitch/analyze'
 import { analysisHop, voicedValues, type Contour } from '../pitch/contour'
 import {
@@ -121,6 +123,7 @@ export function RepeatFeedback({
   modelMissing,
   voiceId,
   timingsPending = false,
+  uiLang,
 }: {
   copy: Dictionary
   lang: Lang
@@ -135,6 +138,8 @@ export function RepeatFeedback({
   voiceId: string
   /** True while the timing file is still loading. The missing-times line waits. */
   timingsPending?: boolean
+  /** App language for the star note. The target language stays `lang`. */
+  uiLang?: Lang
 }) {
   const [view, setView] = useState<'result' | 'word' | 'tones'>('result')
   const [selected, setSelected] = useState(0)
@@ -225,6 +230,7 @@ export function RepeatFeedback({
         <Result
           copy={copy}
           lang={lang}
+          uiLang={uiLang ?? 'de'}
           speech={speech}
           voiceId={voiceId}
           score={score}
@@ -301,6 +307,7 @@ export function RepeatFeedback({
 function Result({
   copy,
   lang,
+  uiLang,
   speech,
   voiceId,
   score,
@@ -312,6 +319,7 @@ function Result({
 }: {
   copy: Dictionary
   lang: Lang
+  uiLang: Lang
   speech: string
   voiceId: string
   score: RepeatScore | null
@@ -337,6 +345,7 @@ function Result({
   const melodyBar = score?.melodyBar ?? null
   const rhythmBar = score?.rhythmBar ?? null
   const showBars = Boolean(melodyBar && rhythmBar && coloured)
+  const stars = showBars ? takeStars(melodyBar, rhythmBar) : null
   const gapWord = scored?.find((word) => !word.scorable)
   const notice = tooShort
     ? feedback.tooShort
@@ -419,6 +428,7 @@ function Result({
           ))}
         </div>
       ) : null}
+      {stars != null ? <TakeStars count={stars} copy={copy} speechLang={uiLang} /> : null}
       {showBars && melodyBar && rhythmBar ? (
         <div className="repeat-bars">
           <ScoreBar label={feedback.melody} state={melodyBar} copy={copy} testId="melody-bar" />
@@ -433,6 +443,30 @@ function Result({
           </p>
         ) : null,
       )}
+    </div>
+  )
+}
+
+function TakeStars({ count, copy, speechLang }: { count: 1 | 2 | 3; copy: Dictionary; speechLang: Lang }) {
+  const feedback = copy.repeatFeedback
+  return (
+    <div className="take-stars" data-testid="repeat-stars" data-stars={count}>
+      <p className="take-stars-row" role="img" aria-label={feedback.stars(count)}>
+        {[1, 2, 3].map((star) => (
+          <span key={star} className={star <= count ? 'star on' : 'star'} aria-hidden="true">
+            ★
+          </span>
+        ))}
+      </p>
+      <InfoButton
+        label={feedback.starsInfo}
+        title={feedback.starsTitle}
+        closeLabel={copy.infoClose}
+        readLabel={copy.readAloud}
+        stopLabel={copy.readAloudStop}
+        lang={speechLang}
+        parts={[{ text: feedback.starsHint, clip: null }]}
+      />
     </div>
   )
 }

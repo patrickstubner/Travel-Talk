@@ -17,6 +17,7 @@ import { KaraokeLine } from '../components/KaraokeLine'
 import { LearnCard } from '../components/LearnCard'
 import { TempoSwitch } from '../components/TempoSwitch'
 import { RepeatFeedback } from '../components/RepeatFeedback'
+import { StudyProgress } from '../components/StudyProgress'
 import { RichText } from '../components/RichText'
 import { spokenCitation, wordAudioFile, wordById } from '../../content/words'
 import { Rating, emptyCard, fromStored, previewDue, reviewCard, toStored, type Grade } from '../srs/scheduler'
@@ -314,6 +315,7 @@ export function PracticePage() {
   const app = settings.appLang
   const targetLang = settings.targetLang
   const activeDirection = direction
+  const study = <StudyProgress cards={snapshot.cards} copy={copy} variant="compact" lang={app} />
 
   function goNext(): void {
     releaseMic()
@@ -392,6 +394,7 @@ export function PracticePage() {
     const canDo = sessionCanDo(catalog, queue.map((entry) => entry.id), app)
     return (
       <section className="stack" data-testid="session-end">
+        {study}
         <p className="eyebrow">{copy.sessionKicker}</p>
         <h1>{copy.sessionDone}</h1>
         <div className="card pad">
@@ -441,6 +444,7 @@ export function PracticePage() {
     }
     return (
       <section className="stack learn" data-testid="practice-word">
+        {study}
         <h2 className="eyebrow">{copy.wordsFirst}</h2>
         {offlineAudio ? (
           <p className="warn" role="status">
@@ -516,6 +520,7 @@ export function PracticePage() {
   if (!item || !concept || !step || step === 'word') {
     return (
       <section className="stack" data-testid="practice">
+        {study}
         <h1>{copy.learnToday}</h1>
         <p>{kind === 'review' ? copy.noReviews : copy.noNewToday}</p>
         <Link to="/">{copy.back}</Link>
@@ -528,6 +533,7 @@ export function PracticePage() {
   if (!source || !target) {
     return (
       <section className="stack">
+        {study}
         <p>{copy.missingLine}</p>
         <button type="button" className="button" onClick={goNext}>
           {copy.next}
@@ -613,6 +619,7 @@ export function PracticePage() {
 
   return (
     <section className="stack learn" data-testid="practice">
+      {study}
       <h2 className="eyebrow">{heading[step]}</h2>
       {offlineAudio ? (
         <p className="warn" role="status">
@@ -660,7 +667,7 @@ export function PracticePage() {
           <div className="learn-speak" data-testid="learn-record">
           <div className="row">
             {recording ? (
-              <button type="button" onClick={() => sessionRef.current?.recorder.stop()}>
+              <button type="button" className="button accent learn-stop" onClick={() => sessionRef.current?.recorder.stop()}>
                 {copy.stop}
               </button>
             ) : (
@@ -718,6 +725,7 @@ export function PracticePage() {
             <RepeatFeedback
               copy={copy}
               lang={targetLang}
+              uiLang={app}
               region={settings.viRegion}
               speech={target.speech}
               words={feedbackTimes}
@@ -732,9 +740,11 @@ export function PracticePage() {
           ) : null}
           {take && !take.samples && !recording ? <p role="status">{copy.pitchEmpty}</p> : null}
           </div>
-          <button type="button" className="button primary" disabled={micStarting} onClick={goNext}>
-            {copy.next}
-          </button>
+          {recording ? null : (
+            <button type="button" className="button primary learn-next" disabled={micStarting} onClick={goNext}>
+              {copy.next}
+            </button>
+          )}
         </>
       ) : null}
       {step === 'understand' ? (

@@ -355,6 +355,7 @@ export function PhrasePage() {
           <RepeatFeedback
             copy={copy}
             lang={targetLang}
+            uiLang={settings.appLang ?? 'de'}
             region={settings.viRegion}
             speech={target.speech}
             words={feedbackTimes}

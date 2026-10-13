@@ -233,6 +233,7 @@ describe('practice repeat feedback', () => {
       release: vi.fn(),
     } as unknown as CaptureSession)
     expect(await screen.findByRole('button', { name: 'Stopp' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Weiter' })).toBeNull()
     expect((screen.getByRole('button', { name: 'Anhören' }) as HTMLButtonElement).disabled).toBe(true)
   })
 

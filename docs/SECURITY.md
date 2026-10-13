@@ -8,6 +8,10 @@ Geprüft am 13. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Rech
 
 Die Tempo-Wahl eines neuen Satzes ist nur 0.7, 0.85 oder 1. Fehlt sie oder ist der Wert ein anderer, gilt 0.7. Sie liegt in den Einstellungen dieser Person und geht nicht in den Export. Ein Import lässt sie auf dem Gerät stehen, `mergeLocal` übernimmt nur einen der drei Werte. `coerceSettings` verwirft einen anderen Wert. Daraus wird keine Adresse gebaut. `playbackRate` bleibt 1. Das Tempo ist der Dateiname, und der Name muss weiter `AUDIO_FILE` und `manifest.json` erfüllen. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Die CSP bleibt. Aufnahmen bleiben auf dem Gerät.
 
+Die Sterne nach dem Nachsprechen sind nur die beiden Balken, die schon auf der Seite stehen: drei wenn beide passen, zwei wenn keiner daneben ist, einer wenn einer daneben ist. Fehlen die Balken, gibt es keine Sterne. Das ist keine Spracherkennung und kein Urteil, ob der gesprochene Satz der gehörte war. `src/pitch/sentence-grade.ts` bleibt unbenutzt. Die Erklärung steht hinter dem Info-Knopf. Ohne vorerzeugte Datei spricht `speechSynthesis` den Satz auf dem Gerät, wie bisher bei fehlenden Hilfedateien.
+
+Der Lernstand liest die Karten dieser Person aus IndexedDB. Gezählt werden gelernte Sätze, gelernte Wörter, heute wiederholte Karten und der Anteil im Wiederholungszustand. Die Zahlen werden nicht gespeichert, nicht exportiert und nicht gesendet. Kein neues `fetch`, kein neues Paket.
+
 Die offenen Punkte bleiben offen: kein `frame-ancestors` auf GitHub Pages, Mikrofon-Freigabe im Browser, Notiz unverschlüsselt in IndexedDB.
 
 ## 0.9.4 Erklärungen
