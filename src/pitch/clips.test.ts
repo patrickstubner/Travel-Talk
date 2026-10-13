@@ -17,7 +17,7 @@ import { WORDS, wordAudioFile } from '../../content/words'
 import { analyzeModel, analyzeUser } from './analyze'
 import { clipProblem, lengthProblem } from './clip-plausible'
 import { contourFromSamples, frameEnergy } from './contour'
-import { SENTENCE_SAME, scoreRepeat, starsFromVerdict, type RepeatScore } from './feedback'
+import { SENTENCE_SAME, VERDICT_BAND_PASST, scoreRepeat, starsFromVerdict, type RepeatScore } from './feedback'
 import { bandDistance, bandShape } from './spectrum'
 
 /**
@@ -388,6 +388,8 @@ describe('shipped clips', () => {
       modelBands: modelFeatures.bands,
       userBands: userFeatures.bands,
       userPlainBands: userFeatures.plainBands,
+      modelSpeechBands: modelFeatures.speechBands,
+      userSpeechBands: userFeatures.speechBands,
     })
     expect(score.unclear, file).toBe(true)
     expect(score.reason, file).toBe('unclear')
@@ -498,6 +500,8 @@ describe('shipped clips', () => {
         modelBands: model.bands,
         userBands: user.bands,
         userPlainBands: user.plainBands,
+        modelSpeechBands: model.speechBands,
+        userSpeechBands: user.speechBands,
       })
       expectAssessed(score, item.file)
       for (const word of score.words ?? []) {
@@ -550,6 +554,8 @@ describe('shipped clips', () => {
       modelBands: model.bands,
       userBands: user.bands,
       userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
     })
     expect(score.globalRatio ?? 0, file).toBeGreaterThan(0.85)
     expect(score.globalRatio ?? 9, file).toBeLessThan(1.2)
@@ -602,6 +608,8 @@ describe('shipped clips', () => {
       modelBands: model.bands,
       userBands: user.bands,
       userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
     })
     const modelVoiced = model.contour.filter((value) => value != null).length
     const userVoiced = user.contour.filter((value) => value != null).length
@@ -713,6 +721,8 @@ describe('shipped clips', () => {
       modelBands: model.bands,
       userBands: user.bands,
       userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
     })
   }
 
@@ -817,6 +827,8 @@ describe('shipped clips', () => {
       modelBands: model.bands,
       userBands: user.bands,
       userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
     })
   }
 
@@ -1005,6 +1017,8 @@ describe('shipped clips', () => {
           modelBands: modelFeatures.bands,
           userBands: userFeatures.bands,
           userPlainBands: userFeatures.plainBands,
+          modelSpeechBands: modelFeatures.speechBands,
+          userSpeechBands: userFeatures.speechBands,
         })
         const label = `${pair.model.line.text} <- ${pair.user.voice} ${pair.user.text}`
         expect(score.melodyBar, label).not.toBe('passt')
@@ -1017,6 +1031,27 @@ describe('shipped clips', () => {
     },
     720_000,
   )
+
+  function clipHalf(file: string): 'A' | 'B' {
+    const byte = createHash('sha1').update(file).digest()[0] ?? 0
+    return byte % 2 === 0 ? 'A' : 'B'
+  }
+
+  /**
+   * Half A is the even SHA-1 byte of the line file. Counts are the calibration
+   * pass. A floor and a ceiling sit around each one, so a mutant that moves
+   * the distribution either way fails. «Höchstens 1 Stern» is 0 or 1, not
+   * exactly 1. The 20 % aim is not met on this half.
+   */
+  const HALF_A_BOUNDS: Record<
+    'de' | 'en' | 'pt-BR' | 'vi',
+    { otherJudged: number; otherLow: [number, number]; coloured: number; red: [number, number]; wrongJudged: number; wrongZero: [number, number] }
+  > = {
+    de: { otherJudged: 68, otherLow: [16, 22], coloured: 246, red: [55, 71], wrongJudged: 136, wrongZero: [56, 72] },
+    en: { otherJudged: 44, otherLow: [17, 23], coloured: 105, red: [36, 50], wrongJudged: 88, wrongZero: [28, 40] },
+    'pt-BR': { otherJudged: 375, otherLow: [130, 154], coloured: 1411, red: [300, 366], wrongJudged: 437, wrongZero: [100, 124] },
+    vi: { otherJudged: 235, otherLow: [44, 56], coloured: 1046, red: [310, 386], wrongJudged: 353, wrongZero: [108, 136] },
+  }
 
   it.skipIf(!ready)(
     'never gives a wrong sentence or a reversed take passt or three stars',
@@ -1044,6 +1079,7 @@ describe('shipped clips', () => {
                 file: line.file,
                 samples,
                 bands: features.bands,
+                speechBands: features.speechBands,
                 contour: features.contour,
                 energy: features.energy,
                 words: times.map((word, index) => ({ ...word, text: texts[index] ?? '' })),
@@ -1088,6 +1124,8 @@ describe('shipped clips', () => {
               modelBands: pair.model.bands,
               userBands: user.bands,
               userPlainBands: user.plainBands,
+              modelSpeechBands: pair.model.speechBands,
+              userSpeechBands: user.speechBands,
             })
             const label = `${lang} ${pair.distance.toFixed(3)} ${pair.model.file} <- ${pair.user.voice} ${pair.user.file}`
             expect(score.verdict, label).not.toBe('passt')
@@ -1119,6 +1157,8 @@ describe('shipped clips', () => {
             modelBands: model.bands,
             userBands: user.bands,
             userPlainBands: user.plainBands,
+            modelSpeechBands: model.speechBands,
+            userSpeechBands: user.speechBands,
           })
         }
         const refuse = (score: RepeatScore, label: string) => {
@@ -1133,6 +1173,10 @@ describe('shipped clips', () => {
           expect(rows.length, `${lang} ${voice.id}`).toBeGreaterThan(20)
           let before3 = 0
           let after3 = 0
+          const starsOf = (score: RepeatScore) =>
+            score.verdict
+              ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+              : 0
           for (let index = 0; index < rows.length; index += 1) {
             const row = rows[index]
             const next = rows[(index + 1) % rows.length]
@@ -1140,10 +1184,27 @@ describe('shipped clips', () => {
             const self = grade(row, row.samples)
             if (self.melodyBar === 'passt' && self.rhythmBar === 'passt') {
               before3 += 1
-              const stars = self.verdict
-                ? starsFromVerdict(self.verdict, self.melodyBar, self.rhythmBar, self.sentenceCheck?.backwards ?? false)
-                : 0
-              if (stars === 3) after3 += 1
+              // Silence before and after the take, then the same file through opus.
+              // The band distance stays inside the cap. When the bars stay
+              // «passt», the third star stays too. A codec or a lead-in can
+              // move one word off green; that is not the pause.
+              const padded = grade(row, withLead(row.samples, 16000))
+              const coded = grade(row, throughOpus(row.samples, 16000))
+              const paddedBars = padded.melodyBar === 'passt' && padded.rhythmBar === 'passt'
+              const paddedBands = padded.sentenceCheck?.bands
+              const barsHeld = coded.melodyBar === 'passt' && coded.rhythmBar === 'passt'
+              const codedBands = coded.sentenceCheck?.bands
+              const silenceKept =
+                starsOf(self) === 3 &&
+                paddedBands != null &&
+                paddedBands <= VERDICT_BAND_PASST &&
+                (!paddedBars || starsOf(padded) === 3)
+              const opusKept =
+                starsOf(self) === 3 &&
+                codedBands != null &&
+                codedBands <= VERDICT_BAND_PASST &&
+                (!barsHeld || starsOf(coded) === 3)
+              if (silenceKept && opusKept) after3 += 1
             }
             if (next.text !== row.text) refuse(grade(row, next.samples), `${lang} ${voice.id} wrong ${row.file}`)
             const reversed = Float32Array.from(row.samples)
@@ -1152,9 +1213,58 @@ describe('shipped clips', () => {
           }
           expect(after3, `${lang} ${voice.id} ${after3}/${before3}`).toBe(before3)
         }
+        const anchorId = voices.find((voice) => voice.defaultNew)?.id ?? ''
+        const anchorRows = new Map((byVoice.get(anchorId) ?? []).filter((row) => clipHalf(row.file) === 'A').map((row) => [row.file, row]))
+        let otherJudged = 0
+        let otherLow = 0
+        let otherExact = 0
+        let red = 0
+        let coloured = 0
+        let wrongJudged = 0
+        let wrongZero = 0
+        for (const voice of voices) {
+          const rows = (byVoice.get(voice.id) ?? []).filter((row) => clipHalf(row.file) === 'A')
+          for (let index = 0; index < rows.length; index += 1) {
+            const row = rows[index]
+            const next = rows[(index + 1) % rows.length]
+            if (!row || !next || next.text === row.text) continue
+            const bad = grade(row, next.samples)
+            if (bad.verdict) {
+              wrongJudged += 1
+              const stars = starsFromVerdict(bad.verdict, bad.melodyBar, bad.rhythmBar, bad.sentenceCheck?.backwards ?? false)
+              if (stars === 0) wrongZero += 1
+            }
+            if (voice.id === anchorId) continue
+            const model = anchorRows.get(row.file)
+            if (!model) continue
+            const heard = grade(model, row.samples)
+            if (heard.verdict) {
+              otherJudged += 1
+              const stars = starsFromVerdict(heard.verdict, heard.melodyBar, heard.rhythmBar, heard.sentenceCheck?.backwards ?? false)
+              if (stars <= 1) otherLow += 1
+              if (stars === 1) otherExact += 1
+            }
+            for (const word of heard.words ?? []) {
+              if (word.color == null) continue
+              coloured += 1
+              if (word.color === 'red') red += 1
+            }
+          }
+        }
+        const bounds = HALF_A_BOUNDS[lang]
+        expect(otherLow, `${lang} höchstens 1 ${otherLow}/${otherJudged}`).toBeGreaterThan(otherExact)
+        expect(otherJudged, lang).toBe(bounds.otherJudged)
+        expect(otherLow, lang).toBeGreaterThanOrEqual(bounds.otherLow[0])
+        expect(otherLow, lang).toBeLessThanOrEqual(bounds.otherLow[1])
+        expect(coloured, lang).toBe(bounds.coloured)
+        expect(red, lang).toBeGreaterThanOrEqual(bounds.red[0])
+        expect(red, lang).toBeLessThanOrEqual(bounds.red[1])
+        expect(wrongJudged, lang).toBe(bounds.wrongJudged)
+        expect(wrongZero, lang).toBeGreaterThanOrEqual(bounds.wrongZero[0])
+        expect(wrongZero, lang).toBeLessThanOrEqual(bounds.wrongZero[1])
       }
     },
-    720_000,
+    1_200_000,
   )
 
   function scoreLang(
@@ -1184,6 +1294,8 @@ describe('shipped clips', () => {
       modelBands: model.bands,
       userBands: user.bands,
       userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
     })
   }
 
@@ -1265,6 +1377,8 @@ describe('shipped clips', () => {
         modelBands: model.bands,
         userBands: model.bands,
         userPlainBands: model.plainBands,
+        modelSpeechBands: model.speechBands,
+        userSpeechBands: model.speechBands,
       })
       expect(score.globalRatio ?? 0, file).toBeGreaterThan(0.7)
       expect(score.globalRatio ?? 9, file).toBeLessThan(0.9)
@@ -1539,6 +1653,8 @@ main().catch((error) => fetch('/fail', { method: 'POST', body: String(error && e
       modelBands: model.bands,
       userBands: user.bands,
       userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
     })
   }
 

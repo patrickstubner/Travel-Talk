@@ -17,6 +17,57 @@ const WARP_SCALES = [0.8, 0.84, 0.88, 0.92, 0.96, 1.04, 1.08, 1.12, 1.16, 1.2]
  * scales are skipped. The value is on the variance-normalised scale.
  */
 const CLOSE_ENOUGH = 0.35
+/**
+ * A sample quieter than this share of the peak is silence. 0.08, the
+ * fraction that moves a timed span, cuts a quiet word such as «Help!»
+ * down to a couple of frames, and the pause then has nothing left to
+ * compare. 0.02 still drops digital silence and keeps that word.
+ */
+const SILENCE_FRACTION = 0.02
+
+/**
+ * Drop leading and trailing silence. A 10 ms hop finds the loud region,
+ * then the cut moves to the first and last sample that still reach
+ * `SILENCE_FRACTION` of the peak. Cutting at the hop would leave a
+ * fraction of a window of silence and shift every band frame.
+ */
+export function trimSilence(input: Float32Array, rate: number): Float32Array {
+  if (input.length === 0 || !Number.isFinite(rate) || rate <= 0) return input
+  const hop = Math.max(1, Math.round(rate * 0.01))
+  if (input.length < hop) return input
+  let peak = 0
+  for (let index = 0; index < input.length; index += 1) {
+    const value = Math.abs(input[index] ?? 0)
+    if (value > peak) peak = value
+  }
+  if (!(peak > 1e-8)) return input
+  const gate = peak * SILENCE_FRACTION
+  const hold = hop
+  const loud = (from: number): boolean => {
+    if (from < 0 || from + hold > input.length) return false
+    let sum = 0
+    const end = from + hold
+    for (let cursor = from; cursor < end; cursor += 1) {
+      const sample = input[cursor] ?? 0
+      sum += sample * sample
+    }
+    return Math.sqrt(sum / hold) >= gate
+  }
+  let start = 0
+  while (start + hold <= input.length && !loud(start)) start += hold
+  if (start + hold > input.length) return input
+  const startLimit = Math.min(input.length, start + hold)
+  while (start < startLimit && Math.abs(input[start] ?? 0) < gate) start += 1
+  let end = input.length
+  while (end - hold >= start && !loud(end - hold)) end -= hold
+  const endLimit = Math.max(start, end - hold)
+  while (end > endLimit && Math.abs(input[end - 1] ?? 0) < gate) end -= 1
+  if (end - start < hold) return input
+  if (start === 0 && end === input.length) return input
+  const trimmed = new Float32Array(end - start)
+  trimmed.set(input.subarray(start, end))
+  return trimmed
+}
 
 /**
  * Twelve MFCCs per analysis frame, without the loudness coefficient.

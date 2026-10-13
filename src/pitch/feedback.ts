@@ -1131,17 +1131,20 @@ export const SENTENCE_IMPOSTOR = 0.37
  * file, half B the odd byte.
  */
 export const VERDICT_PASST_CORR = 0.2
-export const VERDICT_DANEBEN_CORR = -0.4
+/** A pitch correlation below 0 is already «daneben», in every language. */
+export const VERDICT_DANEBEN_CORR = 0
 /** joe «wifi» against itself marks half its words opposed. Proposed. */
 export const VERDICT_OPPOSED_PASST = 0.5
 export const VERDICT_OPPOSED_DANEBEN = 0.67
 export const VERDICT_ORDER_DANEBEN = 0.5
 /**
  * «passt» only while the band sequence is still this file.
- * On half A the nearest wrong line that would otherwise pass is a
- * vais1000 address variant at about 0.224. 0.20 sits under that and
- * over a padded copy of the same file (about 0.12). An opus pass of
- * the same file, about 0.23, is then «teilweise». Proposed.
+ * Silence at both ends is cut first. The sentence then keeps the lower
+ * of that cut and the uncut take, so a codec pass that moves the cut
+ * does not raise the distance. On half A a padded copy of the same file
+ * sits at 0, and an opus pass stays under about 0.17. The nearest wrong
+ * line that would otherwise pass is a vais1000 address variant at about
+ * 0.224. Proposed.
  */
 export const VERDICT_BAND_PASST = 0.2
 
@@ -1164,7 +1167,7 @@ export type SentenceCheck = {
  * Whether the spoken line is the file.
  *
  * «passt» needs the pitch contour to agree and the band sequence to still be
- * the file. A negative contour, a run of opposed words, a word order that
+ * the file. A contour below 0, a run of opposed words, a word order that
  * folds back, or a reversed take is «daneben». Everything else is «teilweise».
  */
 export function sentenceVerdict(check: SentenceCheck): BarState {
@@ -1184,10 +1187,10 @@ export function sentenceVerdict(check: SentenceCheck): BarState {
  *
  * 3 only when the sentence is «passt» and both bars are «passt».
  * 2 when the sentence is «passt» or «teilweise» and at least one bar is
- * not «daneben». A yellow bar still counts for that second star: a green
- * bar alone leaves more than a fifth of the correct other-voice takes on
- * one star. Anything else spoken forward is 1. «daneben» or a reversed
- * take is 0.
+ * not «daneben». A yellow bar still counts for that second star.
+ * The held-out check counts a correct other voice with at most one star
+ * (0 or 1), not a take that landed on exactly one. Anything else spoken
+ * forward is 1. «daneben» or a reversed take is 0.
  */
 export function starsFromVerdict(
   verdict: BarState,
@@ -1264,6 +1267,12 @@ export function scoreRepeat(input: {
    * so the reverse lock uses these when they are present.
    */
   userPlainBands?: readonly (readonly number[])[] | null
+  /**
+   * Bands after leading and trailing silence is cut. The sentence distance
+   * uses these when both sides have them. Absent on the synthetic fixtures.
+   */
+  modelSpeechBands?: readonly (readonly number[])[] | null
+  userSpeechBands?: readonly (readonly number[])[] | null
 }): RepeatScore {
   const modelThin = thin(input.model, input.modelHop > 0 ? input.modelHop : 0.01)
   const userThin = thin(input.user, input.userHop > 0 ? input.userHop : 0.01)
@@ -1554,10 +1563,21 @@ export function scoreRepeat(input: {
       reason: 'unclear',
     }
   }
-  const takeBands =
+  const fullBands =
     input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0
       ? bandDistance(input.modelBands, lockBands)
       : null
+  const spokenBands =
+    input.modelSpeechBands &&
+    input.userSpeechBands &&
+    input.modelSpeechBands.length > 0 &&
+    input.userSpeechBands.length > 0
+      ? bandDistance(input.modelSpeechBands, input.userSpeechBands)
+      : null
+  // Silence at the ends moves the window, so the trimmed distance is the one
+  // that still matches the file. A codec pass can move the energy cut, and
+  // then the untrimmed distance is the lower one. The sentence uses the lower.
+  const takeBands = fullBands == null ? spokenBands : spokenBands == null ? fullBands : Math.min(fullBands, spokenBands)
   const alignedCorr = contourCorrelation(model, heard, rhythmAlign ?? path)
   const knownDirections = directions.filter((direction) => direction !== 'unknown')
   const opposedShare =

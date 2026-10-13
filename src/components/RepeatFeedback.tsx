@@ -191,6 +191,8 @@ export function RepeatFeedback({
       modelBands: modelFeatures.bands,
       userBands: userFeatures.bands,
       userPlainBands: userFeatures.plainBands,
+      modelSpeechBands: modelFeatures.speechBands,
+      userSpeechBands: userFeatures.speechBands,
     })
   }, [lang, modelFeatures, modelRate, region, speech, userFeatures, userRate, userSamples, words])
 

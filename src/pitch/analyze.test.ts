@@ -32,6 +32,7 @@ describe('pitch analysis', () => {
     const result = handleAnalysis({ id: 4, kind: 'model', samples, rate: 16000, modelBands: null })
     expect(result.id).toBe(4)
     expect(result.bands.length).toBeGreaterThan(8)
+    expect(result.speechBands.length).toBeGreaterThan(8)
     expect(result.energy.length).toBe(result.contour.length)
   })
 

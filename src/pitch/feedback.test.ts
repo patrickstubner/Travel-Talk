@@ -136,6 +136,8 @@ describe('scoring bands', () => {
     expect(sentenceVerdict({ ...same, bands: VERDICT_BAND_PASST })).toBe('passt')
     expect(sentenceVerdict({ ...same, bands: VERDICT_BAND_PASST + 0.02 })).toBe('teilweise')
     expect(sentenceVerdict({ ...same, bands: SENTENCE_SAME + 0.02 })).toBe('teilweise')
+    expect(sentenceVerdict({ ...same, correlation: -0.05 })).toBe('daneben')
+    expect(sentenceVerdict({ ...same, correlation: 0 })).toBe('teilweise')
     expect(starsFromVerdict('teilweise', 'passt', 'teilweise')).toBe(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise')).toBe(2)
     expect(starsFromVerdict('teilweise', 'daneben', 'daneben')).toBe(1)
@@ -1277,6 +1279,41 @@ describe('repeat alignment', () => {
     expect(kept.unclear).toBe(false)
     expect(kept.melodyBar).not.toBeNull()
     expect(kept.rhythmBar).not.toBeNull()
+  })
+
+  it('keeps the lower band distance when silence trimming and the raw take disagree', () => {
+    const contour = ramp(36, -1, 2)
+    const file = Array.from({ length: 36 }, (_, index) =>
+      Array.from({ length: 12 }, (_, band) => Math.sin((index + 1) * (band + 1) * 0.17) * (band + 1)),
+    )
+    const other = Array.from({ length: 36 }, (_, index) => Array.from({ length: 12 }, (_, band) => ((index * 3 + band) % 7) - 3))
+    const base = {
+      model: contour,
+      user: contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.36 }],
+      lang: 'de' as const,
+      region: 'south' as const,
+      userDuration: 0.5,
+    }
+    const trimmed = scoreRepeat({
+      ...base,
+      modelBands: other,
+      userBands: file,
+      modelSpeechBands: file,
+      userSpeechBands: file,
+    })
+    const raw = scoreRepeat({
+      ...base,
+      modelBands: file,
+      userBands: file,
+      modelSpeechBands: other,
+      userSpeechBands: file,
+    })
+    expect(trimmed.sentenceCheck?.bands ?? 1).toBeLessThan(0.05)
+    expect(raw.sentenceCheck?.bands ?? 1).toBeLessThan(0.05)
+    expect(bandDistance(other, file) ?? 0).toBeGreaterThan(0.2)
   })
 
   it('locks a band shape that fits the file better backwards', () => {
