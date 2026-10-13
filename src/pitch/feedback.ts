@@ -237,13 +237,14 @@ const DECAY_FRAMES = 6
 
 /**
  * First run of three voiced frames, and the last voiced frame. A run
- * under twelve frames is stepped over when a run of at least twelve
- * frames follows and is clearly louder. Only that one run: the onset
- * just after a soft splinter stays. The analysis window leans into a
- * microphone lead-in and opens a brief pitch there, a few frames longer
- * than the same blip on the file. A real onset is about as loud as what
- * follows, so it stays. The quiet splinter would otherwise stretch the
- * whole-take tempo.
+ * under eleven frames is stepped over when a run of at least twelve
+ * frames follows and is clearly louder. Eleven keeps a short first
+ * syllable that the microphone shortens by a frame or two; ten still
+ * drops the quiet blip a lead-in stretches in front of the sentence.
+ * Only that one run: the onset just after a soft splinter stays. The
+ * analysis window leans into a microphone lead-in and opens a brief
+ * pitch there. A real onset is about as loud as what follows, so it
+ * stays. The quiet splinter would otherwise stretch the whole-take tempo.
  * When loudness is known, the end is the last run of at least three
  * frames that rises above the floor. A near-silent continuation, or one
  * or two leftover frames, does not stretch the map. Later words would
@@ -270,7 +271,7 @@ function sustained(contour: Contour, energy?: readonly number[] | null): { start
   const body = runs.filter((run) => run.end - run.start >= 3)
   let chosen = body[0]
   if (!chosen) return null
-  while (chosen.end - chosen.start < 12 && chosen.peak > 0) {
+  while (chosen.end - chosen.start < 11 && chosen.peak > 0) {
     const louderLater = body.some((run) => run.start >= chosen.end && run.end - run.start >= 12 && run.peak > chosen.peak + 0.12)
     if (!louderLater) break
     const next = body.find((run) => run.start >= chosen.end)
@@ -1244,7 +1245,11 @@ export function scoreRepeat(input: {
       // walks through a gap, and that gap is not a spoken word.
       let userVoiced = 0
       for (let index = userFrame; index < userFrameEnd; index += 1) if (heard[index] != null) userVoiced += 1
-      if (!scorable || fromPath == null || userVoiced < MIN_WORD_VOICED) return base
+      // A rhythm colour with no melody is only kept when the path agrees
+      // with the file. A warped path and a missed pitch window used to
+      // paint the word yellow; that word stays grey.
+      const reliable = fromPath != null && fromPath >= RHYTHM_GREEN_MIN && fromPath <= RHYTHM_GREEN_MAX
+      if (!scorable || !reliable || userVoiced < MIN_WORD_VOICED) return base
       const rhythm = rhythmBand(fromPath)
       return { ...base, color: rhythm, rhythm, rawRatio: fromPath }
     }

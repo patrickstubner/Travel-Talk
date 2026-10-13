@@ -1,7 +1,8 @@
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { readFileSync as readBytes } from 'fs'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { createServer, type IncomingMessage } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -659,4 +660,388 @@ describe('shipped clips', () => {
     },
     30_000,
   )
+
+  function chromeBinary(): string | null {
+    for (const name of ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser']) {
+      try {
+        const found = execFileSync('which', [name], { encoding: 'utf8' }).trim()
+        if (found) return found
+      } catch {
+        // The next name may still be installed.
+      }
+    }
+    return null
+  }
+
+  function requireChrome(): string | null {
+    const bin = chromeBinary()
+    if (bin) return bin
+    expect(process.env.CI, 'Chrome fehlt. Der Mikrofonweg wird in CI für pt-BR und vi verlangt.').not.toBe('true')
+    return null
+  }
+
+  function writePcm16Wav(path: string, samples: Float32Array, rate: number): void {
+    const data = Buffer.alloc(samples.length * 2)
+    for (let index = 0; index < samples.length; index += 1) {
+      const clamped = Math.max(-1, Math.min(1, samples[index] ?? 0))
+      data.writeInt16LE(Math.round(clamped * 32767), index * 2)
+    }
+    const header = Buffer.alloc(44)
+    header.write('RIFF', 0)
+    header.writeUInt32LE(36 + data.length, 4)
+    header.write('WAVE', 8)
+    header.write('fmt ', 12)
+    header.writeUInt32LE(16, 16)
+    header.writeUInt16LE(1, 20)
+    header.writeUInt16LE(1, 22)
+    header.writeUInt32LE(rate, 24)
+    header.writeUInt32LE(rate * 2, 28)
+    header.writeUInt16LE(2, 32)
+    header.writeUInt16LE(16, 34)
+    header.write('data', 36)
+    header.writeUInt32LE(data.length, 40)
+    writeFileSync(path, Buffer.concat([header, data]) as unknown as string)
+  }
+
+  function readPostedSamples(body: Buffer): { rate: number; samples: Float32Array } {
+    const view = new DataView(body.buffer, body.byteOffset, body.byteLength)
+    const rate = view.getUint32(0, true)
+    const length = view.getUint32(4, true)
+    if (length <= 0 || 8 + length * 4 > body.byteLength) throw new Error('Chrome hat keine Samples geschickt.')
+    const samples = new Float32Array(length)
+    for (let index = 0; index < length; index += 1) samples[index] = view.getFloat32(8 + index * 4, true)
+    return { rate, samples }
+  }
+
+  /**
+   * The same path as a take in the app: Chrome decodes the file, and
+   * MediaRecorder with echo cancellation writes the fake microphone.
+   * Each take opens the microphone again, as «Nochmal» does.
+   */
+  async function captureChrome(
+    bin: string,
+    modelFile: string,
+    userSamples: Float32Array,
+    rate: number,
+    takes: number,
+  ): Promise<Array<{ tag: string; rate: number; samples: Float32Array }>> {
+    const dir = mkdtempSync(join(tmpdir(), 'tt-chrome-'))
+    const wav = join(dir, 'mic.wav')
+    writePcm16Wav(wav, userSamples, rate)
+    const ms = Math.max(800, Math.round((userSamples.length / rate) * 1000) - 200)
+    const page = `<!doctype html>
+<meta charset="utf-8" />
+<script>
+async function postSamples(samples, sampleRate, tag) {
+  const raw = new Uint8Array(samples.buffer.slice(0))
+  const body = new Uint8Array(8 + raw.length)
+  const view = new DataView(body.buffer)
+  view.setUint32(0, sampleRate, true)
+  view.setUint32(4, samples.length, true)
+  body.set(raw, 8)
+  const response = await fetch('/save?tag=' + encodeURIComponent(tag), { method: 'POST', body })
+  if (!response.ok) throw new Error(tag + ' ' + response.status)
+}
+async function decodeFile(url, tag) {
+  const context = new AudioContext()
+  const bytes = await (await fetch(url)).arrayBuffer()
+  const buffer = await context.decodeAudioData(bytes.slice(0))
+  const mixed = new Float32Array(buffer.length)
+  for (let index = 0; index < buffer.length; index += 1) {
+    let sum = 0
+    for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) sum += buffer.getChannelData(channel)[index] || 0
+    mixed[index] = sum / buffer.numberOfChannels
+  }
+  await postSamples(mixed, buffer.sampleRate, tag)
+  await context.close()
+}
+async function recordOnce(durationMs, tag) {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false },
+  })
+  const recorder = new MediaRecorder(stream)
+  const chunks = []
+  recorder.addEventListener('dataavailable', (event) => { if (event.data.size > 0) chunks.push(event.data) })
+  const stopped = new Promise((resolve) => recorder.addEventListener('stop', resolve))
+  recorder.start()
+  await new Promise((resolve) => setTimeout(resolve, durationMs))
+  recorder.stop()
+  await stopped
+  for (const track of stream.getTracks()) track.stop()
+  const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })
+  const context = new AudioContext()
+  const buffer = await context.decodeAudioData(await blob.arrayBuffer())
+  await postSamples(buffer.getChannelData(0).slice(0), buffer.sampleRate, tag)
+  await context.close()
+}
+async function main() {
+  const params = new URLSearchParams(location.search)
+  await decodeFile(params.get('file'), 'model')
+  const count = Number(params.get('takes') || '1')
+  const durationMs = Number(params.get('ms') || '1000')
+  for (let index = 1; index <= count; index += 1) {
+    await recordOnce(durationMs, 'take' + index)
+    await new Promise((resolve) => setTimeout(resolve, 300))
+  }
+  await fetch('/done', { method: 'POST' })
+}
+main().catch((error) => fetch('/fail', { method: 'POST', body: String(error && error.stack ? error.stack : error) }))
+</script>`
+    writeFileSync(join(dir, 'page.html'), page)
+    const saved = new Map<string, { rate: number; samples: Float32Array }>()
+    let failure = ''
+    let settle: (() => void) | null = null
+    const finished = new Promise<void>((resolve) => {
+      settle = resolve
+    })
+    const server = createServer(async (request, response) => {
+      try {
+        const url = new URL(request.url || '/', 'http://127.0.0.1')
+        if (request.method === 'GET' && url.pathname === '/page.html') {
+          const bytes = readBytes(join(dir, 'page.html'))
+          response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+          response.write(bytes)
+          response.end()
+          return
+        }
+        if (request.method === 'GET' && url.pathname === '/model.m4a') {
+          const bytes = readBytes(modelFile)
+          response.writeHead(200, { 'content-type': 'audio/mp4' })
+          response.write(bytes)
+          response.end()
+          return
+        }
+        const body = await readRequest(request)
+        if (request.method === 'POST' && url.pathname === '/fail') {
+          failure = body.toString('utf8')
+          response.writeHead(204)
+          response.end()
+          settle?.()
+          return
+        }
+        if (request.method === 'POST' && url.pathname === '/done') {
+          response.writeHead(204)
+          response.end()
+          settle?.()
+          return
+        }
+        if (request.method === 'POST' && url.pathname === '/save') {
+          const tag = url.searchParams.get('tag') || ''
+          saved.set(tag, readPostedSamples(body))
+          response.writeHead(204)
+          response.end()
+          return
+        }
+        response.writeHead(404)
+        response.end()
+      } catch (error) {
+        failure = error instanceof Error ? error.message : String(error)
+        response.writeHead(500)
+        response.end()
+        settle?.()
+      }
+    })
+    const child = await new Promise<ReturnType<typeof spawn>>((resolve, reject) => {
+      server.listen(0, '127.0.0.1', () => {
+        const address = server.address()
+        if (!address || typeof address === 'string') {
+          reject(new Error('Der lokale Server hat keinen Port.'))
+          return
+        }
+        const profile = join(dir, 'profile')
+        const chrome = spawn(
+          bin,
+          [
+            '--headless=new',
+            '--no-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-first-run',
+            '--use-fake-device-for-media-stream',
+            `--use-file-for-fake-audio-capture=${wav}`,
+            '--use-fake-ui-for-media-stream',
+            '--autoplay-policy=no-user-gesture-required',
+            `--user-data-dir=${profile}`,
+            `http://127.0.0.1:${address.port}/page.html?file=model.m4a&ms=${ms}&takes=${takes}`,
+          ],
+          { detached: true, stdio: 'ignore' },
+        )
+        resolve(chrome)
+      })
+      server.on('error', reject)
+    })
+    const timer = setTimeout(() => {
+      failure = failure || 'Chrome hat die Takes nicht rechtzeitig geschickt.'
+      settle?.()
+    }, ms * takes + 20_000)
+    try {
+      await finished
+      if (failure) throw new Error(failure)
+      const model = saved.get('model')
+      if (!model) throw new Error('Chrome hat die Datei nicht dekodiert.')
+      const takesOut = []
+      for (let index = 1; index <= takes; index += 1) {
+        const take = saved.get(`take${index}`)
+        if (!take) throw new Error(`Chrome hat Take ${index} nicht geschickt.`)
+        takesOut.push({ tag: `take${index}`, ...take })
+      }
+      return [{ tag: 'model', ...model }, ...takesOut]
+    } finally {
+      clearTimeout(timer)
+      if (child.pid != null) {
+        try {
+          process.kill(-child.pid, 'SIGKILL')
+        } catch {
+          child.kill('SIGKILL')
+        }
+      }
+      await new Promise<void>((resolve) => server.close(() => resolve()))
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }
+
+  function scoreChrome(
+    modelFile: string,
+    text: string,
+    lang: 'pt-BR' | 'vi',
+    modelTake: { rate: number; samples: Float32Array },
+    userTake: { rate: number; samples: Float32Array },
+  ): RepeatScore {
+    const texts = splitWords(text)
+    const times = parseAlignment(JSON.parse(readFileSync(modelFile.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+    const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+    const model = analyzeModel(modelTake.samples, modelTake.rate)
+    const user = analyzeUser(userTake.samples, userTake.rate, model.bands)
+    return scoreRepeat({
+      model: model.contour,
+      user: user.contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang,
+      region: 'south',
+      userDuration: userTake.samples.length / userTake.rate,
+      modelEnergy: model.energy,
+      userEnergy: user.energy,
+      modelBands: model.bands,
+      userBands: user.bands,
+      userPlainBands: user.plainBands,
+    })
+  }
+
+  function expectStableGreen(scores: RepeatScore[], file: string, required: readonly string[]): void {
+    expect(scores.length, file).toBeGreaterThanOrEqual(3)
+    for (const score of scores) {
+      expect(score.melodyBar, file).toBe('passt')
+      expect(score.rhythmBar, file).toBe('passt')
+      for (const word of score.words ?? []) {
+        if (!word.scorable) continue
+        expect(word.melody, `${file} ${word.text}`).toBe('green')
+        expect(word.rhythm, `${file} ${word.text}`).toBe('green')
+      }
+      for (const text of required) {
+        const word = score.words?.find((item) => item.text === text)
+        expect(word?.melody, `${file} ${text}`).toBe('green')
+        expect(word?.rhythm, `${file} ${text}`).toBe('green')
+      }
+    }
+    const first = scores[0]?.words ?? []
+    for (const word of first) {
+      if (word.rawRatio == null) continue
+      for (const score of scores.slice(1)) {
+        const again = score.words?.find((item) => item.text === word.text)
+        const delta = Math.abs((again?.rawRatio ?? 0) - word.rawRatio)
+        expect(delta, `${file} ${word.text}`).toBeLessThanOrEqual(0.08)
+      }
+    }
+  }
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'keeps cadu green across three Chrome microphone takes',
+    async () => {
+      const bin = requireChrome()
+      if (!bin) return
+      const text = 'Você pode escrever isso, por favor?'
+      const file = 'public/audio/pt-BR/cadu/emergency.write__any__base.m4a'
+      const padded = withLead(decodeRate(file, 48000), 48000)
+      const captured = await captureChrome(bin, file, padded, 48000, 3)
+      const model = captured[0]
+      if (!model) throw new Error('Chrome hat die Datei nicht dekodiert.')
+      const scores = captured.slice(1).map((take) => scoreChrome(file, text, 'pt-BR', model, take))
+      expectStableGreen(scores, file, ['Você', 'pode', 'escrever', 'isso,', 'por', 'favor?'])
+    },
+    90_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('vi'))(
+    'keeps the heard Vietnamese file green across three Chrome microphone takes',
+    async () => {
+      const bin = requireChrome()
+      if (!bin) return
+      const text = 'Xin viết ra giúp tôi.'
+      const file = 'public/audio/vi/vivos-22/emergency.write__any__base.m4a'
+      const padded = withLead(decodeRate(file, 48000), 48000)
+      const captured = await captureChrome(bin, file, padded, 48000, 3)
+      const model = captured[0]
+      if (!model) throw new Error('Chrome hat die Datei nicht dekodiert.')
+      const scores = captured.slice(1).map((take) => scoreChrome(file, text, 'vi', model, take))
+      expectStableGreen(scores, file, ['Xin', 'viết', 'ra', 'giúp', 'tôi.'])
+    },
+    90_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('vi'))(
+    'marks a shorter word when another Vietnamese voice is recorded in Chrome',
+    async () => {
+      const bin = requireChrome()
+      if (!bin) return
+      const writeText = 'Xin viết ra giúp tôi.'
+      const writeModel = 'public/audio/vi/vivos-22/emergency.write__any__base.m4a'
+      const writeUser = 'public/audio/vi/vivos-32/emergency.write__any__base.m4a'
+      const writeCapture = await captureChrome(bin, writeModel, withLead(decodeRate(writeUser, 48000), 48000), 48000, 2)
+      const writeHeard = writeCapture[0]
+      if (!writeHeard) throw new Error('Chrome hat die Datei nicht dekodiert.')
+      const writeScores = writeCapture.slice(1).map((take) => scoreChrome(writeModel, writeText, 'vi', writeHeard, take))
+      for (const score of writeScores) {
+        expect(score.rhythmBar, writeModel).not.toBeNull()
+        const toi = score.words?.find((word) => word.text === 'tôi.')
+        expect(toi?.scorable, writeModel).toBe(true)
+        expect(['yellow', 'red']).toContain(toi?.rhythm)
+        expect(toi?.rawRatio ?? 1, writeModel).toBeLessThan(0.7)
+      }
+      const first = writeScores[0]?.words ?? []
+      for (const word of first) {
+        if (word.rawRatio == null) continue
+        const again = writeScores[1]?.words?.find((item) => item.text === word.text)
+        expect(Math.abs((again?.rawRatio ?? 0) - word.rawRatio), word.text).toBeLessThanOrEqual(0.05)
+        if (word.text === 'tôi.') continue
+        if (word.scorable) expect(word.rhythm, word.text).toBe('green')
+      }
+      // The older bundled voice stays inside the green band. Its alignment
+      // does too. The longer vivos-32 take is the one that leaves it.
+      const legacyUser = 'public/audio/vi/emergency.write__any__base.m4a'
+      const legacyCapture = await captureChrome(bin, writeModel, withLead(decodeRate(legacyUser, 48000), 48000), 48000, 1)
+      const legacyHeard = legacyCapture[0]
+      const legacyTake = legacyCapture[1]
+      if (!legacyHeard || !legacyTake) throw new Error('Chrome hat die Datei nicht dekodiert.')
+      const legacy = scoreChrome(writeModel, writeText, 'vi', legacyHeard, legacyTake)
+      expect(legacy.rhythmBar, legacyUser).not.toBeNull()
+      expect(legacy.words?.some((word) => word.melody != null && word.melody !== 'green'), legacyUser).toBe(true)
+      for (const word of legacy.words ?? []) {
+        if (!word.scorable) continue
+        if (word.text === 'giúp') expect(word.rawRatio ?? 9, word.text).toBeLessThanOrEqual(1.45)
+        else expect(word.rhythm, `${legacyUser} ${word.text}`).toBe('green')
+      }
+    },
+    90_000,
+  )
 })
+
+function readRequest(request: IncomingMessage): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    request.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)))
+    request.on('end', () => resolve(Buffer.concat(chunks)))
+    request.on('error', reject)
+  })
+}

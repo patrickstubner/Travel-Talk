@@ -79,6 +79,28 @@ jobs:
             sudo dpkg --configure -a || true
             timeout 180s bash -c 'sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg && ffmpeg -version'
           fi
+      - name: Chrome for the microphone clip
+        if: matrix.lang == 'pt-BR' || matrix.lang == 'vi'
+        timeout-minutes: 8
+        run: |
+          set -eu
+          if command -v google-chrome >/dev/null 2>&1 || command -v google-chrome-stable >/dev/null 2>&1 || command -v chromium >/dev/null 2>&1 || command -v chromium-browser >/dev/null 2>&1; then
+            exit 0
+          fi
+          deb=$(mktemp --suffix=.deb)
+          fetch() { timeout 180s curl -fsSL -o "$deb" https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb; }
+          if ! fetch; then
+            echo "chrome download failed, retrying once"
+            fetch
+          fi
+          # The package lists were just updated for ffmpeg. A hung apt
+          # dies after three minutes, and one retry still fits this step.
+          if ! timeout 180s sudo apt-get install -y --no-install-recommends "$deb"; then
+            echo "chrome install failed, retrying once"
+            sudo dpkg --configure -a || true
+            timeout 180s sudo apt-get install -y --no-install-recommends "$deb"
+          fi
+          google-chrome --version || google-chrome-stable --version
       - run: npm run test:clips
         env:
           CLIP_LANG: ${{ matrix.lang }}

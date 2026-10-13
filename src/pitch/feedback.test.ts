@@ -425,6 +425,112 @@ describe('repeat alignment', () => {
     expect(score.rhythmBar).toBe('passt')
   })
 
+  it('keeps the middle of a smeared boundary instead of the outer frame', () => {
+    // The first file frame of the short word is the same shape as two
+    // extra recording frames. The outer frames would push the ratio out
+    // of the green band. The middle of that step stays inside it.
+    const frames = 40
+    const model: Contour = flat(frames, 0)
+    const user: Contour = flat(44, 0)
+    const words = [
+      { text: 'A', start: 0.08, end: 0.12 },
+      { text: 'senhora', start: 0.12, end: 0.32 },
+      { text: 'pode', start: 0.32, end: 0.4 },
+    ]
+    const modelBands = Array.from({ length: frames }, (_, index) => [index / 5, index % 3])
+    const userBands = Array.from({ length: 44 }, (_, index) => {
+      const source = index < 10 ? index : index < 14 ? 8 : index - 4
+      return [source / 5, Math.floor(source) % 3]
+    })
+    const energy = (length: number) => Array.from({ length }, () => 0.4)
+    const score = scoreRepeat({
+      model,
+      user,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'pt-BR',
+      region: 'south',
+      userDuration: 0.44,
+      modelEnergy: energy(frames),
+      userEnergy: energy(44),
+      modelBands,
+      userBands,
+    })
+    const article = score.words?.[0]
+    expect(article?.rhythm).toBe('green')
+    expect(article?.rawRatio ?? 9).toBeLessThanOrEqual(RHYTHM_GREEN_MAX)
+    expect(article?.rawRatio ?? 0).toBeGreaterThan(0.9)
+  })
+
+  it('colours rhythm without a melody only when the path agrees with the file', () => {
+    // The pitch window misses the middle word. Three voiced frames are
+    // enough to time it, and too few to call the melody. The bands still
+    // match the file, so the rhythm stays green. A stretched copy of the
+    // same word leaves the green band and stays grey.
+    const frames = 80
+    const model = ramp(frames, -3, 3)
+    const words = [
+      { text: 'Could', start: 0, end: 0.2 },
+      { text: 'you', start: 0.2, end: 0.5 },
+      { text: 'please?', start: 0.5, end: 0.8 },
+    ]
+    const bands = Array.from({ length: frames }, (_, index) => [Math.sin(index * 0.5), Math.cos(index * 0.5), (index % 7) / 3])
+    const energyFor = (length: number) => Array.from({ length }, (_, index) => 0.2 + (index % 5) * 0.1)
+    const agreedUser = model.map((value, index) => {
+      if (index >= 16 && index < 54 && (index < 30 || index > 32)) return null
+      return value
+    })
+    const agreed = scoreRepeat({
+      model,
+      user: agreedUser,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'en',
+      region: 'south',
+      userDuration: 0.8,
+      modelEnergy: energyFor(frames),
+      userEnergy: energyFor(frames),
+      modelBands: bands,
+      userBands: bands,
+    })
+    const kept = agreed.words?.[1]
+    expect(kept?.melody).toBeNull()
+    expect(kept?.rhythm).toBe('green')
+    expect(kept?.color).toBe('green')
+    expect(kept?.rawRatio ?? 0).toBeGreaterThan(RHYTHM_GREEN_MIN)
+    expect(kept?.rawRatio ?? 9).toBeLessThanOrEqual(RHYTHM_GREEN_MAX)
+    const userBands: number[][] = []
+    const wildUser: Array<number | null> = []
+    for (let index = 0; index < frames; index += 1) {
+      const copies = index >= 20 && index < 50 ? 3 : 1
+      for (let copy = 0; copy < copies; copy += 1) {
+        userBands.push(bands[index] ?? [0, 0, 0])
+        const inWord = index >= 20 && index < 50
+        const voiced = index >= 30 && index <= 32
+        wildUser.push(inWord && !voiced ? null : (model[index] ?? null))
+      }
+    }
+    const wild = scoreRepeat({
+      model,
+      user: wildUser,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'en',
+      region: 'south',
+      userDuration: wildUser.length * 0.01,
+      modelEnergy: energyFor(frames),
+      userEnergy: energyFor(wildUser.length),
+      modelBands: bands,
+      userBands,
+    })
+    expect(wild.words?.[1]?.melody).toBeNull()
+    expect(wild.words?.[1]?.rhythm).toBeNull()
+    expect(wild.words?.[1]?.color).toBeNull()
+  })
+
   it('finds the voice after a leading silence and still lines the words up', () => {
     const model = [...ramp(30, -2, 2), ...ramp(30, 2, -1)]
     const user = [...flat(25, null), ...model]
