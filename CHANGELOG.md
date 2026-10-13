@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.6 — 2026-10-13
+
+- Beim Nachsprechen auf Portugiesisch (Brasilien) wird ein Wort seltener rot, wenn die Melodie nur etwas anders ist als die Vorlage. Unter 2,5 Halbtönen bleibt es grün, bis 5 gelb, darüber rot. Vietnamesisch, Deutsch und Englisch bleiben bei 1,5 und 3.
+- Ein Wort wird nur noch rot, wenn die Melodie klar in die andere Richtung läuft und das Wort in der Vorlage hörbar steigt oder fällt. Eine kleine Abweichung bleibt höchstens gelb. Die Richtung wird dort gelesen, wo die Wörter zeitlich zusammengehören, nicht stur von vorn nach hinten.
+- Die Stimme faber ist ein Mann, nicht eine Frau. Die Modellkarte nennt das Geschlecht nicht. Die Beschreibung des Datensatzes nennt einen Sprecher. In der Auswahl stehen zwei Männerstimmen und die vier Frauenstimmen aus 0.9.5.
+
 ## 0.9.5 — 2026-10-12
 
 - Portugiesisch (Brasilien) hat vier zusätzliche Frauenstimmen: Daisy Studious, Gracie Wise, Tammie Ema und, als Versuch, Claribel Dervla. Die Dateien sind offline mit Coqui XTTS-v2 erzeugt, Sprache `pt`. Der Standard für neue Nutzer bleibt cadu. Wer schon eine Stimme gewählt hat, behält sie. Claribel bleibt, bis `SHIP_CLARIBEL` in `src/audio/voices.ts` auf falsch steht. Pull Request 24 behält 0.9.1.

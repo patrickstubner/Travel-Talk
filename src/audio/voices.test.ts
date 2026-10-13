@@ -6,6 +6,14 @@ import { defaultSettings } from '../storage/types'
 import { SHIP_CLARIBEL, filesForVoice, selectedVoice, spokenFile, spokenWordFile, voicesFor, voicesKeptByOthers, withDefaultVoices } from './voices'
 
 describe('voices', () => {
+  it('lists faber as a man, with the dataset description rather than the silent model card', () => {
+    const faber = voicesFor('pt-BR').find((voice) => voice.id === 'faber')
+    const cadu = voicesFor('pt-BR').find((voice) => voice.id === 'cadu')
+    expect(faber?.gender).toBe('male')
+    expect(cadu?.gender).toBe('male')
+    expect(voicesFor('pt-BR').filter((voice) => voice.provider === 'piper').every((voice) => voice.gender === 'male')).toBe(true)
+  })
+
   it('keeps the old files when no voice is stored and writes a male voice for a new user', () => {
     const settings = { ...defaultSettings, appLang: 'de' as const, targetLang: 'vi' as const }
     expect(selectedVoice(settings, 'vi').id).toBe('vais1000')

@@ -34,6 +34,26 @@ describe('language choice voices', () => {
     expect(playClip).toHaveBeenCalledWith('vi/vivos-22/emergency.help__any__base.m4a', 'Mann 1', 'vi', 1)
   })
 
+  it('offers two male Portuguese voices and does not call faber a woman', () => {
+    render(
+      <LanguageChoice
+        settings={{ ...defaultSettings, appLang: 'de', targetLang: 'pt-BR', voices: { 'pt-BR': 'cadu' } }}
+        copy={copy}
+        ui="de"
+        mode="settings"
+        onChange={() => undefined}
+      />,
+    )
+    expect(screen.getByRole('button', { name: (value) => value === 'Mann' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: (value) => value === 'Mann 2' }).getAttribute('aria-pressed')).toBe('false')
+    expect(screen.queryByRole('button', { name: (value) => value === 'Frau' })).toBeNull()
+    for (const name of ['Frau (Daisy)', 'Frau (Gracie)', 'Frau (Tammie)', 'Frau (Claribel)']) {
+      expect(screen.getByRole('button', { name: (value) => value === name }).getAttribute('aria-pressed')).toBe('false')
+    }
+    expect(screen.getByText(/Zwei Männerstimmen/)).toBeTruthy()
+    expect(screen.getByText(/Vier Frauen von XTTS-v2/)).toBeTruthy()
+  })
+
   it('keeps the previous voice selected for someone who already has settings', () => {
     render(
       <LanguageChoice

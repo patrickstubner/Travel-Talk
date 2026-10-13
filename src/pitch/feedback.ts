@@ -43,13 +43,28 @@ import { bandDistance } from './spectrum'
  * tail, or one or two leftover frames, would stretch the map and drop
  * later words into the gaps. A word whose model moves by MOVING_RANGE
  * needs that movement in the same direction, otherwise it stays at most
- * yellow. Local stretch stays inside about 0.75–1.33. When the local
+ * yellow. Local stretch stays inside about 0.75–1.33 and is only kept
+ * when it lands inside that language's green band. When the local
  * window misses every word but the model word has enough voice, the
  * whole-path distance still colours those words. A second voice often
  * sits outside the four-frame window.
+ *
+ * Melody bands live in MELODY_LIMITS. pt-BR is wider: at 1.5/3 a correct
+ * second voice was red on about two words in five. vi stays tight because
+ * a tone is a small movement. de and en stay on the first-version band.
  */
-export const MELODY_GREEN = 1.5
-export const MELODY_YELLOW = 3
+export type MelodyLimits = { readonly green: number; readonly yellow: number }
+
+export const MELODY_LIMITS: Record<Lang, MelodyLimits> = {
+  de: { green: 1.5, yellow: 3 },
+  en: { green: 1.5, yellow: 3 },
+  'pt-BR': { green: 2.5, yellow: 5 },
+  vi: { green: 1.5, yellow: 3 },
+}
+
+/** First-version band. de, en and vi still use it. pt-BR does not. */
+export const MELODY_GREEN = MELODY_LIMITS.de.green
+export const MELODY_YELLOW = MELODY_LIMITS.de.yellow
 export const RHYTHM_GREEN_MIN = 0.7
 export const RHYTHM_GREEN_MAX = 1.4
 export const RHYTHM_YELLOW_MIN = 0.5
@@ -63,8 +78,30 @@ export const COLOURED_SHARE = 0.6
 export const VOICE_COVERAGE = 0.5
 /** A word below this correlation does not stay green. */
 export const DIRECTION_MIN = 0.3
-/** Below this, a word runs the other way. Every such word makes the take «unklar». */
+/**
+ * Below this, a word runs the other way for the whole-take check.
+ * It does not by itself paint the word red.
+ */
 export const DIRECTION_OPPOSED = -0.15
+/**
+ * Clear counter-movement, measured on the DTW path of the band shape.
+ *
+ * Pearson r of −0.4 sits between a moderate association (|r| ≈ 0.3) and a
+ * large one (|r| ≈ 0.5). The old cutoff of −0.15 used a linear map. A pause
+ * in a different place shifted the two curves and the word went red even
+ * when the tune was the same: on correct second pt-BR voices, 210 red
+ * melody words had a distance of at most 3. The DTW path has already lined
+ * the frames up, so a correlation that is still under −0.4 is the tune
+ * going the other way, not a lag. Anything milder stays at most yellow.
+ */
+export const DIRECTION_CLEAR = -0.4
+/**
+ * Semitones the file's word must cover before that negative correlation can
+ * paint it red. Two semitones is a rise or fall a listener hears as another
+ * tune, and it is twice MOVING_RANGE. Under that, a sign flip on a nearly
+ * level word is noise and stays at most yellow.
+ */
+export const DIRECTION_RANGE = 2
 /** Loudness of a drone barely moves. Speech does. */
 export const DRONE_ENERGY = 0.12
 export const SPEECH_ENERGY = 0.15
@@ -151,9 +188,10 @@ export type RepeatScore = {
   otherSentence: boolean
 }
 
-export function melodyBand(distance: number): Band {
-  if (distance < MELODY_GREEN) return 'green'
-  if (distance <= MELODY_YELLOW) return 'yellow'
+export function melodyBand(distance: number, lang: Lang = 'de'): Band {
+  const limits = MELODY_LIMITS[lang]
+  if (distance < limits.green) return 'green'
+  if (distance <= limits.yellow) return 'yellow'
   return 'red'
 }
 
@@ -699,6 +737,7 @@ function matchLocal(
   frameEnd: number,
   modelSpan: { start: number; end: number },
   userSpan: { start: number; end: number },
+  green: number,
 ): { mean: number; scale: number; shift: number; count: number } | null {
   let atOne: { mean: number; scale: number; shift: number; count: number } | null = null
   for (let shift = -4; shift <= 4; shift += 2) {
@@ -706,13 +745,13 @@ function matchLocal(
     if (found && (!atOne || found.mean < atOne.mean)) atOne = { ...found, scale: 1, shift }
   }
   if (!atOne) return null
-  if (atOne.mean < MELODY_GREEN) return atOne
+  if (atOne.mean < green) return atOne
   let best = atOne
   for (const scale of LOCAL_SCALES) {
     if (scale === 1) continue
     for (let shift = -4; shift <= 4; shift += 2) {
       const found = distanceAt(model, user, frame, frameEnd, modelSpan, userSpan, scale, shift)
-      if (!found || found.mean >= MELODY_GREEN) continue
+      if (!found || found.mean >= green) continue
       if (found.mean < best.mean) best = { ...found, scale, shift }
     }
   }
@@ -1209,7 +1248,8 @@ export function scoreRepeat(input: {
     }
     const scorable = modelVoiced >= MIN_WORD_VOICED
     const aligned = rangeOnPath(rhythmAlign, frame, frameEnd)
-    const matched = scorable && word.end > word.start ? matchLocal(model, heard, frame, frameEnd, modelSpan, userSpan) : null
+    const green = MELODY_LIMITS[input.lang].green
+    const matched = scorable && word.end > word.start ? matchLocal(model, heard, frame, frameEnd, modelSpan, userSpan, green) : null
     const plainStart = mappedFrame(frame, modelSpan, userSpan)
     const plainEnd = mappedFrame(Math.max(frame, frameEnd - 1), modelSpan, userSpan)
     const userFrame = aligned ? aligned.userStart : Math.max(0, Math.round(Math.min(plainStart, plainEnd)))
@@ -1253,7 +1293,11 @@ export function scoreRepeat(input: {
       const rhythm = rhythmBand(fromPath)
       return { ...base, color: rhythm, rhythm, rawRatio: fromPath }
     }
-    const pitchCorr = wordCorrelation(model, heard, path, frame, frameEnd)
+    // The linear path still feeds the distance. Direction uses the DTW path
+    // of the band shape, so a pause in a different place does not flip the
+    // sign. Without bands the linear path remains, as in the synthetic fixtures.
+    const pitchPath = rhythmAlign ?? path
+    const pitchCorr = wordCorrelation(model, heard, pitchPath, frame, frameEnd)
     const modelShape = describeShape(model.slice(frame, frameEnd))
     const userSlice = heard.slice(Math.min(userFrame, heard.length), Math.min(heard.length, userFrameEnd))
     const userShape = describeShape(userSlice)
@@ -1263,8 +1307,9 @@ export function scoreRepeat(input: {
     const userRange = voicedRange(userSlice) ?? 0
     // A null correlation is too little movement to judge.
     const follows = pitchCorr != null && pitchCorr >= DIRECTION_MIN && userRange >= MOVING_RANGE
-    let melody = melodyBand(matched.mean)
-    if (pitchCorr != null && pitchCorr < DIRECTION_OPPOSED) melody = 'red'
+    let melody = melodyBand(matched.mean, input.lang)
+    const clearTurn = pitchCorr != null && pitchCorr < DIRECTION_CLEAR && modelRange >= DIRECTION_RANGE
+    if (clearTurn) melody = 'red'
     else if (pitchCorr != null && pitchCorr < DIRECTION_MIN && melody === 'green') melody = 'yellow'
     if (scorable && modelRange >= MOVING_RANGE && pitchCorr != null && !follows && melody === 'green') {
       melody = 'yellow'
@@ -1306,7 +1351,7 @@ export function scoreRepeat(input: {
       ? words
       : words.map((word) => {
           if (!word.scorable) return word
-          const melody = melodyBand(meanDistance)
+          const melody = melodyBand(meanDistance, input.lang)
           const aligned = rangeOnPath(rhythmAlign, word.modelFrame, word.modelFrameEnd)
           const fromPath = aligned ? ratioFromRange(aligned, globalRatio, modelHop, userHop) : null
           const rawRatio =

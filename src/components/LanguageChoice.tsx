@@ -17,7 +17,8 @@ function voiceLabel(id: string, copy: Dictionary): string {
   if (id === 'vais1000') return copy.voiceFrauNorth
   if (id === 'thorsten-high') return copy.voiceMannHigh
   if (id === 'thorsten') return copy.voiceMannMid
-  if (id === 'ljspeech' || id === 'faber') return copy.voiceFrau
+  if (id === 'ljspeech') return copy.voiceFrau
+  if (id === 'faber') return copy.voiceMann2
   if (id === 'daisy-studious') return copy.voiceFrauDaisy
   if (id === 'gracie-wise') return copy.voiceFrauGracie
   if (id === 'tammie-ema') return copy.voiceFrauTammie

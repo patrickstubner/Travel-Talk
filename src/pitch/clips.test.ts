@@ -327,6 +327,7 @@ describe('shipped clips', () => {
           expect(score.otherSentence, file).toBe(false)
           for (const word of score.words ?? []) {
             if (word.scorable) expect(word.rhythm, `${file} ${word.text}`).toBe('green')
+            if (word.melody != null) expect(word.melody, `${file} ${word.text}`).toBe('green')
           }
           expectReversed(samples, words, line.lang, region, duration, file)
         }
@@ -771,6 +772,129 @@ describe('shipped clips', () => {
         expect(word?.rhythm, `${file} ${text}`).toBe('green')
       }
       expect(score.rhythmBar, file).toBe('passt')
+    },
+    60_000,
+  )
+
+  /**
+   * Coloured-word red share against cadu, before the wider pt-BR band,
+   * on the clips in this tree. A drop of ten points is the floor.
+   * Putting pt-BR back to 1.5/3 leaves faber at 240 of 591, above the floor.
+   * Turning the clear-turn rule off leaves the reversed senhora line, and
+   * «Bom dia.» for Daisy, Tammie and Claribel, short of «daneben».
+   */
+  const RED_BEFORE_CADU: Record<string, number> = {
+    faber: 262 / 591,
+    'daisy-studious': 227 / 595,
+    'gracie-wise': 263 / 575,
+    'tammie-ema': 252 / 579,
+    'claribel-dervla': 230 / 585,
+  }
+  const MIN_RED_DROP = 0.1
+
+  function scoreHeard(
+    modelFile: string,
+    userSamples: Float32Array,
+    text: string,
+  ): RepeatScore {
+    const texts = splitWords(text)
+    const times = parseAlignment(JSON.parse(readFileSync(modelFile.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+    const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+    const modelSamples = decode(modelFile)
+    const model = analyzeModel(modelSamples, 16000)
+    const user = analyzeUser(userSamples, 16000, model.bands)
+    return scoreRepeat({
+      model: model.contour,
+      user: user.contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'pt-BR',
+      region: 'south',
+      userDuration: userSamples.length / 16000,
+      modelEnergy: model.energy,
+      userEnergy: user.energy,
+      modelBands: model.bands,
+      userBands: user.bands,
+      userPlainBands: user.plainBands,
+    })
+  }
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'marks fewer words red when another correct pt-BR voice is scored against cadu',
+    () => {
+      const others = VOICES.filter((voice) => voice.bundled && voice.lang === 'pt-BR' && voice.id !== 'cadu')
+      expect(others.map((voice) => voice.id)).toContain('faber')
+      const lines = allSpeechLines(rawCatalog.concepts).filter((line) => line.lang === 'pt-BR')
+      for (const voice of others) {
+        const before = RED_BEFORE_CADU[voice.id]
+        expect(before, voice.id).toBeTypeOf('number')
+        let red = 0
+        let coloured = 0
+        let sentences = 0
+        for (const line of lines) {
+          const modelFile = `public/audio/${voiceFile(line.file, 'cadu', false)}`
+          const userFile = `public/audio/${voiceFile(line.file, voice.id, voice.legacy)}`
+          const alignPath = modelFile.replace(/\.m4a$/, '.align.json')
+          if (!existsSync(modelFile) || !existsSync(userFile) || !existsSync(alignPath)) continue
+          const texts = splitWords(line.text)
+          const times = parseAlignment(JSON.parse(readFileSync(alignPath, 'utf8')), texts.length)
+          if (!times) continue
+          const modelSamples = decode(modelFile)
+          if (!alignmentFitsDuration(times, modelSamples.length / 16000)) continue
+          const score = scoreHeard(modelFile, decode(userFile), line.text)
+          sentences += 1
+          for (const word of score.words ?? []) {
+            if (word.color == null) continue
+            coloured += 1
+            if (word.color === 'red') red += 1
+          }
+        }
+        expect(sentences, voice.id).toBeGreaterThan(100)
+        expect(coloured, voice.id).toBeGreaterThan(0)
+        const share = red / coloured
+        expect(share, `${voice.id} ${red}/${coloured}`).toBeLessThanOrEqual((before ?? 1) - MIN_RED_DROP)
+      }
+    },
+    600_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'keeps a different sentence and a reversed take mostly red',
+    () => {
+      const wrongModel = 'public/audio/pt-BR/cadu/transport.07.here__any__base.m4a'
+      const wrongUser = 'public/audio/pt-BR/cadu/emergency.doctor__any__base.m4a'
+      const wrong = scoreHeard(wrongModel, decode(wrongUser), 'Por favor, pare aqui.')
+      const wrongColoured = (wrong.words ?? []).filter((word) => word.color != null)
+      const wrongRed = wrongColoured.filter((word) => word.color === 'red')
+      expect(wrong.unclear, wrongModel).toBe(false)
+      expect(wrong.melodyBar, wrongModel).toBe('daneben')
+      expect(wrongRed.length * 2, wrongModel).toBeGreaterThanOrEqual(wrongColoured.length)
+
+      const reverseModel = 'public/audio/pt-BR/cadu/meet.repeat__any__senhora.m4a'
+      const reverseUser = 'public/audio/pt-BR/meet.repeat__any__senhora.m4a'
+      const reversed = Float32Array.from(decode(reverseUser))
+      reversed.reverse()
+      const back = scoreHeard(reverseModel, reversed, 'A senhora pode repetir, por favor?')
+      const backColoured = (back.words ?? []).filter((word) => word.color != null)
+      const backRed = backColoured.filter((word) => word.color === 'red')
+      expect(back.unclear, reverseModel).toBe(false)
+      expect(back.melodyBar, reverseModel).toBe('daneben')
+      expect(backRed.length * 2, reverseModel).toBeGreaterThanOrEqual(backColoured.length)
+
+      const morning = 'pt-BR/day.morning__any__base.m4a'
+      const morningModel = `public/audio/${voiceFile(morning, 'cadu', false)}`
+      for (const voice of VOICES.filter((item) => item.bundled && item.lang === 'pt-BR' && item.id !== 'cadu')) {
+        const userFile = `public/audio/${voiceFile(morning, voice.id, voice.legacy)}`
+        const turned = Float32Array.from(decode(userFile))
+        turned.reverse()
+        const score = scoreHeard(morningModel, turned, 'Bom dia.')
+        const coloured = (score.words ?? []).filter((word) => word.color != null)
+        const reds = coloured.filter((word) => word.color === 'red')
+        expect(score.unclear, voice.id).toBe(false)
+        expect(score.melodyBar, voice.id).toBe('daneben')
+        expect(reds.length * 2, voice.id).toBeGreaterThanOrEqual(coloured.length)
+      }
     },
     60_000,
   )

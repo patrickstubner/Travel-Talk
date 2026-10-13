@@ -47,7 +47,9 @@ export const VOICES: readonly CatalogVoice[] = [
   { id: 'joe', lang: 'en', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
   { id: 'ljspeech', lang: 'en', gender: 'female', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
   { id: 'cadu', lang: 'pt-BR', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
-  { id: 'faber', lang: 'pt-BR', gender: 'female', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
+  // The Piper model card does not state a gender. The dataset description calls the speaker male:
+  // https://mozilladatacollective.com/datasets/cmiupazq801ftnv079bo1zu4h
+  { id: 'faber', lang: 'pt-BR', gender: 'male', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
   { id: 'daisy-studious', lang: 'pt-BR', gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false, order: 3 },
   { id: 'gracie-wise', lang: 'pt-BR', gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false, order: 4 },
   { id: 'tammie-ema', lang: 'pt-BR', gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false, order: 5 },

@@ -4,7 +4,10 @@ import {
   DIRECTION_MIN,
   DIRECTION_OPPOSED,
   DRONE_ENERGY,
+  DIRECTION_CLEAR,
+  DIRECTION_RANGE,
   MELODY_GREEN,
+  MELODY_LIMITS,
   MOVING_RANGE,
   RHYTHM_GREEN_MAX,
   RHYTHM_GREEN_MIN,
@@ -72,6 +75,16 @@ describe('scoring bands', () => {
     expect(melodyBand(1.5)).toBe('yellow')
     expect(melodyBand(3)).toBe('yellow')
     expect(melodyBand(3.01)).toBe('red')
+    expect(melodyBand(2.49, 'pt-BR')).toBe('green')
+    expect(melodyBand(2.5, 'pt-BR')).toBe('yellow')
+    expect(melodyBand(5, 'pt-BR')).toBe('yellow')
+    expect(melodyBand(5.01, 'pt-BR')).toBe('red')
+    expect(melodyBand(1.49, 'vi')).toBe('green')
+    expect(melodyBand(1.5, 'vi')).toBe('yellow')
+    expect(melodyBand(3.01, 'vi')).toBe('red')
+    expect(MELODY_LIMITS.de).toEqual(MELODY_LIMITS.en)
+    expect(MELODY_LIMITS.vi).toEqual({ green: MELODY_GREEN, yellow: 3 })
+    expect(MELODY_LIMITS['pt-BR']).toEqual({ green: 2.5, yellow: 5 })
     expect(rhythmBand(0.7)).toBe('green')
     expect(rhythmBand(1)).toBe('green')
     expect(rhythmBand(1.4)).toBe('green')
@@ -1128,6 +1141,45 @@ describe('repeat alignment', () => {
     expect(score.unclear).toBe(false)
     expect(score.words?.[0]?.melodyDistance ?? 9).toBeLessThan(MELODY_GREEN)
     expect(score.words?.[0]?.melody).toBe('yellow')
+  })
+
+  it('leaves a small opposite contour yellow and paints a clear turn red', () => {
+    const count = 40
+    const wave = (scale: number) => Array.from({ length: count }, (_, index) => scale * Math.sin((2 * Math.PI * index) / 8))
+    const mildModel = wave(0.7)
+    const mildUser = mildModel.map((value) => -value)
+    const mild = scoreRepeat({
+      model: mildModel,
+      user: mildUser,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.4 }],
+      lang: 'pt-BR',
+      region: 'south',
+      userDuration: 0.5,
+    })
+    expect(correlation(mildModel, mildUser) ?? 0).toBeLessThan(DIRECTION_CLEAR)
+    expect(Math.max(...mildModel) - Math.min(...mildModel)).toBeLessThan(DIRECTION_RANGE)
+    expect(mild.unclear).toBe(false)
+    expect(mild.words?.[0]?.melodyDistance ?? 9).toBeLessThan(MELODY_LIMITS['pt-BR'].green)
+    expect(mild.words?.[0]?.melody).toBe('yellow')
+    const wideModel = wave(DIRECTION_RANGE)
+    const wideUser = wideModel.map((value) => -value)
+    const turned = scoreRepeat({
+      model: wideModel,
+      user: wideUser,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.4 }],
+      lang: 'pt-BR',
+      region: 'south',
+      userDuration: 0.5,
+    })
+    expect(correlation(wideModel, wideUser) ?? 0).toBeLessThan(DIRECTION_CLEAR)
+    expect(Math.max(...wideModel) - Math.min(...wideModel)).toBeGreaterThanOrEqual(DIRECTION_RANGE)
+    expect(turned.unclear).toBe(false)
+    expect(turned.words?.[0]?.melodyDistance ?? 9).toBeLessThanOrEqual(MELODY_LIMITS['pt-BR'].yellow)
+    expect(turned.words?.[0]?.melody).toBe('red')
   })
 
   it('paints one opposed word red without calling the whole take unclear', () => {
