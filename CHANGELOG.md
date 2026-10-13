@@ -3,8 +3,9 @@
 ## 0.9.6 — 2026-10-13
 
 - Beim Nachsprechen auf Portugiesisch (Brasilien) wird ein Wort seltener rot, wenn die Melodie nur etwas anders ist als die Vorlage. Unter 2,5 Halbtönen bleibt es grün, bis 5 gelb, darüber rot. Vietnamesisch, Deutsch und Englisch bleiben bei 1,5 und 3.
-- Ein Wort wird nur noch rot, wenn die Melodie klar in die andere Richtung läuft und das Wort in der Vorlage hörbar steigt oder fällt. Eine kleine Abweichung bleibt höchstens gelb. Die Richtung wird dort gelesen, wo die Wörter zeitlich zusammengehören, nicht stur von vorn nach hinten.
-- Die Stimme faber ist ein Mann, nicht eine Frau. Die Modellkarte nennt das Geschlecht nicht. Die Beschreibung des Datensatzes nennt einen Sprecher. In der Auswahl stehen zwei Männerstimmen und die vier Frauenstimmen aus 0.9.5.
+- Auf Portugiesisch wird ein Wort nur noch rot, wenn die Melodie klar in die andere Richtung läuft und das Wort in der Vorlage hörbar steigt oder fällt. Eine kleine Abweichung bleibt höchstens gelb. Die Richtung wird dort gelesen, wo die Wörter zeitlich zusammengehören, nicht stur von vorn nach hinten. Deutsch, Englisch und Vietnamesisch bleiben bei der bisherigen Regel: unter −0,15 auf der geraden Zeitachse wird das Wort rot.
+- Der Melodiebalken auf Portugiesisch sagt nur «passt», wenn die Aufnahme noch die Datei ist. Ein falscher Satz bekommt nie «passt». Liegt die Klangfolge knapp darüber, sagt der Balken «daneben», weil das dieselbe Stimme mit einem anderen Satz ist. Eine andere Stimme behält die lockereren Wortfarben und verliert «passt». Deutsch, Englisch und Vietnamesisch bilden den Balken weiter aus den Wortfarben.
+- Die Stimme faber ist ein Mann, nicht eine Frau. Die Modellkarte nennt das Geschlecht nicht. Die Datensatzseite widerspricht sich: die Beschreibung nennt einen männlichen Sprecher, der Demografie-Absatz sagt, Alter und Geschlecht seien nicht angegeben. Die App folgt der Beschreibung. Die veröffentlichte Hörprobe bei etwa 202 Hz entscheidet das nicht.
 
 ## 0.9.5 — 2026-10-12
 

@@ -1106,6 +1106,46 @@ function worseBar(left: BarState, right: BarState): BarState {
   return rank[left] >= rank[right] ? left : right
 }
 
+/**
+ * Above this, the sounds are not the file. A take of the same file through
+ * opus stays under it (about 0.23 on the cadu lines that were checked).
+ * Every other pt-BR sentence, of any bundled voice, stays above it. The
+ * closest is cadu «senhor» against «senhora», about 0.28.
+ */
+export const SENTENCE_SAME = 0.26
+
+/**
+ * Same-speaker other sentences start just above SENTENCE_SAME and crowd
+ * the low end. Another voice of the right sentence stays above this
+ * (the lowest bundled one, tammie, is about 0.39). In between, the file's
+ * own voice is saying something else, and the bar is «daneben».
+ */
+export const SENTENCE_IMPOSTOR = 0.37
+
+/**
+ * pt-BR word colours use the wide band. The bar is stricter. It does not
+ * say «passt» unless the band shape is still the file. A same-speaker
+ * impostor is «daneben». On the file itself, a whole-take contour under
+ * the old opposed cutoff is «daneben», and one under DIRECTION_MIN is not
+ * «passt». de, en and vi keep the bar taken from the word colours: their
+ * words already go red at that opposed cutoff.
+ */
+export function sentenceMelodyBar(
+  bar: BarState | null,
+  lang: Lang,
+  takeCorr: number | null,
+  bands: number | null,
+): BarState | null {
+  if (bar == null || lang !== 'pt-BR') return bar
+  if (bands != null && bands > SENTENCE_SAME && bands <= SENTENCE_IMPOSTOR) return 'daneben'
+  const onFile = bands == null || bands <= SENTENCE_SAME
+  let next = bar
+  if (onFile && takeCorr != null && takeCorr < DIRECTION_OPPOSED) next = 'daneben'
+  else if (onFile && takeCorr != null && takeCorr < DIRECTION_MIN && next === 'passt') next = 'teilweise'
+  if (bands != null && bands > SENTENCE_SAME && next === 'passt') next = 'teilweise'
+  return next
+}
+
 function globalBar(ratio: number): BarState {
   const band = rhythmBand(ratio)
   if (band === 'green') return 'passt'
@@ -1293,10 +1333,10 @@ export function scoreRepeat(input: {
       const rhythm = rhythmBand(fromPath)
       return { ...base, color: rhythm, rhythm, rawRatio: fromPath }
     }
-    // The linear path still feeds the distance. Direction uses the DTW path
-    // of the band shape, so a pause in a different place does not flip the
-    // sign. Without bands the linear path remains, as in the synthetic fixtures.
-    const pitchPath = rhythmAlign ?? path
+    // pt-BR reads direction on the DTW path, so a pause in a different place
+    // does not flip the sign. de, en and vi keep the linear path and the
+    // first-version cutoff: a mild opposite contour is already red there.
+    const pitchPath = input.lang === 'pt-BR' ? (rhythmAlign ?? path) : path
     const pitchCorr = wordCorrelation(model, heard, pitchPath, frame, frameEnd)
     const modelShape = describeShape(model.slice(frame, frameEnd))
     const userSlice = heard.slice(Math.min(userFrame, heard.length), Math.min(heard.length, userFrameEnd))
@@ -1308,9 +1348,16 @@ export function scoreRepeat(input: {
     // A null correlation is too little movement to judge.
     const follows = pitchCorr != null && pitchCorr >= DIRECTION_MIN && userRange >= MOVING_RANGE
     let melody = melodyBand(matched.mean, input.lang)
-    const clearTurn = pitchCorr != null && pitchCorr < DIRECTION_CLEAR && modelRange >= DIRECTION_RANGE
-    if (clearTurn) melody = 'red'
-    else if (pitchCorr != null && pitchCorr < DIRECTION_MIN && melody === 'green') melody = 'yellow'
+    if (input.lang === 'pt-BR') {
+      // Wide word colours. Red from direction only for a clear turn.
+      const clearTurn = pitchCorr != null && pitchCorr < DIRECTION_CLEAR && modelRange >= DIRECTION_RANGE
+      if (clearTurn) melody = 'red'
+      else if (pitchCorr != null && pitchCorr < DIRECTION_MIN && melody === 'green') melody = 'yellow'
+    } else if (pitchCorr != null && pitchCorr < DIRECTION_OPPOSED) {
+      melody = 'red'
+    } else if (pitchCorr != null && pitchCorr < DIRECTION_MIN && melody === 'green') {
+      melody = 'yellow'
+    }
     if (scorable && modelRange >= MOVING_RANGE && pitchCorr != null && !follows && melody === 'green') {
       melody = 'yellow'
     }
@@ -1391,7 +1438,11 @@ export function scoreRepeat(input: {
       reason: 'unclear',
     }
   }
-  const melodyBar = melodyColours
+  const takeBands =
+    input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0
+      ? bandDistance(input.modelBands, lockBands)
+      : null
+  const melodyBar = sentenceMelodyBar(melodyColours, input.lang, forward, takeBands)
   const rhythmBar = rhythmColours
   const scorable = scoredWords.filter((word) => word.scorable)
   const coloured = scorable.filter((word) => word.color != null).length

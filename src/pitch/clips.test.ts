@@ -17,8 +17,8 @@ import { WORDS, wordAudioFile } from '../../content/words'
 import { analyzeModel, analyzeUser } from './analyze'
 import { clipProblem, lengthProblem } from './clip-plausible'
 import { contourFromSamples, frameEnergy } from './contour'
-import { scoreRepeat, type RepeatScore } from './feedback'
-import { bandShape } from './spectrum'
+import { SENTENCE_SAME, scoreRepeat, type RepeatScore } from './feedback'
+import { bandDistance, bandShape } from './spectrum'
 
 /**
  * The shipped clips still decode, and the melody score still runs on each
@@ -895,6 +895,202 @@ describe('shipped clips', () => {
         expect(score.melodyBar, voice.id).toBe('daneben')
         expect(reds.length * 2, voice.id).toBeGreaterThanOrEqual(coloured.length)
       }
+    },
+    60_000,
+  )
+
+  function lineByFile(lang: 'de' | 'en' | 'pt-BR' | 'vi', file: string) {
+    return allSpeechLines(rawCatalog.concepts).find((line) => line.lang === lang && line.file === file) ?? null
+  }
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'keeps the pt-BR direction and local-search cuts on real clips',
+    () => {
+      const pharmacy = 'pt-BR/emergency.pharmacy__any__base.m4a'
+      const pharmacyLine = lineByFile('pt-BR', pharmacy)
+      expect(pharmacyLine).not.toBeNull()
+      const onde = scoreHeard(
+        `public/audio/${voiceFile(pharmacy, 'cadu', false)}`,
+        decode(`public/audio/${voiceFile(pharmacy, 'faber', true)}`),
+        pharmacyLine?.text ?? '',
+      ).words?.find((word) => word.text === 'Onde')
+      expect(onde?.melody).toBe('yellow')
+      expect(onde?.melodyDistance ?? 0).toBeLessThan(2.5)
+
+      const ambulance = 'pt-BR/emergency.ambulance__any__base.m4a'
+      const ambulanceLine = lineByFile('pt-BR', ambulance)
+      expect(ambulanceLine).not.toBeNull()
+      const local = scoreHeard(
+        `public/audio/${voiceFile(ambulance, 'cadu', false)}`,
+        decode(`public/audio/${voiceFile(ambulance, 'faber', true)}`),
+        ambulanceLine?.text ?? '',
+      ).words?.find((word) => word.text === 'ambulância,')
+      expect(local?.melody).toBe('green')
+      expect(local?.melodyDistance ?? 0).toBeGreaterThanOrEqual(1.5)
+      expect(local?.melodyDistance ?? 9).toBeLessThan(2.5)
+    },
+    60_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'never calls a wrong pt-BR sentence passt',
+    () => {
+      const voices = VOICES.filter((voice) => voice.bundled && voice.lang === 'pt-BR')
+      const lines = allSpeechLines(rawCatalog.concepts).filter((line) => line.lang === 'pt-BR')
+      const cadu = lines.flatMap((line) => {
+        const audio = `public/audio/${voiceFile(line.file, 'cadu', false)}`
+        const align = audio.replace(/\.m4a$/, '.align.json')
+        if (!existsSync(audio) || !existsSync(align)) return []
+        const texts = splitWords(line.text)
+        const times = parseAlignment(JSON.parse(readFileSync(align, 'utf8')), texts.length)
+        if (!times) return []
+        const samples = decode(audio)
+        if (!alignmentFitsDuration(times, samples.length / 16000)) return []
+        return [{ line, audio, samples, bands: analyzeModel(samples, 16000).bands, words: times }]
+      })
+      expect(cadu.length).toBeGreaterThan(100)
+      const users = voices.flatMap((voice) =>
+        lines.flatMap((line) => {
+          const audio = `public/audio/${voiceFile(line.file, voice.id, voice.legacy)}`
+          if (!existsSync(audio)) return []
+          const samples = decode(audio)
+          return [{ voice: voice.id, text: line.text, audio, samples, bands: analyzeModel(samples, 16000).bands }]
+        }),
+      )
+      let pairs = 0
+      let nearest = 99
+      let nearestLabel = ''
+      let tooClose = ''
+      const close: { distance: number; model: (typeof cadu)[number]; user: (typeof users)[number] }[] = []
+      for (const model of cadu) {
+        for (const user of users) {
+          if (user.text === model.line.text) continue
+          const distance = bandDistance(model.bands, user.bands)
+          const label = `${model.line.file} <- ${user.voice} ${user.text}`
+          if (distance == null || distance <= SENTENCE_SAME) tooClose = `${label} ${distance}`
+          pairs += 1
+          if (distance != null && distance < nearest) {
+            nearest = distance
+            nearestLabel = label
+          }
+          if (distance != null && distance < SENTENCE_SAME + 0.06) close.push({ distance, model, user })
+        }
+      }
+      expect(tooClose).toBe('')
+      expect(pairs).toBeGreaterThan(100_000)
+      expect(nearest, nearestLabel).toBeGreaterThan(SENTENCE_SAME)
+      close.sort((left, right) => left.distance - right.distance)
+      expect(close.length).toBeGreaterThan(0)
+      const scored = close.slice(0, 40).map((item) => ({ model: item.model, user: item.user }))
+      for (let index = 0; index < cadu.length; index += 1) {
+        const model = cadu[index]
+        const user = cadu[(index + 1) % cadu.length]
+        if (!model || !user) continue
+        scored.push({ model, user: { voice: 'cadu', text: user.line.text, audio: user.audio, samples: user.samples, bands: user.bands } })
+      }
+      for (const pair of scored) {
+        const modelFeatures = analyzeModel(pair.model.samples, 16000)
+        const userFeatures = analyzeUser(pair.user.samples, 16000, modelFeatures.bands)
+        const score = scoreRepeat({
+          model: modelFeatures.contour,
+          user: userFeatures.contour,
+          modelHop: 0.01,
+          userHop: 0.01,
+          words: pair.model.words.map((word, index) => ({ ...word, text: splitWords(pair.model.line.text)[index] ?? '' })),
+          lang: 'pt-BR',
+          region: 'south',
+          userDuration: pair.user.samples.length / 16000,
+          modelEnergy: modelFeatures.energy,
+          userEnergy: userFeatures.energy,
+          modelBands: modelFeatures.bands,
+          userBands: userFeatures.bands,
+          userPlainBands: userFeatures.plainBands,
+        })
+        expect(score.melodyBar, `${pair.model.line.text} <- ${pair.user.voice} ${pair.user.text}`).not.toBe('passt')
+      }
+    },
+    720_000,
+  )
+
+  function scoreLang(
+    modelFile: string,
+    userFile: string,
+    text: string,
+    lang: 'de' | 'vi',
+  ): RepeatScore {
+    const texts = splitWords(text)
+    const times = parseAlignment(JSON.parse(readFileSync(modelFile.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+    const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+    const modelSamples = decode(modelFile)
+    const userSamples = decode(userFile)
+    const model = analyzeModel(modelSamples, 16000)
+    const user = analyzeUser(userSamples, 16000, model.bands)
+    return scoreRepeat({
+      model: model.contour,
+      user: user.contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang,
+      region: 'south',
+      userDuration: userSamples.length / 16000,
+      modelEnergy: model.energy,
+      userEnergy: user.energy,
+      modelBands: model.bands,
+      userBands: user.bands,
+      userPlainBands: user.plainBands,
+    })
+  }
+
+  it.skipIf(!ready || !clipLangs.includes('de'))(
+    'keeps a wrong German sentence daneben under the old direction cutoff',
+    () => {
+      const modelLine = lineByFile('de', 'de/emergency.fever__any__base.m4a')
+      const userLine = lineByFile('de', 'de/emergency.slow__any__base.m4a')
+      expect(modelLine && userLine).toBeTruthy()
+      const score = scoreLang(
+        `public/audio/${voiceFile(modelLine?.file ?? '', 'thorsten-high', false)}`,
+        `public/audio/${voiceFile(userLine?.file ?? '', 'thorsten-high', false)}`,
+        modelLine?.text ?? '',
+        'de',
+      )
+      expect(score.melodyBar).toBe('daneben')
+      const fever = score.words?.find((word) => word.text === 'Fieber.')
+      expect(fever?.melody).toBe('red')
+      expect(fever?.melodyDistance ?? 9).toBeLessThanOrEqual(3)
+    },
+    30_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('vi'))(
+    'keeps a wrong Vietnamese sentence daneben and a real word red past 3 semitones',
+    () => {
+      const modelLine = lineByFile('vi', 'vi/meet.food__any__base.m4a')
+      const userLine = lineByFile('vi', 'vi/meet.food-q__any__anh.m4a')
+      expect(modelLine && userLine).toBeTruthy()
+      const wrong = scoreLang(
+        `public/audio/${voiceFile(modelLine?.file ?? '', 'vivos-22', false)}`,
+        `public/audio/${voiceFile(userLine?.file ?? '', 'vivos-22', false)}`,
+        modelLine?.text ?? '',
+        'vi',
+      )
+      expect(wrong.melodyBar).toBe('daneben')
+      const thich = wrong.words?.find((word) => word.text === 'thích')
+      expect(thich?.melody).toBe('red')
+      expect(thich?.melodyDistance ?? 9).toBeLessThanOrEqual(3)
+
+      const allergic = lineByFile('vi', 'vi/emergency.allergic__any__base.m4a')
+      expect(allergic).not.toBeNull()
+      const tone = scoreLang(
+        `public/audio/${voiceFile(allergic?.file ?? '', 'vivos-22', false)}`,
+        `public/audio/${voiceFile(allergic?.file ?? '', 'vivos-32', false)}`,
+        allergic?.text ?? '',
+        'vi',
+      )
+      const word = tone.words?.find((item) => item.text === 'ứng.')
+      expect(word?.melody).toBe('red')
+      expect(word?.melodyDistance ?? 0).toBeGreaterThan(3)
+      expect(word?.melodyDistance ?? 9).toBeLessThanOrEqual(5)
     },
     60_000,
   )

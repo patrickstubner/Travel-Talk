@@ -15,8 +15,11 @@ import {
   contentMismatch,
   reversedRecording,
   spectralReversed,
+  SENTENCE_IMPOSTOR,
+  SENTENCE_SAME,
   barFromColours,
   correlation,
+  sentenceMelodyBar,
   droneAgainstSpeech,
   flatContour,
   matchesBetterBackwards,
@@ -104,6 +107,20 @@ describe('scoring bands', () => {
     expect(barFromColours(['green'])).toBe('passt')
     expect(barFromColours(['green', 'yellow'])).toBe('passt')
     expect(barFromColours([null, 'green'])).toBe('passt')
+  })
+
+  it('keeps a wrong pt-BR sentence off «passt» without moving de', () => {
+    expect(sentenceMelodyBar('passt', 'pt-BR', 0.9, SENTENCE_SAME)).toBe('passt')
+    expect(sentenceMelodyBar('passt', 'pt-BR', 0.9, SENTENCE_SAME + 0.001)).toBe('daneben')
+    expect(sentenceMelodyBar('teilweise', 'pt-BR', 0.9, SENTENCE_IMPOSTOR)).toBe('daneben')
+    expect(sentenceMelodyBar('passt', 'pt-BR', 0.9, SENTENCE_IMPOSTOR + 0.01)).toBe('teilweise')
+    expect(sentenceMelodyBar('daneben', 'pt-BR', 0.9, 0.5)).toBe('daneben')
+    expect(sentenceMelodyBar('passt', 'pt-BR', -0.2, 0.1)).toBe('daneben')
+    expect(sentenceMelodyBar('passt', 'pt-BR', 0.1, 0.1)).toBe('teilweise')
+    expect(sentenceMelodyBar('passt', 'pt-BR', -0.9, 0.5)).toBe('teilweise')
+    expect(sentenceMelodyBar('passt', 'de', -0.9, 0.5)).toBe('passt')
+    expect(sentenceMelodyBar('passt', 'vi', -0.9, 0.2)).toBe('passt')
+    expect(sentenceMelodyBar(null, 'pt-BR', -0.9, 0.5)).toBeNull()
   })
 })
 
