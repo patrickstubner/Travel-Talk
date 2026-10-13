@@ -186,6 +186,9 @@ export type RepeatScore = {
   reason: 'short' | 'quiet' | 'file' | 'noTimes' | 'unclear' | 'few' | null
   /** The band shape is closer to a different sentence. The bars can stay. */
   otherSentence: boolean
+  /** Sentence check. Null when the take was not scored. Stars stay off the score. */
+  sentenceCheck: SentenceCheck | null
+  verdict: BarState | null
 }
 
 export function melodyBand(distance: number, lang: Lang = 'de'): Band {
@@ -1123,12 +1126,100 @@ export const SENTENCE_SAME = 0.26
 export const SENTENCE_IMPOSTOR = 0.37
 
 /**
+ * Proposed sentence thresholds. The final numbers are set after the held-out
+ * half of the clips is reviewed. Half A is the even SHA-1 byte of the line
+ * file, half B the odd byte.
+ */
+export const VERDICT_PASST_CORR = 0.2
+export const VERDICT_DANEBEN_CORR = -0.4
+/** joe «wifi» against itself marks half its words opposed. Proposed. */
+export const VERDICT_OPPOSED_PASST = 0.5
+export const VERDICT_OPPOSED_DANEBEN = 0.67
+export const VERDICT_ORDER_DANEBEN = 0.5
+/**
+ * «passt» only while the band sequence is still this file.
+ * On half A the nearest wrong line that would otherwise pass is a
+ * vais1000 address variant at about 0.224. 0.20 sits under that and
+ * over a padded copy of the same file (about 0.12). An opus pass of
+ * the same file, about 0.23, is then «teilweise». Proposed.
+ */
+export const VERDICT_BAND_PASST = 0.2
+
+export type SentenceCheck = {
+  /** Pearson of the pitch contour on the DTW path. Null when the tune is level. */
+  correlation: number | null
+  /** Share of judged words whose tune runs the other way. */
+  opposedShare: number
+  /**
+   * Share of successive words whose DTW user-span still moves forward.
+   * Null when fewer than two words can be placed.
+   */
+  order: number | null
+  /** DTW cost of the band sequence. Null when the take has no bands. */
+  bands: number | null
+  backwards: boolean
+}
+
+/**
+ * Whether the spoken line is the file.
+ *
+ * «passt» needs the pitch contour to agree and the band sequence to still be
+ * the file. A negative contour, a run of opposed words, a word order that
+ * folds back, or a reversed take is «daneben». Everything else is «teilweise».
+ */
+export function sentenceVerdict(check: SentenceCheck): BarState {
+  if (check.backwards) return 'daneben'
+  if (check.order != null && check.order < VERDICT_ORDER_DANEBEN) return 'daneben'
+  if (check.correlation != null && check.correlation < VERDICT_DANEBEN_CORR) return 'daneben'
+  if (check.opposedShare >= VERDICT_OPPOSED_DANEBEN) return 'daneben'
+  const orderOk = check.order == null || check.order >= VERDICT_ORDER_DANEBEN
+  const soundOk = check.bands == null || check.bands <= VERDICT_BAND_PASST
+  const directionOk = check.correlation == null || check.correlation >= VERDICT_PASST_CORR
+  if (orderOk && soundOk && directionOk && check.opposedShare <= VERDICT_OPPOSED_PASST) return 'passt'
+  return 'teilweise'
+}
+
+/**
+ * Star count for a later release. Not stored on the score.
+ *
+ * 3 only when the sentence is «passt» and both bars are «passt».
+ * 2 when the sentence is «passt» or «teilweise» and at least one bar is
+ * not «daneben». A yellow bar still counts for that second star: a green
+ * bar alone leaves more than a fifth of the correct other-voice takes on
+ * one star. Anything else spoken forward is 1. «daneben» or a reversed
+ * take is 0.
+ */
+export function starsFromVerdict(
+  verdict: BarState,
+  melody: BarState | null,
+  rhythm: BarState | null,
+  backwards = false,
+): 0 | 1 | 2 | 3 {
+  if (backwards || verdict === 'daneben') return 0
+  const green = [melody, rhythm].filter((bar) => bar === 'passt').length
+  const carried = [melody, rhythm].filter((bar) => bar === 'passt' || bar === 'teilweise').length
+  if (verdict === 'passt' && green === 2) return 3
+  if ((verdict === 'passt' || verdict === 'teilweise') && carried >= 1) return 2
+  return 1
+}
+
+/** Share of successive placed words whose recording span still moves forward. */
+export function wordOrderScore(words: ReadonlyArray<{ userStart: number; userEnd: number }> | null): number | null {
+  const placed = (words ?? []).filter((word) => word.userEnd > word.userStart)
+  if (placed.length < 2) return null
+  let forward = 0
+  for (let index = 1; index < placed.length; index += 1) {
+    if ((placed[index]?.userStart ?? 0) + 0.03 >= (placed[index - 1]?.userStart ?? 0)) forward += 1
+  }
+  return forward / (placed.length - 1)
+}
+
+/**
  * pt-BR word colours use the wide band. The bar is stricter. It does not
  * say «passt» unless the band shape is still the file. A same-speaker
  * impostor is «daneben». On the file itself, a whole-take contour under
  * the old opposed cutoff is «daneben», and one under DIRECTION_MIN is not
- * «passt». de, en and vi keep the bar taken from the word colours: their
- * words already go red at that opposed cutoff.
+ * «passt». de, en and vi keep the bar taken from the word colours.
  */
 export function sentenceMelodyBar(
   bar: BarState | null,
@@ -1202,6 +1293,8 @@ export function scoreRepeat(input: {
     fewWords: false,
     globalRatio: null,
     otherSentence: false,
+    sentenceCheck: null,
+    verdict: null,
     reason: tooShort ? 'short' : fileThin ? 'file' : tooLittleVoice ? 'quiet' : null,
   }
   const lockBands = input.userPlainBands && input.userPlainBands.length > 0 ? input.userPlainBands : input.userBands
@@ -1210,7 +1303,16 @@ export function scoreRepeat(input: {
   if (tooShort) return empty
   if (fileThin) return { ...empty, tooLittleVoice: false, reason: 'file' }
   // A reversed file can lose its tracked pitch. That is still «unklar», not a quiet take.
-  if (bandReversed) return { ...empty, tooLittleVoice: false, unclear: true, reason: 'unclear' }
+  if (bandReversed) {
+    return {
+      ...empty,
+      tooLittleVoice: false,
+      unclear: true,
+      reason: 'unclear',
+      verdict: 'daneben',
+      sentenceCheck: { correlation: null, opposedShare: 1, order: null, bands: null, backwards: true },
+    }
+  }
   if (tooLittleVoice) return empty
   const modelEnergy = thinEnergy(input.modelEnergy, input.model.length)
   const userEnergy = thinEnergy(input.userEnergy, input.user.length)
@@ -1252,6 +1354,10 @@ export function scoreRepeat(input: {
       unclear: true,
       tooLittleVoice: false,
       reason: 'unclear',
+      verdict: reversed ? 'daneben' : null,
+      sentenceCheck: reversed
+        ? { correlation: forward, opposedShare: 1, order: null, bands: null, backwards: true }
+        : null,
     }
   }
   if (!input.words || input.words.length === 0) {
@@ -1418,6 +1524,8 @@ export function scoreRepeat(input: {
   const rhythmColours = rhythmWords ? worseBar(globalBar(globalRatio), rhythmWords) : null
   const hasColour = scoredWords.some((word) => word.color != null)
   if (takeRunsBackwards(directions) && !hasColour) {
+    const known = directions.filter((direction) => direction !== 'unknown')
+    const opposedShare = known.length === 0 ? 1 : known.filter((direction) => direction === 'opposed').length / known.length
     return {
       model,
       user: heard,
@@ -1435,6 +1543,14 @@ export function scoreRepeat(input: {
       tooShort: false,
       globalRatio,
       otherSentence: false,
+      sentenceCheck: {
+        correlation: forward,
+        opposedShare,
+        order: wordOrderScore(scoredWords),
+        bands: null,
+        backwards: true,
+      },
+      verdict: 'daneben',
       reason: 'unclear',
     }
   }
@@ -1442,6 +1558,18 @@ export function scoreRepeat(input: {
     input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0
       ? bandDistance(input.modelBands, lockBands)
       : null
+  const alignedCorr = contourCorrelation(model, heard, rhythmAlign ?? path)
+  const knownDirections = directions.filter((direction) => direction !== 'unknown')
+  const opposedShare =
+    knownDirections.length === 0 ? 0 : knownDirections.filter((direction) => direction === 'opposed').length / knownDirections.length
+  const sentenceCheck: SentenceCheck = {
+    correlation: alignedCorr,
+    opposedShare,
+    order: wordOrderScore(scoredWords),
+    bands: takeBands,
+    backwards: false,
+  }
+  const verdict = sentenceVerdict(sentenceCheck)
   const melodyBar = sentenceMelodyBar(melodyColours, input.lang, forward, takeBands)
   const rhythmBar = rhythmColours
   const scorable = scoredWords.filter((word) => word.scorable)
@@ -1468,6 +1596,8 @@ export function scoreRepeat(input: {
     tooShort: false,
     globalRatio,
     otherSentence: false,
+    sentenceCheck,
+    verdict: hasColour ? verdict : null,
     reason: hasColour && !fewWords ? null : 'few',
   }
 }

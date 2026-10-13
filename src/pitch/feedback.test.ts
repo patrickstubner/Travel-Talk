@@ -17,9 +17,13 @@ import {
   spectralReversed,
   SENTENCE_IMPOSTOR,
   SENTENCE_SAME,
+  VERDICT_BAND_PASST,
   barFromColours,
   correlation,
   sentenceMelodyBar,
+  sentenceVerdict,
+  starsFromVerdict,
+  wordOrderScore,
   droneAgainstSpeech,
   flatContour,
   matchesBetterBackwards,
@@ -121,6 +125,28 @@ describe('scoring bands', () => {
     expect(sentenceMelodyBar('passt', 'de', -0.9, 0.5)).toBe('passt')
     expect(sentenceMelodyBar('passt', 'vi', -0.9, 0.2)).toBe('passt')
     expect(sentenceMelodyBar(null, 'pt-BR', -0.9, 0.5)).toBeNull()
+  })
+
+  it('grades the sentence from contour, direction and word order', () => {
+    const same = { correlation: 0.9, opposedShare: 0, order: 1, bands: 0.1, backwards: false }
+    expect(sentenceVerdict(same)).toBe('passt')
+    expect(starsFromVerdict('passt', 'passt', 'passt')).toBe(3)
+    expect(sentenceVerdict({ ...same, opposedShare: 0.5 })).toBe('passt')
+    expect(sentenceVerdict({ ...same, opposedShare: 0.51 })).toBe('teilweise')
+    expect(sentenceVerdict({ ...same, bands: VERDICT_BAND_PASST })).toBe('passt')
+    expect(sentenceVerdict({ ...same, bands: VERDICT_BAND_PASST + 0.02 })).toBe('teilweise')
+    expect(sentenceVerdict({ ...same, bands: SENTENCE_SAME + 0.02 })).toBe('teilweise')
+    expect(starsFromVerdict('teilweise', 'passt', 'teilweise')).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise')).toBe(2)
+    expect(starsFromVerdict('teilweise', 'daneben', 'daneben')).toBe(1)
+    expect(starsFromVerdict('passt', 'teilweise', 'teilweise')).toBe(2)
+    expect(sentenceVerdict({ ...same, correlation: -0.5 })).toBe('daneben')
+    expect(sentenceVerdict({ ...same, backwards: true })).toBe('daneben')
+    expect(sentenceVerdict({ ...same, order: 0.2 })).toBe('daneben')
+    expect(starsFromVerdict('daneben', 'passt', 'passt')).toBe(0)
+    expect(starsFromVerdict('passt', 'passt', 'passt', true)).toBe(0)
+    expect(wordOrderScore([{ userStart: 0, userEnd: 0.2 }, { userStart: 0.3, userEnd: 0.5 }])).toBe(1)
+    expect(wordOrderScore([{ userStart: 0.4, userEnd: 0.6 }, { userStart: 0.1, userEnd: 0.2 }])).toBe(0)
   })
 })
 

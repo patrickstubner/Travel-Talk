@@ -17,7 +17,7 @@ import { WORDS, wordAudioFile } from '../../content/words'
 import { analyzeModel, analyzeUser } from './analyze'
 import { clipProblem, lengthProblem } from './clip-plausible'
 import { contourFromSamples, frameEnergy } from './contour'
-import { SENTENCE_SAME, scoreRepeat, type RepeatScore } from './feedback'
+import { SENTENCE_SAME, scoreRepeat, starsFromVerdict, type RepeatScore } from './feedback'
 import { bandDistance, bandShape } from './spectrum'
 
 /**
@@ -1006,7 +1006,152 @@ describe('shipped clips', () => {
           userBands: userFeatures.bands,
           userPlainBands: userFeatures.plainBands,
         })
-        expect(score.melodyBar, `${pair.model.line.text} <- ${pair.user.voice} ${pair.user.text}`).not.toBe('passt')
+        const label = `${pair.model.line.text} <- ${pair.user.voice} ${pair.user.text}`
+        expect(score.melodyBar, label).not.toBe('passt')
+        expect(score.verdict, label).not.toBe('passt')
+        const stars = score.verdict
+          ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+          : 0
+        expect(stars, label).not.toBe(3)
+      }
+    },
+    720_000,
+  )
+
+  it.skipIf(!ready)(
+    'never gives a wrong sentence or a reversed take passt or three stars',
+    () => {
+      for (const lang of clipLangs) {
+        const voices = VOICES.filter((voice) => voice.bundled && voice.lang === lang)
+        const lines = allSpeechLines(rawCatalog.concepts).filter((line) => line.lang === lang)
+        const clips = voices.flatMap((voice) =>
+          lines.flatMap((line) => {
+            const audio = `public/audio/${voiceFile(line.file, voice.id, voice.legacy)}`
+            const alignVoice = lang === 'pt-BR' ? 'cadu' : voice.id
+            const alignLegacy = lang === 'pt-BR' ? false : voice.legacy
+            const align = `public/audio/${voiceFile(line.file, alignVoice, alignLegacy)}`.replace(/\.m4a$/, '.align.json')
+            if (!existsSync(audio) || !existsSync(align)) return []
+            const texts = splitWords(line.text)
+            const times = parseAlignment(JSON.parse(readFileSync(align, 'utf8')), texts.length)
+            if (!times) return []
+            const samples = decode(audio)
+            if (voice.id === alignVoice && !alignmentFitsDuration(times, samples.length / 16000)) return []
+            const features = analyzeModel(samples, 16000)
+            return [
+              {
+                voice: voice.id,
+                text: line.text,
+                file: line.file,
+                samples,
+                bands: features.bands,
+                contour: features.contour,
+                energy: features.energy,
+                words: times.map((word, index) => ({ ...word, text: texts[index] ?? '' })),
+              },
+            ]
+          }),
+        )
+        expect(clips.length, lang).toBeGreaterThan(40)
+        if (lang !== 'pt-BR') {
+          let pairs = 0
+          let nearest = 99
+          let nearestLabel = ''
+          const close: { model: (typeof clips)[number]; user: (typeof clips)[number]; distance: number }[] = []
+          for (const model of clips) {
+            for (const user of clips) {
+              if (user.text === model.text) continue
+              const distance = bandDistance(model.bands, user.bands)
+              pairs += 1
+              if (distance == null) continue
+              if (distance < nearest) {
+                nearest = distance
+                nearestLabel = `${model.file} <- ${user.voice} ${user.file}`
+              }
+              if (distance <= SENTENCE_SAME) close.push({ model, user, distance })
+            }
+          }
+          expect(pairs, lang).toBeGreaterThan(1000)
+          expect(nearest, nearestLabel).toBeGreaterThan(0.15)
+          for (const pair of close) {
+            const user = analyzeUser(pair.user.samples, 16000, pair.model.bands)
+            const score = scoreRepeat({
+              model: pair.model.contour,
+              user: user.contour,
+              modelHop: 0.01,
+              userHop: 0.01,
+              words: pair.model.words,
+              lang,
+              region: pair.model.file.includes('__north__') ? 'north' : 'south',
+              userDuration: pair.user.samples.length / 16000,
+              modelEnergy: pair.model.energy,
+              userEnergy: user.energy,
+              modelBands: pair.model.bands,
+              userBands: user.bands,
+              userPlainBands: user.plainBands,
+            })
+            const label = `${lang} ${pair.distance.toFixed(3)} ${pair.model.file} <- ${pair.user.voice} ${pair.user.file}`
+            expect(score.verdict, label).not.toBe('passt')
+            const stars = score.verdict
+              ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+              : 0
+            expect(stars, label).not.toBe(3)
+          }
+        }
+        const byVoice = new Map<string, typeof clips>()
+        for (const clip of clips) {
+          const list = byVoice.get(clip.voice) ?? []
+          list.push(clip)
+          byVoice.set(clip.voice, list)
+        }
+        const grade = (model: (typeof clips)[number], samples: Float32Array) => {
+          const user = analyzeUser(samples, 16000, model.bands)
+          return scoreRepeat({
+            model: model.contour,
+            user: user.contour,
+            modelHop: 0.01,
+            userHop: 0.01,
+            words: model.words,
+            lang,
+            region: model.file.includes('__north__') ? 'north' : 'south',
+            userDuration: samples.length / 16000,
+            modelEnergy: model.energy,
+            userEnergy: user.energy,
+            modelBands: model.bands,
+            userBands: user.bands,
+            userPlainBands: user.plainBands,
+          })
+        }
+        const refuse = (score: RepeatScore, label: string) => {
+          expect(score.verdict, label).not.toBe('passt')
+          const stars = score.verdict
+            ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+            : 0
+          expect(stars, label).not.toBe(3)
+        }
+        for (const voice of voices) {
+          const rows = byVoice.get(voice.id) ?? []
+          expect(rows.length, `${lang} ${voice.id}`).toBeGreaterThan(20)
+          let before3 = 0
+          let after3 = 0
+          for (let index = 0; index < rows.length; index += 1) {
+            const row = rows[index]
+            const next = rows[(index + 1) % rows.length]
+            if (!row || !next) continue
+            const self = grade(row, row.samples)
+            if (self.melodyBar === 'passt' && self.rhythmBar === 'passt') {
+              before3 += 1
+              const stars = self.verdict
+                ? starsFromVerdict(self.verdict, self.melodyBar, self.rhythmBar, self.sentenceCheck?.backwards ?? false)
+                : 0
+              if (stars === 3) after3 += 1
+            }
+            if (next.text !== row.text) refuse(grade(row, next.samples), `${lang} ${voice.id} wrong ${row.file}`)
+            const reversed = Float32Array.from(row.samples)
+            reversed.reverse()
+            refuse(grade(row, reversed), `${lang} ${voice.id} reverse ${row.file}`)
+          }
+          expect(after3, `${lang} ${voice.id} ${after3}/${before3}`).toBe(before3)
+        }
       }
     },
     720_000,
