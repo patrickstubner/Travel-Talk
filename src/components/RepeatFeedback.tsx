@@ -5,7 +5,6 @@ import type { WordTime } from '../audio/align'
 import { playSequence, stopSlices } from '../audio/slice'
 import type { Dictionary } from '../i18n/dictionary'
 import { analyzeModelCached, analyzeUserOnce, pitchWorker } from '../pitch/analyze-client'
-import { takeStars } from '../pitch/take-stars'
 import { InfoButton } from './InfoButton'
 import { analyzeModel, analyzeUser, type ClipFeatures } from '../pitch/analyze'
 import { analysisHop, voicedValues, type Contour } from '../pitch/contour'
@@ -13,6 +12,7 @@ import {
   MIN_VOICED,
   SHORT_SECONDS,
   scoreRepeat,
+  starsFromVerdict,
   type Band,
   type BarState,
   type FeedbackWord,
@@ -345,7 +345,12 @@ function Result({
   const melodyBar = score?.melodyBar ?? null
   const rhythmBar = score?.rhythmBar ?? null
   const showBars = Boolean(melodyBar && rhythmBar && coloured)
-  const stars = showBars ? takeStars(melodyBar, rhythmBar) : null
+  const verdict = score?.verdict ?? null
+  // Missing bars, or a score with no sentence verdict, are not a grade. 0 stays on the row.
+  const stars =
+    showBars && verdict
+      ? starsFromVerdict(verdict, melodyBar, rhythmBar, score?.sentenceCheck?.backwards ?? false)
+      : null
   const gapWord = scored?.find((word) => !word.scorable)
   const notice = tooShort
     ? feedback.tooShort
@@ -447,7 +452,7 @@ function Result({
   )
 }
 
-function TakeStars({ count, copy, speechLang }: { count: 1 | 2 | 3; copy: Dictionary; speechLang: Lang }) {
+function TakeStars({ count, copy, speechLang }: { count: 0 | 1 | 2 | 3; copy: Dictionary; speechLang: Lang }) {
   const feedback = copy.repeatFeedback
   return (
     <div className="take-stars" data-testid="repeat-stars" data-stars={count}>

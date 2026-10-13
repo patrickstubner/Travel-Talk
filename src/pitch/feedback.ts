@@ -36,7 +36,8 @@ import { bandDistance } from './spectrum'
  * «unklar» is set only when the bars are absent. A model file
  * with fewer than MIN_VOICED frames says the file is thin, not that the
  * take was quiet. The old 1–3 grade is in sentence-grade.ts, which the
- * app does not import. Bars stay when at least one word has a colour.
+ * app does not import. The stars on the page are starsFromVerdict in this
+ * file, and that count is not stored. Bars stay when at least one word has a colour.
  * Under COLOURED_SHARE the words still show, the bars cover the coloured
  * part, and the page says so. The timed span ends on the last run of at
  * least three frames that rises above the loudness floor. A near-silent
@@ -1196,7 +1197,7 @@ export function sentenceVerdict(check: SentenceCheck, lang: Lang = 'de'): BarSta
 }
 
 /**
- * Star count for a later release. Not stored on the score.
+ * Star count for the repeat screen. Not stored on the score.
  *
  * 3 only when the sentence is «passt» and both bars are «passt».
  * «passt» and «teilweise» stay at 2. On «daneben», 2 only when a bar is

@@ -229,7 +229,7 @@ describe('repeat feedback view', () => {
     for (const bar of screen.queryAllByTestId(/bar$/)) {
       expect(bar.getAttribute('data-state')).toBeTruthy()
     }
-    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toMatch(/^[123]$/)
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toMatch(/^[0123]$/)
   })
 
   it('keeps the not-assessable sentence readable in show mode', () => {
@@ -391,26 +391,61 @@ describe('repeat feedback view', () => {
     expect(screen.getByTestId('melody-bar')).toBeTruthy()
   })
 
-  it('maps one off bar to one star and a partial bar to two, and explains them without naming the sentence', async () => {
+  it('keeps three stars off a wrong sentence and two stars on a fitting sentence with one off bar', async () => {
     const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
+      ...actual.scoreRepeat(input),
+      melodyBar: 'passt',
+      rhythmBar: 'passt',
+      verdict: 'daneben',
+      sentenceCheck: {
+        correlation: -0.2,
+        opposedShare: 0.8,
+        order: 0.2,
+        bands: 0.4,
+        backwards: false,
+      },
+    }))
+    renderFeedback('de')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
+    expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(2)
+    cleanup()
     vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
       ...actual.scoreRepeat(input),
       melodyBar: 'daneben',
       rhythmBar: 'passt',
-    }))
-    renderFeedback('de')
-    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('1')
-    expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(1)
-    cleanup()
-    vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
-      ...actual.scoreRepeat(input),
-      melodyBar: 'teilweise',
-      rhythmBar: 'passt',
+      verdict: 'passt',
     }))
     renderFeedback('de')
     expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
+    cleanup()
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
+      ...actual.scoreRepeat(input),
+      melodyBar: 'daneben',
+      rhythmBar: 'teilweise',
+      verdict: 'daneben',
+    }))
+    renderFeedback('de')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('1')
+    cleanup()
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
+      ...actual.scoreRepeat(input),
+      melodyBar: 'daneben',
+      rhythmBar: 'daneben',
+      verdict: 'daneben',
+      sentenceCheck: {
+        correlation: null,
+        opposedShare: 1,
+        order: null,
+        bands: null,
+        backwards: true,
+      },
+    }))
+    renderFeedback('de')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('0')
+    expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(0)
     fireEvent.click(screen.getByRole('button', { name: 'Was die Sterne bedeuten' }))
-    expect(screen.getByRole('dialog').textContent ?? '').toMatch(/nicht, ob der gesprochene Satz der gehörte war/)
+    expect(screen.getByRole('dialog').textContent ?? '').toMatch(/Ein falscher Satz bekommt nie drei/)
   })
 
   it('draws no stars when the bars are absent', () => {

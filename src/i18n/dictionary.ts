@@ -401,7 +401,7 @@ export const de: Dictionary = {
     starsInfo: 'Was die Sterne bedeuten',
     starsTitle: 'Sterne',
     starsHint:
-      'Die Sterne kommen nur aus den Balken Melodie und Rhythmus. Drei, wenn beide passen. Zwei, wenn keiner daneben ist. Einer, wenn einer daneben ist. Sie sagen nicht, ob der gesprochene Satz der gehörte war.',
+      'Drei Sterne nur, wenn der Satz passt und beide Balken passen. Passt oder teilweise bleibt bei zwei, auch wenn ein Balken daneben ist. Bei daneben gibt es zwei nur, wenn ein Balken passt, einen, wenn der bessere Balken teilweise ist, sonst keinen. Rückwärts gibt keinen Stern. Ein falscher Satz bekommt nie drei.',
     unclear: 'Das lässt sich nicht zuordnen. Sprich in derselben Richtung wie die Datei, ohne lange Pause davor.',
     noWordTimes: 'Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.',
     tooShort: 'Zu kurz. Sprich den ganzen Satz.',
@@ -769,7 +769,7 @@ export const en: Dictionary = {
     starsInfo: 'What the stars mean',
     starsTitle: 'Stars',
     starsHint:
-      'The stars come only from the melody bar and the rhythm bar. Three when both fit. Two when neither is off. One when one is off. They do not say whether the spoken line was the line you heard.',
+      'Three stars only when the sentence fits and both bars fit. Fits or partly stays at two, even if a bar is off. When the sentence is off, two only if a bar fits, one if the better bar is partly, otherwise none. Spoken backwards gets none. A wrong sentence never gets three.',
     unclear: 'This cannot be lined up. Speak in the same direction as the file, without a long pause first.',
     noWordTimes: 'This voice has no word timings. The curve stays, and the words stay grey.',
     tooShort: 'Too short. Say the whole sentence.',
@@ -1133,7 +1133,7 @@ export const pt: Dictionary = {
     starsInfo: 'O que as estrelas significam',
     starsTitle: 'Estrelas',
     starsHint:
-      'As estrelas vêm só das barras de melodia e de ritmo. Três quando as duas encaixam. Duas quando nenhuma está fora. Uma quando uma está fora. Elas não dizem se a frase falada era a frase ouvida.',
+      'Três estrelas só quando a frase encaixa e as duas barras encaixam. Encaixa ou em parte fica em duas, mesmo se uma barra está fora. Quando a frase está fora, duas só se uma barra encaixa, uma se a melhor barra está em parte, senão nenhuma. Ao contrário, nenhuma. Uma frase errada nunca ganha três.',
     unclear: 'Não dá para alinhar. Fale na mesma direção do arquivo, sem uma pausa longa antes.',
     noWordTimes: 'Esta voz não tem os tempos das palavras. A curva fica, e as palavras ficam cinza.',
     tooShort: 'Curto demais. Fale a frase inteira.',
@@ -1500,7 +1500,7 @@ export const vi: Dictionary = {
     starsInfo: 'Sao có nghĩa là gì',
     starsTitle: 'Sao',
     starsHint:
-      'Sao chỉ lấy từ cột giai điệu và cột nhịp. Ba sao khi cả hai ổn. Hai sao khi không cái nào lệch. Một sao khi một cái lệch. Sao không nói câu bạn nói có phải câu đã nghe hay không.',
+      'Ba sao chỉ khi câu ổn và cả hai cột ổn. Ổn hoặc một phần vẫn là hai sao, kể cả khi một cột lệch. Khi câu lệch, hai sao chỉ nếu một cột ổn, một sao nếu cột tốt hơn là một phần, không thì không sao. Nói ngược không có sao. Câu sai không bao giờ được ba sao.',
     unclear: 'Không xếp được. Nói cùng hướng với tệp, đừng dừng lâu trước khi nói.',
     noWordTimes: 'Giọng này không có thời điểm từng từ. Đường cong vẫn còn, các từ vẫn xám.',
     tooShort: 'Quá ngắn. Nói cả câu.',
