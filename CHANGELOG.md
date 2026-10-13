@@ -3,7 +3,7 @@
 ## 0.9.7 — 2026-10-13
 
 - Ein neuer Satz hat die Tempo-Wahl direkt neben «Anhören»: Langsam, 85 % und Normal. Langsam ist der Anfang. Die Wahl bleibt für diese Person, auch beim nächsten Satz und nach einem Neuladen. «Anhören» spielt immer das gewählte Tempo, so oft man will. «Weiter» steht da, auch während der Wiedergabe und unabhängig vom Tempo. Nur während einer laufenden Aufnahme ist «Weiter» ausgeblendet.
-- Nach «Normal» kann man wieder «Langsam» wählen. Die beiden Schritte langsam und dann normal gibt es nicht mehr. Pfeiltasten bewegen die Wahl. Der Schalter ist eine Gruppe mit `aria-pressed`.
+- Der frühere Schritt «normal» fällt weg, weil die Tempo-Wahl ihn ersetzt. Nach «Normal» kann man wieder «Langsam» wählen. Pfeiltasten bewegen die Wahl. Der Schalter ist eine Gruppe mit `aria-pressed`.
 - Die Wahl liegt nur auf dem Gerät, in den Einstellungen dieser Person. Sie geht nicht in den Export. Ein anderer Wert als 70 %, 85 % oder 100 % wird verworfen, dann gilt Langsam. Es entsteht keine Adresse, und `playbackRate` bleibt 1.
 - Zieltext, Übersetzung, Anhören mit Tempo, dann Aufnahme. Erklärungen bleiben hinter dem Info-Knopf.
 - Nach dem Nachsprechen stehen bis zu drei Sterne, abgeleitet aus den Balken Melodie und Rhythmus. Drei, wenn beide passen. Zwei, wenn keiner daneben ist. Einer, wenn einer daneben ist. Ohne Balken keine Sterne. Die Sterne sagen nicht, ob der gesprochene Satz der gehörte war. Die Erklärung steht hinter dem Info-Knopf. Die spätere Spracherkennung bleibt eine andere Fassung.
