@@ -2,6 +2,10 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## 0.9.4 Erklärungen
+
+Kein neues Paket, kein neues Netz, kein externer Sprachdienst. Die Info-Blätter lesen vorerzeugte Dateien unter `/Travel-Talk/audio/{sprache}/help/`. Der Name muss `AUDIO_FILE` und `manifest.json` erfüllen, derselbe Weg wie das Satz-Audio. `speechSynthesis` spricht nur den Absatz, dessen Datei fehlt oder offline nicht im Cache liegt, und nur in der App-Sprache. Es wird keine URL gebaut und kein Text gesendet. Die CSP bleibt. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Aufnahmen bleiben auf dem Gerät.
+
 ## Quellen
 
 - OWASP Cheat Sheet, Input Validation: https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html

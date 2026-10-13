@@ -53,9 +53,11 @@ Die einzige Wahl sitzt am Player des Satzes: Automatisch, 70 %, 85 %, 100 %. Ein
 
 Ein Export aus 0.1.0 hat `slow` und kein `speed`. `slow: true` wird fest 85 %, die nähere Stufe zu `atempo=0.8`. `slow: false` und ein fehlendes `slow` sind der alte Standard und werden «Automatisch», damit die Steigerung an bleibt und sich von einer bewusst gewählten 100 % unterscheidet. Ein gesetztes `speed` gewinnt. Neue Installationen starten mit «Automatisch».
 
-## Keine Browserstimme
+## Keine Browserstimme für Sätze
 
-Fehlt die Datei, oder ist sie offline nicht geladen, spielt die App sie nicht. Die Oberfläche sagt «Stimme offline nicht geladen». `speechSynthesis` wird nicht benutzt.
+Fehlt die Datei eines Satzes oder Wortes, oder ist sie offline nicht geladen, spielt die App sie nicht. Die Oberfläche sagt «Stimme offline nicht geladen». `speechSynthesis` spricht keine Lernsätze.
+
+Erklärungen hinter dem Info-Knopf sind eine Ausnahme, ab 0.9.4. «Vorlesen» spielt zuerst eine vorerzeugte Piper-Datei der App-Sprache, `public/audio/{sprache}/help/{id}__any__base.m4a`, Stimme thorsten-high, joe, cadu oder vivos-22, nur 100 %. Die Datei steht in `manifest.json` und passt auf `AUDIO_FILE`. Sie liegt nicht im Stimmordner, den «Für offline laden» holt. Fehlt die Datei, oder gibt `playClip` `offline` zurück, spricht `speechSynthesis` denselben Absatz in der App-Sprache (`de-CH`, `en-US`, `pt-BR`, `vi-VN`). Es geht kein Text an einen Dienst. Die langen Kulturartikel auf der eigenen Seite bleiben sichtbar und haben keine eigene Datei.
 
 ## Offline laden
 

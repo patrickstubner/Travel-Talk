@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.4 — 2026-10-12
+
+- Auf der Satzseite, in Heute lernen und bei der Wortvorstellung steht zuerst der Satz oder das Wort in der Lernsprache, gross, auf einer Karte. Direkt darunter die Übersetzung. Dann Anhören mit dem Tempo, dann Aufnehmen. Sobald eine Aufnahme bewertet ist, stehen die Wörter, die Balken und der Hinweis direkt darunter, nicht unter den Erklärungen.
+- Erklärungen, Kulturhinweise zum Satz, Aussprache- und Stimmenhinweise und die übrigen Hilfetexte stehen hinter einem Info-Knopf (i). Ein Tippen öffnet ein Blatt. Escape, Tippen daneben und «Schliessen» machen es zu. Die Seite selbst zeigt den Lerninhalt.
+- «Vorlesen» im Blatt spricht die Erklärung in der Sprache der App. Zuerst die mitgelieferte Piper-Datei unter `public/audio/{sprache}/help/`. Fehlt sie oder ist sie offline nicht da, spricht `speechSynthesis` denselben Satz. Satz-Audio geht weiter nicht über `speechSynthesis`.
+- Die Karten und Knöpfe sind heller und kräftiger. Der Text bleibt dunkel auf hellem Grund, im Zeigen-Modus hell auf dunklem Grund.
+
 ## 0.9.1 — 2026-10-12
 
 - Nach dem Nachsprechen stehen die Wörter immer da. Jedes Wort zeigt Melodie und Rhythmus, nicht nur die schlechtere Farbe. Grün, gelb und rot bleiben. Ein Wort ohne bewertbare Stimme bleibt grau.

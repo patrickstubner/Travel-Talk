@@ -9,6 +9,8 @@ import { spokenFile } from '../audio/voices'
 import { effectiveSpeed, speedPercent, tempoFile } from '../audio/speed'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
+import { fixedPart } from '../audio/notes'
+import { InfoButton } from '../components/InfoButton'
 import { KaraokeLine } from '../components/KaraokeLine'
 import { RichText } from '../components/RichText'
 import { cardIdFor } from '../srs/session'
@@ -72,8 +74,20 @@ export function ShowPage() {
 
   return (
     <section className="stack show" data-testid="show">
-      <p className="for-other">{copy.forOther}</p>
-      <p className="show-purpose">{copy.showPurpose}</p>
+      <div className="for-other-row">
+        <p className="for-other">{copy.forOther}</p>
+        {app ? (
+          <InfoButton
+            label={copy.infoOpen}
+            title={copy.aboutLine}
+            closeLabel={copy.infoClose}
+            readLabel={copy.readAloud}
+            stopLabel={copy.readAloudStop}
+            lang={app}
+            parts={[fixedPart(app, 'ui.show', copy.showPurpose)]}
+          />
+        ) : null}
+      </div>
       {offlineAudio ? (
         <p className="warn" role="status">
           {copy.audioOffline}

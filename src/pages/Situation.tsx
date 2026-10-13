@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import type { Lang } from '../../content/phrase'
 import { conceptsForSituation, isStale, resolvePlayback } from '../content/resolve'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { prefsFromSettings } from '../storage/types'
+import { infoCardParts } from '../audio/notes'
+import { InfoButton } from '../components/InfoButton'
 import { RichText } from '../components/RichText'
 
 export function SituationPage() {
@@ -76,13 +77,20 @@ export function SituationPage() {
         </section>
       ) : null}
       {cards.map((card) => (
-        <article key={card.id} className="card">
-          <h2>{card.title[ui]}</h2>
+        <article key={card.id} className="card info-card">
+          <div className="info-card-head">
+            <h2>{card.title[ui]}</h2>
+            <InfoButton
+              label={copy.infoOpen}
+              title={card.title[ui]}
+              closeLabel={copy.infoClose}
+              readLabel={copy.readAloud}
+              stopLabel={copy.readAloudStop}
+              lang={ui}
+              parts={infoCardParts(copy, ui, card)}
+            />
+          </div>
           {isStale(card.checkedAt, new Date()) ? <p className="warn">{copy.infoStale}</p> : null}
-          <p className="prose">{card.body[ui as Lang]}</p>
-          <p>
-            {copy.sources}: {card.sources.map((source) => source.title).join(', ')}
-          </p>
         </article>
       ))}
     </div>

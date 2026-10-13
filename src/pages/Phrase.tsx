@@ -12,21 +12,13 @@ import { stopSlices } from '../audio/slice'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
+import { fixedPart, lineContext, pairPart, speedPart, voiceCaption } from '../audio/notes'
 import { RepeatFeedback } from '../components/RepeatFeedback'
 import { KaraokeLine } from '../components/KaraokeLine'
+import { LearnCard } from '../components/LearnCard'
 import { RichText } from '../components/RichText'
 import { cardIdFor } from '../srs/session'
-import type { Dictionary } from '../i18n/dictionary'
-import { prefsFromSettings, type Settings } from '../storage/types'
-import type { Lang } from '../../content/phrase'
-
-function audioCaption(copy: Dictionary, lang: Lang, settings: Settings): string {
-  const id = selectedVoice(settings, lang).id
-  if (lang === 'vi') return id === 'vais1000' ? copy.audioVi : copy.audioViMale
-  if (lang === 'de') return id === 'thorsten-high' ? copy.audioDeHigh : copy.audioDe
-  if (lang === 'en') return id === 'joe' ? copy.audioEnMale : copy.audioEn
-  return id === 'cadu' ? copy.audioPtMale : copy.audioPt
-}
+import { prefsFromSettings } from '../storage/types'
 
 export function PhrasePage() {
   const { conceptId = '' } = useParams()
@@ -249,83 +241,88 @@ export function PhrasePage() {
   }
 
   return (
-    <article className="stack phrase">
-      <p>
+    <article className="stack learn phrase" data-testid="phrase">
+      <p className="back-row">
         <Link to={`/situation/${concept.situationIds[0] ?? ''}`}>{copy.back}</Link>
       </p>
-      {followWords ? (
-        <KaraokeLine
-          heading
-          lang={targetLang}
-          speech={target.speech}
-          gloss={source.speech}
-          links={links}
-          times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration, alignmentScale(timingFile))) ? times : null}
-          seconds={playing ? seconds : null}
-          note={copy.glossUnchecked}
-          template={target.text}
-        />
-      ) : (
-        <>
-          <h1>
-            <RichText text={target.text} />
-          </h1>
-          <p className="gloss">
-            <RichText text={source.text} />
-          </p>
-        </>
-      )}
-      <p className="hint">{copy.exampleAudio}</p>
-      <p>
-        {copy.context}: {concept.context[ui]}
-      </p>
-      {targetLang === 'vi' ? <p className="warn">{audioCaption(copy, targetLang, settings)}</p> : <p className="hint">{audioCaption(copy, targetLang, settings)}</p>}
-      {heard === 'offline' ? <p className="warn" role="status">{copy.audioOffline}</p> : null}
-      <p className="speed-now" data-testid="speed-now">
-        {copy.speedShown(percent)}
-      </p>
-      <fieldset className="speed" data-testid="speed-control">
-        <legend>{copy.speedTitle}</legend>
-        <div className="row" role="group" aria-label={copy.speedTitle}>
-          <button type="button" aria-pressed={settings.speed === 'auto'} onClick={() => void saveSettings({ ...settings, speed: 'auto' })}>
-            {copy.speedAuto}
-          </button>
-          {SPEED_STEPS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={settings.speed === option}
-              onClick={() => void saveSettings({ ...settings, speed: option })}
-            >
-              {option === 0.7 ? copy.speed70 : option === 0.85 ? copy.speed85 : copy.speed100}
-            </button>
-          ))}
-        </div>
-        <p className="hint">{settings.speed === 'auto' ? copy.speedAutoHint(percent) : copy.speedFixedHint(percent)}</p>
-      </fieldset>
-      <div className="row">
-        <button
-          type="button"
-          className="play-row"
-          aria-pressed={playing}
-          disabled={recording || micStarting}
-          onClick={() => void onPlay(tempoFile(spokenFile(settings, targetLang, target.file), step), step)}
-        >
-          <span className="play-mark" aria-hidden="true" />
-          {playing ? copy.playing : copy.play}
-        </button>
-        <Link className="button" to={`/show/${concept.id}`}>
-          {copy.showThis}
-        </Link>
-      </div>
-      {pairNotes.map((note) => (
-        <p key={note.id} className="hint">
-          {copy.pairNote}: {note.text[ui]}
+      <LearnCard
+        parts={[
+          fixedPart(ui, 'ui.example', copy.exampleAudio),
+          lineContext(copy, ui, concept.id, concept.context[ui]),
+          voiceCaption(copy, ui, targetLang, settings),
+          ...(followWords ? [fixedPart(ui, 'ui.gloss', copy.glossUnchecked)] : []),
+          speedPart(copy, ui, settings.speed, percent),
+          ...pairNotes.map((note) => pairPart(copy, ui, note.id, note.text[ui])),
+          fixedPart(ui, 'ui.mic', copy.micHint),
+          fixedPart(ui, 'ui.unchecked', copy.uncheckedCalm),
+        ]}
+      >
+        {followWords ? (
+          <KaraokeLine
+            heading
+            lang={targetLang}
+            speech={target.speech}
+            gloss={source.speech}
+            links={links}
+            times={times && (clipDuration == null || alignmentFitsDuration(times, clipDuration, alignmentScale(timingFile))) ? times : null}
+            seconds={playing ? seconds : null}
+            template={target.text}
+          />
+        ) : (
+          <>
+            <h1 data-testid="target-line" lang={targetLang}>
+              <RichText text={target.text} />
+            </h1>
+            <p className="gloss">
+              <RichText text={source.text} />
+            </p>
+          </>
+        )}
+      </LearnCard>
+      {heard === 'offline' ? (
+        <p className="warn" role="status">
+          {copy.audioOffline}
         </p>
-      ))}
-      <section className="record">
-        <h2>{copy.record}</h2>
-        <p className="hint">{copy.micHint}</p>
+      ) : null}
+      <div className="learn-actions" data-testid="learn-actions">
+        <p className="speed-now" data-testid="speed-now">
+          {copy.speedShown(percent)}
+        </p>
+        <fieldset className="speed" data-testid="speed-control">
+          <legend>{copy.speedTitle}</legend>
+          <div className="row" role="group" aria-label={copy.speedTitle}>
+            <button type="button" aria-pressed={settings.speed === 'auto'} onClick={() => void saveSettings({ ...settings, speed: 'auto' })}>
+              {copy.speedAuto}
+            </button>
+            {SPEED_STEPS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={settings.speed === option}
+                onClick={() => void saveSettings({ ...settings, speed: option })}
+              >
+                {option === 0.7 ? copy.speed70 : option === 0.85 ? copy.speed85 : copy.speed100}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <div className="row">
+          <button
+            type="button"
+            className="play-row"
+            aria-pressed={playing}
+            disabled={recording || micStarting}
+            onClick={() => void onPlay(tempoFile(spokenFile(settings, targetLang, target.file), step), step)}
+          >
+            <span className="play-mark" aria-hidden="true" />
+            {playing ? copy.playing : copy.play}
+          </button>
+          <Link className="button" to={`/show/${concept.id}`}>
+            {copy.showThis}
+          </Link>
+        </div>
+      </div>
+      <div className="learn-speak" data-testid="learn-record">
         {micError ? <p role="alert">{copy.micDenied}</p> : null}
         <div className="row">
           {recording ? (
@@ -333,7 +330,7 @@ export function PhrasePage() {
               {copy.stop}
             </button>
           ) : (
-            <button type="button" disabled={micStarting} onClick={() => void onRecord()}>
+            <button type="button" className="button accent" disabled={micStarting} onClick={() => void onRecord()}>
               {userAudio ? copy.repeatFeedback.again : copy.record}
             </button>
           )}
@@ -352,25 +349,24 @@ export function PhrasePage() {
             </button>
           ) : null}
         </div>
-      </section>
-      {userAudio && !recording && !micStarting ? (
-        <RepeatFeedback
-          copy={copy}
-          lang={targetLang}
-          region={settings.viRegion}
-          speech={target.speech}
-          words={feedbackTimes}
-          modelSamples={modelAudio?.samples ?? null}
-          modelRate={modelAudio?.sampleRate ?? 0}
-          userSamples={userAudio.samples}
-          userRate={userAudio.sampleRate}
-          modelMissing={modelMissing}
-          timingsPending={timingsPending}
-          voiceId={selectedVoice(settings, targetLang).id}
-        />
-      ) : null}
-      {!userAudio && mineUrl ? <p role="status">{copy.pitchEmpty}</p> : null}
-      <p className="hint">{copy.uncheckedCalm}</p>
+        {userAudio && !recording && !micStarting ? (
+          <RepeatFeedback
+            copy={copy}
+            lang={targetLang}
+            region={settings.viRegion}
+            speech={target.speech}
+            words={feedbackTimes}
+            modelSamples={modelAudio?.samples ?? null}
+            modelRate={modelAudio?.sampleRate ?? 0}
+            userSamples={userAudio.samples}
+            userRate={userAudio.sampleRate}
+            modelMissing={modelMissing}
+            timingsPending={timingsPending}
+            voiceId={selectedVoice(settings, targetLang).id}
+          />
+        ) : null}
+        {!userAudio && mineUrl ? <p role="status">{copy.pitchEmpty}</p> : null}
+      </div>
     </article>
   )
 }
