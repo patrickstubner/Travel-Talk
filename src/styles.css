@@ -115,6 +115,8 @@ h1 { font-size: 2rem; line-height: 1.15; margin: 0.2rem 0; }
 .learn-head .gloss { margin: 0; color: var(--ink); }
 .learn-actions, .learn-speak { display: grid; gap: 0.3rem; }
 .learn-stop { display: block; width: 100%; }
+.skip-row { display: flex; align-items: center; gap: 0.45rem; }
+.skip-row .button.wide { flex: 1; }
 .learn-next { margin-top: 1.35rem; }
 .tempo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; min-width: 0; }
 .tempo-bar .play-row { gap: 0.45rem; flex: none; }
@@ -397,6 +399,13 @@ a.menu-card span { color: var(--muted); }
   padding: 0 0.08rem;
   line-height: inherit;
 }
+.karaoke button.linked {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: #0a4744;
+}
 .karaoke button[aria-pressed="true"] {
   background: transparent;
   color: inherit;
@@ -406,6 +415,7 @@ a.menu-card span { color: var(--muted); }
 .karaoke button.now,
 .karaoke button.now[aria-pressed="true"] { background: #b7e0d4; color: inherit; }
 .show-mode .karaoke button { background: #24303a; color: #f4efe6; }
+.show-mode .karaoke button.linked { text-decoration-color: #8fd0c6; }
 .show-mode .karaoke button[aria-pressed="true"] {
   background: #2c3a46;
   color: #f4efe6;

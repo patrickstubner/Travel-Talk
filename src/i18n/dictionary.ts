@@ -167,6 +167,13 @@ export type Dictionary = {
   offlineReload: string
   highlightTitle: string
   highlightHint: string
+  skipWords: string
+  skipWordsRemember: string
+  skipWordsInfo: string
+  skipWordsTitle: string
+  skipWordsHint: string
+  skipWordsSetting: string
+  wordDots: string
   glossUnchecked: string
   offlineReady: string
   offlineRetry: string
@@ -526,6 +533,14 @@ export const de: Dictionary = {
   offlineReload: 'Für offline noch nicht vollständig geladen',
   highlightTitle: 'Wörter mitlaufen lassen',
   highlightHint: 'Während die Stimme spielt, wird das Wort markiert. Darunter steht eine Wortzuordnung. Sie ist nicht geprüft.',
+  skipWords: 'Wörter überspringen',
+  skipWordsRemember: 'Für mich merken',
+  skipWordsInfo: 'Was Überspringen bedeutet',
+  skipWordsTitle: 'Wörter überspringen',
+  skipWordsHint:
+    'Die Wörter dieser Sitzung werden ausgelassen. Sie zählen nicht als gelernt und nicht als falsch. Ein Satz, der so ein Wort braucht, bleibt zu.',
+  skipWordsSetting: 'Wörter vor den Sätzen überspringen',
+  wordDots: 'Eine punktierte Linie zeigt ein Wort, das zur Übersetzung darunter gehört. Ein Wort ohne Linie hat keine Zuordnung.',
   glossUnchecked: 'Die Wortzuordnung ist nicht geprüft.',
   offlineReady: 'offline bereit',
   offlineRetry: 'Erneut versuchen',
@@ -883,6 +898,14 @@ export const en: Dictionary = {
   offlineReload: 'Not fully loaded for offline yet',
   highlightTitle: 'Follow the words',
   highlightHint: 'While the voice plays, the word is marked. Under the line is a word-by-word gloss. It has not been checked.',
+  skipWords: 'Skip the words',
+  skipWordsRemember: 'Remember for me',
+  skipWordsInfo: 'What skipping does',
+  skipWordsTitle: 'Skip the words',
+  skipWordsHint:
+    'The words in this sitting are left out. They are not counted as learned or as wrong. A line that needs one of those words stays closed.',
+  skipWordsSetting: 'Skip the words before the lines',
+  wordDots: 'A dotted line marks a word that belongs to the translation underneath. A word with no line has no match.',
   glossUnchecked: 'The word links have not been checked.',
   offlineReady: 'ready offline',
   offlineRetry: 'Try again',
@@ -1242,6 +1265,14 @@ export const pt: Dictionary = {
   offlineReload: 'Ainda não está completo para offline',
   highlightTitle: 'Acompanhar as palavras',
   highlightHint: 'Enquanto a voz toca, a palavra fica marcada. Abaixo está a relação entre as palavras. Ela não foi revista.',
+  skipWords: 'Pular as palavras',
+  skipWordsRemember: 'Lembrar para mim',
+  skipWordsInfo: 'O que pular significa',
+  skipWordsTitle: 'Pular as palavras',
+  skipWordsHint:
+    'As palavras desta sessão ficam de fora. Elas não contam como aprendidas nem como erradas. Uma frase que precisa de uma dessas palavras continua fechada.',
+  skipWordsSetting: 'Pular as palavras antes das frases',
+  wordDots: 'Uma linha pontilhada mostra uma palavra que tem par na tradução abaixo. Uma palavra sem linha não tem par.',
   glossUnchecked: 'A relação entre as palavras não foi revista.',
   offlineReady: 'pronto offline',
   offlineRetry: 'Tentar de novo',
@@ -1595,6 +1626,14 @@ export const vi: Dictionary = {
   offlineReload: 'Chưa tải đủ để dùng offline',
   highlightTitle: 'Theo từng tiếng',
   highlightHint: 'Khi giọng đọc, tiếng đang phát được đánh dấu. Bên dưới là nghĩa từng tiếng. Phần này chưa được kiểm tra.',
+  skipWords: 'Bỏ qua các từ',
+  skipWordsRemember: 'Nhớ cho tôi',
+  skipWordsInfo: 'Bỏ qua nghĩa là gì',
+  skipWordsTitle: 'Bỏ qua các từ',
+  skipWordsHint:
+    'Các từ của buổi này được bỏ qua. Chúng không tính là đã học và cũng không tính là sai. Câu nào cần một từ đó vẫn đóng.',
+  skipWordsSetting: 'Bỏ qua các từ trước câu',
+  wordDots: 'Đường chấm cho biết từ có nghĩa ở dòng dịch bên dưới. Từ không có đường chấm thì không có cặp.',
   glossUnchecked: 'Phần nối nghĩa từng tiếng chưa được kiểm tra.',
   offlineReady: 'sẵn sàng offline',
   offlineRetry: 'Thử lại',

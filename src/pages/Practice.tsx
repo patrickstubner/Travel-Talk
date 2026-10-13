@@ -14,6 +14,7 @@ import { useCopy, useSettings } from '../app/use-copy'
 import type { ExplainPart } from '../audio/explain'
 import { fixedPart, lineContext } from '../audio/notes'
 import { KaraokeLine } from '../components/KaraokeLine'
+import { InfoButton } from '../components/InfoButton'
 import { LearnCard } from '../components/LearnCard'
 import { TempoSwitch } from '../components/TempoSwitch'
 import { RepeatFeedback } from '../components/RepeatFeedback'
@@ -127,7 +128,7 @@ export function PracticePage() {
     const key = `${personId}:${direction}:${kind}:${run}`
     if (readyFor === key) return
     const usable = usableConcepts(orderedConcepts(catalog), settings.appLang, settings.targetLang, settings.viRegion)
-    const plan = buildDay(usable, snapshot.cards, direction, new Date(), kind)
+    const plan = buildDay(usable, snapshot.cards, direction, new Date(), kind, settings.skipWords === true)
     sentenceSlots.current = plan.sentenceSlots
     setQueue(plan.items)
     setIndex(0)
@@ -137,7 +138,7 @@ export function PracticePage() {
     setFinished(false)
     setMicNote(false)
     setReadyFor(key)
-  }, [catalog, direction, kind, readyFor, run, settings.appLang, settings.targetLang, settings.viRegion, snapshot])
+  }, [catalog, direction, kind, readyFor, run, settings.appLang, settings.skipWords, settings.targetLang, settings.viRegion, snapshot])
 
   const item = queue[index]
   const steps: LearnStep[] = item ? (item.kind === 'word' ? ['word'] : stepsFor(item.isNew)) : []
@@ -336,6 +337,27 @@ export function PracticePage() {
     setFinished(true)
   }
 
+  function skipWordBlock(): void {
+    if (!catalog || !snapshot) return
+    stopClip()
+    setPlaying(false)
+    setOfflineAudio(false)
+    const usable = usableConcepts(orderedConcepts(catalog), app, targetLang, settings.viRegion)
+    const plan = buildDay(usable, snapshot.cards, activeDirection, new Date(), kind, true)
+    sentenceSlots.current = plan.sentenceSlots
+    const done = queue.slice(0, index)
+    const seen = new Set(done.map((entry) => `${entry.kind}:${entry.id}`))
+    const upcoming = plan.items.filter((entry) => !seen.has(`${entry.kind}:${entry.id}`))
+    const next = [...done, ...upcoming]
+    setQueue(next)
+    setStepIndex(0)
+    setAnswered(false)
+    setPicked(null)
+    setMicNote(false)
+    if (index >= next.length) setFinished(true)
+    else setIndex(index)
+  }
+
   function chooseTempo(next: SpeedStep): void {
     if (next === storedLearnTempo(settings.learnTempo)) return
     void saveSettings({ ...settings, learnTempo: next })
@@ -446,6 +468,33 @@ export function PracticePage() {
       <section className="stack learn" data-testid="practice-word">
         {study}
         <h2 className="eyebrow">{copy.wordsFirst}</h2>
+        <div className="skip-row">
+          <button type="button" className="button wide" data-testid="skip-words" onClick={skipWordBlock}>
+            {copy.skipWords}
+          </button>
+          <InfoButton
+            label={copy.skipWordsInfo}
+            title={copy.skipWordsTitle}
+            closeLabel={copy.infoClose}
+            readLabel={copy.readAloud}
+            stopLabel={copy.readAloudStop}
+            lang={app}
+            parts={[{ text: copy.skipWordsHint, clip: null }]}
+          />
+        </div>
+        <label className="choice">
+          <input
+            type="checkbox"
+            checked={settings.skipWords === true}
+            onChange={(event) => {
+              const next = { ...settings }
+              if (event.target.checked) next.skipWords = true
+              else delete next.skipWords
+              void saveSettings(next)
+            }}
+          />
+          {copy.skipWordsRemember}
+        </label>
         {offlineAudio ? (
           <p className="warn" role="status">
             {copy.audioOffline}
@@ -605,7 +654,9 @@ export function PracticePage() {
       </p>
     ) : null
   const contextNote = lineContext(copy, app, concept.id, concept.context[app])
-  const glossNote = followWords ? [fixedPart(app, 'ui.gloss', copy.glossUnchecked)] : []
+  const glossNote = followWords
+    ? [fixedPart(app, 'ui.gloss', copy.glossUnchecked), { text: copy.wordDots, clip: null }]
+    : []
   const sentenceNotes: ExplainPart[] =
     step === 'slow' || step === 'normal'
       ? [contextNote, ...glossNote]

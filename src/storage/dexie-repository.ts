@@ -290,6 +290,7 @@ function mergeLocal(incoming: Settings, local: Settings | undefined): Settings {
     ...(local.voiceHintSeen ? { voiceHintSeen: true } : {}),
     ...(local.highlightWords === false ? { highlightWords: false } : {}),
     ...(isSpeedStep(local.learnTempo) ? { learnTempo: local.learnTempo } : {}),
+    ...(local.skipWords === true ? { skipWords: true } : {}),
   }
 }
 

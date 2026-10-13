@@ -252,7 +252,7 @@ export function PhrasePage() {
           fixedPart(ui, 'ui.example', copy.exampleAudio),
           lineContext(copy, ui, concept.id, concept.context[ui]),
           voiceCaption(copy, ui, targetLang, settings),
-          ...(followWords ? [fixedPart(ui, 'ui.gloss', copy.glossUnchecked)] : []),
+          ...(followWords ? [fixedPart(ui, 'ui.gloss', copy.glossUnchecked), { text: copy.wordDots, clip: null }] : []),
           speedPart(copy, ui, settings.speed, percent),
           ...pairNotes.map((note) => pairPart(copy, ui, note.id, note.text[ui])),
           fixedPart(ui, 'ui.mic', copy.micHint),

@@ -148,6 +148,8 @@ describe('import', () => {
     expect(coerceSettings({ learnTempo: 1 }).learnTempo).toBe(1)
     expect(coerceSettings({ learnTempo: 0.5 as never }).learnTempo).toBeUndefined()
     expect(coerceSettings({ learnTempo: 'slow' as never }).learnTempo).toBeUndefined()
+    expect(coerceSettings({ skipWords: true }).skipWords).toBe(true)
+    expect(coerceSettings({ skipWords: false as never }).skipWords).toBeUndefined()
   })
 
   it('rejects a settings object that carries an unknown field', () => {
@@ -325,6 +327,8 @@ describe('import', () => {
     expect(withHighlight).not.toContain('highlightWords')
     const withTempo = toExport({ settings: { ...current, learnTempo: 0.7 }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
     expect(withTempo).not.toContain('learnTempo')
+    const withSkip = toExport({ settings: { ...current, skipWords: true }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
+    expect(withSkip).not.toContain('skipWords')
   })
 
   it('caps last review and due in a format 4 file', () => {

@@ -84,7 +84,10 @@ export function ShowPage() {
             readLabel={copy.readAloud}
             stopLabel={copy.readAloudStop}
             lang={app}
-            parts={[fixedPart(app, 'ui.show', copy.showPurpose)]}
+            parts={[
+              fixedPart(app, 'ui.show', copy.showPurpose),
+              ...(followWords ? [{ text: copy.wordDots, clip: null }] : []),
+            ]}
           />
         ) : null}
       </div>

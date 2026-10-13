@@ -45,6 +45,28 @@ describe('karaoke line', () => {
     expect(screen.getByRole('button', { name: 'Krankenwagen.' }).getAttribute('aria-pressed')).toBe('false')
   })
 
+  it('underlines only the words that map to the other line', () => {
+    render(
+      <KaraokeLine
+        speech="alpha beta"
+        gloss="eins zwei"
+        links={[{ target: [0], gloss: [0] }]}
+        times={null}
+        seconds={null}
+      />,
+    )
+    const alpha = screen.getByRole('button', { name: 'alpha' })
+    expect(alpha.classList.contains('linked')).toBe(true)
+    expect(alpha.getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByRole('button', { name: 'eins' }).classList.contains('linked')).toBe(true)
+    expect(screen.queryByRole('button', { name: 'beta' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'zwei' })).toBeNull()
+    const plain = screen.getByText('beta')
+    expect(plain.tagName).toBe('SPAN')
+    expect(plain.classList.contains('linked')).toBe(false)
+    expect(screen.getByText('zwei').classList.contains('linked')).toBe(false)
+  })
+
   it('does not mark a current word when there are no timings', () => {
     render(
       <KaraokeLine

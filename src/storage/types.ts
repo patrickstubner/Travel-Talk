@@ -34,6 +34,11 @@ export type Settings = {
    */
   learnTempo?: SpeedStep
   /**
+   * Skip the word block and do not grade those cards. Local only, not exported.
+   * Missing means the words are shown.
+   */
+  skipWords?: boolean
+  /**
    * Other learning languages besides `targetLang`.
    * Today still practises one. The daily cap counts every direction of this person.
    */
@@ -199,6 +204,7 @@ export function coerceSettings(raw: Partial<Settings> & { slow?: boolean; pairId
     personalNote: cleanPersonalNote(raw.personalNote),
     speed: normalizeSpeed(raw.speed, raw.slow),
     ...(isSpeedStep(raw.learnTempo) ? { learnTempo: raw.learnTempo } : {}),
+    ...(raw.skipWords === true ? { skipWords: true } : {}),
     ...(cleanMoreTargets(raw.moreTargets, appLang, targetLang).length > 0
       ? { moreTargets: cleanMoreTargets(raw.moreTargets, appLang, targetLang) }
       : {}),

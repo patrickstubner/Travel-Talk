@@ -190,7 +190,15 @@ describe('people on one device', () => {
     const first = await repo.load()
     const id = first.activePersonId ?? ''
     await repo.renamePerson(id, 'A')
-    const local: Settings = { ...learning('de', 'vi'), personalNote: 'Nur lokal', voiceHintSeen: true, highlightWords: false, learnTempo: 0.85, voices: { vi: 'vais1000' } }
+    const local: Settings = {
+      ...learning('de', 'vi'),
+      personalNote: 'Nur lokal',
+      voiceHintSeen: true,
+      highlightWords: false,
+      learnTempo: 0.85,
+      skipWords: true,
+      voices: { vi: 'vais1000' },
+    }
     await repo.saveSettings(id, local)
     await repo.importPerson('replace', { name: 'C', settings: { ...learning('de', 'en'), personalNote: '   ' }, cards: [] }, local, id)
     const kept = await repo.load()
@@ -198,6 +206,7 @@ describe('people on one device', () => {
     expect(kept.settings.voiceHintSeen).toBe(true)
     expect(kept.settings.highlightWords).toBe(false)
     expect(kept.settings.learnTempo).toBe(0.85)
+    expect(kept.settings.skipWords).toBe(true)
     expect(kept.settings.voices?.vi).toBe('vais1000')
     expect(kept.people?.find((person) => person.id === id)?.name).toBe('A')
     await repo.importPerson('replace', { name: 'C', settings: { ...learning('de', 'en'), personalNote: 'Neu' }, cards: [] }, kept.settings, id)

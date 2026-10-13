@@ -9,6 +9,8 @@
 - Nach dem Nachsprechen stehen bis zu drei Sterne, abgeleitet aus den Balken Melodie und Rhythmus. Drei, wenn beide passen. Zwei, wenn keiner daneben ist. Einer, wenn einer daneben ist. Ohne Balken keine Sterne. Die Sterne sagen nicht, ob der gesprochene Satz der gehörte war. Die Erklärung steht hinter dem Info-Knopf. Die spätere Spracherkennung bleibt eine andere Fassung.
 - Während die Aufnahme läuft, ist «Weiter» weg, weil Stopp sonst zu nah daran liegt. Nach Stopp kommt «Weiter» wieder. Sonst bleibt «Weiter» sichtbar. Stopp liegt in der Aufnahmezeile, «Weiter» darunter mit Abstand.
 - Der Lernstand dieser Person steht als kleiner Balken auf der Lernseite und etwas grösser auf der Startseite: gelernte Sätze und Wörter, heute wiederholt, behalten. Die Erklärung steht hinter dem Info-Knopf. Die Zahlen bleiben auf dem Gerät.
+- Vor den Sätzen gibt es «Wörter überspringen». Die Wortkarten bleiben, wie sie sind: nicht gelernt und nicht falsch. Ein Satz, der so ein Wort braucht, bleibt zu. «Für mich merken» und die Einstellung speichern das für diese Person, nur auf dem Gerät.
+- Wörter im Satz, die zur Übersetzung darunter gehören, haben eine feine punktierte Linie. Ein Wort ohne Zuordnung hat keine Linie. Die Erklärung steht hinter dem Info-Knopf. Im Zeigen-Modus bleibt die Linie hell auf dunklem Grund.
 
 ## 0.9.6 — 2026-10-13
 

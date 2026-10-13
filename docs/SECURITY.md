@@ -12,6 +12,8 @@ Die Sterne nach dem Nachsprechen sind nur die beiden Balken, die schon auf der S
 
 Der Lernstand liest die Karten dieser Person aus IndexedDB. Gezählt werden gelernte Sätze, gelernte Wörter, heute wiederholte Karten und der Anteil im Wiederholungszustand. Die Zahlen werden nicht gespeichert, nicht exportiert und nicht gesendet. Kein neues `fetch`, kein neues Paket.
 
+«Wörter überspringen» schreibt keine Karte. Die gemerkte Wahl ist nur wahr oder fehlt, nur in den Einstellungen dieser Person, nicht im Export. Ein Import lässt sie auf dem Gerät stehen, `mergeLocal` übernimmt nur `true`. Die punktierte Linie ist Darstellung, keine Adresse. Die Erklärung dazu hat keine neue Datei. `speechSynthesis` spricht sie nur auf dem Gerät, wenn «Vorlesen» gedrückt wird.
+
 Die offenen Punkte bleiben offen: kein `frame-ancestors` auf GitHub Pages, Mikrofon-Freigabe im Browser, Notiz unverschlüsselt in IndexedDB.
 
 ## 0.9.4 Erklärungen

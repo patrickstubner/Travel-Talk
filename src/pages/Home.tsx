@@ -52,7 +52,7 @@ export function HomePage() {
   const due =
     dueConcepts(usable, snapshot.cards, direction, now).length +
     WORDS.filter((word) => isDueCard(snapshot.cards.find((card) => card.cardId === cardIdFor(direction, word.id)), now)).length
-  const planned = buildDay(usable, snapshot.cards, direction, now, 'new')
+  const planned = buildDay(usable, snapshot.cards, direction, now, 'new', settings.skipWords === true)
   const fresh = planned.items.filter((item) => item.kind === 'sentence').length
   const coming = fresh + planned.waiting
   const words = planned.items.filter((item) => item.kind === 'word').length
