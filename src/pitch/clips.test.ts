@@ -17,8 +17,17 @@ import { WORDS, wordAudioFile } from '../../content/words'
 import { analyzeModel, analyzeUser } from './analyze'
 import { clipProblem, lengthProblem } from './clip-plausible'
 import { contourFromSamples, frameEnergy } from './contour'
-import { scoreRepeat, type RepeatScore } from './feedback'
-import { bandShape } from './spectrum'
+import {
+  SENTENCE_IMPOSTOR,
+  SENTENCE_SAME,
+  VERDICT_BAND_PASST,
+  barFromColours,
+  reversedRecording,
+  scoreRepeat,
+  starsFromVerdict,
+  type RepeatScore,
+} from './feedback'
+import { bandDistance, bandShape } from './spectrum'
 
 /**
  * The shipped clips still decode, and the melody score still runs on each
@@ -327,6 +336,7 @@ describe('shipped clips', () => {
           expect(score.otherSentence, file).toBe(false)
           for (const word of score.words ?? []) {
             if (word.scorable) expect(word.rhythm, `${file} ${word.text}`).toBe('green')
+            if (word.melody != null) expect(word.melody, `${file} ${word.text}`).toBe('green')
           }
           expectReversed(samples, words, line.lang, region, duration, file)
         }
@@ -387,6 +397,8 @@ describe('shipped clips', () => {
       modelBands: modelFeatures.bands,
       userBands: userFeatures.bands,
       userPlainBands: userFeatures.plainBands,
+      modelSpeechBands: modelFeatures.speechBands,
+      userSpeechBands: userFeatures.speechBands,
     })
     expect(score.unclear, file).toBe(true)
     expect(score.reason, file).toBe('unclear')
@@ -497,6 +509,8 @@ describe('shipped clips', () => {
         modelBands: model.bands,
         userBands: user.bands,
         userPlainBands: user.plainBands,
+        modelSpeechBands: model.speechBands,
+        userSpeechBands: user.speechBands,
       })
       expectAssessed(score, item.file)
       for (const word of score.words ?? []) {
@@ -549,6 +563,8 @@ describe('shipped clips', () => {
       modelBands: model.bands,
       userBands: user.bands,
       userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
     })
     expect(score.globalRatio ?? 0, file).toBeGreaterThan(0.85)
     expect(score.globalRatio ?? 9, file).toBeLessThan(1.2)
@@ -601,6 +617,8 @@ describe('shipped clips', () => {
       modelBands: model.bands,
       userBands: user.bands,
       userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
     })
     const modelVoiced = model.contour.filter((value) => value != null).length
     const userVoiced = user.contour.filter((value) => value != null).length
@@ -712,6 +730,8 @@ describe('shipped clips', () => {
       modelBands: model.bands,
       userBands: user.bands,
       userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
     })
   }
 
@@ -775,6 +795,668 @@ describe('shipped clips', () => {
     60_000,
   )
 
+  /**
+   * Coloured-word red share against cadu, before the wider pt-BR band,
+   * on the clips in this tree. A drop of ten points is the floor.
+   * Putting pt-BR back to 1.5/3 leaves faber at 240 of 591, above the floor.
+   * Turning the clear-turn rule off leaves the reversed senhora line, and
+   * «Bom dia.» for Daisy, Tammie and Claribel, short of «daneben».
+   */
+  const RED_BEFORE_CADU: Record<string, number> = {
+    faber: 262 / 591,
+    'daisy-studious': 227 / 595,
+    'gracie-wise': 263 / 575,
+    'tammie-ema': 252 / 579,
+    'claribel-dervla': 230 / 585,
+  }
+  const MIN_RED_DROP = 0.1
+
+  function scoreHeard(
+    modelFile: string,
+    userSamples: Float32Array,
+    text: string,
+  ): RepeatScore {
+    const texts = splitWords(text)
+    const times = parseAlignment(JSON.parse(readFileSync(modelFile.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+    const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+    const modelSamples = decode(modelFile)
+    const model = analyzeModel(modelSamples, 16000)
+    const user = analyzeUser(userSamples, 16000, model.bands)
+    return scoreRepeat({
+      model: model.contour,
+      user: user.contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang: 'pt-BR',
+      region: 'south',
+      userDuration: userSamples.length / 16000,
+      modelEnergy: model.energy,
+      userEnergy: user.energy,
+      modelBands: model.bands,
+      userBands: user.bands,
+      userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
+    })
+  }
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'marks fewer words red when another correct pt-BR voice is scored against cadu',
+    () => {
+      const others = VOICES.filter((voice) => voice.bundled && voice.lang === 'pt-BR' && voice.id !== 'cadu')
+      expect(others.map((voice) => voice.id)).toContain('faber')
+      const lines = allSpeechLines(rawCatalog.concepts).filter((line) => line.lang === 'pt-BR')
+      for (const voice of others) {
+        const before = RED_BEFORE_CADU[voice.id]
+        expect(before, voice.id).toBeTypeOf('number')
+        let red = 0
+        let coloured = 0
+        let sentences = 0
+        for (const line of lines) {
+          const modelFile = `public/audio/${voiceFile(line.file, 'cadu', false)}`
+          const userFile = `public/audio/${voiceFile(line.file, voice.id, voice.legacy)}`
+          const alignPath = modelFile.replace(/\.m4a$/, '.align.json')
+          if (!existsSync(modelFile) || !existsSync(userFile) || !existsSync(alignPath)) continue
+          const texts = splitWords(line.text)
+          const times = parseAlignment(JSON.parse(readFileSync(alignPath, 'utf8')), texts.length)
+          if (!times) continue
+          const modelSamples = decode(modelFile)
+          if (!alignmentFitsDuration(times, modelSamples.length / 16000)) continue
+          const score = scoreHeard(modelFile, decode(userFile), line.text)
+          sentences += 1
+          for (const word of score.words ?? []) {
+            if (word.color == null) continue
+            coloured += 1
+            if (word.color === 'red') red += 1
+          }
+        }
+        expect(sentences, voice.id).toBeGreaterThan(100)
+        expect(coloured, voice.id).toBeGreaterThan(0)
+        const share = red / coloured
+        expect(share, `${voice.id} ${red}/${coloured}`).toBeLessThanOrEqual((before ?? 1) - MIN_RED_DROP)
+      }
+    },
+    600_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'keeps a different sentence and a reversed take mostly red',
+    () => {
+      const wrongModel = 'public/audio/pt-BR/cadu/transport.07.here__any__base.m4a'
+      const wrongUser = 'public/audio/pt-BR/cadu/emergency.doctor__any__base.m4a'
+      const wrong = scoreHeard(wrongModel, decode(wrongUser), 'Por favor, pare aqui.')
+      const wrongColoured = (wrong.words ?? []).filter((word) => word.color != null)
+      const wrongRed = wrongColoured.filter((word) => word.color === 'red')
+      expect(wrong.unclear, wrongModel).toBe(false)
+      expect(wrong.melodyBar, wrongModel).toBe('daneben')
+      expect(wrongRed.length * 2, wrongModel).toBeGreaterThanOrEqual(wrongColoured.length)
+
+      const reverseModel = 'public/audio/pt-BR/cadu/meet.repeat__any__senhora.m4a'
+      const reverseUser = 'public/audio/pt-BR/meet.repeat__any__senhora.m4a'
+      const reversed = Float32Array.from(decode(reverseUser))
+      reversed.reverse()
+      const back = scoreHeard(reverseModel, reversed, 'A senhora pode repetir, por favor?')
+      const backColoured = (back.words ?? []).filter((word) => word.color != null)
+      const backRed = backColoured.filter((word) => word.color === 'red')
+      expect(back.unclear, reverseModel).toBe(false)
+      expect(back.melodyBar, reverseModel).toBe('daneben')
+      expect(backRed.length * 2, reverseModel).toBeGreaterThanOrEqual(backColoured.length)
+
+      const morning = 'pt-BR/day.morning__any__base.m4a'
+      const morningModel = `public/audio/${voiceFile(morning, 'cadu', false)}`
+      for (const voice of VOICES.filter((item) => item.bundled && item.lang === 'pt-BR' && item.id !== 'cadu')) {
+        const userFile = `public/audio/${voiceFile(morning, voice.id, voice.legacy)}`
+        const turned = Float32Array.from(decode(userFile))
+        turned.reverse()
+        const score = scoreHeard(morningModel, turned, 'Bom dia.')
+        const coloured = (score.words ?? []).filter((word) => word.color != null)
+        const reds = coloured.filter((word) => word.color === 'red')
+        expect(score.unclear, voice.id).toBe(false)
+        expect(score.melodyBar, voice.id).toBe('daneben')
+        expect(reds.length * 2, voice.id).toBeGreaterThanOrEqual(coloured.length)
+      }
+    },
+    60_000,
+  )
+
+  function lineByFile(lang: 'de' | 'en' | 'pt-BR' | 'vi', file: string) {
+    return allSpeechLines(rawCatalog.concepts).find((line) => line.lang === lang && line.file === file) ?? null
+  }
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'keeps the pt-BR direction and local-search cuts on real clips',
+    () => {
+      const pharmacy = 'pt-BR/emergency.pharmacy__any__base.m4a'
+      const pharmacyLine = lineByFile('pt-BR', pharmacy)
+      expect(pharmacyLine).not.toBeNull()
+      const onde = scoreHeard(
+        `public/audio/${voiceFile(pharmacy, 'cadu', false)}`,
+        decode(`public/audio/${voiceFile(pharmacy, 'faber', true)}`),
+        pharmacyLine?.text ?? '',
+      ).words?.find((word) => word.text === 'Onde')
+      expect(onde?.melody).toBe('yellow')
+      expect(onde?.melodyDistance ?? 0).toBeLessThan(2.5)
+
+      const ambulance = 'pt-BR/emergency.ambulance__any__base.m4a'
+      const ambulanceLine = lineByFile('pt-BR', ambulance)
+      expect(ambulanceLine).not.toBeNull()
+      const local = scoreHeard(
+        `public/audio/${voiceFile(ambulance, 'cadu', false)}`,
+        decode(`public/audio/${voiceFile(ambulance, 'faber', true)}`),
+        ambulanceLine?.text ?? '',
+      ).words?.find((word) => word.text === 'ambulância,')
+      expect(local?.melody).toBe('green')
+      expect(local?.melodyDistance ?? 0).toBeGreaterThanOrEqual(1.5)
+      expect(local?.melodyDistance ?? 9).toBeLessThan(2.5)
+    },
+    60_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'never calls a wrong pt-BR sentence passt',
+    () => {
+      const voices = VOICES.filter((voice) => voice.bundled && voice.lang === 'pt-BR')
+      const lines = allSpeechLines(rawCatalog.concepts).filter((line) => line.lang === 'pt-BR')
+      const cadu = lines.flatMap((line) => {
+        const audio = `public/audio/${voiceFile(line.file, 'cadu', false)}`
+        const align = audio.replace(/\.m4a$/, '.align.json')
+        if (!existsSync(audio) || !existsSync(align)) return []
+        const texts = splitWords(line.text)
+        const times = parseAlignment(JSON.parse(readFileSync(align, 'utf8')), texts.length)
+        if (!times) return []
+        const samples = decode(audio)
+        if (!alignmentFitsDuration(times, samples.length / 16000)) return []
+        return [{ line, audio, samples, bands: analyzeModel(samples, 16000).bands, words: times }]
+      })
+      expect(cadu.length).toBeGreaterThan(100)
+      const users = voices.flatMap((voice) =>
+        lines.flatMap((line) => {
+          const audio = `public/audio/${voiceFile(line.file, voice.id, voice.legacy)}`
+          if (!existsSync(audio)) return []
+          const samples = decode(audio)
+          return [{ voice: voice.id, text: line.text, audio, samples, bands: analyzeModel(samples, 16000).bands }]
+        }),
+      )
+      let pairs = 0
+      let nearest = 99
+      let nearestLabel = ''
+      let tooClose = ''
+      const close: { distance: number; model: (typeof cadu)[number]; user: (typeof users)[number] }[] = []
+      for (const model of cadu) {
+        for (const user of users) {
+          if (user.text === model.line.text) continue
+          const distance = bandDistance(model.bands, user.bands)
+          const label = `${model.line.file} <- ${user.voice} ${user.text}`
+          if (distance == null || distance <= SENTENCE_SAME) tooClose = `${label} ${distance}`
+          pairs += 1
+          if (distance != null && distance < nearest) {
+            nearest = distance
+            nearestLabel = label
+          }
+          if (distance != null && distance < SENTENCE_SAME + 0.06) close.push({ distance, model, user })
+        }
+      }
+      expect(tooClose).toBe('')
+      expect(pairs).toBeGreaterThan(100_000)
+      expect(nearest, nearestLabel).toBeGreaterThan(SENTENCE_SAME)
+      close.sort((left, right) => left.distance - right.distance)
+      expect(close.length).toBeGreaterThan(0)
+      const scored = close.slice(0, 40).map((item) => ({ model: item.model, user: item.user }))
+      for (let index = 0; index < cadu.length; index += 1) {
+        const model = cadu[index]
+        const user = cadu[(index + 1) % cadu.length]
+        if (!model || !user) continue
+        scored.push({ model, user: { voice: 'cadu', text: user.line.text, audio: user.audio, samples: user.samples, bands: user.bands } })
+      }
+      for (const pair of scored) {
+        const modelFeatures = analyzeModel(pair.model.samples, 16000)
+        const userFeatures = analyzeUser(pair.user.samples, 16000, modelFeatures.bands)
+        const score = scoreRepeat({
+          model: modelFeatures.contour,
+          user: userFeatures.contour,
+          modelHop: 0.01,
+          userHop: 0.01,
+          words: pair.model.words.map((word, index) => ({ ...word, text: splitWords(pair.model.line.text)[index] ?? '' })),
+          lang: 'pt-BR',
+          region: 'south',
+          userDuration: pair.user.samples.length / 16000,
+          modelEnergy: modelFeatures.energy,
+          userEnergy: userFeatures.energy,
+          modelBands: modelFeatures.bands,
+          userBands: userFeatures.bands,
+          userPlainBands: userFeatures.plainBands,
+          modelSpeechBands: modelFeatures.speechBands,
+          userSpeechBands: userFeatures.speechBands,
+        })
+        const label = `${pair.model.line.text} <- ${pair.user.voice} ${pair.user.text}`
+        expect(score.melodyBar, label).not.toBe('passt')
+        expect(score.verdict, label).not.toBe('passt')
+        const stars = score.verdict
+          ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+          : 0
+        expect(stars, label).not.toBe(3)
+      }
+    },
+    720_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('en'))(
+    'keeps joe «Help!» long enough to compare after the silence trim',
+    () => {
+      const file = 'public/audio/en/joe/emergency.help__any__base.m4a'
+      const features = analyzeModel(decode(file), 16000)
+      // 0.02 leaves 11 frames on this word, five of them with a spectrum.
+      // 0.08, the fraction that moves a timed span, leaves 8. The distance
+      // of those few loud frames is null either way; the frame count is the gate.
+      expect(features.speechBands.length, file).toBeGreaterThanOrEqual(11)
+      expect(features.speechBands.filter((frame) => frame.length > 0).length, file).toBeGreaterThanOrEqual(5)
+    },
+    30_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'keeps the pt-BR sentence window on senhor, senhora and a farther voice',
+    () => {
+      const senhor = 'public/audio/pt-BR/cadu/meet.repeat__any__senhor.m4a'
+      const senhora = 'public/audio/pt-BR/cadu/meet.repeat__any__senhora.m4a'
+      const sameSpeaker = scoreHeard(senhor, decode(senhora), 'O senhor pode repetir, por favor?')
+      const sameDistance = sameSpeaker.sentenceCheck?.bands ?? null
+      expect(sameDistance, senhor).toBeGreaterThan(SENTENCE_SAME)
+      expect(sameDistance, senhor).toBeLessThanOrEqual(SENTENCE_IMPOSTOR)
+      expect(barFromColours((sameSpeaker.words ?? []).map((word) => word.melody)), senhor).toBe('teilweise')
+      expect(sameSpeaker.melodyBar, senhor).toBe('daneben')
+      expect(sameSpeaker.verdict, senhor).not.toBe('passt')
+      const sameStars = sameSpeaker.verdict
+        ? starsFromVerdict(sameSpeaker.verdict, sameSpeaker.melodyBar, sameSpeaker.rhythmBar, sameSpeaker.sentenceCheck?.backwards ?? false)
+        : 0
+      expect(sameStars, senhor).not.toBe(3)
+
+      const ambulance = 'public/audio/pt-BR/cadu/emergency.ambulance__any__base.m4a'
+      const farther = scoreHeard(ambulance, decode('public/audio/pt-BR/emergency.ambulance__any__base.m4a'), 'Pode chamar uma ambulância, por favor?')
+      const farDistance = farther.sentenceCheck?.bands ?? 0
+      expect(farDistance, ambulance).toBeGreaterThan(SENTENCE_IMPOSTOR)
+      expect(barFromColours((farther.words ?? []).map((word) => word.melody)), ambulance).toBe('passt')
+      expect(farther.melodyBar, ambulance).not.toBe('daneben')
+      expect(farther.melodyBar, ambulance).toBe('teilweise')
+    },
+    60_000,
+  )
+
+  function clipHalf(file: string): 'A' | 'B' {
+    const byte = createHash('sha1').update(file).digest()[0] ?? 0
+    return byte % 2 === 0 ? 'A' : 'B'
+  }
+
+  /**
+   * Half A is the even SHA-1 byte of the line file. Counts are the calibration
+   * pass under the V2 star rule. A floor and a ceiling sit around each one.
+   * «Höchstens 1 Stern» is 0 or 1. The aim is 20 % per language and 25 % per
+   * voice. Deutsch, Englisch and Vietnamesisch stay inside that. Portugiesisch
+   * does not: 95/375 and Claribel 24/75. Those ceilings are the measured
+   * compromise, not a second rule.
+   */
+  const HALF_A_BOUNDS: Record<
+    'de' | 'en' | 'pt-BR' | 'vi',
+    {
+      otherJudged: number
+      otherLow: [number, number]
+      coloured: number
+      red: [number, number]
+      wrongJudged: number
+      wrongZero: [number, number]
+      lowShare: number
+      voiceShare: number
+    }
+  > = {
+    de: { otherJudged: 68, otherLow: [1, 3], coloured: 246, red: [55, 71], wrongJudged: 136, wrongZero: [8, 14], lowShare: 0.2, voiceShare: 0.25 },
+    en: { otherJudged: 44, otherLow: [1, 4], coloured: 105, red: [36, 50], wrongJudged: 88, wrongZero: [2, 8], lowShare: 0.2, voiceShare: 0.25 },
+    'pt-BR': { otherJudged: 375, otherLow: [85, 105], coloured: 1411, red: [300, 366], wrongJudged: 437, wrongZero: [3, 9], lowShare: 0.28, voiceShare: 0.35 },
+    vi: { otherJudged: 235, otherLow: [30, 42], coloured: 1046, red: [310, 386], wrongJudged: 353, wrongZero: [10, 18], lowShare: 0.2, voiceShare: 0.25 },
+  }
+
+  it.skipIf(!ready)(
+    'never gives a wrong sentence or a reversed take passt or three stars',
+    () => {
+      for (const lang of clipLangs) {
+        const voices = VOICES.filter((voice) => voice.bundled && voice.lang === lang)
+        const lines = allSpeechLines(rawCatalog.concepts).filter((line) => line.lang === lang)
+        const clips = voices.flatMap((voice) =>
+          lines.flatMap((line) => {
+            const audio = `public/audio/${voiceFile(line.file, voice.id, voice.legacy)}`
+            const alignVoice = lang === 'pt-BR' ? 'cadu' : voice.id
+            const alignLegacy = lang === 'pt-BR' ? false : voice.legacy
+            const align = `public/audio/${voiceFile(line.file, alignVoice, alignLegacy)}`.replace(/\.m4a$/, '.align.json')
+            if (!existsSync(audio) || !existsSync(align)) return []
+            const texts = splitWords(line.text)
+            const times = parseAlignment(JSON.parse(readFileSync(align, 'utf8')), texts.length)
+            if (!times) return []
+            const samples = decode(audio)
+            if (voice.id === alignVoice && !alignmentFitsDuration(times, samples.length / 16000)) return []
+            const features = analyzeModel(samples, 16000)
+            return [
+              {
+                voice: voice.id,
+                text: line.text,
+                file: line.file,
+                samples,
+                bands: features.bands,
+                speechBands: features.speechBands,
+                contour: features.contour,
+                energy: features.energy,
+                words: times.map((word, index) => ({ ...word, text: texts[index] ?? '' })),
+              },
+            ]
+          }),
+        )
+        expect(clips.length, lang).toBeGreaterThan(40)
+        if (lang !== 'pt-BR') {
+          let pairs = 0
+          let nearest = 99
+          let nearestLabel = ''
+          const close: { model: (typeof clips)[number]; user: (typeof clips)[number]; distance: number }[] = []
+          for (const model of clips) {
+            for (const user of clips) {
+              if (user.text === model.text) continue
+              const distance = bandDistance(model.bands, user.bands)
+              pairs += 1
+              if (distance == null) continue
+              if (distance < nearest) {
+                nearest = distance
+                nearestLabel = `${model.file} <- ${user.voice} ${user.file}`
+              }
+              if (distance <= SENTENCE_SAME) close.push({ model, user, distance })
+            }
+          }
+          expect(pairs, lang).toBeGreaterThan(1000)
+          expect(nearest, nearestLabel).toBeGreaterThan(0.15)
+          for (const pair of close) {
+            const user = analyzeUser(pair.user.samples, 16000, pair.model.bands)
+            const score = scoreRepeat({
+              model: pair.model.contour,
+              user: user.contour,
+              modelHop: 0.01,
+              userHop: 0.01,
+              words: pair.model.words,
+              lang,
+              region: pair.model.file.includes('__north__') ? 'north' : 'south',
+              userDuration: pair.user.samples.length / 16000,
+              modelEnergy: pair.model.energy,
+              userEnergy: user.energy,
+              modelBands: pair.model.bands,
+              userBands: user.bands,
+              userPlainBands: user.plainBands,
+              modelSpeechBands: pair.model.speechBands,
+              userSpeechBands: user.speechBands,
+            })
+            const label = `${lang} ${pair.distance.toFixed(3)} ${pair.model.file} <- ${pair.user.voice} ${pair.user.file}`
+            expect(score.verdict, label).not.toBe('passt')
+            const stars = score.verdict
+              ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+              : 0
+            expect(stars, label).not.toBe(3)
+          }
+        }
+        const byVoice = new Map<string, typeof clips>()
+        for (const clip of clips) {
+          const list = byVoice.get(clip.voice) ?? []
+          list.push(clip)
+          byVoice.set(clip.voice, list)
+        }
+        const grade = (model: (typeof clips)[number], samples: Float32Array) => {
+          const user = analyzeUser(samples, 16000, model.bands)
+          return scoreRepeat({
+            model: model.contour,
+            user: user.contour,
+            modelHop: 0.01,
+            userHop: 0.01,
+            words: model.words,
+            lang,
+            region: model.file.includes('__north__') ? 'north' : 'south',
+            userDuration: samples.length / 16000,
+            modelEnergy: model.energy,
+            userEnergy: user.energy,
+            modelBands: model.bands,
+            userBands: user.bands,
+            userPlainBands: user.plainBands,
+            modelSpeechBands: model.speechBands,
+            userSpeechBands: user.speechBands,
+          })
+        }
+        const refuse = (score: RepeatScore, label: string) => {
+          expect(score.verdict, label).not.toBe('passt')
+          const stars = score.verdict
+            ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+            : 0
+          expect(stars, label).not.toBe(3)
+        }
+        for (const voice of voices) {
+          const rows = byVoice.get(voice.id) ?? []
+          expect(rows.length, `${lang} ${voice.id}`).toBeGreaterThan(20)
+          let before3 = 0
+          let after3 = 0
+          const starsOf = (score: RepeatScore) =>
+            score.verdict
+              ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+              : 0
+          for (let index = 0; index < rows.length; index += 1) {
+            const row = rows[index]
+            const next = rows[(index + 1) % rows.length]
+            if (!row || !next) continue
+            const self = grade(row, row.samples)
+            if (self.melodyBar === 'passt' && self.rhythmBar === 'passt') {
+              before3 += 1
+              // Silence before and after the take, then the same file through opus.
+              // The band distance stays inside the cap. When the bars stay
+              // «passt», the third star stays too. A codec or a lead-in can
+              // move one word off green; that is not the pause.
+              const padded = grade(row, withLead(row.samples, 16000))
+              const coded = grade(row, throughOpus(row.samples, 16000))
+              const paddedBars = padded.melodyBar === 'passt' && padded.rhythmBar === 'passt'
+              const paddedBands = padded.sentenceCheck?.bands
+              const barsHeld = coded.melodyBar === 'passt' && coded.rhythmBar === 'passt'
+              const codedBands = coded.sentenceCheck?.bands
+              const silenceKept =
+                starsOf(self) === 3 &&
+                paddedBands != null &&
+                paddedBands <= VERDICT_BAND_PASST &&
+                (!paddedBars || starsOf(padded) === 3)
+              const opusKept =
+                starsOf(self) === 3 &&
+                codedBands != null &&
+                codedBands <= VERDICT_BAND_PASST &&
+                (!barsHeld || starsOf(coded) === 3)
+              if (silenceKept && opusKept) after3 += 1
+            }
+            if (next.text !== row.text) refuse(grade(row, next.samples), `${lang} ${voice.id} wrong ${row.file}`)
+            const reversed = Float32Array.from(row.samples)
+            reversed.reverse()
+            const rawBack = grade(row, reversed)
+            const reverseLabel = `${lang} ${voice.id} reverse ${row.file}`
+            refuse(rawBack, reverseLabel)
+            expect(starsOf(rawBack), reverseLabel).toBeLessThan(2)
+            if (rawBack.verdict) expect(rawBack.sentenceCheck?.backwards, reverseLabel).toBe(true)
+            if (row.samples.length / 16000 >= 0.3) {
+              const coded = throughOpus(reversed, 16000)
+              const codedUser = analyzeUser(coded, 16000, row.bands)
+              const opusLabel = `${lang} ${voice.id} opus reverse ${row.file}`
+              expect(
+                reversedRecording(row.bands, codedUser.bands) || reversedRecording(row.speechBands, codedUser.speechBands),
+                opusLabel,
+              ).toBe(true)
+              const opusScore = scoreRepeat({
+                model: row.contour,
+                user: codedUser.contour,
+                modelHop: 0.01,
+                userHop: 0.01,
+                words: row.words,
+                lang,
+                region: row.file.includes('__north__') ? 'north' : 'south',
+                userDuration: coded.length / 16000,
+                modelEnergy: row.energy,
+                userEnergy: codedUser.energy,
+                modelBands: row.bands,
+                userBands: codedUser.bands,
+                userPlainBands: codedUser.plainBands,
+                modelSpeechBands: row.speechBands,
+                userSpeechBands: codedUser.speechBands,
+              })
+              expect(starsOf(opusScore), opusLabel).toBeLessThan(2)
+              if (opusScore.verdict) expect(opusScore.sentenceCheck?.backwards, opusLabel).toBe(true)
+            }
+          }
+          expect(after3, `${lang} ${voice.id} ${after3}/${before3}`).toBe(before3)
+        }
+        const anchorId = voices.find((voice) => voice.defaultNew)?.id ?? ''
+        const anchorRows = new Map((byVoice.get(anchorId) ?? []).filter((row) => clipHalf(row.file) === 'A').map((row) => [row.file, row]))
+        let otherJudged = 0
+        let otherLow = 0
+        let otherExact = 0
+        let red = 0
+        let coloured = 0
+        let wrongJudged = 0
+        let wrongZero = 0
+        const perVoice = new Map<string, { judged: number; low: number }>()
+        for (const voice of voices) {
+          const rows = (byVoice.get(voice.id) ?? []).filter((row) => clipHalf(row.file) === 'A')
+          for (let index = 0; index < rows.length; index += 1) {
+            const row = rows[index]
+            const next = rows[(index + 1) % rows.length]
+            if (!row || !next || next.text === row.text) continue
+            const bad = grade(row, next.samples)
+            if (bad.verdict) {
+              wrongJudged += 1
+              const stars = starsFromVerdict(bad.verdict, bad.melodyBar, bad.rhythmBar, bad.sentenceCheck?.backwards ?? false)
+              if (stars === 0) wrongZero += 1
+            }
+            if (voice.id === anchorId) continue
+            const model = anchorRows.get(row.file)
+            if (!model) continue
+            const heard = grade(model, row.samples)
+            if (heard.verdict) {
+              otherJudged += 1
+              const stars = starsFromVerdict(heard.verdict, heard.melodyBar, heard.rhythmBar, heard.sentenceCheck?.backwards ?? false)
+              const slot = perVoice.get(voice.id) ?? { judged: 0, low: 0 }
+              slot.judged += 1
+              if (stars <= 1) {
+                otherLow += 1
+                slot.low += 1
+              }
+              if (stars === 1) otherExact += 1
+              perVoice.set(voice.id, slot)
+            }
+            for (const word of heard.words ?? []) {
+              if (word.color == null) continue
+              coloured += 1
+              if (word.color === 'red') red += 1
+            }
+          }
+        }
+        const bounds = HALF_A_BOUNDS[lang]
+        expect(otherLow, `${lang} höchstens 1 ${otherLow}/${otherJudged}`).toBeGreaterThan(otherExact)
+        expect(otherJudged, lang).toBe(bounds.otherJudged)
+        expect(otherLow, lang).toBeGreaterThanOrEqual(bounds.otherLow[0])
+        expect(otherLow, lang).toBeLessThanOrEqual(bounds.otherLow[1])
+        expect(coloured, lang).toBe(bounds.coloured)
+        expect(red, lang).toBeGreaterThanOrEqual(bounds.red[0])
+        expect(red, lang).toBeLessThanOrEqual(bounds.red[1])
+        expect(wrongJudged, lang).toBe(bounds.wrongJudged)
+        expect(wrongZero, lang).toBeGreaterThanOrEqual(bounds.wrongZero[0])
+        expect(wrongZero, lang).toBeLessThanOrEqual(bounds.wrongZero[1])
+        expect(otherLow / otherJudged, `${lang} höchstens 1 ${otherLow}/${otherJudged}`).toBeLessThanOrEqual(bounds.lowShare)
+        for (const [id, slot] of perVoice) {
+          expect(slot.low / slot.judged, `${lang} ${id} ${slot.low}/${slot.judged}`).toBeLessThanOrEqual(bounds.voiceShare)
+        }
+      }
+    },
+    1_800_000,
+  )
+
+  function scoreLang(
+    modelFile: string,
+    userFile: string,
+    text: string,
+    lang: 'de' | 'vi',
+  ): RepeatScore {
+    const texts = splitWords(text)
+    const times = parseAlignment(JSON.parse(readFileSync(modelFile.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+    const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+    const modelSamples = decode(modelFile)
+    const userSamples = decode(userFile)
+    const model = analyzeModel(modelSamples, 16000)
+    const user = analyzeUser(userSamples, 16000, model.bands)
+    return scoreRepeat({
+      model: model.contour,
+      user: user.contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words,
+      lang,
+      region: 'south',
+      userDuration: userSamples.length / 16000,
+      modelEnergy: model.energy,
+      userEnergy: user.energy,
+      modelBands: model.bands,
+      userBands: user.bands,
+      userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
+    })
+  }
+
+  it.skipIf(!ready || !clipLangs.includes('de'))(
+    'keeps a wrong German sentence daneben under the old direction cutoff',
+    () => {
+      const modelLine = lineByFile('de', 'de/emergency.fever__any__base.m4a')
+      const userLine = lineByFile('de', 'de/emergency.slow__any__base.m4a')
+      expect(modelLine && userLine).toBeTruthy()
+      const score = scoreLang(
+        `public/audio/${voiceFile(modelLine?.file ?? '', 'thorsten-high', false)}`,
+        `public/audio/${voiceFile(userLine?.file ?? '', 'thorsten-high', false)}`,
+        modelLine?.text ?? '',
+        'de',
+      )
+      expect(score.melodyBar).toBe('daneben')
+      const fever = score.words?.find((word) => word.text === 'Fieber.')
+      expect(fever?.melody).toBe('red')
+      expect(fever?.melodyDistance ?? 9).toBeLessThanOrEqual(3)
+    },
+    30_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('vi'))(
+    'keeps a wrong Vietnamese sentence daneben and a real word red past 3 semitones',
+    () => {
+      const modelLine = lineByFile('vi', 'vi/meet.food__any__base.m4a')
+      const userLine = lineByFile('vi', 'vi/meet.food-q__any__anh.m4a')
+      expect(modelLine && userLine).toBeTruthy()
+      const wrong = scoreLang(
+        `public/audio/${voiceFile(modelLine?.file ?? '', 'vivos-22', false)}`,
+        `public/audio/${voiceFile(userLine?.file ?? '', 'vivos-22', false)}`,
+        modelLine?.text ?? '',
+        'vi',
+      )
+      expect(wrong.melodyBar).toBe('daneben')
+      const thich = wrong.words?.find((word) => word.text === 'thích')
+      expect(thich?.melody).toBe('red')
+      expect(thich?.melodyDistance ?? 9).toBeLessThanOrEqual(3)
+
+      const allergic = lineByFile('vi', 'vi/emergency.allergic__any__base.m4a')
+      expect(allergic).not.toBeNull()
+      const tone = scoreLang(
+        `public/audio/${voiceFile(allergic?.file ?? '', 'vivos-22', false)}`,
+        `public/audio/${voiceFile(allergic?.file ?? '', 'vivos-32', false)}`,
+        allergic?.text ?? '',
+        'vi',
+      )
+      const word = tone.words?.find((item) => item.text === 'ứng.')
+      expect(word?.melody).toBe('red')
+      expect(word?.melodyDistance ?? 0).toBeGreaterThan(3)
+      expect(word?.melodyDistance ?? 9).toBeLessThanOrEqual(5)
+    },
+    60_000,
+  )
+
   it.skipIf(!ready || !clipLangs.includes('vi'))(
     'keeps the rhythm bar when a real clip fades and the decay still counts',
     () => {
@@ -800,6 +1482,8 @@ describe('shipped clips', () => {
         modelBands: model.bands,
         userBands: model.bands,
         userPlainBands: model.plainBands,
+        modelSpeechBands: model.speechBands,
+        userSpeechBands: model.speechBands,
       })
       expect(score.globalRatio ?? 0, file).toBeGreaterThan(0.7)
       expect(score.globalRatio ?? 9, file).toBeLessThan(0.9)
@@ -1074,6 +1758,8 @@ main().catch((error) => fetch('/fail', { method: 'POST', body: String(error && e
       modelBands: model.bands,
       userBands: user.bands,
       userPlainBands: user.plainBands,
+      modelSpeechBands: model.speechBands,
+      userSpeechBands: user.speechBands,
     })
   }
 

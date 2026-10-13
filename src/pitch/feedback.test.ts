@@ -4,16 +4,27 @@ import {
   DIRECTION_MIN,
   DIRECTION_OPPOSED,
   DRONE_ENERGY,
+  DIRECTION_CLEAR,
+  DIRECTION_RANGE,
   MELODY_GREEN,
+  MELODY_LIMITS,
   MOVING_RANGE,
   RHYTHM_GREEN_MAX,
   RHYTHM_GREEN_MIN,
   SPECTRAL_DISTANCE_MAX,
   contentMismatch,
+  REVERSE_BAND_GAP,
   reversedRecording,
   spectralReversed,
+  SENTENCE_IMPOSTOR,
+  SENTENCE_SAME,
+  VERDICT_BAND_PASST,
   barFromColours,
   correlation,
+  sentenceMelodyBar,
+  sentenceVerdict,
+  starsFromVerdict,
+  wordOrderScore,
   droneAgainstSpeech,
   flatContour,
   matchesBetterBackwards,
@@ -24,7 +35,7 @@ import {
   thin,
   toneSentence,
 } from './feedback'
-import { bandDistance } from './spectrum'
+import { WARP_REVERSE_GAP, bandDistance } from './spectrum'
 
 function flat(count: number, value: number | null): Contour {
   return Array.from({ length: count }, () => value)
@@ -72,6 +83,16 @@ describe('scoring bands', () => {
     expect(melodyBand(1.5)).toBe('yellow')
     expect(melodyBand(3)).toBe('yellow')
     expect(melodyBand(3.01)).toBe('red')
+    expect(melodyBand(2.49, 'pt-BR')).toBe('green')
+    expect(melodyBand(2.5, 'pt-BR')).toBe('yellow')
+    expect(melodyBand(5, 'pt-BR')).toBe('yellow')
+    expect(melodyBand(5.01, 'pt-BR')).toBe('red')
+    expect(melodyBand(1.49, 'vi')).toBe('green')
+    expect(melodyBand(1.5, 'vi')).toBe('yellow')
+    expect(melodyBand(3.01, 'vi')).toBe('red')
+    expect(MELODY_LIMITS.de).toEqual(MELODY_LIMITS.en)
+    expect(MELODY_LIMITS.vi).toEqual({ green: MELODY_GREEN, yellow: 3 })
+    expect(MELODY_LIMITS['pt-BR']).toEqual({ green: 2.5, yellow: 5 })
     expect(rhythmBand(0.7)).toBe('green')
     expect(rhythmBand(1)).toBe('green')
     expect(rhythmBand(1.4)).toBe('green')
@@ -91,6 +112,55 @@ describe('scoring bands', () => {
     expect(barFromColours(['green'])).toBe('passt')
     expect(barFromColours(['green', 'yellow'])).toBe('passt')
     expect(barFromColours([null, 'green'])).toBe('passt')
+  })
+
+  it('keeps a wrong pt-BR sentence off «passt» without moving de', () => {
+    expect(sentenceMelodyBar('passt', 'pt-BR', 0.9, SENTENCE_SAME)).toBe('passt')
+    expect(sentenceMelodyBar('passt', 'pt-BR', 0.9, SENTENCE_SAME + 0.001)).toBe('daneben')
+    expect(sentenceMelodyBar('teilweise', 'pt-BR', 0.9, SENTENCE_IMPOSTOR)).toBe('daneben')
+    expect(sentenceMelodyBar('passt', 'pt-BR', 0.9, SENTENCE_IMPOSTOR + 0.01)).toBe('teilweise')
+    expect(sentenceMelodyBar('daneben', 'pt-BR', 0.9, 0.5)).toBe('daneben')
+    expect(sentenceMelodyBar('passt', 'pt-BR', -0.2, 0.1)).toBe('daneben')
+    expect(sentenceMelodyBar('passt', 'pt-BR', 0.1, 0.1)).toBe('teilweise')
+    expect(sentenceMelodyBar('passt', 'pt-BR', -0.9, 0.5)).toBe('teilweise')
+    expect(sentenceMelodyBar('passt', 'de', -0.9, 0.5)).toBe('passt')
+    expect(sentenceMelodyBar('passt', 'vi', -0.9, 0.2)).toBe('passt')
+    expect(sentenceMelodyBar(null, 'pt-BR', -0.9, 0.5)).toBeNull()
+  })
+
+  it('grades the sentence from contour, direction and word order', () => {
+    const same = { correlation: 0.9, opposedShare: 0, order: 1, bands: 0.1, backwards: false }
+    expect(sentenceVerdict(same)).toBe('passt')
+    expect(starsFromVerdict('passt', 'passt', 'passt')).toBe(3)
+    expect(sentenceVerdict({ ...same, opposedShare: 0.5 })).toBe('passt')
+    expect(sentenceVerdict({ ...same, opposedShare: 0.51 })).toBe('teilweise')
+    expect(sentenceVerdict({ ...same, bands: VERDICT_BAND_PASST })).toBe('passt')
+    expect(sentenceVerdict({ ...same, bands: VERDICT_BAND_PASST + 0.02 })).toBe('teilweise')
+    expect(sentenceVerdict({ ...same, bands: SENTENCE_SAME + 0.02 })).toBe('teilweise')
+    expect(sentenceVerdict({ ...same, correlation: -0.05 })).toBe('daneben')
+    expect(sentenceVerdict({ ...same, correlation: -0.05 }, 'pt-BR')).toBe('daneben')
+    expect(sentenceVerdict({ ...same, correlation: -0.05 }, 'vi')).toBe('daneben')
+    expect(sentenceVerdict({ ...same, correlation: -0.05 }, 'en')).toBe('teilweise')
+    expect(sentenceVerdict({ ...same, correlation: -0.4 }, 'en')).toBe('teilweise')
+    expect(sentenceVerdict({ ...same, correlation: -0.41 }, 'en')).toBe('daneben')
+    expect(sentenceVerdict({ ...same, correlation: 0 })).toBe('teilweise')
+    expect(starsFromVerdict('teilweise', 'passt', 'teilweise')).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise')).toBe(2)
+    expect(starsFromVerdict('teilweise', 'daneben', 'daneben')).toBe(2)
+    expect(starsFromVerdict('passt', 'daneben', 'daneben')).toBe(2)
+    expect(starsFromVerdict('passt', 'teilweise', 'teilweise')).toBe(2)
+    expect(starsFromVerdict('daneben', 'teilweise', 'daneben')).toBe(1)
+    expect(starsFromVerdict('daneben', 'daneben', 'teilweise')).toBe(1)
+    expect(starsFromVerdict('daneben', 'daneben', 'passt')).toBe(2)
+    expect(sentenceVerdict({ ...same, correlation: -0.5 })).toBe('daneben')
+    expect(sentenceVerdict({ ...same, backwards: true })).toBe('daneben')
+    expect(sentenceVerdict({ ...same, order: 0.2 })).toBe('daneben')
+    expect(starsFromVerdict('daneben', 'daneben', 'daneben')).toBe(0)
+    expect(starsFromVerdict('daneben', 'passt', 'passt')).toBe(2)
+    expect(starsFromVerdict('passt', 'passt', 'passt', true)).toBe(0)
+    expect(WARP_REVERSE_GAP).toBe(REVERSE_BAND_GAP)
+    expect(wordOrderScore([{ userStart: 0, userEnd: 0.2 }, { userStart: 0.3, userEnd: 0.5 }])).toBe(1)
+    expect(wordOrderScore([{ userStart: 0.4, userEnd: 0.6 }, { userStart: 0.1, userEnd: 0.2 }])).toBe(0)
   })
 })
 
@@ -1130,6 +1200,45 @@ describe('repeat alignment', () => {
     expect(score.words?.[0]?.melody).toBe('yellow')
   })
 
+  it('leaves a small opposite contour yellow and paints a clear turn red', () => {
+    const count = 40
+    const wave = (scale: number) => Array.from({ length: count }, (_, index) => scale * Math.sin((2 * Math.PI * index) / 8))
+    const mildModel = wave(0.7)
+    const mildUser = mildModel.map((value) => -value)
+    const mild = scoreRepeat({
+      model: mildModel,
+      user: mildUser,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.4 }],
+      lang: 'pt-BR',
+      region: 'south',
+      userDuration: 0.5,
+    })
+    expect(correlation(mildModel, mildUser) ?? 0).toBeLessThan(DIRECTION_CLEAR)
+    expect(Math.max(...mildModel) - Math.min(...mildModel)).toBeLessThan(DIRECTION_RANGE)
+    expect(mild.unclear).toBe(false)
+    expect(mild.words?.[0]?.melodyDistance ?? 9).toBeLessThan(MELODY_LIMITS['pt-BR'].green)
+    expect(mild.words?.[0]?.melody).toBe('yellow')
+    const wideModel = wave(DIRECTION_RANGE)
+    const wideUser = wideModel.map((value) => -value)
+    const turned = scoreRepeat({
+      model: wideModel,
+      user: wideUser,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.4 }],
+      lang: 'pt-BR',
+      region: 'south',
+      userDuration: 0.5,
+    })
+    expect(correlation(wideModel, wideUser) ?? 0).toBeLessThan(DIRECTION_CLEAR)
+    expect(Math.max(...wideModel) - Math.min(...wideModel)).toBeGreaterThanOrEqual(DIRECTION_RANGE)
+    expect(turned.unclear).toBe(false)
+    expect(turned.words?.[0]?.melodyDistance ?? 9).toBeLessThanOrEqual(MELODY_LIMITS['pt-BR'].yellow)
+    expect(turned.words?.[0]?.melody).toBe('red')
+  })
+
   it('paints one opposed word red without calling the whole take unclear', () => {
     const wave = (sign: number) => Array.from({ length: 40 }, (_, index) => sign * Math.sin((2 * Math.PI * index) / 8))
     const model = [...wave(1), ...wave(1)]
@@ -1182,6 +1291,41 @@ describe('repeat alignment', () => {
     expect(kept.unclear).toBe(false)
     expect(kept.melodyBar).not.toBeNull()
     expect(kept.rhythmBar).not.toBeNull()
+  })
+
+  it('keeps the lower band distance when silence trimming and the raw take disagree', () => {
+    const contour = ramp(36, -1, 2)
+    const file = Array.from({ length: 36 }, (_, index) =>
+      Array.from({ length: 12 }, (_, band) => Math.sin((index + 1) * (band + 1) * 0.17) * (band + 1)),
+    )
+    const other = Array.from({ length: 36 }, (_, index) => Array.from({ length: 12 }, (_, band) => ((index * 3 + band) % 7) - 3))
+    const base = {
+      model: contour,
+      user: contour,
+      modelHop: 0.01,
+      userHop: 0.01,
+      words: [{ text: 'qua', start: 0, end: 0.36 }],
+      lang: 'de' as const,
+      region: 'south' as const,
+      userDuration: 0.5,
+    }
+    const trimmed = scoreRepeat({
+      ...base,
+      modelBands: other,
+      userBands: file,
+      modelSpeechBands: file,
+      userSpeechBands: file,
+    })
+    const raw = scoreRepeat({
+      ...base,
+      modelBands: file,
+      userBands: file,
+      modelSpeechBands: other,
+      userSpeechBands: file,
+    })
+    expect(trimmed.sentenceCheck?.bands ?? 1).toBeLessThan(0.05)
+    expect(raw.sentenceCheck?.bands ?? 1).toBeLessThan(0.05)
+    expect(bandDistance(other, file) ?? 0).toBeGreaterThan(0.2)
   })
 
   it('locks a band shape that fits the file better backwards', () => {

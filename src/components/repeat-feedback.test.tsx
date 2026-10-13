@@ -146,6 +146,8 @@ describe('repeat feedback view', () => {
     expect(input?.userBands?.length ?? 0).toBeGreaterThan(8)
     expect(input?.modelBands?.find((frame) => frame.length > 0)?.length).toBe(12)
     expect(input?.userBands?.find((frame) => frame.length > 0)?.length).toBe(12)
+    expect(input?.modelSpeechBands?.length ?? 0).toBeGreaterThan(8)
+    expect(input?.userSpeechBands?.length ?? 0).toBeGreaterThan(8)
   })
 
   it('shows the missing-times line only once the timings are known to be absent', () => {

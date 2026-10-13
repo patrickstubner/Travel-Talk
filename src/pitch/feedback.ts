@@ -43,13 +43,28 @@ import { bandDistance } from './spectrum'
  * tail, or one or two leftover frames, would stretch the map and drop
  * later words into the gaps. A word whose model moves by MOVING_RANGE
  * needs that movement in the same direction, otherwise it stays at most
- * yellow. Local stretch stays inside about 0.75–1.33. When the local
+ * yellow. Local stretch stays inside about 0.75–1.33 and is only kept
+ * when it lands inside that language's green band. When the local
  * window misses every word but the model word has enough voice, the
  * whole-path distance still colours those words. A second voice often
  * sits outside the four-frame window.
+ *
+ * Melody bands live in MELODY_LIMITS. pt-BR is wider: at 1.5/3 a correct
+ * second voice was red on about two words in five. vi stays tight because
+ * a tone is a small movement. de and en stay on the first-version band.
  */
-export const MELODY_GREEN = 1.5
-export const MELODY_YELLOW = 3
+export type MelodyLimits = { readonly green: number; readonly yellow: number }
+
+export const MELODY_LIMITS: Record<Lang, MelodyLimits> = {
+  de: { green: 1.5, yellow: 3 },
+  en: { green: 1.5, yellow: 3 },
+  'pt-BR': { green: 2.5, yellow: 5 },
+  vi: { green: 1.5, yellow: 3 },
+}
+
+/** First-version band. de, en and vi still use it. pt-BR does not. */
+export const MELODY_GREEN = MELODY_LIMITS.de.green
+export const MELODY_YELLOW = MELODY_LIMITS.de.yellow
 export const RHYTHM_GREEN_MIN = 0.7
 export const RHYTHM_GREEN_MAX = 1.4
 export const RHYTHM_YELLOW_MIN = 0.5
@@ -63,8 +78,30 @@ export const COLOURED_SHARE = 0.6
 export const VOICE_COVERAGE = 0.5
 /** A word below this correlation does not stay green. */
 export const DIRECTION_MIN = 0.3
-/** Below this, a word runs the other way. Every such word makes the take «unklar». */
+/**
+ * Below this, a word runs the other way for the whole-take check.
+ * It does not by itself paint the word red.
+ */
 export const DIRECTION_OPPOSED = -0.15
+/**
+ * Clear counter-movement, measured on the DTW path of the band shape.
+ *
+ * Pearson r of −0.4 sits between a moderate association (|r| ≈ 0.3) and a
+ * large one (|r| ≈ 0.5). The old cutoff of −0.15 used a linear map. A pause
+ * in a different place shifted the two curves and the word went red even
+ * when the tune was the same: on correct second pt-BR voices, 210 red
+ * melody words had a distance of at most 3. The DTW path has already lined
+ * the frames up, so a correlation that is still under −0.4 is the tune
+ * going the other way, not a lag. Anything milder stays at most yellow.
+ */
+export const DIRECTION_CLEAR = -0.4
+/**
+ * Semitones the file's word must cover before that negative correlation can
+ * paint it red. Two semitones is a rise or fall a listener hears as another
+ * tune, and it is twice MOVING_RANGE. Under that, a sign flip on a nearly
+ * level word is noise and stays at most yellow.
+ */
+export const DIRECTION_RANGE = 2
 /** Loudness of a drone barely moves. Speech does. */
 export const DRONE_ENERGY = 0.12
 export const SPEECH_ENERGY = 0.15
@@ -149,11 +186,15 @@ export type RepeatScore = {
   reason: 'short' | 'quiet' | 'file' | 'noTimes' | 'unclear' | 'few' | null
   /** The band shape is closer to a different sentence. The bars can stay. */
   otherSentence: boolean
+  /** Sentence check. Null when the take was not scored. Stars stay off the score. */
+  sentenceCheck: SentenceCheck | null
+  verdict: BarState | null
 }
 
-export function melodyBand(distance: number): Band {
-  if (distance < MELODY_GREEN) return 'green'
-  if (distance <= MELODY_YELLOW) return 'yellow'
+export function melodyBand(distance: number, lang: Lang = 'de'): Band {
+  const limits = MELODY_LIMITS[lang]
+  if (distance < limits.green) return 'green'
+  if (distance <= limits.yellow) return 'yellow'
   return 'red'
 }
 
@@ -699,6 +740,7 @@ function matchLocal(
   frameEnd: number,
   modelSpan: { start: number; end: number },
   userSpan: { start: number; end: number },
+  green: number,
 ): { mean: number; scale: number; shift: number; count: number } | null {
   let atOne: { mean: number; scale: number; shift: number; count: number } | null = null
   for (let shift = -4; shift <= 4; shift += 2) {
@@ -706,13 +748,13 @@ function matchLocal(
     if (found && (!atOne || found.mean < atOne.mean)) atOne = { ...found, scale: 1, shift }
   }
   if (!atOne) return null
-  if (atOne.mean < MELODY_GREEN) return atOne
+  if (atOne.mean < green) return atOne
   let best = atOne
   for (const scale of LOCAL_SCALES) {
     if (scale === 1) continue
     for (let shift = -4; shift <= 4; shift += 2) {
       const found = distanceAt(model, user, frame, frameEnd, modelSpan, userSpan, scale, shift)
-      if (!found || found.mean >= MELODY_GREEN) continue
+      if (!found || found.mean >= green) continue
       if (found.mean < best.mean) best = { ...found, scale, shift }
     }
   }
@@ -1067,6 +1109,152 @@ function worseBar(left: BarState, right: BarState): BarState {
   return rank[left] >= rank[right] ? left : right
 }
 
+/**
+ * Above this, the sounds are not the file. A take of the same file sits at
+ * 0 before a codec. On half B (odd SHA-1 byte of the line file, measured
+ * once) the closest other pt-BR sentence is cadu «senhor» against «senhora»
+ * on the hobby question, plain distance 0.303. 0.26 stays under that.
+ */
+export const SENTENCE_SAME = 0.26
+
+/**
+ * Same-speaker other sentences start just above SENTENCE_SAME. Against cadu
+ * on half B, another voice of the right sentence stays above this: the
+ * lowest is tammie «Olá, tudo bem?», plain distance 0.388, and the sentence
+ * distance used by the bar is 0.380. Two other voices against each other
+ * can sit lower (tammie against gracie on the job question, 0.290). In
+ * between, the file's own voice is saying something else, and the bar is
+ * «daneben». The numbers are the half-B measurement. The thresholds stay.
+ */
+export const SENTENCE_IMPOSTOR = 0.37
+
+/**
+ * Proposed sentence thresholds. The final numbers are set after the held-out
+ * half of the clips is reviewed. Half A is the even SHA-1 byte of the line
+ * file, half B the odd byte.
+ */
+export const VERDICT_PASST_CORR = 0.2
+/**
+ * A pitch correlation below this is already «daneben».
+ * German, Portuguese and Vietnamese use 0. English uses −0.4: a mild
+ * negative contour there is still the sentence, and 0 was marking correct
+ * other voices «daneben» too often.
+ */
+export const VERDICT_DANEBEN_CORR = 0
+export const VERDICT_DANEBEN_CORR_EN = -0.4
+
+export function danebenCorrelation(lang: Lang): number {
+  return lang === 'en' ? VERDICT_DANEBEN_CORR_EN : VERDICT_DANEBEN_CORR
+}
+/** joe «wifi» against itself marks half its words opposed. Proposed. */
+export const VERDICT_OPPOSED_PASST = 0.5
+export const VERDICT_OPPOSED_DANEBEN = 0.67
+export const VERDICT_ORDER_DANEBEN = 0.5
+/**
+ * «passt» only while the band sequence is still this file.
+ * Silence at both ends is cut first. The sentence then keeps the lower
+ * of that cut and the uncut take, so a codec pass that moves the cut
+ * does not raise the distance. On half A a padded copy of the same file
+ * sits at 0, and an opus pass stays under about 0.17. The nearest wrong
+ * line that would otherwise pass is a vais1000 address variant at about
+ * 0.224. Proposed.
+ */
+export const VERDICT_BAND_PASST = 0.2
+
+export type SentenceCheck = {
+  /** Pearson of the pitch contour on the DTW path. Null when the tune is level. */
+  correlation: number | null
+  /** Share of judged words whose tune runs the other way. */
+  opposedShare: number
+  /**
+   * Share of successive words whose DTW user-span still moves forward.
+   * Null when fewer than two words can be placed.
+   */
+  order: number | null
+  /** DTW cost of the band sequence. Null when the take has no bands. */
+  bands: number | null
+  backwards: boolean
+}
+
+/**
+ * Whether the spoken line is the file.
+ *
+ * «passt» needs the pitch contour to agree and the band sequence to still be
+ * the file. A contour below 0, a run of opposed words, a word order that
+ * folds back, or a reversed take is «daneben». Everything else is «teilweise».
+ */
+export function sentenceVerdict(check: SentenceCheck, lang: Lang = 'de'): BarState {
+  if (check.backwards) return 'daneben'
+  if (check.order != null && check.order < VERDICT_ORDER_DANEBEN) return 'daneben'
+  if (check.correlation != null && check.correlation < danebenCorrelation(lang)) return 'daneben'
+  if (check.opposedShare >= VERDICT_OPPOSED_DANEBEN) return 'daneben'
+  const orderOk = check.order == null || check.order >= VERDICT_ORDER_DANEBEN
+  const soundOk = check.bands == null || check.bands <= VERDICT_BAND_PASST
+  const directionOk = check.correlation == null || check.correlation >= VERDICT_PASST_CORR
+  if (orderOk && soundOk && directionOk && check.opposedShare <= VERDICT_OPPOSED_PASST) return 'passt'
+  return 'teilweise'
+}
+
+/**
+ * Star count for a later release. Not stored on the score.
+ *
+ * 3 only when the sentence is «passt» and both bars are «passt».
+ * «passt» and «teilweise» stay at 2. On «daneben», 2 only when a bar is
+ * «passt», 1 when the better bar is yellow, otherwise 0. A reversed take
+ * is 0. The held-out check counts 0 and 1 together.
+ */
+export function starsFromVerdict(
+  verdict: BarState,
+  melody: BarState | null,
+  rhythm: BarState | null,
+  backwards = false,
+): 0 | 1 | 2 | 3 {
+  if (backwards) return 0
+  const green = [melody, rhythm].filter((bar) => bar === 'passt').length
+  const yellow = [melody, rhythm].filter((bar) => bar === 'teilweise').length
+  if (verdict === 'passt' && green === 2) return 3
+  if (verdict === 'daneben') {
+    if (green >= 1) return 2
+    if (yellow >= 1) return 1
+    return 0
+  }
+  return 2
+}
+
+/** Share of successive placed words whose recording span still moves forward. */
+export function wordOrderScore(words: ReadonlyArray<{ userStart: number; userEnd: number }> | null): number | null {
+  const placed = (words ?? []).filter((word) => word.userEnd > word.userStart)
+  if (placed.length < 2) return null
+  let forward = 0
+  for (let index = 1; index < placed.length; index += 1) {
+    if ((placed[index]?.userStart ?? 0) + 0.03 >= (placed[index - 1]?.userStart ?? 0)) forward += 1
+  }
+  return forward / (placed.length - 1)
+}
+
+/**
+ * pt-BR word colours use the wide band. The bar is stricter. It does not
+ * say «passt» unless the band shape is still the file. A same-speaker
+ * impostor is «daneben». On the file itself, a whole-take contour under
+ * the old opposed cutoff is «daneben», and one under DIRECTION_MIN is not
+ * «passt». de, en and vi keep the bar taken from the word colours.
+ */
+export function sentenceMelodyBar(
+  bar: BarState | null,
+  lang: Lang,
+  takeCorr: number | null,
+  bands: number | null,
+): BarState | null {
+  if (bar == null || lang !== 'pt-BR') return bar
+  if (bands != null && bands > SENTENCE_SAME && bands <= SENTENCE_IMPOSTOR) return 'daneben'
+  const onFile = bands == null || bands <= SENTENCE_SAME
+  let next = bar
+  if (onFile && takeCorr != null && takeCorr < DIRECTION_OPPOSED) next = 'daneben'
+  else if (onFile && takeCorr != null && takeCorr < DIRECTION_MIN && next === 'passt') next = 'teilweise'
+  if (bands != null && bands > SENTENCE_SAME && next === 'passt') next = 'teilweise'
+  return next
+}
+
 function globalBar(ratio: number): BarState {
   const band = rhythmBand(ratio)
   if (band === 'green') return 'passt'
@@ -1094,6 +1282,12 @@ export function scoreRepeat(input: {
    * so the reverse lock uses these when they are present.
    */
   userPlainBands?: readonly (readonly number[])[] | null
+  /**
+   * Bands after leading and trailing silence is cut. The sentence distance
+   * uses these when both sides have them. Absent on the synthetic fixtures.
+   */
+  modelSpeechBands?: readonly (readonly number[])[] | null
+  userSpeechBands?: readonly (readonly number[])[] | null
 }): RepeatScore {
   const modelThin = thin(input.model, input.modelHop > 0 ? input.modelHop : 0.01)
   const userThin = thin(input.user, input.userHop > 0 ? input.userHop : 0.01)
@@ -1123,15 +1317,30 @@ export function scoreRepeat(input: {
     fewWords: false,
     globalRatio: null,
     otherSentence: false,
+    sentenceCheck: null,
+    verdict: null,
     reason: tooShort ? 'short' : fileThin ? 'file' : tooLittleVoice ? 'quiet' : null,
   }
   const lockBands = input.userPlainBands && input.userPlainBands.length > 0 ? input.userPlainBands : input.userBands
   const lockKnown = Boolean(input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0)
-  const bandReversed = reversedRecording(input.modelBands, lockBands)
+  // Plain bands and the silence-trimmed bands. Opus padding can move one
+  // of the two; either one fitting backwards is the file played backwards.
+  const bandReversed =
+    reversedRecording(input.modelBands, lockBands) ||
+    reversedRecording(input.modelSpeechBands, input.userSpeechBands)
   if (tooShort) return empty
   if (fileThin) return { ...empty, tooLittleVoice: false, reason: 'file' }
   // A reversed file can lose its tracked pitch. That is still «unklar», not a quiet take.
-  if (bandReversed) return { ...empty, tooLittleVoice: false, unclear: true, reason: 'unclear' }
+  if (bandReversed) {
+    return {
+      ...empty,
+      tooLittleVoice: false,
+      unclear: true,
+      reason: 'unclear',
+      verdict: 'daneben',
+      sentenceCheck: { correlation: null, opposedShare: 1, order: null, bands: null, backwards: true },
+    }
+  }
   if (tooLittleVoice) return empty
   const modelEnergy = thinEnergy(input.modelEnergy, input.model.length)
   const userEnergy = thinEnergy(input.userEnergy, input.user.length)
@@ -1173,6 +1382,10 @@ export function scoreRepeat(input: {
       unclear: true,
       tooLittleVoice: false,
       reason: 'unclear',
+      verdict: reversed ? 'daneben' : null,
+      sentenceCheck: reversed
+        ? { correlation: forward, opposedShare: 1, order: null, bands: null, backwards: true }
+        : null,
     }
   }
   if (!input.words || input.words.length === 0) {
@@ -1209,7 +1422,8 @@ export function scoreRepeat(input: {
     }
     const scorable = modelVoiced >= MIN_WORD_VOICED
     const aligned = rangeOnPath(rhythmAlign, frame, frameEnd)
-    const matched = scorable && word.end > word.start ? matchLocal(model, heard, frame, frameEnd, modelSpan, userSpan) : null
+    const green = MELODY_LIMITS[input.lang].green
+    const matched = scorable && word.end > word.start ? matchLocal(model, heard, frame, frameEnd, modelSpan, userSpan, green) : null
     const plainStart = mappedFrame(frame, modelSpan, userSpan)
     const plainEnd = mappedFrame(Math.max(frame, frameEnd - 1), modelSpan, userSpan)
     const userFrame = aligned ? aligned.userStart : Math.max(0, Math.round(Math.min(plainStart, plainEnd)))
@@ -1253,7 +1467,11 @@ export function scoreRepeat(input: {
       const rhythm = rhythmBand(fromPath)
       return { ...base, color: rhythm, rhythm, rawRatio: fromPath }
     }
-    const pitchCorr = wordCorrelation(model, heard, path, frame, frameEnd)
+    // pt-BR reads direction on the DTW path, so a pause in a different place
+    // does not flip the sign. de, en and vi keep the linear path and the
+    // first-version cutoff: a mild opposite contour is already red there.
+    const pitchPath = input.lang === 'pt-BR' ? (rhythmAlign ?? path) : path
+    const pitchCorr = wordCorrelation(model, heard, pitchPath, frame, frameEnd)
     const modelShape = describeShape(model.slice(frame, frameEnd))
     const userSlice = heard.slice(Math.min(userFrame, heard.length), Math.min(heard.length, userFrameEnd))
     const userShape = describeShape(userSlice)
@@ -1263,9 +1481,17 @@ export function scoreRepeat(input: {
     const userRange = voicedRange(userSlice) ?? 0
     // A null correlation is too little movement to judge.
     const follows = pitchCorr != null && pitchCorr >= DIRECTION_MIN && userRange >= MOVING_RANGE
-    let melody = melodyBand(matched.mean)
-    if (pitchCorr != null && pitchCorr < DIRECTION_OPPOSED) melody = 'red'
-    else if (pitchCorr != null && pitchCorr < DIRECTION_MIN && melody === 'green') melody = 'yellow'
+    let melody = melodyBand(matched.mean, input.lang)
+    if (input.lang === 'pt-BR') {
+      // Wide word colours. Red from direction only for a clear turn.
+      const clearTurn = pitchCorr != null && pitchCorr < DIRECTION_CLEAR && modelRange >= DIRECTION_RANGE
+      if (clearTurn) melody = 'red'
+      else if (pitchCorr != null && pitchCorr < DIRECTION_MIN && melody === 'green') melody = 'yellow'
+    } else if (pitchCorr != null && pitchCorr < DIRECTION_OPPOSED) {
+      melody = 'red'
+    } else if (pitchCorr != null && pitchCorr < DIRECTION_MIN && melody === 'green') {
+      melody = 'yellow'
+    }
     if (scorable && modelRange >= MOVING_RANGE && pitchCorr != null && !follows && melody === 'green') {
       melody = 'yellow'
     }
@@ -1306,7 +1532,7 @@ export function scoreRepeat(input: {
       ? words
       : words.map((word) => {
           if (!word.scorable) return word
-          const melody = melodyBand(meanDistance)
+          const melody = melodyBand(meanDistance, input.lang)
           const aligned = rangeOnPath(rhythmAlign, word.modelFrame, word.modelFrameEnd)
           const fromPath = aligned ? ratioFromRange(aligned, globalRatio, modelHop, userHop) : null
           const rawRatio =
@@ -1326,6 +1552,8 @@ export function scoreRepeat(input: {
   const rhythmColours = rhythmWords ? worseBar(globalBar(globalRatio), rhythmWords) : null
   const hasColour = scoredWords.some((word) => word.color != null)
   if (takeRunsBackwards(directions) && !hasColour) {
+    const known = directions.filter((direction) => direction !== 'unknown')
+    const opposedShare = known.length === 0 ? 1 : known.filter((direction) => direction === 'opposed').length / known.length
     return {
       model,
       user: heard,
@@ -1343,10 +1571,45 @@ export function scoreRepeat(input: {
       tooShort: false,
       globalRatio,
       otherSentence: false,
+      sentenceCheck: {
+        correlation: forward,
+        opposedShare,
+        order: wordOrderScore(scoredWords),
+        bands: null,
+        backwards: true,
+      },
+      verdict: 'daneben',
       reason: 'unclear',
     }
   }
-  const melodyBar = melodyColours
+  const fullBands =
+    input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0
+      ? bandDistance(input.modelBands, lockBands)
+      : null
+  const spokenBands =
+    input.modelSpeechBands &&
+    input.userSpeechBands &&
+    input.modelSpeechBands.length > 0 &&
+    input.userSpeechBands.length > 0
+      ? bandDistance(input.modelSpeechBands, input.userSpeechBands)
+      : null
+  // Silence at the ends moves the window, so the trimmed distance is the one
+  // that still matches the file. A codec pass can move the energy cut, and
+  // then the untrimmed distance is the lower one. The sentence uses the lower.
+  const takeBands = fullBands == null ? spokenBands : spokenBands == null ? fullBands : Math.min(fullBands, spokenBands)
+  const alignedCorr = contourCorrelation(model, heard, rhythmAlign ?? path)
+  const knownDirections = directions.filter((direction) => direction !== 'unknown')
+  const opposedShare =
+    knownDirections.length === 0 ? 0 : knownDirections.filter((direction) => direction === 'opposed').length / knownDirections.length
+  const sentenceCheck: SentenceCheck = {
+    correlation: alignedCorr,
+    opposedShare,
+    order: wordOrderScore(scoredWords),
+    bands: takeBands,
+    backwards: false,
+  }
+  const verdict = sentenceVerdict(sentenceCheck, input.lang)
+  const melodyBar = sentenceMelodyBar(melodyColours, input.lang, forward, takeBands)
   const rhythmBar = rhythmColours
   const scorable = scoredWords.filter((word) => word.scorable)
   const coloured = scorable.filter((word) => word.color != null).length
@@ -1372,6 +1635,8 @@ export function scoreRepeat(input: {
     tooShort: false,
     globalRatio,
     otherSentence: false,
+    sentenceCheck,
+    verdict: hasColour ? verdict : null,
     reason: hasColour && !fewWords ? null : 'few',
   }
 }

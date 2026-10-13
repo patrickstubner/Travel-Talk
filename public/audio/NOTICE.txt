@@ -10,7 +10,7 @@ Deutsch, mittlere Qualität, ohne Stimmordner: de_DE-thorsten-medium. Derselbe D
 
 Portugiesisch (Brasilien), Ordner pt-BR/cadu: pt_BR-cadu-medium. Datensatz über OHF-Voice, CC0. https://github.com/OHF-Voice/voice-datasets. Die Stimme ist kein CC0. Feintuning von lessac (medium). Die Modellkarte nennt das Geschlecht nicht. Die veröffentlichte Hörprobe des Datensatzes liegt bei etwa 143 Hz, die Synthese dieser Version bei etwa 119 Hz.
 
-Portugiesisch (Brasilien), ohne Stimmordner: pt_BR-faber-medium. Datensatz über OHF-Voice, CC0. Die Stimme ist kein CC0. Feintuning von lessac (medium). Die Modellkarte nennt das Geschlecht nicht. Die veröffentlichte Hörprobe liegt bei etwa 202 Hz.
+Portugiesisch (Brasilien), ohne Stimmordner: pt_BR-faber-medium. Datensatz über OHF-Voice, CC0. Die Stimme ist kein CC0. Feintuning von lessac (medium). Die Modellkarte nennt das Geschlecht nicht. Die Beschreibung des Datensatzes Faber 1.0 (Open Home Foundation, Mozilla Data Collective, https://mozilladatacollective.com/datasets/cmiupazq801ftnv079bo1zu4h) nennt einen männlichen Sprecher. Dieselbe Seite sagt im Demografie-Absatz, Alter und Geschlecht seien nicht angegeben und der Name folge der Wahl der sprechenden Person. Die beiden Angaben widersprechen sich. Die App löst das nicht durch Zuhören und folgt nur der Zeile «male speaker». Die veröffentlichte Hörprobe liegt bei etwa 202 Hz. Diese Tonhöhe ist keine Bestimmung des Geschlechts.
 
 Englisch, Ordner en/joe: en_US-joe-medium. Datensatz über OHF-Voice, CC0. Die Stimme ist kein CC0. Feintuning von lessac (medium). Die Modellkarte nennt das Geschlecht nicht. Die Hörprobe liegt bei etwa 110 Hz, die Synthese bei etwa 99 Hz.
 
