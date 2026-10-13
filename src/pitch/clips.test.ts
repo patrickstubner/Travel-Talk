@@ -1041,16 +1041,17 @@ describe('shipped clips', () => {
    * Half A is the even SHA-1 byte of the line file. Counts are the calibration
    * pass. A floor and a ceiling sit around each one, so a mutant that moves
    * the distribution either way fails. «Höchstens 1 Stern» is 0 or 1, not
-   * exactly 1. The 20 % aim is not met on this half.
+   * exactly 1. On this half that share stays at or under 20 % per language
+   * and 30 % for any one voice.
    */
   const HALF_A_BOUNDS: Record<
     'de' | 'en' | 'pt-BR' | 'vi',
     { otherJudged: number; otherLow: [number, number]; coloured: number; red: [number, number]; wrongJudged: number; wrongZero: [number, number] }
   > = {
-    de: { otherJudged: 68, otherLow: [16, 22], coloured: 246, red: [55, 71], wrongJudged: 136, wrongZero: [56, 72] },
-    en: { otherJudged: 44, otherLow: [17, 23], coloured: 105, red: [36, 50], wrongJudged: 88, wrongZero: [28, 40] },
-    'pt-BR': { otherJudged: 375, otherLow: [130, 154], coloured: 1411, red: [300, 366], wrongJudged: 437, wrongZero: [100, 124] },
-    vi: { otherJudged: 235, otherLow: [44, 56], coloured: 1046, red: [310, 386], wrongJudged: 353, wrongZero: [108, 136] },
+    de: { otherJudged: 68, otherLow: [1, 3], coloured: 246, red: [55, 71], wrongJudged: 136, wrongZero: [8, 14] },
+    en: { otherJudged: 44, otherLow: [1, 4], coloured: 105, red: [36, 50], wrongJudged: 88, wrongZero: [2, 8] },
+    'pt-BR': { otherJudged: 375, otherLow: [16, 26], coloured: 1411, red: [300, 366], wrongJudged: 437, wrongZero: [3, 9] },
+    vi: { otherJudged: 235, otherLow: [6, 12], coloured: 1046, red: [310, 386], wrongJudged: 353, wrongZero: [10, 18] },
   }
 
   it.skipIf(!ready)(
@@ -1222,6 +1223,7 @@ describe('shipped clips', () => {
         let coloured = 0
         let wrongJudged = 0
         let wrongZero = 0
+        const perVoice = new Map<string, { judged: number; low: number }>()
         for (const voice of voices) {
           const rows = (byVoice.get(voice.id) ?? []).filter((row) => clipHalf(row.file) === 'A')
           for (let index = 0; index < rows.length; index += 1) {
@@ -1241,8 +1243,14 @@ describe('shipped clips', () => {
             if (heard.verdict) {
               otherJudged += 1
               const stars = starsFromVerdict(heard.verdict, heard.melodyBar, heard.rhythmBar, heard.sentenceCheck?.backwards ?? false)
-              if (stars <= 1) otherLow += 1
+              const slot = perVoice.get(voice.id) ?? { judged: 0, low: 0 }
+              slot.judged += 1
+              if (stars <= 1) {
+                otherLow += 1
+                slot.low += 1
+              }
               if (stars === 1) otherExact += 1
+              perVoice.set(voice.id, slot)
             }
             for (const word of heard.words ?? []) {
               if (word.color == null) continue
@@ -1262,6 +1270,10 @@ describe('shipped clips', () => {
         expect(wrongJudged, lang).toBe(bounds.wrongJudged)
         expect(wrongZero, lang).toBeGreaterThanOrEqual(bounds.wrongZero[0])
         expect(wrongZero, lang).toBeLessThanOrEqual(bounds.wrongZero[1])
+        expect(otherLow / otherJudged, `${lang} höchstens 1 ${otherLow}/${otherJudged}`).toBeLessThanOrEqual(0.2)
+        for (const [id, slot] of perVoice) {
+          expect(slot.low / slot.judged, `${lang} ${id} ${slot.low}/${slot.judged}`).toBeLessThanOrEqual(0.3)
+        }
       }
     },
     1_200_000,

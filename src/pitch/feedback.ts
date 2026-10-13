@@ -1186,11 +1186,12 @@ export function sentenceVerdict(check: SentenceCheck): BarState {
  * Star count for a later release. Not stored on the score.
  *
  * 3 only when the sentence is «passt» and both bars are «passt».
- * 2 when the sentence is «passt» or «teilweise» and at least one bar is
- * not «daneben». A yellow bar still counts for that second star.
- * The held-out check counts a correct other voice with at most one star
- * (0 or 1), not a take that landed on exactly one. Anything else spoken
- * forward is 1. «daneben» or a reversed take is 0.
+ * 2 when the sentence is «passt» or «teilweise», even if both bars are
+ * red, and also when the sentence is «daneben» but a bar is still yellow
+ * or green. A pitch correlation below 0 marks many correct other voices
+ * «daneben»; the bar that still carries the take keeps the second star.
+ * 0 when the sentence is «daneben» and neither bar carried it, or the
+ * take is reversed. The held-out check counts 0 and 1 together.
  */
 export function starsFromVerdict(
   verdict: BarState,
@@ -1198,12 +1199,12 @@ export function starsFromVerdict(
   rhythm: BarState | null,
   backwards = false,
 ): 0 | 1 | 2 | 3 {
-  if (backwards || verdict === 'daneben') return 0
+  if (backwards) return 0
   const green = [melody, rhythm].filter((bar) => bar === 'passt').length
   const carried = [melody, rhythm].filter((bar) => bar === 'passt' || bar === 'teilweise').length
   if (verdict === 'passt' && green === 2) return 3
-  if ((verdict === 'passt' || verdict === 'teilweise') && carried >= 1) return 2
-  return 1
+  if (verdict !== 'daneben' || carried >= 1) return 2
+  return 0
 }
 
 /** Share of successive placed words whose recording span still moves forward. */
