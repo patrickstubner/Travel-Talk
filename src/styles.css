@@ -114,10 +114,13 @@ h1 { font-size: 2rem; line-height: 1.15; margin: 0.2rem 0; }
 .learn-head .karaoke-block { gap: 0.12rem; }
 .learn-head .gloss { margin: 0; color: var(--ink); }
 .learn-actions, .learn-speak { display: grid; gap: 0.3rem; }
-.tempo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.55rem; }
+.tempo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; min-width: 0; }
+.tempo-bar .play-row { gap: 0.45rem; flex: none; }
+.tempo-bar .play-mark { width: 2.15rem; height: 2.15rem; }
 .tempo-switch {
   display: inline-flex;
-  max-width: 100%;
+  flex: 0 1 auto;
+  min-width: 0;
   border: 2px solid var(--teal-deep);
   border-radius: 999px;
   overflow: hidden;
@@ -128,8 +131,9 @@ h1 { font-size: 2rem; line-height: 1.15; margin: 0.2rem 0; }
   border-radius: 0;
   background: #fff;
   color: var(--ink);
-  padding: 0.4rem 0.58rem;
+  padding: 0.38rem 0.48rem;
   font-weight: 650;
+  font-size: 0.92rem;
   min-width: 0;
 }
 .tempo-switch button + button { box-shadow: inset 1px 0 0 #c9b79a; }
