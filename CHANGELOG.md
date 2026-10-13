@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.5 — 2026-10-12
+
+- Portugiesisch (Brasilien) hat vier zusätzliche Frauenstimmen: Daisy Studious, Gracie Wise, Tammie Ema und, als Versuch, Claribel Dervla. Die Dateien sind offline mit Coqui XTTS-v2 erzeugt, Sprache `pt`. Der Standard für neue Nutzer bleibt cadu. Wer schon eine Stimme gewählt hat, behält sie. Claribel bleibt, bis `SHIP_CLARIBEL` in `src/audio/voices.ts` auf falsch steht. Pull Request 24 behält 0.9.1.
+- Die Lizenz ist die Coqui Public Model License 1.0.0. Sie erlaubt nur nicht kommerzielle Nutzung. Das gilt für das Modell und für das erzeugte Audio. Der Text steht in `LICENSE.txt` im Stimmordner, in `docs/samples/LICENSE.txt` und in NOTICE.txt. Die App bleibt für die Familie und ist nicht kommerziell.
+- Die Revision ist `6c2b0d75eae4b7047358e3b6bd9325f857d43f77`. Die SHA-256 der Gewichte steht in `tools/generate_xtts.py` und wird vor der Synthese geprüft. Die Gewichte liegen nicht im Repo. `coqui-tts` 0.27.2 ist nur das Erzeugungswerkzeug.
+- Dieselben Stufen wie bei Piper: 150 Sätze in drei Tempi, Basis, 70 % und 85 %, vier Stimmen, zusammen 1800 m4a, plus die `align.json` aus `tools/align_clips.py`. Die Wortzeiten kommen aus der Phonemuhr von cadu und liegen auf der XTTS-Datei. Eine Datei unter 0,3 Sekunden oder eine kurze Datei mit zu wenig stimmhaften Frames wird nicht übernommen.
+- XTTS spricht manchmal das Satzzeichen mit. Jeder Satz und jedes Wort wird ohne Satzzeichen am Ende gesprochen. `faster-whisper` small, Sprache `pt`, Temperatur 0, prüft die Basisdatei. Ein zusätzliches `ponto`, `vírgula`, `interrogação`, `exclamação` oder `reticências`, das nicht schon im Text steht, wird verworfen. Mehr als ein Wort über dem Text ebenfalls. Ein Wort darüber bleibt, weil der Erkenner ein Wort manchmal spaltet. Die Dauergrenze `Wörter × 0,72 + 0,85` Sekunden plus 0,03 bleibt zusätzlich. Dieselbe Dauerformel steht in `src/pitch/clip-plausible.ts`. Der Spracherkenner ist nur das Erzeugungswerkzeug, nicht Teil der App. 149 der 150 Sätze enden im Text mit einem Satzzeichen und sind deshalb neu gesprochen, in allen drei Tempi, und die Zeitdateien dazu neu gelegt.
+- Dieselben neunzehn Wörter wie in 0.9.0, in der Zitierform, je Basis, 70 % und 85 %, ohne Zeitdatei, wie die Piper-Wörter. Vier Stimmen, 228 Dateien. Dieselbe Prüfung auf Dauer, stimmhafte Frames und die Längengrenze gilt für diese Wörter.
+- `manifest.json` hat 9278 Einträge, 7358 Audio und 1920 Zeiten. 117 Sätze bleiben ohne Zeitdatei: Daisy 22, Gracie 32, Tammie 30, Claribel 33. Tammie «O senhor pode me dizer a regra atual?» bleibt ohne Zeitdatei: «O» liegt auf 17 ms, mitten im Vokal, und der Rhythmus gegen die eigene Datei ist gelb. Der Audio-Cache lässt 12000 Einträge.
+
 ## 0.9.4 — 2026-10-12
 
 - Auf der Satzseite, in Heute lernen und bei der Wortvorstellung steht zuerst der Satz oder das Wort in der Lernsprache, gross, auf einer Karte. Direkt darunter die Übersetzung. Dann Anhören mit dem Tempo, dann Aufnehmen. Sobald eine Aufnahme bewertet ist, stehen die Wörter, die Balken und der Hinweis direkt darunter, nicht unter den Erklärungen.

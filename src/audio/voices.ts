@@ -3,10 +3,11 @@ import { voiceFile } from '../content/resolve'
 import type { Settings } from '../storage/types'
 
 /**
- * A bundled Piper voice, or a later paid voice that is not in the repo yet.
+ * A bundled voice, or a later paid voice that is not in the repo yet.
  * `bundled: false` stays out of the picker. Adding Azure is another entry, not a new field.
+ * XTTS clips are pre-rendered. The app does not load that model.
  */
-export type VoiceProvider = 'piper' | 'azure'
+export type VoiceProvider = 'piper' | 'xtts' | 'azure'
 
 export type CatalogVoice = {
   id: string
@@ -21,6 +22,25 @@ export type CatalogVoice = {
   order: number
 }
 
+/**
+ * Trial speaker. She stays until Patrick turns this off.
+ * To remove her: set this to false, delete public/audio/pt-BR/claribel-dervla,
+ * and delete the Claribel lines in src/i18n/dictionary.ts.
+ * The generator entry is the last item of SPEAKERS in tools/generate_xtts.py.
+ */
+export const SHIP_CLARIBEL = true
+
+const CLARIBEL: CatalogVoice = {
+  id: 'claribel-dervla',
+  lang: 'pt-BR',
+  gender: 'female',
+  provider: 'xtts',
+  bundled: true,
+  legacy: false,
+  defaultNew: false,
+  order: 6,
+}
+
 export const VOICES: readonly CatalogVoice[] = [
   { id: 'thorsten-high', lang: 'de', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
   { id: 'thorsten', lang: 'de', gender: 'male', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
@@ -28,6 +48,10 @@ export const VOICES: readonly CatalogVoice[] = [
   { id: 'ljspeech', lang: 'en', gender: 'female', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
   { id: 'cadu', lang: 'pt-BR', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
   { id: 'faber', lang: 'pt-BR', gender: 'female', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
+  { id: 'daisy-studious', lang: 'pt-BR', gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false, order: 3 },
+  { id: 'gracie-wise', lang: 'pt-BR', gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false, order: 4 },
+  { id: 'tammie-ema', lang: 'pt-BR', gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false, order: 5 },
+  ...(SHIP_CLARIBEL ? [CLARIBEL] : []),
   { id: 'vivos-22', lang: 'vi', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
   { id: 'vivos-32', lang: 'vi', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: false, order: 2 },
   { id: 'vais1000', lang: 'vi', gender: 'female', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 3 },

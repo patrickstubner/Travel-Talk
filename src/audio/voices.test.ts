@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { AUDIO_FILE, voiceFile } from '../content/resolve'
 import { defaultSettings } from '../storage/types'
-import { filesForVoice, selectedVoice, spokenFile, spokenWordFile, voicesFor, voicesKeptByOthers, withDefaultVoices } from './voices'
+import { SHIP_CLARIBEL, filesForVoice, selectedVoice, spokenFile, spokenWordFile, voicesFor, voicesKeptByOthers, withDefaultVoices } from './voices'
 
 describe('voices', () => {
   it('keeps the old files when no voice is stored and writes a male voice for a new user', () => {
@@ -64,6 +64,23 @@ describe('voices', () => {
       'de/emergency.help__any__base.m4a',
       'de/emergency.help__any__base.align.json',
     ])
+  })
+
+  it('keeps cadu as the new Portuguese default and offers the XTTS women', () => {
+    const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../../public/audio/manifest.json', import.meta.url)), 'utf8')) as string[]
+    const voices = voicesFor('pt-BR')
+    const xtts = ['daisy-studious', 'gracie-wise', 'tammie-ema', ...(SHIP_CLARIBEL ? ['claribel-dervla'] : [])]
+    expect(voices.map((voice) => voice.id)).toEqual(['cadu', 'faber', ...xtts])
+    expect(voices.find((voice) => voice.defaultNew)?.id).toBe('cadu')
+    for (const id of xtts) {
+      const voice = voices.find((item) => item.id === id)
+      expect(voice).toMatchObject({ gender: 'female', provider: 'xtts', bundled: true, legacy: false, defaultNew: false })
+      expect(voiceFile('pt-BR/emergency.help__any__base.m4a', id, false)).toMatch(AUDIO_FILE)
+      const settings = { ...defaultSettings, voices: { 'pt-BR': id } }
+      const word = spokenWordFile(settings, 'pt-BR', 'pt-BR/w.water__any__base.m4a')
+      expect(word).toBe(`pt-BR/${id}/w.water__any__base.m4a`)
+      expect(manifest).toContain(word)
+    }
   })
 
   it('keeps another person voice and not the active person own voice', () => {

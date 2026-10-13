@@ -10,9 +10,12 @@ import { describe, expect, it } from 'vitest'
 import { rawCatalog } from '../../content'
 import { splitWords } from '../../content/gloss'
 import { alignmentFitsDuration, parseAlignment } from '../audio/align'
+import { tempoFile } from '../audio/speed'
 import { VOICES } from '../audio/voices'
 import { allSpeechLines, voiceFile } from '../content/resolve'
+import { WORDS, wordAudioFile } from '../../content/words'
 import { analyzeModel, analyzeUser } from './analyze'
+import { clipProblem, lengthProblem } from './clip-plausible'
 import { contourFromSamples, frameEnergy } from './contour'
 import { scoreRepeat, type RepeatScore } from './feedback'
 import { bandShape } from './spectrum'
@@ -78,6 +81,124 @@ const KNOWN_MISSING = new Set([
   'en/stay.problem__any__base.m4a',
   'en/transport.09.app__any__base.m4a',
   'en/visa.evisa__any__base.m4a',
+  'pt-BR/daisy-studious/day.toilet__any__base.m4a',
+  'pt-BR/daisy-studious/emergency.accident__any__base.m4a',
+  'pt-BR/daisy-studious/emergency.doctor__any__base.m4a',
+  'pt-BR/daisy-studious/emergency.hurt__any__base.m4a',
+  'pt-BR/daisy-studious/emergency.passport__any__base.m4a',
+  'pt-BR/daisy-studious/emergency.peanut__any__base.m4a',
+  'pt-BR/daisy-studious/meet.contact__any__senhor.m4a',
+  'pt-BR/daisy-studious/meet.contact__any__senhora.m4a',
+  'pt-BR/daisy-studious/meet.father__any__base.m4a',
+  'pt-BR/daisy-studious/meet.food-q__any__senhor.m4a',
+  'pt-BR/daisy-studious/meet.hobby-q__any__senhor.m4a',
+  'pt-BR/daisy-studious/meet.hobby-q__any__senhora.m4a',
+  'pt-BR/daisy-studious/meet.nice__any__senhor.m4a',
+  'pt-BR/daisy-studious/meet.where-from__any__senhor.m4a',
+  'pt-BR/daisy-studious/meet.where-from__any__senhora.m4a',
+  'pt-BR/daisy-studious/meet.your-name__any__voce.m4a',
+  'pt-BR/daisy-studious/shop.receipt__any__base.m4a',
+  'pt-BR/daisy-studious/sight.open__any__base.m4a',
+  'pt-BR/daisy-studious/stay.checkout__any__base.m4a',
+  'pt-BR/daisy-studious/stay.reservation__any__base.m4a',
+  'pt-BR/daisy-studious/transport.16.gate__any__base.m4a',
+  'pt-BR/daisy-studious/transport.19.ferry__any__base.m4a',
+  'pt-BR/gracie-wise/arrival.luggage__any__base.m4a',
+  'pt-BR/gracie-wise/arrival.passport__any__base.m4a',
+  'pt-BR/gracie-wise/day.today__any__base.m4a',
+  'pt-BR/gracie-wise/day.toilet__any__base.m4a',
+  'pt-BR/gracie-wise/emergency.accident__any__base.m4a',
+  'pt-BR/gracie-wise/emergency.family__any__base.m4a',
+  'pt-BR/gracie-wise/emergency.hurt__any__base.m4a',
+  'pt-BR/gracie-wise/emergency.passport__any__base.m4a',
+  'pt-BR/gracie-wise/food.recommend__any__senhora.m4a',
+  'pt-BR/gracie-wise/meet.father__any__base.m4a',
+  'pt-BR/gracie-wise/meet.hobby-q__any__senhor.m4a',
+  'pt-BR/gracie-wise/meet.job-q__any__senhor.m4a',
+  'pt-BR/gracie-wise/meet.job-q__any__senhora.m4a',
+  'pt-BR/gracie-wise/meet.nice__any__senhor.m4a',
+  'pt-BR/gracie-wise/meet.origin__any__base.m4a',
+  'pt-BR/gracie-wise/meet.thanks__any__obrigada.m4a',
+  'pt-BR/gracie-wise/meet.where-from__any__senhor.m4a',
+  'pt-BR/gracie-wise/meet.yes__any__base.m4a',
+  'pt-BR/gracie-wise/meet.your-name__any__senhor.m4a',
+  'pt-BR/gracie-wise/meet.your-name__any__senhora.m4a',
+  'pt-BR/gracie-wise/meet.your-name__any__voce.m4a',
+  'pt-BR/gracie-wise/shop.receipt__any__base.m4a',
+  'pt-BR/gracie-wise/sight.price__any__base.m4a',
+  'pt-BR/gracie-wise/sight.where__any__base.m4a',
+  'pt-BR/gracie-wise/stay.address__any__base.m4a',
+  'pt-BR/gracie-wise/stay.checkout__any__base.m4a',
+  'pt-BR/gracie-wise/stay.reservation__any__base.m4a',
+  'pt-BR/gracie-wise/transport.04.airport__any__base.m4a',
+  'pt-BR/gracie-wise/transport.05.price__any__base.m4a',
+  'pt-BR/gracie-wise/transport.09.app__any__base.m4a',
+  'pt-BR/gracie-wise/transport.13.line__any__base.m4a',
+  'pt-BR/gracie-wise/transport.19.ferry__any__base.m4a',
+  'pt-BR/tammie-ema/arrival.exit__any__base.m4a',
+  'pt-BR/tammie-ema/arrival.luggage__any__base.m4a',
+  'pt-BR/tammie-ema/arrival.passport__any__base.m4a',
+  'pt-BR/tammie-ema/day.excuse__any__base.m4a',
+  'pt-BR/tammie-ema/day.toilet__any__base.m4a',
+  'pt-BR/tammie-ema/emergency.accident__any__base.m4a',
+  'pt-BR/tammie-ema/emergency.allergic__any__base.m4a',
+  'pt-BR/tammie-ema/emergency.ambulance__any__base.m4a',
+  'pt-BR/tammie-ema/emergency.doctor__any__base.m4a',
+  'pt-BR/tammie-ema/emergency.hurt__any__base.m4a',
+  'pt-BR/tammie-ema/emergency.passport__any__base.m4a',
+  'pt-BR/tammie-ema/emergency.peanut__any__base.m4a',
+  'pt-BR/tammie-ema/meet.contact__any__senhor.m4a',
+  'pt-BR/tammie-ema/meet.contact__any__senhora.m4a',
+  'pt-BR/tammie-ema/meet.father__any__base.m4a',
+  'pt-BR/tammie-ema/meet.job-q__any__senhora.m4a',
+  'pt-BR/tammie-ema/meet.job-q__any__voce.m4a',
+  'pt-BR/tammie-ema/meet.nice__any__senhor.m4a',
+  'pt-BR/tammie-ema/meet.origin__any__base.m4a',
+  'pt-BR/tammie-ema/meet.where-from__any__senhora.m4a',
+  'pt-BR/tammie-ema/meet.where-from__any__voce.m4a',
+  'pt-BR/tammie-ema/meet.your-name__any__voce.m4a',
+  'pt-BR/tammie-ema/sight.price__any__base.m4a',
+  'pt-BR/tammie-ema/sight.where__any__base.m4a',
+  'pt-BR/tammie-ema/stay.reservation__any__base.m4a',
+  'pt-BR/tammie-ema/transport.03.hotel__any__base.m4a',
+  'pt-BR/tammie-ema/transport.08.plate__any__base.m4a',
+  'pt-BR/tammie-ema/transport.19.ferry__any__base.m4a',
+  'pt-BR/tammie-ema/visa.rules__any__senhor.m4a',
+  'pt-BR/tammie-ema/visa.where__any__base.m4a',
+  'pt-BR/claribel-dervla/arrival.luggage__any__base.m4a',
+  'pt-BR/claribel-dervla/arrival.passport__any__base.m4a',
+  'pt-BR/claribel-dervla/day.morning__any__base.m4a',
+  'pt-BR/claribel-dervla/day.tomorrow__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.accident__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.doctor__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.hospital__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.hurt__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.lost__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.passport__any__base.m4a',
+  'pt-BR/claribel-dervla/emergency.peanut__any__base.m4a',
+  'pt-BR/claribel-dervla/food.recommend__any__senhor.m4a',
+  'pt-BR/claribel-dervla/meet.address-ask__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.contact__any__senhor.m4a',
+  'pt-BR/claribel-dervla/meet.contact__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.father__any__base.m4a',
+  'pt-BR/claribel-dervla/meet.food-q__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.hobby-q__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.job-q__any__senhor.m4a',
+  'pt-BR/claribel-dervla/meet.job-q__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.thanks__any__obrigada.m4a',
+  'pt-BR/claribel-dervla/meet.where-from__any__senhora.m4a',
+  'pt-BR/claribel-dervla/meet.your-name__any__voce.m4a',
+  'pt-BR/claribel-dervla/shop.have__any__base.m4a',
+  'pt-BR/claribel-dervla/shop.receipt__any__base.m4a',
+  'pt-BR/claribel-dervla/sight.open__any__base.m4a',
+  'pt-BR/claribel-dervla/sight.where__any__base.m4a',
+  'pt-BR/claribel-dervla/stay.address__any__base.m4a',
+  'pt-BR/claribel-dervla/stay.checkout__any__base.m4a',
+  'pt-BR/claribel-dervla/transport.03.hotel__any__base.m4a',
+  'pt-BR/claribel-dervla/transport.04.airport__any__base.m4a',
+  'pt-BR/claribel-dervla/transport.13.line__any__base.m4a',
+  'pt-BR/claribel-dervla/transport.16.gate__any__base.m4a',
+  'pt-BR/claribel-dervla/visa.where__any__base.m4a',
 ])
 
 function ffmpegReady(): boolean {
@@ -152,6 +273,15 @@ describe('shipped clips', () => {
         const file = voiceFile(line.file, voice.id, voice.legacy)
         const audio = `public/audio/${file}`
         if (!existsSync(audio)) continue
+        const samples = decode(audio)
+        expect(clipProblem(file, samples), file).toBeNull()
+        if (voice.provider === 'xtts') expect(lengthProblem(line.text, samples.length / 16000), file).toBeNull()
+        for (const step of [0.7, 0.85] as const) {
+          const slow = tempoFile(file, step)
+          const slowPath = `public/audio/${slow}`
+          if (!existsSync(slowPath)) continue
+          expect(clipProblem(slow, decode(slowPath)), slow).toBeNull()
+        }
         const alignPath = audio.replace(/\.m4a$/, '.align.json')
         if (!existsSync(alignPath)) {
           missing.push(file)
@@ -162,7 +292,6 @@ describe('shipped clips', () => {
           missing.push(file)
           continue
         }
-        const samples = decode(audio)
         const duration = samples.length / 16000
         if (!alignmentFitsDuration(times, duration)) {
           missing.push(file)
@@ -207,6 +336,24 @@ describe('shipped clips', () => {
     expect(timed, only).toBeGreaterThan(0)
     for (const file of missing) expect(KNOWN_MISSING.has(file), file).toBe(true)
     expectOtherVoice(only)
+    if (only !== 'pt-BR') return
+    for (const voice of VOICES.filter((item) => item.lang === 'pt-BR' && item.provider === 'xtts')) {
+      for (const word of WORDS) {
+        const file = voiceFile(wordAudioFile(word, 'pt-BR', 'south'), voice.id, false)
+        const audio = `public/audio/${file}`
+        expect(existsSync(audio), file).toBe(true)
+        const samples = decode(audio)
+        expect(clipProblem(file, samples), file).toBeNull()
+        expect(lengthProblem(word.citation['pt-BR'], samples.length / 16000), file).toBeNull()
+        for (const step of [0.7, 0.85] as const) {
+          const slow = tempoFile(file, step)
+          const slowPath = `public/audio/${slow}`
+          expect(existsSync(slowPath), slow).toBe(true)
+          expect(clipProblem(slow, decode(slowPath)), slow).toBeNull()
+        }
+        expect(existsSync(audio.replace(/\.m4a$/, '.align.json')), file).toBe(false)
+      }
+    }
   }
 
   function reverseSamples(samples: Float32Array): Float32Array {
@@ -298,6 +445,7 @@ describe('shipped clips', () => {
     }
   }
 
+
   const allLangs = ['de', 'en', 'pt-BR', 'vi'] as const
   const requested = process.env.CLIP_LANG
   if (requested && !allLangs.includes(requested as (typeof allLangs)[number])) {
@@ -306,7 +454,7 @@ describe('shipped clips', () => {
   const clipLangs = requested ? allLangs.filter((lang) => lang === requested) : [...allLangs]
 
   for (const lang of clipLangs) {
-    it.skipIf(!ready)(`decodes ${lang} and scores the melody`, () => checkLanguage(lang), 1_080_000)
+    it.skipIf(!ready)(`decodes ${lang} and scores the melody`, () => checkLanguage(lang), 2_400_000)
   }
 
   const microphone = [
