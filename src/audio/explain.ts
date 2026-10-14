@@ -5,10 +5,18 @@ import { playClip, stopClip } from './player'
 /** One paragraph in the info sheet. `clip` is a bundled Piper file, or null when only the device voice can say it. */
 export type ExplainPart = { text: string; clip: string | null }
 
-/** `{lang}/help/{id}__any__base.m4a`. `id` is a fixed token, never a free path. */
+/**
+ * The Vietnamese show-purpose clip was spoken again. Help audio is CacheFirst
+ * and the URL is the cache key, so that one file is `.v2`.
+ */
+const HELP_REVISION: Record<string, string> = { 'vi/ui.show': 'v2' }
+
+/** `{lang}/help/{id}__any__base.m4a`, or `.vN` when the clip was spoken again. `id` is a fixed token, never a free path. */
 export function helpFile(lang: Lang, id: string): string {
   if (!/^[a-z0-9.-]+$/.test(id)) throw new Error('HELP_ID')
-  return `${lang}/help/${id}__any__base.m4a`
+  const rev = HELP_REVISION[`${lang}/${id}`]
+  const version = rev ? `.${rev}` : ''
+  return `${lang}/help/${id}__any__base${version}.m4a`
 }
 
 export function stopExplanation(): void {

@@ -44,6 +44,8 @@ const CLARIBEL: CatalogVoice = {
 export const VOICES: readonly CatalogVoice[] = [
   { id: 'thorsten-high', lang: 'de', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
   { id: 'thorsten', lang: 'de', gender: 'male', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
+  // MLS speaker 4576, Piper id 153. Optional. CC BY 4.0, trained from scratch. Not the default.
+  { id: 'mls-4576', lang: 'de', gender: 'female', provider: 'piper', bundled: true, legacy: false, defaultNew: false, order: 3 },
   { id: 'joe', lang: 'en', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
   { id: 'ljspeech', lang: 'en', gender: 'female', provider: 'piper', bundled: true, legacy: true, defaultNew: false, order: 2 },
   { id: 'cadu', lang: 'pt-BR', gender: 'male', provider: 'piper', bundled: true, legacy: false, defaultNew: true, order: 1 },
@@ -65,6 +67,14 @@ const PREVIEW: Record<Lang, string> = {
   'pt-BR': 'pt-BR/emergency.help__any__base.m4a',
   vi: 'vi/emergency.help__any__base.m4a',
 }
+
+/**
+ * Hörprobe for a Piper voice: one greeting and a short introduction, at the
+ * normal rate. Not a lesson clip, so there is no slow copy.
+ * XTTS stays on the lesson clip. That model is CPML, non-commercial only,
+ * so this version does not add a new sample for those speakers.
+ */
+export const VOICE_SAMPLE = 'voice.sample__any__base.m4a'
 
 export function voicesFor(lang: Lang): CatalogVoice[] {
   return VOICES.filter((voice) => voice.lang === lang && voice.bundled).sort((a, b) => a.order - b.order)
@@ -120,7 +130,8 @@ export function spokenWordFile(settings: Settings, lang: Lang, file: string): st
 }
 
 export function previewFile(lang: Lang, voice: CatalogVoice): string {
-  return voiceFile(PREVIEW[lang], voice.id, voice.legacy)
+  if (voice.provider === 'xtts') return voiceFile(PREVIEW[lang], voice.id, voice.legacy)
+  return voiceFile(`${lang}/${VOICE_SAMPLE}`, voice.id, voice.legacy)
 }
 
 /** Onboarding writes the male voice. An explicit choice is kept. Existing rows never come through here. */

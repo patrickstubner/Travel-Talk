@@ -12,7 +12,7 @@ const fixture = `
   <a class="skip" href="#inhalt">Zum Inhalt</a>
   <header class="top">
     <p class="brand">Travel Talk</p>
-    <p class="version">Version 0.9.6</p>
+    <p class="version">Version 0.9.8</p>
   </header>
   <div class="top-switch">
     <button type="button" class="top-trigger">Vietnamesisch</button>

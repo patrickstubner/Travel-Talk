@@ -31,7 +31,7 @@ describe('language choice voices', () => {
     expect(screen.getByRole('button', { name: 'Mann 1' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', { name: 'Frau (Norden)' }).getAttribute('aria-pressed')).toBe('false')
     fireEvent.click(screen.getByRole('button', { name: 'Hörprobe: Mann 1' }))
-    expect(playClip).toHaveBeenCalledWith('vi/vivos-22/emergency.help__any__base.m4a', 'Mann 1', 'vi', 1)
+    expect(playClip).toHaveBeenCalledWith('vi/vivos-22/voice.sample__any__base.m4a', 'Mann 1', 'vi', 1)
   })
 
   it('offers two male Portuguese voices and does not call faber a woman', () => {
@@ -52,6 +52,23 @@ describe('language choice voices', () => {
     }
     expect(screen.getByText(/Zwei Männerstimmen/)).toBeTruthy()
     expect(screen.getByText(/Vier Frauen von XTTS-v2/)).toBeTruthy()
+  })
+
+  it('offers the German woman beside the men and does not make her the default', () => {
+    render(
+      <LanguageChoice
+        settings={{ ...defaultSettings, appLang: 'en', targetLang: 'de' }}
+        copy={copy}
+        ui="de"
+        mode="onboarding"
+        onChange={() => undefined}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Mann (hoch)' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Frau' }).getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByText(/oder eine Frau/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Hörprobe: Frau' }))
+    expect(playClip).toHaveBeenCalledWith('de/mls-4576/voice.sample__any__base.m4a', 'Frau', 'de', 1)
   })
 
   it('keeps the previous voice selected for someone who already has settings', () => {

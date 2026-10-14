@@ -43,6 +43,12 @@ export type Settings = {
    * Today still practises one. The daily cap counts every direction of this person.
    */
   moreTargets?: Lang[]
+  /**
+   * Tempo of single words for this person. Missing means 100 %.
+   * Sentences keep `speed`. There is no automatic step for words.
+   * Optional in the export. Only 0.7, 0.85 or 1 are kept.
+   */
+  wordSpeed?: SpeedStep
 }
 
 export type StoredCard = {
@@ -208,6 +214,7 @@ export function coerceSettings(raw: Partial<Settings> & { slow?: boolean; pairId
     ...(cleanMoreTargets(raw.moreTargets, appLang, targetLang).length > 0
       ? { moreTargets: cleanMoreTargets(raw.moreTargets, appLang, targetLang) }
       : {}),
+    ...(isSpeedStep(raw.wordSpeed) ? { wordSpeed: raw.wordSpeed } : {}),
   }
 }
 

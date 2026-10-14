@@ -291,6 +291,7 @@ function mergeLocal(incoming: Settings, local: Settings | undefined): Settings {
     ...(local.highlightWords === false ? { highlightWords: false } : {}),
     ...(isSpeedStep(local.learnTempo) ? { learnTempo: local.learnTempo } : {}),
     ...(local.skipWords === true ? { skipWords: true } : {}),
+    ...(incoming.wordSpeed == null && isSpeedStep(local.wordSpeed) ? { wordSpeed: local.wordSpeed } : {}),
   }
 }
 

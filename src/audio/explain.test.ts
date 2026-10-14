@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { speakExplanation } from './explain'
+import { helpFile, speakExplanation } from './explain'
 import { playClip } from './player'
 
 vi.mock('./player', () => ({
@@ -10,6 +10,15 @@ vi.mock('./player', () => ({
 afterEach(() => {
   vi.clearAllMocks()
   vi.unstubAllGlobals()
+})
+
+describe('help files', () => {
+  it('versions only the respoken Vietnamese show clip', () => {
+    expect(helpFile('vi', 'ui.show')).toBe('vi/help/ui.show__any__base.v2.m4a')
+    expect(helpFile('de', 'ui.show')).toBe('de/help/ui.show__any__base.m4a')
+    expect(helpFile('en', 'ui.show')).toBe('en/help/ui.show__any__base.m4a')
+    expect(helpFile('pt-BR', 'ui.show')).toBe('pt-BR/help/ui.show__any__base.m4a')
+  })
 })
 
 describe('speakExplanation', () => {

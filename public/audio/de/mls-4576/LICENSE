@@ -1,0 +1,11 @@
+Creative Commons Attribution 4.0 International
+
+https://creativecommons.org/licenses/by/4.0/
+
+This folder holds audio generated with Piper from Multilingual LibriSpeech speaker 4576 (Piper speaker id 153, model de_DE-mls-medium). The material was changed: these files are synthesis, not the original recordings.
+
+The generated audio is licensed under CC BY 4.0. Give appropriate credit and say that changes were made. Commercial use of this audio is allowed under that licence.
+
+Attribution: Multilingual LibriSpeech, Pratap et al., OpenSLR 94, http://openslr.org/94/. The recordings come from LibriVox. Model: rhasspy/piper-voices, de_DE-mls-medium, commit c10ece1aade47bb51c153c893d14e5bf8e5b7117, rendered with piper-tts 1.8.0.
+
+This note is not a substitute for the legal code at the link above.

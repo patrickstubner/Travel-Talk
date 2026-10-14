@@ -2,6 +2,10 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## 0.9.8 Neue Wörter und mls-4576
+
+Geprüft am 14. Oktober 2026. Keine neue Laufzeitabhängigkeit und keine neue npm-Abhängigkeit. Die App lädt kein Modell. `wordSpeed` ist optional und nur 0.7, 0.85 oder 1. Ein anderer Wert lehnt die ganze Exportdatei ab. Fehlt das Feld, bleibt die lokale Stufe dieser Person. Die Umschrift und die IPA sind statischer Text in `content/word-sounds.ts`. React setzt sie als Text. Es gibt kein neues `fetch`. Die Hörprobe heisst `voice.sample__any__base.m4a`, trifft `AUDIO_FILE` und steht in `manifest.json`. `playbackRate` bleibt 1. Die Stimmen-ID `mls-4576` erfüllt `^[a-z0-9_-]{1,40}$`. Eine unbekannte ID wird weiter abgelehnt. Die vier XTTS-Stimmen bekommen keine neue Hörprobe: ihre Lizenz ist die Coqui Public Model License, nur nicht kommerziell. Der vietnamesische Zweck von Đưa ist statischer Text. Die zugehörige Datei heisst `vi/help/ui.show__any__base.v2.m4a`. Der Hilfe-Cache ist CacheFirst und prüft den Inhalt nicht, deshalb trägt die geänderte Aufnahme `.v2` im Namen. Die Clip-Prüfung aus `src/pitch/clip-plausible.ts` bleibt, wie sie auf main steht. `manifest.json` hat 9888 Einträge, 7836 Audio und 2052 Zeiten. `maxEntries` bleibt 12000, mit mehr als 1200 freien Plätzen. `piper-tts` 1.8.0 und `onnx` 1.17.0 bleiben ausserhalb der App. `numpy` braucht nur `tools/generate_words.py` für die stille Ausleitung kurzer Wörter und steht nicht in `package.json`.
+
 ## 0.9.7 Tempo beim neuen Satz
 
 Geprüft am 13. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` am 13. Oktober 2026: 0 Schwachstellen.
