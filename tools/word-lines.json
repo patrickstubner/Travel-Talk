@@ -652,7 +652,7 @@
     "voice": "vivos-22",
     "model": "vi_VN-vivos-x_low",
     "speaker": 9,
-    "text": "khồng",
+    "text": "không",
     "file": "vi/vivos-22/w.not__any__base.m4a"
   },
   {
@@ -660,7 +660,7 @@
     "voice": "vivos-22",
     "model": "vi_VN-vivos-x_low",
     "speaker": 9,
-    "text": "đầu",
+    "text": "đâu",
     "file": "vi/vivos-22/w.where__any__base.m4a"
   },
   {
@@ -668,7 +668,7 @@
     "voice": "vivos-22",
     "model": "vi_VN-vivos-x_low",
     "speaker": 9,
-    "text": "đấy",
+    "text": "đây",
     "file": "vi/vivos-22/w.here__any__base.m4a"
   },
   {
@@ -812,7 +812,7 @@
     "voice": "vivos-32",
     "model": "vi_VN-vivos-x_low",
     "speaker": 37,
-    "text": "khồng",
+    "text": "không",
     "file": "vi/vivos-32/w.not__any__base.m4a"
   },
   {
@@ -820,7 +820,7 @@
     "voice": "vivos-32",
     "model": "vi_VN-vivos-x_low",
     "speaker": 37,
-    "text": "đầu",
+    "text": "đâu",
     "file": "vi/vivos-32/w.where__any__base.m4a"
   },
   {
@@ -828,7 +828,7 @@
     "voice": "vivos-32",
     "model": "vi_VN-vivos-x_low",
     "speaker": 37,
-    "text": "đấy",
+    "text": "đây",
     "file": "vi/vivos-32/w.here__any__base.m4a"
   },
   {

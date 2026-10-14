@@ -72,19 +72,19 @@ const SOUNDS: Record<string, Record<Lang, FormSound> & { north?: FormSound }> = 
     de: de('/nɪçt/', { de: 'nicht', en: 'nikht', 'pt-BR': 'nikht', vi: 'ních-t' }),
     en: de('/nɑt/', { de: 'not', en: 'not', 'pt-BR': 'nót', vi: 'nót' }),
     'pt-BR': de('/nɐ̃w̃/', { de: 'naung', en: 'nowng', 'pt-BR': 'não', vi: 'nãu' }),
-    vi: de('/xəwŋ˨˩/', { de: 'khong', en: 'khawng', 'pt-BR': 'cong', vi: 'không' }),
+    vi: de('/xəwŋ˧/', { de: 'khong', en: 'khawng', 'pt-BR': 'cong', vi: 'không' }),
   },
   'w.where': {
     de: de('/voː/', { de: 'wo', en: 'voh', 'pt-BR': 'vô', vi: 'vô' }),
     en: de('/wɛɹ/', { de: 'wär', en: 'where', 'pt-BR': 'uér', vi: 'ue' }),
     'pt-BR': de('/ˈõdʒi/', { de: 'ON-dschi', en: 'ON-jee', 'pt-BR': 'onde', vi: 'ôn-gi' }),
-    vi: de('/ɗəw˨˩/', { de: 'dau', en: 'doh', 'pt-BR': 'dau', vi: 'đâu' }),
+    vi: de('/ɗəw˧/', { de: 'dau', en: 'doh', 'pt-BR': 'dau', vi: 'đâu' }),
   },
   'w.here': {
     de: de('/hiːɐ/', { de: 'hir', en: 'heer', 'pt-BR': 'rir', vi: 'hia' }),
     en: de('/hɪɹ/', { de: 'hir', en: 'here', 'pt-BR': 'rír', vi: 'hia' }),
     'pt-BR': de('/aˈki/', { de: 'a-KI', en: 'ah-KEE', 'pt-BR': 'aqui', vi: 'a-KI' }),
-    vi: de('/ɗəj˧˥/', { de: 'dai', en: 'die', 'pt-BR': 'dai', vi: 'đây' }),
+    vi: de('/ɗəj˧/', { de: 'dai', en: 'die', 'pt-BR': 'dai', vi: 'đây' }),
   },
   'w.water': {
     de: de('/ˈvasɐ/', { de: 'VAS-sa', en: 'VAH-suh', 'pt-BR': 'VÁ-sa', vi: 'VA-xơ' }),

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { WORDS, spokenCitation } from '../../content/words'
 import { chaoTones, syllableTones, wordSound } from '../../content/word-sounds'
@@ -35,13 +36,32 @@ describe('word sounds', () => {
         expect(labels).toHaveLength(tones.length)
       }
     }
-    expect(syllableTones(spokenCitation(WORDS.find((word) => word.id === 'w.not')!, 'vi', 'south'))).toEqual(['huyen'])
-    expect(syllableTones(spokenCitation(WORDS.find((word) => word.id === 'w.where')!, 'vi', 'south'))).toEqual(['huyen'])
-    expect(syllableTones(spokenCitation(WORDS.find((word) => word.id === 'w.here')!, 'vi', 'south'))).toEqual(['sac'])
     expect(wordSound(WORDS.find((word) => word.id === 'w.days')!, 'vi', 'de', 'south').read).toBe('ngai, fallend')
     expect(wordSound(WORDS.find((word) => word.id === 'w.yes')!, 'vi', 'de', 'south').read).toBe('ja, schwer')
     expect(wordSound(WORDS.find((word) => word.id === 'w.yes')!, 'vi', 'de', 'north').read).toBe('wöng, eben')
     expect(wordSound(WORDS.find((word) => word.id === 'w.help')!, 'vi', 'en', 'south').read).toBe('koo, rising · voy, rising')
+  })
+
+  it('keeps không, đâu and đây, with a level IPA tone', () => {
+    const pinned = [
+      { id: 'w.not', spelling: 'không', points: [0x6b, 0x68, 0x00f4, 0x6e, 0x67], ipa: '/xəwŋ˧/' },
+      { id: 'w.where', spelling: 'đâu', points: [0x0111, 0x00e2, 0x75], ipa: '/ɗəw˧/' },
+      { id: 'w.here', spelling: 'đây', points: [0x0111, 0x00e2, 0x79], ipa: '/ɗəj˧/' },
+    ] as const
+    const lines = JSON.parse(readFileSync('tools/word-lines.json', 'utf8')) as { text: string; file: string }[]
+    for (const row of pinned) {
+      const word = WORDS.find((entry) => entry.id === row.id)!
+      const points = [...word.citation.vi].map((ch) => ch.codePointAt(0))
+      expect(word.citation.vi).toBe(row.spelling)
+      expect(points).toEqual([...row.points])
+      expect(syllableTones(spokenCitation(word, 'vi', 'south'))).toEqual(['ngang'])
+      const sound = wordSound(word, 'vi', 'vi', 'south')
+      expect(sound.ipa).toBe(row.ipa)
+      expect(chaoTones(sound.ipa)).toEqual(['ngang'])
+      expect(sound.read.startsWith(`${row.spelling},`)).toBe(true)
+      const texts = lines.filter((line) => line.file.startsWith('vi/') && line.file.endsWith(`/${row.id}__any__base.m4a`)).map((line) => line.text)
+      expect(texts).toEqual([row.spelling, row.spelling])
+    }
   })
 
   it('hears a new word three times before the question', () => {
