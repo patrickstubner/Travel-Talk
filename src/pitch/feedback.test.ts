@@ -200,6 +200,8 @@ describe('scoring bands', () => {
     // The take sits far above the file. The gap is absolute, so this stays on V2.
     expect(medianGapSemitones(110, 280)).toBeGreaterThan(S3_PITCH_SEMITONES)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', { template: 'male', user: null }, { modelHz: 110, userHz: 280 })).toBe(2)
+    // The file sits far above the take. Without the absolute value this gap is negative and S3 would turn on.
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', null, { modelHz: 280, userHz: 110 })).toBe(2)
     for (const lang of ['de', 'en', 'pt-BR', 'vi'] as const) {
       expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, lang)).toBe(0)
       expect(starsFromVerdict('daneben', 'teilweise', 'teilweise', false, lang)).toBe(1)

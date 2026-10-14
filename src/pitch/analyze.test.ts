@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
-import { analyzeModelCached, featuresFromWorker } from './analyze-client'
-import { handleAnalysis } from './analyze.worker'
+import { afterEach, describe, expect, it } from 'vitest'
+import { analyzeModelCached, analyzeUserOnce, featuresFromWorker, installPitchWorker } from './analyze-client'
+import { handleAnalysis, type AnalysisRequest, type AnalysisResponse } from './analyze.worker'
 
 function tone(hz: number): Float32Array {
   const rate = 16000
@@ -16,6 +16,10 @@ function tone(hz: number): Float32Array {
 }
 
 describe('pitch analysis', () => {
+  afterEach(() => {
+    installPitchWorker(null)
+  })
+
   it('reuses the model features and leaves the microphone buffer on the caller', async () => {
     const samples = tone(180)
     const first = analyzeModelCached(samples, 16000)
@@ -52,6 +56,22 @@ describe('pitch analysis', () => {
     })
     expect(reply.medianHz).toBe(280)
     expect(reply.contour).toEqual([0])
+  })
+
+  it('keeps the median when a fake worker replies', async () => {
+    const fake = {
+      onmessage: null as ((event: MessageEvent<AnalysisResponse>) => void) | null,
+      onerror: null as (() => void) | null,
+      postMessage(data: AnalysisRequest) {
+        const response = handleAnalysis(data)
+        this.onmessage?.({ data: response } as MessageEvent<AnalysisResponse>)
+      },
+    }
+    installPitchWorker(fake as unknown as Worker)
+    const model = await analyzeModelCached(tone(110), 16000)
+    const take = await analyzeUserOnce(tone(280), 16000, model.bands)
+    expect(model.medianHz).toBeCloseTo(110, 0)
+    expect(take.medianHz).toBeCloseTo(280, 0)
   })
 
   it('does not store or send the samples from the worker', () => {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.12 — 2026-10-14
+
+- Ein Test hält fest, dass auf Deutsch zwei Sterne bleiben, wenn die Vorlage bei 280 Hz liegt und die Aufnahme bei 110 Hz. Der Abstand zählt in beide Richtungen. Liegt er über 4 Halbtönen, bleibt «teilweise» bei zwei.
+- «Ich hätte gern eine Flasche Wasser, bitte.» von thorsten-high und mls-4576 liegt etwa 9 Halbtöne auseinander. Dafür gilt V2, also zwei Sterne. Ein nachgebauter Worker gibt den Median der Antwort an die Seite weiter. Die Grenze und die Speicherung bleiben, wie sie sind.
+
 ## 0.9.11 — 2026-10-14
 
 - Die Grenze für die nahe Tonhöhe auf Deutsch ist 4 Halbtöne, nicht mehr 6. Liegt der Median der Aufnahme weiter weg, bleiben «passt» und «teilweise» bei zwei Sternen. Ein grüner Balken gibt weiter zwei, drei Sterne bleiben an «passt» und beiden grünen Balken. Die Zahl wird nicht gespeichert. Es kommt kein Profilfeld dazu.
