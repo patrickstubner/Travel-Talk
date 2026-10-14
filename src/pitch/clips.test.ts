@@ -503,6 +503,25 @@ describe('shipped clips', () => {
     60_000,
   )
 
+  it.skipIf(!ready || !clipLangs.includes('de'))(
+    'keeps V2 when thorsten-high and mls-4576 are many semitones apart',
+    () => {
+      const model = analyzeModel(decode('public/audio/de/thorsten-high/food.water__any__base.m4a'), 16000)
+      const take = analyzeModel(decode('public/audio/de/mls-4576/food.water__any__base.m4a'), 16000)
+      const gap = medianGapSemitones(model.medianHz, take.medianHz)
+      expect(gap, 'food.water').not.toBeNull()
+      expect(gap ?? 0).toBeGreaterThanOrEqual(8)
+      expect(gap ?? 99).toBeLessThanOrEqual(10)
+      expect(
+        starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', null, {
+          modelHz: model.medianHz,
+          userHz: take.medianHz,
+        }),
+      ).toBe(2)
+    },
+    60_000,
+  )
+
   it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
     'keeps cadu green across three Chrome microphone takes',
     async () => {

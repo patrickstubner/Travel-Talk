@@ -28,6 +28,30 @@ export function featuresFromWorker(data: AnalysisResponse): ClipFeatures {
   }
 }
 
+function deliver(data: AnalysisResponse): void {
+  const waiting = pending.get(data.id)
+  if (!waiting) return
+  pending.delete(data.id)
+  waiting.resolve(featuresFromWorker(data))
+}
+
+/**
+ * Use this worker for the next analysis. Tests pass a fake. Null clears it.
+ * The reply still goes through `featuresFromWorker`, so the median is kept.
+ */
+export function installPitchWorker(created: Worker | null): void {
+  worker = created
+  if (!created) return
+  created.onmessage = (event: MessageEvent<AnalysisResponse>) => {
+    deliver(event.data)
+  }
+  created.onerror = () => {
+    worker = null
+    for (const waiting of pending.values()) waiting.reject(new Error('pitch worker failed'))
+    pending.clear()
+  }
+}
+
 /** The analysis worker, or null in tests and when the browser has none. */
 export function pitchWorker(): Worker | null {
   if (worker !== undefined) return worker
@@ -36,23 +60,11 @@ export function pitchWorker(): Worker | null {
     return null
   }
   try {
-    const created = new Worker(new URL('./analyze.worker.ts', import.meta.url), { type: 'module' })
-    created.onmessage = (event: MessageEvent<AnalysisResponse>) => {
-      const waiting = pending.get(event.data.id)
-      if (!waiting) return
-      pending.delete(event.data.id)
-      waiting.resolve(featuresFromWorker(event.data))
-    }
-    created.onerror = () => {
-      worker = null
-      for (const waiting of pending.values()) waiting.reject(new Error('pitch worker failed'))
-      pending.clear()
-    }
-    worker = created
+    installPitchWorker(new Worker(new URL('./analyze.worker.ts', import.meta.url), { type: 'module' }))
   } catch {
     worker = null
   }
-  return worker
+  return worker ?? null
 }
 
 function locally(request: Omit<AnalysisRequest, 'id'>): ClipFeatures {
