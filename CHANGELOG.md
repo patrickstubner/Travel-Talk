@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.10 — 2026-10-14
+
+- Die Erklärung zu den Sternen nennt nur noch die Regel, die in der App gilt. Sie spricht nicht von einem Geschlecht, weil die App danach nicht fragt. Liegt die mittlere Tonhöhe der Aufnahme nahe an der Datei, gilt auf Deutsch bei «passt» und «teilweise» Regel S3: zwei Sterne nur mit einem grünen Balken, sonst einer. Sonst bleiben es zwei. Drei Sterne, «daneben» und rückwärts bleiben, wie sie sind. Die Nähe ist der Abstand der beiden Mediane in Halbtönen, nach derselben Tonhöhenrechnung wie die Kurve. Die Grenze ist 6 Halbtöne. Auf der Kalibrierungshälfte, mit Stille und Opus, bleibt jedes Paar der beiden Männerstimmen darunter, höchstens 5,98. mls-4576 liegt meist darüber, der Median der Abstände bei etwa 9. Die Zahl wird nicht gespeichert, nicht exportiert, und es kommt kein Profilfeld dazu. Ein Test hält fest, dass die Seite ohne gesetztes Geschlecht und bei weit auseinanderliegender Tonhöhe bei zwei Sternen bleibt. Eine Mutante, die das Geschlecht still auf männlich setzt, fällt durch, weil die Vorlage thorsten-high männlich ist und die Tonhöhen in dem Test weit auseinanderliegen.
+
 ## 0.9.9 — 2026-10-14
 
 - Bei «passt» und «teilweise» gibt Deutsch zwei Sterne nur, wenn ein Balken passt, sonst einen. Das ist Regel S3, und sie gilt nur, wenn die Vorlage und die sprechende Person dasselbe bekannte Geschlecht haben. Ein anderes Geschlecht oder ein fehlendes bleibt bei zwei, wie Portugiesisch, Englisch und Vietnamesisch in diesem Fall. Drei Sterne bleiben an «passt» und beiden grünen Balken. Bei «daneben» gibt es zwei nur mit einem grünen Balken, einen, wenn der bessere Balken teilweise ist, sonst keinen. Rückwärts bleibt ohne Stern. Die Sterne werden weiter nicht gespeichert. Das Profil speichert kein Geschlecht, deshalb bleibt eine Aufnahme in der App bei zwei, solange das Geschlecht fehlt. Die gewählte Stimme liefert das Geschlecht der Vorlage.

@@ -1,4 +1,4 @@
-import { contourFromSamples, frameEnergy, type Contour } from './contour'
+import { contourAndMedian, frameEnergy, type Contour } from './contour'
 import { bandShape, closestBands, trimSilence } from './spectrum'
 
 /** Pitch, loudness and band shape for one clip. The samples themselves are not kept. */
@@ -14,6 +14,8 @@ export type ClipFeatures = {
    * move the window off the file. Rhythm and the reverse lock keep `bands`.
    */
   speechBands: number[][]
+  /** Median voiced pitch in hertz. Not stored. */
+  medianHz: number | null
 }
 
 function spokenBands(samples: Float32Array, rate: number, bands: number[][]): number[][] {
@@ -21,16 +23,28 @@ function spokenBands(samples: Float32Array, rate: number, bands: number[][]): nu
   return spoken === samples ? bands : bandShape(spoken, rate)
 }
 
+function withPitch(
+  samples: Float32Array,
+  rate: number,
+  bands: number[][],
+  plain: number[][],
+  speech: number[][],
+): ClipFeatures {
+  const pitch = contourAndMedian(samples, rate)
+  return {
+    contour: pitch.contour,
+    energy: frameEnergy(samples, rate),
+    bands,
+    plainBands: plain,
+    speechBands: speech,
+    medianHz: pitch.medianHz,
+  }
+}
+
 /** Features of the file the learner just heard. */
 export function analyzeModel(samples: Float32Array, rate: number): ClipFeatures {
   const bands = bandShape(samples, rate)
-  return {
-    contour: contourFromSamples(samples, rate),
-    energy: frameEnergy(samples, rate),
-    bands,
-    plainBands: bands,
-    speechBands: spokenBands(samples, rate, bands),
-  }
+  return withPitch(samples, rate, bands, bands, spokenBands(samples, rate, bands))
 }
 
 /**
@@ -44,11 +58,5 @@ export function analyzeUser(
 ): ClipFeatures {
   const shaped = modelBands && modelBands.length > 0 ? closestBands(modelBands, samples, rate) : null
   const plain = shaped?.plain ?? bandShape(samples, rate)
-  return {
-    contour: contourFromSamples(samples, rate),
-    energy: frameEnergy(samples, rate),
-    bands: shaped?.closest ?? plain,
-    plainBands: plain,
-    speechBands: spokenBands(samples, rate, plain),
-  }
+  return withPitch(samples, rate, shaped?.closest ?? plain, plain, spokenBands(samples, rate, plain))
 }

@@ -1313,6 +1313,7 @@ describe('shipped clips', () => {
                 speechBands: features.speechBands,
                 contour: features.contour,
                 energy: features.energy,
+                medianHz: features.medianHz,
                 words: times.map((word, index) => ({ ...word, text: texts[index] ?? '' })),
               },
             ]
@@ -1508,6 +1509,7 @@ describe('shipped clips', () => {
                 bad.sentenceCheck?.backwards ?? false,
                 lang,
                 gendersOf(voice.id, voice.id),
+                { modelHz: row.medianHz, userHz: next.medianHz },
               )
               if (stars === 0) wrongZero += 1
             }
@@ -1524,6 +1526,7 @@ describe('shipped clips', () => {
                 heard.sentenceCheck?.backwards ?? false,
                 lang,
                 gendersOf(anchorId, voice.id),
+                { modelHz: model.medianHz, userHz: row.medianHz },
               )
               const slot = perVoice.get(voice.id) ?? { judged: 0, low: 0 }
               slot.judged += 1

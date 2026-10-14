@@ -1211,15 +1211,31 @@ export function sentenceVerdict(check: SentenceCheck, lang: Lang = 'de'): BarSta
 export type SpeakerGender = 'male' | 'female'
 
 /**
+ * German S3 also runs when the take and the file sit inside this many
+ * semitones of median pitch. On half A, after silence and Opus, every
+ * thorsten pair stays at or under 6 and mls-4576 is mostly above it.
+ * The page does not store a gender, so this gap is what turns S3 on.
+ */
+export const S3_PITCH_SEMITONES = 6
+
+/** Absolute gap of two median pitches, in semitones. Missing or silent is null. */
+export function medianGapSemitones(modelHz?: number | null, userHz?: number | null): number | null {
+  if (modelHz == null || userHz == null || !(modelHz > 0) || !(userHz > 0)) return null
+  return Math.abs(12 * Math.log2(userHz / modelHz))
+}
+
+/**
  * Star count for the repeat screen. Not stored on the score.
  *
  * 3 only when the sentence is «passt» and both bars are «passt».
  * On «passt» and «teilweise», German rule S3 gives 2 when a bar is
- * «passt» and 1 otherwise, and only when the template voice and the
- * speaker are the same known gender. A different gender, or a missing
- * one, stays on V2: two stars. Portuguese, English and Vietnamese stay
- * at 2. On «daneben», 2 only when a bar is «passt», 1 when the better
- * bar is yellow, otherwise 0. A reversed take is 0.
+ * «passt» and 1 otherwise. S3 runs when the template voice and the
+ * speaker are the same known gender, or when the median pitches are
+ * within S3_PITCH_SEMITONES. A different gender with a far or missing
+ * pitch, and a missing gender with a far or missing pitch, stay on V2:
+ * two stars. Portuguese, English and Vietnamese stay at 2. On
+ * «daneben», 2 only when a bar is «passt», 1 when the better bar is
+ * yellow, otherwise 0. A reversed take is 0.
  */
 export function starsFromVerdict(
   verdict: BarState,
@@ -1228,6 +1244,7 @@ export function starsFromVerdict(
   backwards = false,
   lang: Lang = 'de',
   genders?: { readonly template?: SpeakerGender | null; readonly user?: SpeakerGender | null } | null,
+  pitch?: { readonly modelHz?: number | null; readonly userHz?: number | null } | null,
 ): 0 | 1 | 2 | 3 {
   if (backwards) return 0
   const green = [melody, rhythm].filter((bar) => bar === 'passt').length
@@ -1240,7 +1257,10 @@ export function starsFromVerdict(
   }
   const template = genders?.template
   const user = genders?.user
-  if (lang === 'de' && template && user && template === user) return green >= 1 ? 2 : 1
+  const sameGender = Boolean(template && user && template === user)
+  const gap = medianGapSemitones(pitch?.modelHz, pitch?.userHz)
+  const closePitch = gap != null && gap <= S3_PITCH_SEMITONES
+  if (lang === 'de' && (sameGender || closePitch)) return green >= 1 ? 2 : 1
   return 2
 }
 

@@ -35,6 +35,7 @@ export function pitchWorker(): Worker | null {
         bands: event.data.bands,
         plainBands: event.data.plainBands ?? event.data.bands,
         speechBands: event.data.speechBands ?? event.data.plainBands ?? event.data.bands,
+        medianHz: event.data.medianHz ?? null,
       })
     }
     created.onerror = () => {

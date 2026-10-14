@@ -2,6 +2,12 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## 0.9.10 Tonhöhe für S3
+
+Geprüft am 14. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.
+
+Die Sternregel S3 gilt weiter nur für Deutsch und nur bei «passt» und «teilweise». Sie läuft, wenn die mittlere Tonhöhe der Aufnahme nahe an der der Datei liegt, oder wenn Vorlage und sprechende Person dasselbe bekannte Geschlecht haben. Die Seite fragt das Geschlecht nicht und speichert es nicht. `speakerGender` bleibt leer, solange niemand es setzt. Der Median wird im Speicher aus der Tonhöhenrechnung gebildet und steht auf `ClipFeatures.medianHz`. Er liegt nicht auf dem Score, nicht in IndexedDB und nicht im Export. Es entsteht kein neues Profilfeld. Die Erklärung hinter dem Info-Knopf nennt kein Geschlecht mehr. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Die CSP bleibt.
+
 ## 0.9.9 Sterne und Lernstand
 
 Geprüft am 14. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.

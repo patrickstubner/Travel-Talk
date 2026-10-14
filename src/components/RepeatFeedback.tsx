@@ -140,7 +140,10 @@ export function RepeatFeedback({
   voiceId: string
   /** True while the timing file is still loading. The missing-times line waits. */
   timingsPending?: boolean
-  /** Gender of the person, when the profile has one. Missing keeps German S3 off. */
+  /**
+   * Optional. The profile does not store a gender, and the live page
+   * leaves this null. A test may set it. Missing keeps the gender gate off.
+   */
   speakerGender?: 'male' | 'female' | null
   /** App language for the star note. The target language stays `lang`. */
   uiLang?: Lang
@@ -238,6 +241,8 @@ export function RepeatFeedback({
           speech={speech}
           voiceId={voiceId}
           speakerGender={speakerGender}
+          modelHz={modelFeatures?.medianHz ?? null}
+          userHz={userFeatures?.medianHz ?? null}
           score={score}
           modelMissing={modelMissing}
           tooShort={userDuration < SHORT_SECONDS || score?.tooShort === true}
@@ -316,6 +321,8 @@ function Result({
   speech,
   voiceId,
   speakerGender,
+  modelHz,
+  userHz,
   score,
   modelMissing,
   timingMissing,
@@ -329,6 +336,8 @@ function Result({
   speech: string
   voiceId: string
   speakerGender: 'male' | 'female' | null
+  modelHz: number | null
+  userHz: number | null
   score: RepeatScore | null
   modelMissing: boolean
   timingMissing: boolean
@@ -356,10 +365,18 @@ function Result({
   // Missing bars, or a score with no sentence verdict, are not a grade. 0 stays on the row.
   const stars =
     showBars && verdict
-      ? starsFromVerdict(verdict, melodyBar, rhythmBar, score?.sentenceCheck?.backwards ?? false, lang, {
-          template: voicesFor(lang).find((voice) => voice.id === voiceId)?.gender ?? null,
-          user: speakerGender,
-        })
+      ? starsFromVerdict(
+          verdict,
+          melodyBar,
+          rhythmBar,
+          score?.sentenceCheck?.backwards ?? false,
+          lang,
+          {
+            template: voicesFor(lang).find((voice) => voice.id === voiceId)?.gender ?? null,
+            user: speakerGender,
+          },
+          { modelHz, userHz },
+        )
       : null
   const barsFit = stars === 2 && melodyBar === 'passt' && rhythmBar === 'passt' && verdict !== 'passt'
   const gapWord = scored?.find((word) => !word.scorable)
