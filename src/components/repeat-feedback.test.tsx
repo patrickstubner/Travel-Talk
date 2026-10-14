@@ -86,6 +86,7 @@ describe('repeat feedback view', () => {
       expect(card.querySelectorAll('canvas')).toHaveLength(1)
     }
     expect(screen.getByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeTruthy()
+    expect(screen.queryByTestId('bars-fit')).toBeNull()
     expect(view.textContent ?? '').not.toMatch(/\d+\s*%/)
   })
 
@@ -409,6 +410,7 @@ describe('repeat feedback view', () => {
     renderFeedback('de')
     expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
     expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(2)
+    expect(screen.getByTestId('bars-fit').textContent).toBe('Zwei Sterne. Die Balken passen, der Satz noch nicht ganz.')
     cleanup()
     vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
       ...actual.scoreRepeat(input),
@@ -418,6 +420,7 @@ describe('repeat feedback view', () => {
     }))
     renderFeedback('de')
     expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
+    expect(screen.queryByTestId('bars-fit')).toBeNull()
     cleanup()
     vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
       ...actual.scoreRepeat(input),

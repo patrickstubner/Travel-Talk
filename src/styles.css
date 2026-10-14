@@ -503,6 +503,7 @@ a.menu-card span { color: var(--muted); }
 .score-track.daneben .score-fill { background: var(--clay); }
 .take-stars { display: flex; align-items: center; gap: 0.55rem; margin: 0.35rem 0 0.15rem; }
 .take-stars-row { display: flex; gap: 0.28rem; margin: 0; font-size: 2.6rem; line-height: 1; }
+.take-note { margin: 0.1rem 0 0.25rem; color: var(--ink); }
 .take-stars .star { color: transparent; -webkit-text-stroke: 2px #8a5a12; }
 .take-stars .star.on { color: #8a5a12; -webkit-text-stroke: 0; }
 .study-progress { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
@@ -510,7 +511,9 @@ a.menu-card span { color: var(--muted); }
 .study-progress.full { align-items: flex-start; }
 .study-progress.full .study-meters { grid-template-columns: 1fr; gap: 0.55rem; }
 .study-meter { display: grid; gap: 0.12rem; min-width: 0; }
-.study-progress.full .study-meter { grid-template-columns: 3.2rem minmax(0, 1fr); gap: 0.45rem; align-items: center; }
+.study-progress.full .study-meter { grid-template-columns: 5.6rem minmax(0, 1fr); gap: 0.45rem; align-items: center; }
+.study-figure { display: flex; flex-direction: column; min-width: 0; gap: 0.08rem; }
+.study-label { font-size: 0.68rem; line-height: 1.15; font-weight: 650; color: var(--muted); }
 .study-count { font-variant-numeric: tabular-nums; font-weight: 750; font-size: 0.95rem; line-height: 1; color: var(--ink); }
 .study-progress.full .study-count { font-size: 1.45rem; }
 .study-track { display: block; height: 0.42rem; background: #efe4d4; border-radius: 99px; overflow: hidden; }
@@ -543,6 +546,8 @@ a.menu-card span { color: var(--muted); }
 .show-mode .take-stars .star { color: transparent; -webkit-text-stroke: 2px #f0c27a; }
 .show-mode .take-stars .star.on { color: #f0c27a; -webkit-text-stroke: 0; }
 .show-mode .study-track { background: #1a222a; }
+.show-mode .take-note { color: #f4efe6; }
+.show-mode .study-label { color: #d4c8b6; }
 .show-mode .study-count { color: #f4efe6; }
 .show-mode .study-split .sentences { background: #5ee0d4; }
 .show-mode .study-split .words,

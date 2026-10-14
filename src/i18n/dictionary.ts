@@ -66,6 +66,7 @@ export type Dictionary = {
     starsInfo: string
     starsTitle: string
     starsHint: string
+    barsFit: string
     unclear: string
     noWordTimes: string
     tooShort: string
@@ -119,6 +120,9 @@ export type Dictionary = {
     learned: (sentences: number, words: number) => string
     reviewed: (count: number) => string
     kept: (percent: number) => string
+    learnedLabel: string
+    reviewedLabel: string
+    keptLabel: string
     learnedHint: string
     reviewedHint: string
     keptHint: string
@@ -411,7 +415,8 @@ export const de: Dictionary = {
     starsInfo: 'Was die Sterne bedeuten',
     starsTitle: 'Sterne',
     starsHint:
-      'Drei Sterne nur, wenn der Satz passt und beide Balken passen. Passt oder teilweise bleibt bei zwei, auch wenn ein Balken daneben ist. Bei daneben gibt es zwei nur, wenn ein Balken passt, einen, wenn der bessere Balken teilweise ist, sonst keinen. Rückwärts gibt keinen Stern. Ein falscher Satz bekommt nie drei.',
+      'Drei Sterne nur, wenn der Satz passt und beide Balken passen. Auf Deutsch geben passt und teilweise zwei Sterne nur mit einem grünen Balken, sonst einen. Die anderen Lernsprachen bleiben bei zwei. Bei daneben gibt es zwei nur, wenn ein Balken passt, einen, wenn der bessere Balken teilweise ist, sonst keinen. Rückwärts gibt keinen Stern. Ein falscher Satz bekommt nie drei.',
+    barsFit: 'Zwei Sterne. Die Balken passen, der Satz noch nicht ganz.',
     unclear: 'Das lässt sich nicht zuordnen. Sprich in derselben Richtung wie die Datei, ohne lange Pause davor.',
     noWordTimes: 'Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.',
     tooShort: 'Zu kurz. Sprich den ganzen Satz.',
@@ -481,6 +486,9 @@ export const de: Dictionary = {
       `${sentences === 1 ? '1 Satz' : `${sentences} Sätze`} und ${words === 1 ? '1 Wort' : `${words} Wörter`} gelernt`,
     reviewed: (count) => `${count} heute wiederholt`,
     kept: (percent) => `${percent} Prozent behalten`,
+    learnedLabel: 'Gelernt',
+    reviewedLabel: 'Heute',
+    keptLabel: 'Behalten',
     learnedHint:
       'Der erste Balken zählt Sätze und Wörter, die mindestens einmal bewertet wurden. Türkis sind Sätze, Grün sind Wörter. Die Zahl ist die Summe.',
     reviewedHint:
@@ -569,7 +577,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.9.8',
+  version: 'Version 0.9.9',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   aboutLine: 'Zum Satz',
   infoOpen: 'Erklärungen zum Satz',
@@ -788,7 +796,8 @@ export const en: Dictionary = {
     starsInfo: 'What the stars mean',
     starsTitle: 'Stars',
     starsHint:
-      'Three stars only when the sentence fits and both bars fit. Fits or partly stays at two, even if a bar is off. When the sentence is off, two only if a bar fits, one if the better bar is partly, otherwise none. Spoken backwards gets none. A wrong sentence never gets three.',
+      'Three stars only when the sentence fits and both bars fit. In German, fits or partly is two stars only with a green bar, otherwise one. The other languages stay at two. When the sentence is off, two only if a bar fits, one if the better bar is partly, otherwise none. Spoken backwards gets none. A wrong sentence never gets three.',
+    barsFit: 'Two stars. The bars fit, the sentence does not quite.',
     unclear: 'This cannot be lined up. Speak in the same direction as the file, without a long pause first.',
     noWordTimes: 'This voice has no word timings. The curve stays, and the words stay grey.',
     tooShort: 'Too short. Say the whole sentence.',
@@ -858,6 +867,9 @@ export const en: Dictionary = {
       `${sentences === 1 ? '1 sentence' : `${sentences} sentences`} and ${words === 1 ? '1 word' : `${words} words`} learned`,
     reviewed: (count) => `${count} reviewed today`,
     kept: (percent) => `${percent} percent retained`,
+    learnedLabel: 'Learned',
+    reviewedLabel: 'Today',
+    keptLabel: 'Kept',
     learnedHint:
       'The first bar counts sentences and words rated at least once. Teal is sentences, green is words. The number is the sum.',
     reviewedHint: 'The second bar counts cards that were already known and came up again today. The first meeting that day is not a review.',
@@ -942,7 +954,7 @@ export const en: Dictionary = {
   privacy: 'Progress, recordings and the note stay on this device. No account, no tracking, no font from the network.',
   loading: 'One moment.',
   storageError: 'Local storage is not available.',
-  version: 'Version 0.9.8',
+  version: 'Version 0.9.9',
   exampleAudio: 'The audio speaks the example sentence.',
   aboutLine: 'About this line',
   infoOpen: 'Notes about this line',
@@ -1161,7 +1173,8 @@ export const pt: Dictionary = {
     starsInfo: 'O que as estrelas significam',
     starsTitle: 'Estrelas',
     starsHint:
-      'Três estrelas só quando a frase encaixa e as duas barras encaixam. Encaixa ou em parte fica em duas, mesmo se uma barra está fora. Quando a frase está fora, duas só se uma barra encaixa, uma se a melhor barra está em parte, senão nenhuma. Ao contrário, nenhuma. Uma frase errada nunca ganha três.',
+      'Três estrelas só quando a frase encaixa e as duas barras encaixam. Em alemão, encaixa ou em parte fica em duas só com uma barra verde, senão em uma. As outras línguas ficam em duas. Quando a frase está fora, duas só se uma barra encaixa, uma se a melhor barra está em parte, senão nenhuma. Ao contrário, nenhuma. Uma frase errada nunca ganha três.',
+    barsFit: 'Duas estrelas. As barras encaixam, a frase ainda não.',
     unclear: 'Não dá para alinhar. Fale na mesma direção do arquivo, sem uma pausa longa antes.',
     noWordTimes: 'Esta voz não tem os tempos das palavras. A curva fica, e as palavras ficam cinza.',
     tooShort: 'Curto demais. Fale a frase inteira.',
@@ -1231,6 +1244,9 @@ export const pt: Dictionary = {
       `${sentences === 1 ? '1 frase' : `${sentences} frases`} e ${words === 1 ? '1 palavra' : `${words} palavras`} aprendidas`,
     reviewed: (count) => `${count} revisadas hoje`,
     kept: (percent) => `${percent} por cento retidas`,
+    learnedLabel: 'Aprendidas',
+    reviewedLabel: 'Hoje',
+    keptLabel: 'Retidas',
     learnedHint:
       'A primeira barra conta frases e palavras avaliadas pelo menos uma vez. Verde-azulado são frases, verde são palavras. O número é a soma.',
     reviewedHint:
@@ -1318,7 +1334,7 @@ export const pt: Dictionary = {
   privacy: 'Progresso, gravações e a nota ficam neste aparelho. Sem conta, sem rastreamento, sem fonte da rede.',
   loading: 'Um momento.',
   storageError: 'O armazenamento local não está disponível.',
-  version: 'Version 0.9.8',
+  version: 'Version 0.9.9',
   exampleAudio: 'O áudio fala a frase de exemplo.',
   aboutLine: 'Sobre a frase',
   infoOpen: 'Notas sobre a frase',
@@ -1537,7 +1553,8 @@ export const vi: Dictionary = {
     starsInfo: 'Sao có nghĩa là gì',
     starsTitle: 'Sao',
     starsHint:
-      'Ba sao chỉ khi câu ổn và cả hai cột ổn. Ổn hoặc một phần vẫn là hai sao, kể cả khi một cột lệch. Khi câu lệch, hai sao chỉ nếu một cột ổn, một sao nếu cột tốt hơn là một phần, không thì không sao. Nói ngược không có sao. Câu sai không bao giờ được ba sao.',
+      'Ba sao chỉ khi câu ổn và cả hai cột ổn. Với tiếng Đức, ổn hoặc một phần là hai sao chỉ khi có một cột xanh, không thì một sao. Các ngôn ngữ khác vẫn là hai sao. Khi câu lệch, hai sao chỉ nếu một cột ổn, một sao nếu cột tốt hơn là một phần, không thì không sao. Nói ngược không có sao. Câu sai không bao giờ được ba sao.',
+    barsFit: 'Hai sao. Hai cột ổn, câu chưa hẳn.',
     unclear: 'Không xếp được. Nói cùng hướng với tệp, đừng dừng lâu trước khi nói.',
     noWordTimes: 'Giọng này không có thời điểm từng từ. Đường cong vẫn còn, các từ vẫn xám.',
     tooShort: 'Quá ngắn. Nói cả câu.',
@@ -1606,6 +1623,9 @@ export const vi: Dictionary = {
     learned: (sentences, words) => `${sentences} câu và ${words} từ đã học`,
     reviewed: (count) => `${count} ôn hôm nay`,
     kept: (percent) => `${percent} phần trăm còn nhớ`,
+    learnedLabel: 'Đã học',
+    reviewedLabel: 'Hôm nay',
+    keptLabel: 'Còn nhớ',
     learnedHint: 'Cột thứ nhất đếm câu và từ đã được chấm ít nhất một lần. Xanh lam là câu, xanh lục là từ. Số là tổng.',
     reviewedHint: 'Cột thứ hai đếm thẻ đã biết và được ôn lại hôm nay. Lần gặp đầu trong ngày không tính là ôn.',
     keptHint: 'Cột thứ ba là phần thẻ đã học đang ở trạng thái ôn. Đó không phải điểm phát âm. Không có gì rời khỏi máy.',
@@ -1688,7 +1708,7 @@ export const vi: Dictionary = {
   privacy: 'Tiến độ, bản ghi và ghi chú ở trên máy này. Không tài khoản, không theo dõi, không phông từ mạng.',
   loading: 'Một lát.',
   storageError: 'Bộ nhớ trên máy không dùng được.',
-  version: 'Version 0.9.8',
+  version: 'Version 0.9.9',
   exampleAudio: 'Audio đọc câu ví dụ.',
   aboutLine: 'Về câu này',
   infoOpen: 'Giải thích về câu này',

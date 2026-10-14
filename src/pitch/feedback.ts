@@ -964,8 +964,14 @@ export function reversedRecording(
   userBands: readonly (readonly number[])[] | null | undefined,
 ): boolean {
   if (!modelBands || !userBands || modelBands.length < 8 || userBands.length < 8) return false
-  const forward = bandDistance(modelBands, userBands)
-  const backward = bandDistance([...modelBands].reverse(), userBands)
+  // The sentence distance wants eight frames. A reversed one-syllable file
+  // can fall short on both sides, and then six frames still see the flip.
+  // A longer template against a short take stays at eight, so a correct
+  // «Dạ.» is not locked just because one side is thin.
+  const bothShort = bandDistance(modelBands, modelBands) == null && bandDistance(userBands, userBands) == null
+  const minFrames = bothShort ? 6 : 8
+  const forward = bandDistance(modelBands, userBands, 160, minFrames)
+  const backward = bandDistance([...modelBands].reverse(), userBands, 160, minFrames)
   if (forward == null || backward == null) return false
   return backward + REVERSE_BAND_GAP < forward
 }
@@ -1143,9 +1149,13 @@ export const VERDICT_PASST_CORR = 0.2
  */
 export const VERDICT_DANEBEN_CORR = 0
 export const VERDICT_DANEBEN_CORR_EN = -0.4
+/** Vietnamese is «daneben» when the pitch correlation is below 0.2. */
+export const VERDICT_DANEBEN_CORR_VI = 0.2
 
 export function danebenCorrelation(lang: Lang): number {
-  return lang === 'en' ? VERDICT_DANEBEN_CORR_EN : VERDICT_DANEBEN_CORR
+  if (lang === 'en') return VERDICT_DANEBEN_CORR_EN
+  if (lang === 'vi') return VERDICT_DANEBEN_CORR_VI
+  return VERDICT_DANEBEN_CORR
 }
 /** joe «wifi» against itself marks half its words opposed. Proposed. */
 export const VERDICT_OPPOSED_PASST = 0.5
@@ -1181,8 +1191,10 @@ export type SentenceCheck = {
  * Whether the spoken line is the file.
  *
  * «passt» needs the pitch contour to agree and the band sequence to still be
- * the file. A contour below 0, a run of opposed words, a word order that
- * folds back, or a reversed take is «daneben». Everything else is «teilweise».
+ * the file. A contour below the language cutoff, a run of opposed words, a
+ * word order that folds back, or a reversed take is «daneben». Vietnamese
+ * uses 0.2. German and Portuguese use 0. English uses −0.4. Everything else
+ * is «teilweise».
  */
 export function sentenceVerdict(check: SentenceCheck, lang: Lang = 'de'): BarState {
   if (check.backwards) return 'daneben'
@@ -1200,15 +1212,17 @@ export function sentenceVerdict(check: SentenceCheck, lang: Lang = 'de'): BarSta
  * Star count for the repeat screen. Not stored on the score.
  *
  * 3 only when the sentence is «passt» and both bars are «passt».
- * «passt» and «teilweise» stay at 2. On «daneben», 2 only when a bar is
- * «passt», 1 when the better bar is yellow, otherwise 0. A reversed take
- * is 0. The held-out check counts 0 and 1 together.
+ * On «passt» and «teilweise», German rule S3 gives 2 when a bar is
+ * «passt» and 1 otherwise. Portuguese, English and Vietnamese stay at 2.
+ * On «daneben», 2 only when a bar is «passt», 1 when the better bar is
+ * yellow, otherwise 0. A reversed take is 0.
  */
 export function starsFromVerdict(
   verdict: BarState,
   melody: BarState | null,
   rhythm: BarState | null,
   backwards = false,
+  lang: Lang = 'de',
 ): 0 | 1 | 2 | 3 {
   if (backwards) return 0
   const green = [melody, rhythm].filter((bar) => bar === 'passt').length
@@ -1219,6 +1233,7 @@ export function starsFromVerdict(
     if (yellow >= 1) return 1
     return 0
   }
+  if (lang === 'de') return green >= 1 ? 2 : 1
   return 2
 }
 

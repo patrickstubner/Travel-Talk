@@ -68,6 +68,9 @@ describe('study progress on the pages', () => {
     expect(view.getAttribute('data-variant')).toBe('compact')
     expect(screen.getByTestId('study-learned').getAttribute('data-words')).toBe(String(WORDS.length))
     expect(screen.getByTestId('study-learned').getAttribute('data-sentences')).toBe('0')
+    expect(screen.getByTestId('study-learned').textContent ?? '').toMatch(/Gelernt/)
+    expect(screen.getByTestId('study-reviewed').textContent ?? '').toMatch(/Heute/)
+    expect(screen.getByTestId('study-kept').textContent ?? '').toMatch(/Behalten/)
   })
 
   it('shows the fuller bars on the start page', async () => {
@@ -90,5 +93,8 @@ describe('study progress on the pages', () => {
     expect(screen.getByTestId('study-learned').getAttribute('data-words')).toBe('1')
     expect(screen.getByTestId('study-reviewed').getAttribute('data-count')).toBe('1')
     expect(screen.getByTestId('study-kept').getAttribute('data-percent')).toBe('50')
+    expect(screen.getByTestId('study-learned').textContent ?? '').toMatch(/Gelernt/)
+    expect(screen.getByTestId('study-reviewed').textContent ?? '').toMatch(/Heute/)
+    expect(screen.getByTestId('study-kept').textContent ?? '').toMatch(/Behalten/)
   })
 })

@@ -38,8 +38,13 @@ export function StudyProgress({
           data-sentences={counts.learnedSentences}
           data-words={counts.learnedWords}
         >
-          <span className="study-count" aria-hidden="true">
-            {learned}
+          <span className="study-figure">
+            <span className="study-label" aria-hidden="true">
+              {study.learnedLabel}
+            </span>
+            <span className="study-count" aria-hidden="true">
+              {learned}
+            </span>
           </span>
           <span className="study-track" aria-hidden="true">
             <span className="study-split">
@@ -55,16 +60,26 @@ export function StudyProgress({
           data-testid="study-reviewed"
           data-count={counts.reviewedToday}
         >
-          <span className="study-count" aria-hidden="true">
-            {counts.reviewedToday}
+          <span className="study-figure">
+            <span className="study-label" aria-hidden="true">
+              {study.reviewedLabel}
+            </span>
+            <span className="study-count" aria-hidden="true">
+              {counts.reviewedToday}
+            </span>
           </span>
           <span className="study-track" aria-hidden="true">
             <span className="study-fill reviewed" style={{ width: reviewedWidth }} />
           </span>
         </div>
         <div className="study-meter" role="img" aria-label={study.kept(kept)} data-testid="study-kept" data-percent={kept}>
-          <span className="study-count" aria-hidden="true">
-            {kept}%
+          <span className="study-figure">
+            <span className="study-label" aria-hidden="true">
+              {study.keptLabel}
+            </span>
+            <span className="study-count" aria-hidden="true">
+              {kept}%
+            </span>
           </span>
           <span className="study-track" aria-hidden="true">
             <span className="study-fill kept" style={{ width: `${kept}%` }} />

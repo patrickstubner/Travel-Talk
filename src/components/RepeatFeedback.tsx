@@ -349,8 +349,9 @@ function Result({
   // Missing bars, or a score with no sentence verdict, are not a grade. 0 stays on the row.
   const stars =
     showBars && verdict
-      ? starsFromVerdict(verdict, melodyBar, rhythmBar, score?.sentenceCheck?.backwards ?? false)
+      ? starsFromVerdict(verdict, melodyBar, rhythmBar, score?.sentenceCheck?.backwards ?? false, lang)
       : null
+  const barsFit = stars === 2 && melodyBar === 'passt' && rhythmBar === 'passt' && verdict !== 'passt'
   const gapWord = scored?.find((word) => !word.scorable)
   const notice = tooShort
     ? feedback.tooShort
@@ -434,6 +435,11 @@ function Result({
         </div>
       ) : null}
       {stars != null ? <TakeStars count={stars} copy={copy} speechLang={uiLang} /> : null}
+      {barsFit ? (
+        <p className="take-note" role="status" data-testid="bars-fit">
+          {feedback.barsFit}
+        </p>
+      ) : null}
       {showBars && melodyBar && rhythmBar ? (
         <div className="repeat-bars">
           <ScoreBar label={feedback.melody} state={melodyBar} copy={copy} testId="melody-bar" />
