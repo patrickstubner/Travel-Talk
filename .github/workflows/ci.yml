@@ -157,6 +157,9 @@ jobs:
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: [lint, typecheck, test, clips, overflow, build, audit]
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     permissions:
       contents: read
       actions: write
@@ -172,6 +175,24 @@ jobs:
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - run: npm ci --ignore-scripts
       - run: npm run build
+      # The repo has no verify-build script. This is the build check, on dist,
+      # before the upload: fallback page, CSP, and no help clip in the precache.
+      - name: Verify the build
+        run: |
+          node <<'EOF'
+          const { readFileSync } = require('node:fs')
+          const index = readFileSync('dist/index.html', 'utf8')
+          const fallback = readFileSync('dist/404.html', 'utf8')
+          const sw = readFileSync('dist/sw.js', 'utf8')
+          const manifest = readFileSync('dist/manifest.webmanifest', 'utf8')
+          if (!index) throw new Error('INDEX_MISSING')
+          if (index !== fallback) throw new Error('SPA_FALLBACK_MISSING')
+          if (!index.includes('Content-Security-Policy')) throw new Error('CSP_MISSING')
+          if (!index.includes("default-src 'self'")) throw new Error('CSP_DEFAULT')
+          if (index.includes('unsafe-inline') || index.includes('unsafe-eval')) throw new Error('CSP_LOOSE')
+          if (!manifest.includes('/Travel-Talk/')) throw new Error('MANIFEST_BASE')
+          if (/\/help\/[a-z0-9][^"'\\\s]*\.m4a/.test(sw)) throw new Error('HELP_IN_PRECACHE')
+          EOF
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: dist
@@ -186,6 +207,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    # Same group as pages-artifact, so a second main push waits.
     concurrency:
       group: pages
       cancel-in-progress: false
