@@ -16,6 +16,18 @@ function testsAreRunning(): boolean {
   return typeof process !== 'undefined' && process.env.VITEST === 'true'
 }
 
+/** Copy the worker reply. The median is kept; the samples are not in the reply. */
+export function featuresFromWorker(data: AnalysisResponse): ClipFeatures {
+  return {
+    contour: data.contour,
+    energy: data.energy,
+    bands: data.bands,
+    plainBands: data.plainBands ?? data.bands,
+    speechBands: data.speechBands ?? data.plainBands ?? data.bands,
+    medianHz: data.medianHz ?? null,
+  }
+}
+
 /** The analysis worker, or null in tests and when the browser has none. */
 export function pitchWorker(): Worker | null {
   if (worker !== undefined) return worker
@@ -29,14 +41,7 @@ export function pitchWorker(): Worker | null {
       const waiting = pending.get(event.data.id)
       if (!waiting) return
       pending.delete(event.data.id)
-      waiting.resolve({
-        contour: event.data.contour,
-        energy: event.data.energy,
-        bands: event.data.bands,
-        plainBands: event.data.plainBands ?? event.data.bands,
-        speechBands: event.data.speechBands ?? event.data.plainBands ?? event.data.bands,
-        medianHz: event.data.medianHz ?? null,
-      })
+      waiting.resolve(featuresFromWorker(event.data))
     }
     created.onerror = () => {
       worker = null
