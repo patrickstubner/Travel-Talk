@@ -1259,7 +1259,8 @@ export function starsFromVerdict(
   const user = genders?.user
   const sameGender = Boolean(template && user && template === user)
   const gap = medianGapSemitones(pitch?.modelHz, pitch?.userHz)
-  const closePitch = gap != null && gap <= S3_PITCH_SEMITONES
+  // log2 of an exact power of two can sit a few ulps over the cut.
+  const closePitch = gap != null && gap <= S3_PITCH_SEMITONES + 1e-9
   if (lang === 'de' && (sameGender || closePitch)) return green >= 1 ? 2 : 1
   return 2
 }
