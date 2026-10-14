@@ -47,14 +47,27 @@ export function currentHomeScreenOffer(): HomeScreenOffer {
   return homeScreenOffer(window, deferred !== null)
 }
 
-/** Open the browser install sheet. The saved event can be used once. */
+/**
+ * Open the browser install sheet. The saved event stays when `prompt()` throws,
+ * so the next tap can try again. A successful call discards it.
+ */
 export async function promptHomeScreen(): Promise<void> {
   const event = deferred
   if (!event) return
-  deferred = null
-  emit()
-  await event.prompt()
-  await event.userChoice
+  try {
+    await event.prompt()
+  } catch {
+    return
+  }
+  if (deferred === event) {
+    deferred = null
+    emit()
+  }
+  try {
+    await event.userChoice
+  } catch {
+    // The sheet already opened. The event cannot be used again.
+  }
 }
 
 /** Drop the saved event and the window listeners. Tests call this between cases. */

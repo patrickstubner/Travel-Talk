@@ -2,6 +2,12 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## 0.9.14 Nachfrage und iOS-Browser
+
+Geprüft am 14. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.
+
+`prompt()` läuft weiter nur nach einem Tippen. Wirft es, bleibt das Ereignis im Speicher dieser Seite und geht nicht in den Export. Chrome, Edge und Firefox auf iOS 16.4 zeigen denselben Text wie Safari. Es entsteht kein Profilfeld. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Die CSP bleibt.
+
 ## 0.9.13 Zum Home-Bildschirm
 
 Geprüft am 14. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.
