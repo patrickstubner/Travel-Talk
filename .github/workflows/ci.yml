@@ -157,9 +157,6 @@ jobs:
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: [lint, typecheck, test, clips, overflow, build, audit]
-    concurrency:
-      group: pages
-      cancel-in-progress: false
     permissions:
       contents: read
       actions: write
@@ -207,10 +204,32 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    # Same group as pages-artifact, so a second main push waits.
     concurrency:
       group: pages
       cancel-in-progress: false
     steps:
+      # A queued push must not publish after main has moved. A manual dispatch
+      # is the rollback path, so that run skips the check. The remote URL is
+      # built from runner env vars only.
+      - name: Require this commit to still be the head of main
+        run: |
+          set -eu
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "Manual dispatch: skipping the check that this commit is still the tip of main."
+            exit 0
+          fi
+          url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          line=$(git ls-remote "$url" refs/heads/main)
+          tip=${line%%[[:space:]]*}
+          if [ -z "$tip" ]; then
+            echo "Refusing to deploy: could not read refs/heads/main." >&2
+            exit 1
+          fi
+          if [ "$tip" != "$GITHUB_SHA" ]; then
+            echo "Refusing to deploy: this commit is no longer the head of main." >&2
+            echo "This run: ${GITHUB_SHA}" >&2
+            echo "main:     ${tip}" >&2
+            exit 1
+          fi
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
