@@ -2,6 +2,12 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## 0.9.13 Zum Home-Bildschirm
+
+Geprüft am 14. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.
+
+Der Eintrag liegt in den Einstellungen. `beforeinstallprompt` wird abgefangen, und `prompt()` läuft nur nach einem Tippen. Es wird nichts gespeichert und nichts exportiert. Es entsteht kein Profilfeld. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Die CSP bleibt. Das Manifest und der Service Worker bleiben.
+
 ## 0.9.12 Tests zur Tonhöhe
 
 Geprüft am 14. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.

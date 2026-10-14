@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.13 — 2026-10-14
+
+- In den Einstellungen steht «Zum Home-Bildschirm». Auf Chromium und Android merkt sich die Seite `beforeinstallprompt` und öffnet die Nachfrage beim Tippen. Auf iOS Safari steht ein kurzer Satz: Teilen, dann Zum Home-Bildschirm. Läuft die App schon allein (`display-mode: standalone` oder `navigator.standalone`), fehlt der Eintrag. Dieselbe Beschriftung gibt es auf Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Es wird nichts gespeichert.
+
 ## 0.9.12 — 2026-10-14
 
 - Ein Test hält fest, dass auf Deutsch zwei Sterne bleiben, wenn die Vorlage bei 280 Hz liegt und die Aufnahme bei 110 Hz. Der Abstand zählt in beide Richtungen. Liegt er über 4 Halbtönen, bleibt «teilweise» bei zwei.

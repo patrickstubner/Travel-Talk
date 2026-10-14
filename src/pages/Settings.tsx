@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { DE_ADDRESS, PT_ADDRESS, PT_SPEAKER, VI_ADDRESS } from '../../content/address'
 import { wordIds } from '../../content/words'
 import { voicesKeptByOthers } from '../audio/voices'
+import { AddToHomeScreen } from '../components/AddToHomeScreen'
 import { LanguageChoice } from '../components/LanguageChoice'
 import { interfaceLang } from '../app/labels'
 import { useApp } from '../app/state'
@@ -398,6 +399,7 @@ export function SettingsPage() {
         </div>
       ) : null}
       {importState === 'reset' ? <p role="status">{copy.resetOk}</p> : null}
+      <AddToHomeScreen label={copy.installHome} iosHint={copy.installIos} />
       <button type="button" onClick={() => void persist()}>
         {copy.persist}
       </button>

@@ -193,6 +193,8 @@ export type Dictionary = {
   persist: string
   persistOk: string
   persistNo: string
+  installHome: string
+  installIos: string
   privacy: string
   loading: string
   storageError: string
@@ -573,11 +575,13 @@ export const de: Dictionary = {
   persist: 'Speicher behalten anfragen',
   persistOk: 'Der Browser darf den lokalen Lernstand behalten.',
   persistNo: 'Der Browser hat das nicht zugesichert. Exportiere regelmässig.',
+  installHome: 'Zum Home-Bildschirm',
+  installIos: 'Tippe auf Teilen, dann auf «Zum Home-Bildschirm».',
   privacy:
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.9.12',
+  version: 'Version 0.9.13',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   aboutLine: 'Zum Satz',
   infoOpen: 'Erklärungen zum Satz',
@@ -951,10 +955,12 @@ export const en: Dictionary = {
   persist: 'Ask to keep storage',
   persistOk: 'The browser may keep the local progress.',
   persistNo: 'The browser did not promise that. Export regularly.',
+  installHome: 'Add to Home Screen',
+  installIos: 'Tap Share, then Add to Home Screen.',
   privacy: 'Progress, recordings and the note stay on this device. No account, no tracking, no font from the network.',
   loading: 'One moment.',
   storageError: 'Local storage is not available.',
-  version: 'Version 0.9.12',
+  version: 'Version 0.9.13',
   exampleAudio: 'The audio speaks the example sentence.',
   aboutLine: 'About this line',
   infoOpen: 'Notes about this line',
@@ -1331,10 +1337,12 @@ export const pt: Dictionary = {
   persist: 'Pedir para manter o armazenamento',
   persistOk: 'O navegador pode manter o progresso local.',
   persistNo: 'O navegador não garantiu isso. Exporte com regularidade.',
+  installHome: 'Adicionar à Tela de Início',
+  installIos: 'Toque em Compartilhar e depois em Adicionar à Tela de Início.',
   privacy: 'Progresso, gravações e a nota ficam neste aparelho. Sem conta, sem rastreamento, sem fonte da rede.',
   loading: 'Um momento.',
   storageError: 'O armazenamento local não está disponível.',
-  version: 'Version 0.9.12',
+  version: 'Version 0.9.13',
   exampleAudio: 'O áudio fala a frase de exemplo.',
   aboutLine: 'Sobre a frase',
   infoOpen: 'Notas sobre a frase',
@@ -1705,10 +1713,12 @@ export const vi: Dictionary = {
   persist: 'Xin trình duyệt giữ bộ nhớ',
   persistOk: 'Trình duyệt có thể giữ tiến độ trên máy.',
   persistNo: 'Trình duyệt không hứa điều đó. Hãy xuất thường xuyên.',
+  installHome: 'Thêm vào Màn hình chính',
+  installIos: 'Chạm Chia sẻ, rồi Thêm vào Màn hình chính.',
   privacy: 'Tiến độ, bản ghi và ghi chú ở trên máy này. Không tài khoản, không theo dõi, không phông từ mạng.',
   loading: 'Một lát.',
   storageError: 'Bộ nhớ trên máy không dùng được.',
-  version: 'Version 0.9.12',
+  version: 'Version 0.9.13',
   exampleAudio: 'Audio đọc câu ví dụ.',
   aboutLine: 'Về câu này',
   infoOpen: 'Giải thích về câu này',
