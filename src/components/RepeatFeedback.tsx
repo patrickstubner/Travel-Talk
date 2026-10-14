@@ -6,6 +6,7 @@ import { playSequence, stopSlices } from '../audio/slice'
 import type { Dictionary } from '../i18n/dictionary'
 import { analyzeModelCached, analyzeUserOnce, pitchWorker } from '../pitch/analyze-client'
 import { InfoButton } from './InfoButton'
+import { voicesFor } from '../audio/voices'
 import { analyzeModel, analyzeUser, type ClipFeatures } from '../pitch/analyze'
 import { analysisHop, voicedValues, type Contour } from '../pitch/contour'
 import {
@@ -124,6 +125,7 @@ export function RepeatFeedback({
   voiceId,
   timingsPending = false,
   uiLang,
+  speakerGender = null,
 }: {
   copy: Dictionary
   lang: Lang
@@ -138,6 +140,8 @@ export function RepeatFeedback({
   voiceId: string
   /** True while the timing file is still loading. The missing-times line waits. */
   timingsPending?: boolean
+  /** Gender of the person, when the profile has one. Missing keeps German S3 off. */
+  speakerGender?: 'male' | 'female' | null
   /** App language for the star note. The target language stays `lang`. */
   uiLang?: Lang
 }) {
@@ -233,6 +237,7 @@ export function RepeatFeedback({
           uiLang={uiLang ?? 'de'}
           speech={speech}
           voiceId={voiceId}
+          speakerGender={speakerGender}
           score={score}
           modelMissing={modelMissing}
           tooShort={userDuration < SHORT_SECONDS || score?.tooShort === true}
@@ -310,6 +315,7 @@ function Result({
   uiLang,
   speech,
   voiceId,
+  speakerGender,
   score,
   modelMissing,
   timingMissing,
@@ -322,6 +328,7 @@ function Result({
   uiLang: Lang
   speech: string
   voiceId: string
+  speakerGender: 'male' | 'female' | null
   score: RepeatScore | null
   modelMissing: boolean
   timingMissing: boolean
@@ -349,8 +356,12 @@ function Result({
   // Missing bars, or a score with no sentence verdict, are not a grade. 0 stays on the row.
   const stars =
     showBars && verdict
-      ? starsFromVerdict(verdict, melodyBar, rhythmBar, score?.sentenceCheck?.backwards ?? false)
+      ? starsFromVerdict(verdict, melodyBar, rhythmBar, score?.sentenceCheck?.backwards ?? false, lang, {
+          template: voicesFor(lang).find((voice) => voice.id === voiceId)?.gender ?? null,
+          user: speakerGender,
+        })
       : null
+  const barsFit = stars === 2 && melodyBar === 'passt' && rhythmBar === 'passt' && verdict !== 'passt'
   const gapWord = scored?.find((word) => !word.scorable)
   const notice = tooShort
     ? feedback.tooShort
@@ -434,6 +445,11 @@ function Result({
         </div>
       ) : null}
       {stars != null ? <TakeStars count={stars} copy={copy} speechLang={uiLang} /> : null}
+      {barsFit ? (
+        <p className="take-note" role="status" data-testid="bars-fit">
+          {feedback.barsFit}
+        </p>
+      ) : null}
       {showBars && melodyBar && rhythmBar ? (
         <div className="repeat-bars">
           <ScoreBar label={feedback.melody} state={melodyBar} copy={copy} testId="melody-bar" />

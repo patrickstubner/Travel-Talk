@@ -221,10 +221,11 @@ export function bandDistance(
   modelBands: readonly (readonly number[])[],
   userBands: readonly (readonly number[])[],
   limit = 160,
+  minFrames = 8,
 ): number | null {
   const model = subsample(deltas(speakerNorm(modelBands.filter((frame) => frame.length > 0))), limit)
   const user = subsample(deltas(speakerNorm(userBands.filter((frame) => frame.length > 0))), limit)
-  if (model.length < 8 || user.length < 8) return null
+  if (model.length < minFrames || user.length < minFrames) return null
   const rows = model.length
   const cols = user.length
   const band = Math.max(8, Math.ceil(Math.max(rows, cols) * 0.45))

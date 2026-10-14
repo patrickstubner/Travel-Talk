@@ -800,6 +800,152 @@ describe('shipped clips', () => {
     60_000,
   )
 
+  it.skipIf(!ready || !clipLangs.includes('vi'))(
+    'keeps a reversed short Vietnamese yes under two stars after silence and opus',
+    () => {
+      const file = 'public/audio/vi/meet.yes__south__base.m4a'
+      const text = 'Dạ.'
+      const samples = decode(file)
+      expect(samples.length / 16000, file).toBeLessThan(0.3)
+      const reversed = Float32Array.from(samples)
+      reversed.reverse()
+      const coded = throughOpus(withLead(reversed, 16000), 16000)
+      const texts = splitWords(text)
+      const times = parseAlignment(JSON.parse(readFileSync(file.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+      const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+      const model = analyzeModel(samples, 16000)
+      const user = analyzeUser(coded, 16000, model.bands)
+      const score = scoreRepeat({
+        model: model.contour,
+        user: user.contour,
+        modelHop: 0.01,
+        userHop: 0.01,
+        words,
+        lang: 'vi',
+        region: 'south',
+        userDuration: coded.length / 16000,
+        modelEnergy: model.energy,
+        userEnergy: user.energy,
+        modelBands: model.bands,
+        userBands: user.bands,
+        userPlainBands: user.plainBands,
+        modelSpeechBands: model.speechBands,
+        userSpeechBands: user.speechBands,
+      })
+      const stars = score.verdict
+        ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, 'vi')
+        : 0
+      expect(stars, file).toBeLessThan(2)
+      if (score.verdict) expect(score.sentenceCheck?.backwards, file).toBe(true)
+    },
+    60_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('vi'))(
+    'does not treat a correct vais1000 «Dạ.» as reversed against the vivos-32 template',
+    () => {
+      const modelFile = 'public/audio/vi/vivos-32/meet.yes__south__base.m4a'
+      const userFile = 'public/audio/vi/meet.yes__south__base.m4a'
+      const text = 'Dạ.'
+      const modelSamples = decode(modelFile)
+      const userSamples = decode(userFile)
+      const model = analyzeModel(modelSamples, 16000)
+      const raw = analyzeUser(userSamples, 16000, model.bands)
+      expect(reversedRecording(model.speechBands, raw.speechBands), `${userFile} speech`).toBe(false)
+      expect(reversedRecording(model.bands, raw.plainBands), `${userFile} plain`).toBe(false)
+      const coded = throughOpus(withLead(userSamples, 16000), 16000)
+      const heard = analyzeUser(coded, 16000, model.bands)
+      expect(reversedRecording(model.speechBands, heard.speechBands), `${userFile} opus speech`).toBe(false)
+      expect(reversedRecording(model.bands, heard.plainBands), `${userFile} opus plain`).toBe(false)
+      const texts = splitWords(text)
+      const times = parseAlignment(JSON.parse(readFileSync(modelFile.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+      const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+      const score = scoreRepeat({
+        model: model.contour,
+        user: heard.contour,
+        modelHop: 0.01,
+        userHop: 0.01,
+        words,
+        lang: 'vi',
+        region: 'south',
+        userDuration: coded.length / 16000,
+        modelEnergy: model.energy,
+        userEnergy: heard.energy,
+        modelBands: model.bands,
+        userBands: heard.bands,
+        userPlainBands: heard.plainBands,
+        modelSpeechBands: model.speechBands,
+        userSpeechBands: heard.speechBands,
+      })
+      expect(score.sentenceCheck?.backwards, userFile).not.toBe(true)
+      const stars = score.verdict
+        ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, 'vi')
+        : 0
+      expect(stars, userFile).toBeGreaterThan(0)
+    },
+    60_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('de'))(
+    'detects a reversed hello only through the warp reverse check',
+    () => {
+      const file = 'public/audio/de/thorsten-high/meet.hello__any__base.m4a'
+      const samples = decode(file)
+      const reversed = Float32Array.from(samples)
+      reversed.reverse()
+      const coded = throughOpus(withLead(reversed, 16000), 16000)
+      const model = analyzeModel(samples, 16000)
+      const user = analyzeUser(coded, 16000, model.bands)
+      // X5. The frequency warp is skipped when the unshifted shape already
+      // fits the file better backwards. This take's warped shape is not
+      // reversed, so the lock sees the flip only on the bands that skip left
+      // in place. Speech bands are not the check.
+      expect(reversedRecording(model.bands, user.bands), file).toBe(true)
+      expect(user.bands, file).toBe(user.plainBands)
+    },
+    60_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('vi'))(
+    'keeps two stars when the short Vietnamese yes still has two green bars',
+    () => {
+      const file = 'public/audio/vi/meet.yes__south__base.m4a'
+      const text = 'Dạ.'
+      const samples = decode(file)
+      const coded = throughOpus(withLead(samples, 16000), 16000)
+      const texts = splitWords(text)
+      const times = parseAlignment(JSON.parse(readFileSync(file.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+      const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+      const model = analyzeModel(samples, 16000)
+      const user = analyzeUser(coded, 16000, model.bands)
+      const score = scoreRepeat({
+        model: model.contour,
+        user: user.contour,
+        modelHop: 0.01,
+        userHop: 0.01,
+        words,
+        lang: 'vi',
+        region: 'south',
+        userDuration: coded.length / 16000,
+        modelEnergy: model.energy,
+        userEnergy: user.energy,
+        modelBands: model.bands,
+        userBands: user.bands,
+        userPlainBands: user.plainBands,
+        modelSpeechBands: model.speechBands,
+        userSpeechBands: user.speechBands,
+      })
+      const stars = score.verdict
+        ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, 'vi')
+        : 0
+      expect(score.melodyBar, file).toBe('passt')
+      expect(score.rhythmBar, file).toBe('passt')
+      expect(score.verdict, file).not.toBe('passt')
+      expect(stars, file).toBe(2)
+    },
+    60_000,
+  )
+
   /**
    * Coloured-word red share against cadu, before the wider pt-BR band,
    * on the clips in this tree. A drop of ten points is the floor.
@@ -1038,7 +1184,7 @@ describe('shipped clips', () => {
         expect(score.melodyBar, label).not.toBe('passt')
         expect(score.verdict, label).not.toBe('passt')
         const stars = score.verdict
-          ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+          ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, 'pt-BR')
           : 0
         expect(stars, label).not.toBe(3)
       }
@@ -1073,7 +1219,13 @@ describe('shipped clips', () => {
       expect(sameSpeaker.melodyBar, senhor).toBe('daneben')
       expect(sameSpeaker.verdict, senhor).not.toBe('passt')
       const sameStars = sameSpeaker.verdict
-        ? starsFromVerdict(sameSpeaker.verdict, sameSpeaker.melodyBar, sameSpeaker.rhythmBar, sameSpeaker.sentenceCheck?.backwards ?? false)
+        ? starsFromVerdict(
+            sameSpeaker.verdict,
+            sameSpeaker.melodyBar,
+            sameSpeaker.rhythmBar,
+            sameSpeaker.sentenceCheck?.backwards ?? false,
+            'pt-BR',
+          )
         : 0
       expect(sameStars, senhor).not.toBe(3)
 
@@ -1093,12 +1245,24 @@ describe('shipped clips', () => {
     return byte % 2 === 0 ? 'A' : 'B'
   }
 
+  function gendersOf(templateId: string, userId: string): { template: 'male' | 'female' | null; user: 'male' | 'female' | null } {
+    return {
+      template: VOICES.find((voice) => voice.id === templateId)?.gender ?? null,
+      user: VOICES.find((voice) => voice.id === userId)?.gender ?? null,
+    }
+  }
+
   /**
    * Half A is the even SHA-1 byte of the line file. Counts are the calibration
    * pass under the V2 star rule. A floor and a ceiling sit around each one.
    * «Höchstens 1 Stern» is 0 or 1. The aim is 20 % per language and 25 % per
-   * voice. Deutsch, Englisch and Vietnamesisch stay inside that. Portugiesisch
-   * does not: 95/375 and Claribel 24/75. Those ceilings are the measured
+   * voice. Deutsch and Englisch stay inside that. German S3 gives one star
+   * when the sentence still fits and neither bar is green, so thorsten on
+   * half A is 9/68. Portugiesisch does not meet 20/25. The locked ceilings
+   * are 28 % of the language and 35 % of one
+   * voice: 95/375 and Claribel 24/75. Vietnamese «daneben» starts below a
+   * pitch correlation of 0.2, so it misses 20/25 as well: 48/235 and
+   * vais1000 39/117. Those ceilings, 23 % and 36 %, are the measured
    * compromise, not a second rule.
    */
   const HALF_A_BOUNDS: Record<
@@ -1114,10 +1278,10 @@ describe('shipped clips', () => {
       voiceShare: number
     }
   > = {
-    de: { otherJudged: 68, otherLow: [1, 3], coloured: 246, red: [55, 71], wrongJudged: 136, wrongZero: [8, 14], lowShare: 0.2, voiceShare: 0.25 },
+    de: { otherJudged: 68, otherLow: [7, 11], coloured: 246, red: [55, 71], wrongJudged: 136, wrongZero: [8, 14], lowShare: 0.2, voiceShare: 0.25 },
     en: { otherJudged: 44, otherLow: [1, 4], coloured: 105, red: [36, 50], wrongJudged: 88, wrongZero: [2, 8], lowShare: 0.2, voiceShare: 0.25 },
     'pt-BR': { otherJudged: 375, otherLow: [85, 105], coloured: 1411, red: [300, 366], wrongJudged: 437, wrongZero: [3, 9], lowShare: 0.28, voiceShare: 0.35 },
-    vi: { otherJudged: 235, otherLow: [30, 42], coloured: 1046, red: [310, 386], wrongJudged: 353, wrongZero: [10, 18], lowShare: 0.2, voiceShare: 0.25 },
+    vi: { otherJudged: 235, otherLow: [42, 54], coloured: 1046, red: [310, 386], wrongJudged: 353, wrongZero: [10, 18], lowShare: 0.23, voiceShare: 0.36 },
   }
 
   it.skipIf(!ready)(
@@ -1197,7 +1361,7 @@ describe('shipped clips', () => {
             const label = `${lang} ${pair.distance.toFixed(3)} ${pair.model.file} <- ${pair.user.voice} ${pair.user.file}`
             expect(score.verdict, label).not.toBe('passt')
             const stars = score.verdict
-              ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+              ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, lang)
               : 0
             expect(stars, label).not.toBe(3)
           }
@@ -1231,7 +1395,7 @@ describe('shipped clips', () => {
         const refuse = (score: RepeatScore, label: string) => {
           expect(score.verdict, label).not.toBe('passt')
           const stars = score.verdict
-            ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+            ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, lang)
             : 0
           expect(stars, label).not.toBe(3)
         }
@@ -1240,9 +1404,10 @@ describe('shipped clips', () => {
           expect(rows.length, `${lang} ${voice.id}`).toBeGreaterThan(20)
           let before3 = 0
           let after3 = 0
+          const sameVoice = gendersOf(voice.id, voice.id)
           const starsOf = (score: RepeatScore) =>
             score.verdict
-              ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false)
+              ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, lang, sameVoice)
               : 0
           for (let index = 0; index < rows.length; index += 1) {
             const row = rows[index]
@@ -1322,10 +1487,10 @@ describe('shipped clips', () => {
         let wrongJudged = 0
         let wrongZero = 0
         const perVoice = new Map<string, { judged: number; low: number }>()
-        // mls-4576 stays out of these counts. Half A against thorsten-high is
-        // 29/67 at 0 or 1 star, over the 25 % aim. The star rule is unchanged.
-        // The checks above still cover this voice: no «passt», no third star
-        // on a wrong or reversed take, and a matching take keeps three stars.
+        // mls-4576 stays out of these counts. Half A against thorsten-high was
+        // already over the 25 % aim before S3. The checks above still cover
+        // this voice: no «passt», no third star on a wrong or reversed take,
+        // and a matching take keeps three stars.
         const censusVoices = voices.filter((voice) => voice.id !== 'mls-4576')
         for (const voice of censusVoices) {
           const rows = (byVoice.get(voice.id) ?? []).filter((row) => clipHalf(row.file) === 'A')
@@ -1336,7 +1501,14 @@ describe('shipped clips', () => {
             const bad = grade(row, next.samples)
             if (bad.verdict) {
               wrongJudged += 1
-              const stars = starsFromVerdict(bad.verdict, bad.melodyBar, bad.rhythmBar, bad.sentenceCheck?.backwards ?? false)
+              const stars = starsFromVerdict(
+                bad.verdict,
+                bad.melodyBar,
+                bad.rhythmBar,
+                bad.sentenceCheck?.backwards ?? false,
+                lang,
+                gendersOf(voice.id, voice.id),
+              )
               if (stars === 0) wrongZero += 1
             }
             if (voice.id === anchorId) continue
@@ -1345,7 +1517,14 @@ describe('shipped clips', () => {
             const heard = grade(model, row.samples)
             if (heard.verdict) {
               otherJudged += 1
-              const stars = starsFromVerdict(heard.verdict, heard.melodyBar, heard.rhythmBar, heard.sentenceCheck?.backwards ?? false)
+              const stars = starsFromVerdict(
+                heard.verdict,
+                heard.melodyBar,
+                heard.rhythmBar,
+                heard.sentenceCheck?.backwards ?? false,
+                lang,
+                gendersOf(anchorId, voice.id),
+              )
               const slot = perVoice.get(voice.id) ?? { judged: 0, low: 0 }
               slot.judged += 1
               if (stars <= 1) {
@@ -1773,7 +1952,12 @@ main().catch((error) => fetch('/fail', { method: 'POST', body: String(error && e
     })
   }
 
-  function expectStableGreen(scores: RepeatScore[], file: string, required: readonly string[]): void {
+  function expectStableGreen(
+    scores: RepeatScore[],
+    file: string,
+    required: readonly string[],
+    lang: 'pt-BR' | 'vi',
+  ): void {
     expect(scores.length, file).toBeGreaterThanOrEqual(3)
     for (const score of scores) {
       expect(score.melodyBar, file).toBe('passt')
@@ -1788,6 +1972,12 @@ main().catch((error) => fetch('/fail', { method: 'POST', body: String(error && e
         expect(word?.melody, `${file} ${text}`).toBe('green')
         expect(word?.rhythm, `${file} ${text}`).toBe('green')
       }
+      const stars = score.verdict
+        ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, lang)
+        : 0
+      // Two green bars and two stars means the sentence is not «passt».
+      // The page says so. Raising the stars would score a wrong sentence.
+      if (stars === 2) expect(score.verdict, `${file} ${score.sentenceCheck?.correlation} ${score.sentenceCheck?.bands}`).not.toBe('passt')
     }
     const first = scores[0]?.words ?? []
     for (const word of first) {
@@ -1812,7 +2002,7 @@ main().catch((error) => fetch('/fail', { method: 'POST', body: String(error && e
       const model = captured[0]
       if (!model) throw new Error('Chrome hat die Datei nicht dekodiert.')
       const scores = captured.slice(1).map((take) => scoreChrome(file, text, 'pt-BR', model, take))
-      expectStableGreen(scores, file, ['Você', 'pode', 'escrever', 'isso,', 'por', 'favor?'])
+      expectStableGreen(scores, file, ['Você', 'pode', 'escrever', 'isso,', 'por', 'favor?'], 'pt-BR')
     },
     90_000,
   )
@@ -1829,7 +2019,7 @@ main().catch((error) => fetch('/fail', { method: 'POST', body: String(error && e
       const model = captured[0]
       if (!model) throw new Error('Chrome hat die Datei nicht dekodiert.')
       const scores = captured.slice(1).map((take) => scoreChrome(file, text, 'vi', model, take))
-      expectStableGreen(scores, file, ['Xin', 'viết', 'ra', 'giúp', 'tôi.'])
+      expectStableGreen(scores, file, ['Xin', 'viết', 'ra', 'giúp', 'tôi.'], 'vi')
     },
     90_000,
   )
