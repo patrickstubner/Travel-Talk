@@ -150,6 +150,10 @@ describe('import', () => {
     expect(coerceSettings({ learnTempo: 'slow' as never }).learnTempo).toBeUndefined()
     expect(coerceSettings({ skipWords: true }).skipWords).toBe(true)
     expect(coerceSettings({ skipWords: false as never }).skipWords).toBeUndefined()
+    expect(coerceSettings({ wordSpeed: 0.7 }).wordSpeed).toBe(0.7)
+    expect(coerceSettings({ wordSpeed: 1 }).wordSpeed).toBe(1)
+    expect(coerceSettings({ wordSpeed: 0.5 as never }).wordSpeed).toBeUndefined()
+    expect(coerceSettings({}).wordSpeed).toBeUndefined()
   })
 
   it('rejects a settings object that carries an unknown field', () => {
@@ -329,6 +333,19 @@ describe('import', () => {
     expect(withTempo).not.toContain('learnTempo')
     const withSkip = toExport({ settings: { ...current, skipWords: true }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
     expect(withSkip).not.toContain('skipWords')
+  })
+
+  it('keeps a word tempo on the file and rejects a step that is not 70, 85 or 100', () => {
+    const text = toExport({ settings: { ...current, wordSpeed: 0.7 }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
+    expect(text).toContain('"wordSpeed": 0.7')
+    const plain = toExport({ settings: current, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
+    expect(plain).not.toContain('wordSpeed')
+    expect(parseImport(text, concepts).snapshot.settings.wordSpeed).toBe(0.7)
+    const raw = JSON.parse(text) as { people: { settings: { wordSpeed: unknown } }[] }
+    raw.people[0]!.settings.wordSpeed = 0.5
+    expect(() => parseImport(JSON.stringify(raw), concepts)).toThrow('IMPORT_REJECTED')
+    raw.people[0]!.settings.wordSpeed = 1
+    expect(parseImport(JSON.stringify(raw), concepts).snapshot.settings.wordSpeed).toBe(1)
   })
 
   it('caps last review and due in a format 4 file', () => {

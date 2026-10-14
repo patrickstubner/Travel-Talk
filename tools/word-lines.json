@@ -152,6 +152,158 @@
     "file": "de/thorsten-high/w.photo__any__base.m4a"
   },
   {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "ich",
+    "file": "de/mls-4576/w.i__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "ja",
+    "file": "de/mls-4576/w.yes__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "bitte",
+    "file": "de/mls-4576/w.please__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "danke",
+    "file": "de/mls-4576/w.thanks__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "nicht",
+    "file": "de/mls-4576/w.not__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "wo",
+    "file": "de/mls-4576/w.where__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "hier",
+    "file": "de/mls-4576/w.here__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "Wasser",
+    "file": "de/mls-4576/w.water__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "Hilfe",
+    "file": "de/mls-4576/w.help__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "Tage",
+    "file": "de/mls-4576/w.days__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "bleiben",
+    "file": "de/mls-4576/w.stay__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "Dokumente",
+    "file": "de/mls-4576/w.documents__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "E-Visum",
+    "file": "de/mls-4576/w.evisa__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "Visum",
+    "file": "de/mls-4576/w.visa__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "verlängern",
+    "file": "de/mls-4576/w.extend__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "Gesuch",
+    "file": "de/mls-4576/w.application__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "aktuell",
+    "file": "de/mls-4576/w.current__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "Regel",
+    "file": "de/mls-4576/w.rule__any__base.m4a"
+  },
+  {
+    "lang": "de",
+    "voice": "mls-4576",
+    "model": "de_DE-mls-medium",
+    "speaker": 153,
+    "text": "Passfoto",
+    "file": "de/mls-4576/w.photo__any__base.m4a"
+  },
+  {
     "lang": "en",
     "voice": "joe",
     "model": "en_US-joe-medium",
@@ -500,7 +652,7 @@
     "voice": "vivos-22",
     "model": "vi_VN-vivos-x_low",
     "speaker": 9,
-    "text": "không",
+    "text": "khồng",
     "file": "vi/vivos-22/w.not__any__base.m4a"
   },
   {
@@ -508,7 +660,7 @@
     "voice": "vivos-22",
     "model": "vi_VN-vivos-x_low",
     "speaker": 9,
-    "text": "đâu",
+    "text": "đầu",
     "file": "vi/vivos-22/w.where__any__base.m4a"
   },
   {
@@ -516,7 +668,7 @@
     "voice": "vivos-22",
     "model": "vi_VN-vivos-x_low",
     "speaker": 9,
-    "text": "đây",
+    "text": "đấy",
     "file": "vi/vivos-22/w.here__any__base.m4a"
   },
   {
@@ -660,7 +812,7 @@
     "voice": "vivos-32",
     "model": "vi_VN-vivos-x_low",
     "speaker": 37,
-    "text": "không",
+    "text": "khồng",
     "file": "vi/vivos-32/w.not__any__base.m4a"
   },
   {
@@ -668,7 +820,7 @@
     "voice": "vivos-32",
     "model": "vi_VN-vivos-x_low",
     "speaker": 37,
-    "text": "đâu",
+    "text": "đầu",
     "file": "vi/vivos-32/w.where__any__base.m4a"
   },
   {
@@ -676,7 +828,7 @@
     "voice": "vivos-32",
     "model": "vi_VN-vivos-x_low",
     "speaker": 37,
-    "text": "đây",
+    "text": "đấy",
     "file": "vi/vivos-32/w.here__any__base.m4a"
   },
   {

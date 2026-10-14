@@ -26,7 +26,7 @@ from piper.const import BOS, EOS, PAD
 from piper.voice import PhonemeAlignment
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from generate_audio import LINES, require_model, require_onnx, require_piper  # noqa: E402
+from generate_audio import CARRIERS, LINES, cut_carrier_word, require_model, require_onnx, require_piper  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 AUDIO = ROOT / "public" / "audio"
@@ -34,6 +34,7 @@ AUDIO = ROOT / "public" / "audio"
 JOBS = [
     {"lang": "de", "model": "de_DE-thorsten-medium", "speaker": None, "voice": None},
     {"lang": "de", "model": "de_DE-thorsten-high", "speaker": None, "voice": "thorsten-high"},
+    {"lang": "de", "model": "de_DE-mls-medium", "speaker": 153, "voice": "mls-4576"},
     {"lang": "en", "model": "en_US-ljspeech-medium", "speaker": None, "voice": None},
     {"lang": "en", "model": "en_US-joe-medium", "speaker": None, "voice": "joe"},
     {"lang": "pt-BR", "model": "pt_BR-faber-medium", "speaker": None, "voice": None},
@@ -351,6 +352,20 @@ def main() -> None:
                 relative = Path(job["lang"]) / job["voice"] / relative.name
             audio = AUDIO / relative
             dest = audio.with_suffix(".align.json")
+            if job["voice"] == "mls-4576" and row["text"] in CARRIERS:
+                if dest.exists() and dest.stat().st_size > 0:
+                    skipped += 1
+                    continue
+                if not audio.exists():
+                    reasons["missing-audio"] = reasons.get("missing-audio", 0) + 1
+                    continue
+                _clip, _rate, start, end = cut_carrier_word(voice, row["text"], job["speaker"])
+                dest.write_text(
+                    json.dumps({"words": [{"start": round(start, 3), "end": round(end, 3)}]}, ensure_ascii=False) + "\n",
+                    encoding="utf-8",
+                )
+                written += 1
+                continue
             if dest.exists() and dest.stat().st_size > 0:
                 skipped += 1
                 continue

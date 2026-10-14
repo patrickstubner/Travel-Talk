@@ -68,19 +68,19 @@ export const WORDS: readonly WordEntry[] = [
   {
     id: 'w.not',
     hand: true,
-    citation: { de: 'nicht', en: 'not', 'pt-BR': 'não', vi: 'không' },
+    citation: { de: 'nicht', en: 'not', 'pt-BR': 'não', vi: 'khồng' },
     sentences: ['emergency.breathe', 'emergency.understand', 'food.spicy', 'stay.wifi'],
   },
   {
     id: 'w.where',
     hand: true,
-    citation: { de: 'wo', en: 'where', 'pt-BR': 'onde', vi: 'đâu' },
+    citation: { de: 'wo', en: 'where', 'pt-BR': 'onde', vi: 'đầu' },
     sentences: ['emergency.pharmacy', 'emergency.hospital', 'arrival.taxi', 'arrival.exit', 'day.toilet', 'visa.where', 'sight.where'],
   },
   {
     id: 'w.here',
     hand: true,
-    citation: { de: 'hier', en: 'here', 'pt-BR': 'aqui', vi: 'đây' },
+    citation: { de: 'hier', en: 'here', 'pt-BR': 'aqui', vi: 'đấy' },
     sentences: ['emergency.hurt', 'meet.food', 'food.order', 'stay.address'],
   },
   {

@@ -46,7 +46,9 @@ export function voiceCaption(copy: Dictionary, app: Lang, target: Lang, settings
     return id === 'vais1000' ? fixedPart(app, 'ui.voice-vi', copy.audioVi) : fixedPart(app, 'ui.voice-vi-male', copy.audioViMale)
   }
   if (target === 'de') {
-    return id === 'thorsten-high' ? fixedPart(app, 'ui.voice-de-high', copy.audioDeHigh) : fixedPart(app, 'ui.voice-de', copy.audioDe)
+    if (id === 'thorsten-high') return fixedPart(app, 'ui.voice-de-high', copy.audioDeHigh)
+    if (id === 'mls-4576') return { text: copy.audioDeFemale, clip: null }
+    return fixedPart(app, 'ui.voice-de', copy.audioDe)
   }
   if (target === 'en') {
     return id === 'joe' ? fixedPart(app, 'ui.voice-en-male', copy.audioEnMale) : fixedPart(app, 'ui.voice-en', copy.audioEn)

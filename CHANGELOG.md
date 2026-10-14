@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.8 — 2026-10-14
+
+- Ein neues Wort kommt dreimal ohne Frage: Ton, Schrift, lesbare Umschrift in der App-Sprache, IPA und die Bedeutung. Danach erst «Was bedeutet das Wort?». Die FSRS-Karte entsteht bei der Antwort, nicht beim Hören. Eine Wiederholung überspringt die Einführung.
+- Jedes geprüfte Wort hat eine Umschrift für Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Am vietnamesischen Wort steht der Ton der Schreibung. không, đâu und đây tragen den Ton jetzt in der Schrift der Wortkarte. Die alten Clips dieser drei Wörter sind noch ohne diesen Ton.
+- Einzelne Wörter starten bei 100 %. Diese Person kann 70 %, 85 % oder 100 % wählen. Die Wahl bleibt in ihrem Profil und geht in den Export, sobald sie gesetzt ist. Sätze behalten ihr Tempo. `playbackRate` bleibt 1.
+- Die Hörprobe einer Piper-Stimme ist ein Gruss und eine kurze Vorstellung im normalen Tempo, mindestens zwei Sekunden, Datei `voice.sample__any__base.m4a`. Die vier XTTS-Stimmen behalten die Satzprobe. Ihre Lizenz ist nur nicht kommerziell, deshalb kommt keine neue Datei dazu.
+- Deutsch hat eine optionale Frau: Piper `mls-4576`, Sprecherin 4576 aus Multilingual LibriSpeech (OpenSLR 94, CC BY 4.0), von Grund auf trainiert. Neue Nutzer bleiben bei der Männerstimme. Faber bleibt der Mann aus 0.9.6. Die Bezeichnung aus der Datensatzbeschreibung wird nicht ersetzt. Acht kurze Wörter dieser Stimme kommen aus einem Trägersatz, weil das Wort allein etwa 0,2 s Rauschen war. `manifest.json` hat 9888 Einträge.
+- Auf Vietnamesisch nennt der Zweck von Đưa das Verb: «Chế độ Đưa hiển thị một câu lớn trên màn hình để bạn đưa cho người khác xem, …».
+
 ## 0.9.7 — 2026-10-13
 
 - Ein neuer Satz hat die Tempo-Wahl direkt neben «Anhören»: Langsam, 85 % und Normal. Langsam ist der Anfang. Die Wahl bleibt für diese Person, auch beim nächsten Satz und nach einem Neuladen. «Anhören» spielt immer das gewählte Tempo, so oft man will. «Weiter» steht da, auch während der Wiedergabe und unabhängig vom Tempo. Nur während einer laufenden Aufnahme ist «Weiter» ausgeblendet.

@@ -38,6 +38,7 @@ export type Dictionary = {
   audioPtClaribel: string
   audioDe: string
   audioDeHigh: string
+  audioDeFemale: string
   audioEn: string
   audioEnMale: string
   audioOffline: string
@@ -204,6 +205,13 @@ export type Dictionary = {
   learnToday: string
   wordsFirst: string
   wordPrompt: string
+  wordIntro: string
+  wordIntroStep: (index: number, total: number) => string
+  wordGloss: string
+  wordIpa: string
+  wordReplay: string
+  wordSpeedTitle: string
+  wordSpeedHint: string
   wordRight: string
   wordWrong: (meaning: string) => string
   todayWords: (count: number) => string
@@ -374,6 +382,8 @@ export const de: Dictionary = {
   audioPtClaribel: 'Stimme: XTTS-v2, Claribel Dervla, Frau, Portugiesisch, Versuch. CPML, nur nicht kommerziell. Qualität nicht geprüft.',
   audioDe: 'Stimme: Piper thorsten, mittlere Qualität, Mann. Deutsch aus Deutschland, nicht Schweizerdeutsch. Qualität nicht geprüft.',
   audioDeHigh: 'Stimme: Piper thorsten, hohe Qualität, Mann. Deutsch aus Deutschland, nicht Schweizerdeutsch. Qualität nicht geprüft.',
+  audioDeFemale:
+    'Stimme: Piper mls, Sprecherin 4576, Frau, mittlere Qualität. Deutsch aus Deutschland, nicht Schweizerdeutsch. Multilingual LibriSpeech, CC BY 4.0. Qualität nicht geprüft.',
   audioEn: 'Stimme: Piper LJSpeech, Frau, Englisch (USA). Qualität nicht geprüft.',
   audioEnMale: 'Stimme: Piper joe, Mann, Englisch (USA). Qualität nicht geprüft.',
   audioOffline: 'Stimme offline nicht geladen',
@@ -525,7 +535,7 @@ export const de: Dictionary = {
   backupDownload: 'Sicherung herunterladen',
   voicesTitle: 'Stimmen und Lizenzen',
   voicesVi:
-    'Neue Nutzer starten mit einer Männerstimme. Die bisherige Stimme bleibt, bis du wechselst. Vietnamesisch: vais1000 (Datensatz CC BY 4.0, Frau, Norden; das Modell ist von lessac feinjustiert) und vivos (CC BY-NC-SA 4.0, Männer, Qualität niedrig, von Grund auf trainiert). Das erzeugte vivos-Audio steht unter derselben Lizenz. Deutsch thorsten, Portugiesisch cadu und faber, Englisch joe: der Datensatz ist CC0, die Stimme nicht. Sie ist von lessac feinjustiert, und lessac gilt nur für Forschung. LJSpeech ist gemeinfrei und von Grund auf trainiert. Namensnennung steht in NOTICE.txt. Portugiesisch hat vier weitere Frauen aus XTTS-v2 (coqui/XTTS-v2, CPML, nur nicht kommerziell). Claribel ist ein Versuch. Der Standard bleibt cadu.',
+    'Neue Nutzer starten mit einer Männerstimme. Die bisherige Stimme bleibt, bis du wechselst. Vietnamesisch: vais1000 (Datensatz CC BY 4.0, Frau, Norden; das Modell ist von lessac feinjustiert) und vivos (CC BY-NC-SA 4.0, Männer, Qualität niedrig, von Grund auf trainiert). Das erzeugte vivos-Audio steht unter derselben Lizenz. Deutsch thorsten, Portugiesisch cadu und faber, Englisch joe: der Datensatz ist CC0, die Stimme nicht. Sie ist von lessac feinjustiert, und lessac gilt nur für Forschung. Deutsch hat zusätzlich eine Frau, mls 4576, aus Multilingual LibriSpeech, CC BY 4.0, von Grund auf trainiert. LJSpeech ist gemeinfrei und von Grund auf trainiert. Namensnennung steht in NOTICE.txt. Portugiesisch hat vier weitere Frauen aus XTTS-v2 (coqui/XTTS-v2, CPML, nur nicht kommerziell). Claribel ist ein Versuch. Der Standard bleibt cadu.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'Das Material wurde verändert.',
@@ -559,7 +569,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.9.7',
+  version: 'Version 0.9.8',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   aboutLine: 'Zum Satz',
   infoOpen: 'Erklärungen zum Satz',
@@ -572,6 +582,13 @@ export const de: Dictionary = {
   learnToday: 'Heute lernen',
   wordsFirst: 'Zuerst die Wörter von heute.',
   wordPrompt: 'Was bedeutet das Wort?',
+  wordIntro: 'Neues Wort',
+  wordIntroStep: (index, total) => `Hören · ${index} von ${total}`,
+  wordGloss: 'Bedeutung',
+  wordIpa: 'IPA',
+  wordReplay: 'Noch einmal hören',
+  wordSpeedTitle: 'Tempo der Wörter',
+  wordSpeedHint: 'Gilt für einzelne Wörter dieser Person und bleibt gespeichert. Sätze behalten ihr Tempo.',
   wordRight: 'Das stimmt.',
   wordWrong: (meaning) => `Gemeint ist «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 neues Wort.' : `${count} neue Wörter.`),
@@ -611,7 +628,7 @@ export const de: Dictionary = {
   voicePreview: 'Hörprobe',
   voiceViNote: 'Zwei Männerstimmen, Qualität sehr niedrig. Der Akzent steht nicht in der Modellkarte. Die Frau ist nördlich.',
   voiceEnNote: 'Mann oder Frau. Englisch aus den USA.',
-  voiceDeNote: 'Mann, hohe oder mittlere Qualität. Deutsch aus Deutschland, nicht Schweizerdeutsch.',
+  voiceDeNote: 'Ein Mann, hohe oder mittlere Qualität, oder eine Frau. Deutsch aus Deutschland, nicht Schweizerdeutsch.',
   voicePtNote: 'Zwei Männerstimmen, cadu bleibt der Standard. Bei der zweiten Stimme nennt die Modellkarte das Geschlecht nicht. Der Datensatz nennt einen Sprecher. Vier Frauen von XTTS-v2, Sprache pt, CPML, nur nicht kommerziell. Claribel ist ein Versuch. Der Akzent ist nicht geprüft.',
   voiceHint: 'Es gibt jetzt Männerstimmen. Die bisherige Stimme bleibt ausgewählt.',
   voiceHintClose: 'Verstanden',
@@ -742,6 +759,8 @@ export const en: Dictionary = {
   audioPtClaribel: 'Voice: XTTS-v2, Claribel Dervla, a woman, Portuguese, a trial. CPML, non-commercial only. Quality not checked.',
   audioDe: 'Voice: Piper thorsten, medium quality, a man. German from Germany, not Swiss German. Quality not checked.',
   audioDeHigh: 'Voice: Piper thorsten, high quality, a man. German from Germany, not Swiss German. Quality not checked.',
+  audioDeFemale:
+    'Voice: Piper mls, speaker 4576, a woman, medium quality. German from Germany, not Swiss German. Multilingual LibriSpeech, CC BY 4.0. Quality not checked.',
   audioEn: 'Voice: Piper LJSpeech, a woman, English (US). Quality not checked.',
   audioEnMale: 'Voice: Piper joe, a man, English (US). Quality not checked.',
   audioOffline: 'Voice not loaded for offline',
@@ -890,7 +909,7 @@ export const en: Dictionary = {
   backupDownload: 'Download a backup',
   voicesTitle: 'Voices and licences',
   voicesVi:
-    'New users start with a male voice. The previous voice stays until you change it. Vietnamese: vais1000 (dataset CC BY 4.0, woman, north; the model is fine-tuned from lessac) and vivos (CC BY-NC-SA 4.0, men, low quality, trained from scratch). The generated vivos audio is under the same licence. German thorsten, Brazilian cadu and faber, and English joe: the dataset is CC0, the voice is not. It is fine-tuned from lessac, and lessac is research-only. LJSpeech is public domain and trained from scratch. Attribution is in NOTICE.txt. Brazilian Portuguese has four more women from XTTS-v2 (coqui/XTTS-v2, CPML, non-commercial only). Claribel is a trial. The default stays cadu.',
+    'New users start with a male voice. The previous voice stays until you change it. Vietnamese: vais1000 (dataset CC BY 4.0, woman, north; the model is fine-tuned from lessac) and vivos (CC BY-NC-SA 4.0, men, low quality, trained from scratch). The generated vivos audio is under the same licence. German thorsten, Brazilian cadu and faber, and English joe: the dataset is CC0, the voice is not. It is fine-tuned from lessac, and lessac is research-only. German also has a woman, mls 4576, from Multilingual LibriSpeech, CC BY 4.0, trained from scratch. LJSpeech is public domain and trained from scratch. Attribution is in NOTICE.txt. Brazilian Portuguese has four more women from XTTS-v2 (coqui/XTTS-v2, CPML, non-commercial only). Claribel is a trial. The default stays cadu.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'The material was changed.',
@@ -923,7 +942,7 @@ export const en: Dictionary = {
   privacy: 'Progress, recordings and the note stay on this device. No account, no tracking, no font from the network.',
   loading: 'One moment.',
   storageError: 'Local storage is not available.',
-  version: 'Version 0.9.7',
+  version: 'Version 0.9.8',
   exampleAudio: 'The audio speaks the example sentence.',
   aboutLine: 'About this line',
   infoOpen: 'Notes about this line',
@@ -936,6 +955,13 @@ export const en: Dictionary = {
   learnToday: 'Learn today',
   wordsFirst: 'The words for today come first.',
   wordPrompt: 'What does the word mean?',
+  wordIntro: 'New word',
+  wordIntroStep: (index, total) => `Listen · ${index} of ${total}`,
+  wordGloss: 'Meaning',
+  wordIpa: 'IPA',
+  wordReplay: 'Hear it again',
+  wordSpeedTitle: 'Word speed',
+  wordSpeedHint: 'Applies to single words for this person and stays saved. Sentences keep their speed.',
   wordRight: 'That is the one.',
   wordWrong: (meaning) => `The meaning is «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 new word.' : `${count} new words.`),
@@ -975,7 +1001,7 @@ export const en: Dictionary = {
   voicePreview: 'Preview',
   voiceViNote: 'Two male voices, very low quality. The accent is not on the model card. The woman is northern.',
   voiceEnNote: 'A man or a woman. English from the US.',
-  voiceDeNote: 'A man, high or medium quality. German from Germany, not Swiss German.',
+  voiceDeNote: 'A man, high or medium quality, or a woman. German from Germany, not Swiss German.',
   voicePtNote: 'Two male voices, and cadu stays the default. The second voice\'s model card does not state the gender. The dataset calls the speaker male. Four women from XTTS-v2, language pt, CPML, non-commercial only. Claribel is a trial. The accent is not checked.',
   voiceHint: 'Male voices are available now. Your current voice stays selected.',
   voiceHintClose: 'Got it',
@@ -1106,6 +1132,8 @@ export const pt: Dictionary = {
   audioPtClaribel: 'Voz: XTTS-v2, Claribel Dervla, mulher, português, ensaio. CPML, só não comercial. Qualidade não revisada.',
   audioDe: 'Voz: Piper thorsten, qualidade média, homem. Alemão da Alemanha, não suíço-alemão. Qualidade não revisada.',
   audioDeHigh: 'Voz: Piper thorsten, qualidade alta, homem. Alemão da Alemanha, não suíço-alemão. Qualidade não revisada.',
+  audioDeFemale:
+    'Voz: Piper mls, falante 4576, mulher, qualidade média. Alemão da Alemanha, não suíço-alemão. Multilingual LibriSpeech, CC BY 4.0. Qualidade não revisada.',
   audioEn: 'Voz: Piper LJSpeech, mulher, inglês (EUA). Qualidade não revisada.',
   audioEnMale: 'Voz: Piper joe, homem, inglês (EUA). Qualidade não revisada.',
   audioOffline: 'Voz não carregada para offline',
@@ -1257,7 +1285,7 @@ export const pt: Dictionary = {
   backupDownload: 'Baixar uma cópia',
   voicesTitle: 'Vozes e licenças',
   voicesVi:
-    'Quem começa agora usa uma voz de homem. A voz anterior fica até você trocar. Vietnamita: vais1000 (conjunto CC BY 4.0, mulher, norte; o modelo vem de lessac) e vivos (CC BY-NC-SA 4.0, homens, qualidade baixa, treinado do zero). O áudio gerado de vivos fica na mesma licença. Alemão thorsten, português cadu e faber, e inglês joe: o conjunto é CC0, a voz não. Ela vem de lessac, e lessac vale só para pesquisa. LJSpeech é domínio público e treinado do zero. A atribuição está em NOTICE.txt. Português do Brasil tem mais quatro mulheres do XTTS-v2 (coqui/XTTS-v2, CPML, só não comercial). Claribel é um ensaio. O padrão continua cadu.',
+    'Quem começa agora usa uma voz de homem. A voz anterior fica até você trocar. Vietnamita: vais1000 (conjunto CC BY 4.0, mulher, norte; o modelo vem de lessac) e vivos (CC BY-NC-SA 4.0, homens, qualidade baixa, treinado do zero). O áudio gerado de vivos fica na mesma licença. Alemão thorsten, português cadu e faber, e inglês joe: o conjunto é CC0, a voz não. Ela vem de lessac, e lessac vale só para pesquisa. O alemão também tem uma mulher, mls 4576, do Multilingual LibriSpeech, CC BY 4.0, treinada do zero. LJSpeech é domínio público e treinado do zero. A atribuição está em NOTICE.txt. Português do Brasil tem mais quatro mulheres do XTTS-v2 (coqui/XTTS-v2, CPML, só não comercial). Claribel é um ensaio. O padrão continua cadu.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'O material foi alterado.',
@@ -1290,7 +1318,7 @@ export const pt: Dictionary = {
   privacy: 'Progresso, gravações e a nota ficam neste aparelho. Sem conta, sem rastreamento, sem fonte da rede.',
   loading: 'Um momento.',
   storageError: 'O armazenamento local não está disponível.',
-  version: 'Version 0.9.7',
+  version: 'Version 0.9.8',
   exampleAudio: 'O áudio fala a frase de exemplo.',
   aboutLine: 'Sobre a frase',
   infoOpen: 'Notas sobre a frase',
@@ -1303,6 +1331,13 @@ export const pt: Dictionary = {
   learnToday: 'Aprender hoje',
   wordsFirst: 'Primeiro as palavras de hoje.',
   wordPrompt: 'O que a palavra significa?',
+  wordIntro: 'Palavra nova',
+  wordIntroStep: (index, total) => `Ouvir · ${index} de ${total}`,
+  wordGloss: 'Sentido',
+  wordIpa: 'IPA',
+  wordReplay: 'Ouvir de novo',
+  wordSpeedTitle: 'Velocidade das palavras',
+  wordSpeedHint: 'Vale para as palavras soltas desta pessoa e fica guardada. As frases mantêm a velocidade delas.',
   wordRight: 'É essa.',
   wordWrong: (meaning) => `O sentido é «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 palavra nova.' : `${count} palavras novas.`),
@@ -1342,7 +1377,7 @@ export const pt: Dictionary = {
   voicePreview: 'Ouvir',
   voiceViNote: 'Duas vozes de homem, qualidade muito baixa. O sotaque não está no cartão do modelo. A mulher é do norte.',
   voiceEnNote: 'Homem ou mulher. Inglês dos EUA.',
-  voiceDeNote: 'Homem, qualidade alta ou média. Alemão da Alemanha, não suíço-alemão.',
+  voiceDeNote: 'Um homem, qualidade alta ou média, ou uma mulher. Alemão da Alemanha, não suíço-alemão.',
   voicePtNote: 'Duas vozes de homem, e cadu continua o padrão. O cartão da segunda voz não diz o gênero. O conjunto chama o falante de homem. Quatro mulheres do XTTS-v2, idioma pt, CPML, só não comercial. Claribel é um ensaio. O sotaque não foi revisado.',
   voiceHint: 'Agora há vozes de homem. A voz de agora continua escolhida.',
   voiceHintClose: 'Entendi',
@@ -1473,6 +1508,8 @@ export const vi: Dictionary = {
   audioPtClaribel: 'Giọng: XTTS-v2, Claribel Dervla, nữ, tiếng Bồ Đào Nha, thử. CPML, chỉ phi thương mại. Chất lượng chưa được kiểm tra.',
   audioDe: 'Giọng: Piper thorsten, chất lượng trung bình, nam. Tiếng Đức của Đức, không phải tiếng Đức Thụy Sĩ. Chất lượng chưa được kiểm tra.',
   audioDeHigh: 'Giọng: Piper thorsten, chất lượng cao, nam. Tiếng Đức của Đức, không phải tiếng Đức Thụy Sĩ. Chất lượng chưa được kiểm tra.',
+  audioDeFemale:
+    'Giọng: Piper mls, người nói 4576, nữ, chất lượng trung bình. Tiếng Đức của Đức, không phải tiếng Đức Thụy Sĩ. Multilingual LibriSpeech, CC BY 4.0. Chất lượng chưa được kiểm tra.',
   audioEn: 'Giọng: Piper LJSpeech, nữ, tiếng Anh (Mỹ). Chất lượng chưa được kiểm tra.',
   audioEnMale: 'Giọng: Piper joe, nam, tiếng Anh (Mỹ). Chất lượng chưa được kiểm tra.',
   audioOffline: 'Giọng chưa được tải để dùng offline',
@@ -1575,7 +1612,7 @@ export const vi: Dictionary = {
   },
   forOther: 'Cho người kia đọc',
   showPurpose:
-    'Đưa hiện một câu lớn trên màn hình để đưa cho người khác xem, ví dụ khi cấp cứu hoặc ở nhà thuốc, và có thể phát âm thanh.',
+    'Chế độ Đưa hiển thị một câu lớn trên màn hình để bạn đưa cho người khác xem, ví dụ khi cấp cứu hoặc ở nhà thuốc, và có thể phát âm thanh.',
   hideGloss: 'Ẩn nghĩa',
   showGloss: 'Hiện nghĩa',
   showNote: 'Hiện ghi chú cá nhân',
@@ -1618,7 +1655,7 @@ export const vi: Dictionary = {
   backupDownload: 'Tải bản sao',
   voicesTitle: 'Giọng và giấy phép',
   voicesVi:
-    'Người mới bắt đầu với giọng nam. Giọng cũ giữ nguyên cho đến khi đổi. Tiếng Việt: vais1000 (dữ liệu CC BY 4.0, nữ, miền Bắc; mô hình tinh chỉnh từ lessac) và vivos (CC BY-NC-SA 4.0, nam, chất lượng thấp, huấn luyện từ đầu). Audio tạo từ vivos cùng giấy phép đó. Tiếng Đức thorsten, tiếng Bồ Đào Nha cadu và faber, và tiếng Anh joe: bộ dữ liệu là CC0, bản thân giọng thì không. Giọng được tinh chỉnh từ lessac, và lessac chỉ dùng cho nghiên cứu. LJSpeech là phạm vi công cộng và huấn luyện từ đầu. Ghi nguồn nằm trong NOTICE.txt. Tiếng Bồ Đào Nha Brasil có thêm bốn giọng nữ từ XTTS-v2 (coqui/XTTS-v2, CPML, chỉ phi thương mại). Claribel là giọng thử. Mặc định vẫn là cadu.',
+    'Người mới bắt đầu với giọng nam. Giọng cũ giữ nguyên cho đến khi đổi. Tiếng Việt: vais1000 (dữ liệu CC BY 4.0, nữ, miền Bắc; mô hình tinh chỉnh từ lessac) và vivos (CC BY-NC-SA 4.0, nam, chất lượng thấp, huấn luyện từ đầu). Audio tạo từ vivos cùng giấy phép đó. Tiếng Đức thorsten, tiếng Bồ Đào Nha cadu và faber, và tiếng Anh joe: bộ dữ liệu là CC0, bản thân giọng thì không. Giọng được tinh chỉnh từ lessac, và lessac chỉ dùng cho nghiên cứu. Tiếng Đức còn một giọng nữ, mls 4576, từ Multilingual LibriSpeech, CC BY 4.0, huấn luyện từ đầu. LJSpeech là phạm vi công cộng và huấn luyện từ đầu. Ghi nguồn nằm trong NOTICE.txt. Tiếng Bồ Đào Nha Brasil có thêm bốn giọng nữ từ XTTS-v2 (coqui/XTTS-v2, CPML, chỉ phi thương mại). Claribel là giọng thử. Mặc định vẫn là cadu.',
   voicesCc: 'CC BY 4.0',
   voicesNc: 'CC BY-NC-SA 4.0',
   voicesChanged: 'Tài liệu đã được thay đổi.',
@@ -1651,7 +1688,7 @@ export const vi: Dictionary = {
   privacy: 'Tiến độ, bản ghi và ghi chú ở trên máy này. Không tài khoản, không theo dõi, không phông từ mạng.',
   loading: 'Một lát.',
   storageError: 'Bộ nhớ trên máy không dùng được.',
-  version: 'Version 0.9.7',
+  version: 'Version 0.9.8',
   exampleAudio: 'Audio đọc câu ví dụ.',
   aboutLine: 'Về câu này',
   infoOpen: 'Giải thích về câu này',
@@ -1664,6 +1701,13 @@ export const vi: Dictionary = {
   learnToday: 'Học hôm nay',
   wordsFirst: 'Trước hết là từ của hôm nay.',
   wordPrompt: 'Từ này nghĩa là gì?',
+  wordIntro: 'Từ mới',
+  wordIntroStep: (index, total) => `Nghe · ${index} / ${total}`,
+  wordGloss: 'Nghĩa',
+  wordIpa: 'IPA',
+  wordReplay: 'Nghe lại',
+  wordSpeedTitle: 'Tốc độ của từ',
+  wordSpeedHint: 'Áp dụng cho từ đơn của người này và được lưu. Câu giữ tốc độ riêng.',
   wordRight: 'Đúng rồi.',
   wordWrong: (meaning) => `Nghĩa là «${meaning}».`,
   todayWords: (count) => (count === 1 ? '1 từ mới.' : `${count} từ mới.`),
@@ -1703,7 +1747,7 @@ export const vi: Dictionary = {
   voicePreview: 'Nghe thử',
   voiceViNote: 'Hai giọng nam, chất lượng rất thấp. Thẻ mô hình không ghi phương ngữ. Giọng nữ là miền Bắc.',
   voiceEnNote: 'Nam hoặc nữ. Tiếng Anh Mỹ.',
-  voiceDeNote: 'Nam, chất lượng cao hoặc vừa. Tiếng Đức của Đức, không phải tiếng Đức Thụy Sĩ.',
+  voiceDeNote: 'Một giọng nam, chất lượng cao hoặc vừa, hoặc một giọng nữ. Tiếng Đức của Đức, không phải tiếng Đức Thụy Sĩ.',
   voicePtNote: 'Hai giọng nam, và cadu vẫn là mặc định. Thẻ của giọng thứ hai không ghi giới tính. Bộ dữ liệu gọi người nói là nam. Bốn giọng nữ từ XTTS-v2, ngôn ngữ pt, CPML, chỉ phi thương mại. Claribel là giọng thử. Giọng chưa được kiểm tra.',
   voiceHint: 'Đã có giọng nam. Giọng hiện tại vẫn được chọn.',
   voiceHintClose: 'Đã hiểu',

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { AUDIO_FILE, voiceFile } from '../content/resolve'
 import { defaultSettings } from '../storage/types'
-import { SHIP_CLARIBEL, filesForVoice, selectedVoice, spokenFile, spokenWordFile, voicesFor, voicesKeptByOthers, withDefaultVoices } from './voices'
+import { SHIP_CLARIBEL, VOICE_SAMPLE, filesForVoice, previewFile, selectedVoice, spokenFile, spokenWordFile, VOICES, voicesFor, voicesKeptByOthers, withDefaultVoices } from './voices'
 
 describe('voices', () => {
   it('lists faber as a man, with the dataset description rather than the silent model card', () => {
@@ -91,6 +91,37 @@ describe('voices', () => {
     }
   })
 
+  it('keeps mls-4576 optional and faber a man', () => {
+    expect(voicesFor('de').map((voice) => [voice.id, voice.gender, voice.defaultNew])).toEqual([
+      ['thorsten-high', 'male', true],
+      ['thorsten', 'male', false],
+      ['mls-4576', 'female', false],
+    ])
+    expect(voicesFor('pt-BR').find((voice) => voice.id === 'faber')?.gender).toBe('male')
+  })
+
+  it('gives every Piper voice a normal-tempo sample and leaves XTTS on the lesson clip', () => {
+    const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('../../public/audio/manifest.json', import.meta.url)), 'utf8')) as string[]
+    const bundled = VOICES.filter((voice) => voice.bundled)
+    expect(bundled.length).toBeGreaterThan(0)
+    for (const voice of bundled) {
+      const file = previewFile(voice.lang, voice)
+      if (voice.provider === 'xtts') {
+        expect(file.endsWith(VOICE_SAMPLE)).toBe(false)
+        expect(file).toContain('emergency.help')
+        expect(manifest).toContain(file)
+        continue
+      }
+      expect(file.endsWith(VOICE_SAMPLE)).toBe(true)
+      expect(file).not.toMatch(/\.r70\.m4a$|\.r85\.m4a$/)
+      expect(manifest).toContain(file)
+      expect(filesForVoice(manifest, voice.lang, voice)).toContain(file)
+      const bytes = readFileSync(fileURLToPath(new URL(`../../public/audio/${file}`, import.meta.url)))
+      expect(bytes.length).toBeLessThan(40_000)
+      expect(mp4Seconds(bytes)).toBeGreaterThanOrEqual(2)
+    }
+  })
+
   it('keeps another person voice and not the active person own voice', () => {
     const people = [
       { id: 'a', settings: { ...defaultSettings, appLang: 'de' as const, targetLang: 'vi' as const, voices: { vi: 'vivos-22' } } },
@@ -100,3 +131,47 @@ describe('voices', () => {
     expect(voicesKeptByOthers(people, 'b', 'vi')).toEqual(['vivos-22'])
   })
 })
+
+/** Movie header duration. These clips are one audio track, so it is the sample length. */
+function mp4Seconds(bytes: Uint8Array): number {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  function u32(at: number): number {
+    return view.getUint32(at)
+  }
+  function walk(start: number, end: number): number | null {
+    let offset = start
+    while (offset + 8 <= end) {
+      let size = u32(offset)
+      const type = String.fromCharCode(bytes[offset + 4] ?? 0, bytes[offset + 5] ?? 0, bytes[offset + 6] ?? 0, bytes[offset + 7] ?? 0)
+      let header = 8
+      if (size === 1) {
+        if (offset + 16 > end) return null
+        size = Number(view.getBigUint64(offset + 8))
+        header = 16
+      }
+      if (size < header || offset + size > end) return null
+      const body = offset + header
+      const next = offset + size
+      if (type === 'mvhd') {
+        const version = bytes[body] ?? 0
+        if (version === 0) {
+          const timescale = u32(body + 12)
+          const duration = u32(body + 16)
+          return timescale > 0 ? duration / timescale : null
+        }
+        const timescale = u32(body + 20)
+        const duration = Number(view.getBigUint64(body + 24))
+        return timescale > 0 ? duration / timescale : null
+      }
+      if (type === 'moov' || type === 'trak' || type === 'mdia') {
+        const found = walk(body, next)
+        if (found != null) return found
+      }
+      offset = next
+    }
+    return null
+  }
+  const seconds = walk(0, bytes.length)
+  if (seconds == null) throw new Error('MP4_DURATION')
+  return seconds
+}

@@ -7,6 +7,7 @@ import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } f
 import { decodeContourFile, playClip, stopClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
 import { storedLearnTempo, tempoFile, type SpeedStep } from '../audio/speed'
+import { wordTempo } from '../audio/word-tempo'
 import { startMicrophone, type CaptureSession } from '../audio/recorder'
 import { stopSlices } from '../audio/slice'
 import { useApp } from '../app/state'
@@ -17,9 +18,11 @@ import { KaraokeLine } from '../components/KaraokeLine'
 import { InfoButton } from '../components/InfoButton'
 import { LearnCard } from '../components/LearnCard'
 import { TempoSwitch } from '../components/TempoSwitch'
+import { WordTempoControl } from '../components/WordTempo'
 import { RepeatFeedback } from '../components/RepeatFeedback'
 import { StudyProgress } from '../components/StudyProgress'
 import { RichText } from '../components/RichText'
+import { wordSound } from '../../content/word-sounds'
 import { spokenCitation, wordAudioFile, wordById } from '../../content/words'
 import { Rating, emptyCard, fromStored, previewDue, reviewCard, toStored, type Grade } from '../srs/scheduler'
 import { buildDay, meaningChoices, newSentenceIds, newlyOpenSentences, type DayItem } from '../srs/day'
@@ -36,6 +39,7 @@ import {
   type LearnStep,
   type SessionKind,
 } from '../srs/session'
+import { wordSteps } from '../srs/word-steps'
 import { prefsFromSettings } from '../storage/types'
 
 function practiceRate(step: LearnStep | undefined, tempo: SpeedStep): SpeedStep {
@@ -141,7 +145,7 @@ export function PracticePage() {
   }, [catalog, direction, kind, readyFor, run, settings.appLang, settings.skipWords, settings.targetLang, settings.viRegion, snapshot])
 
   const item = queue[index]
-  const steps: LearnStep[] = item ? (item.kind === 'word' ? ['word'] : stepsFor(item.isNew)) : []
+  const steps: LearnStep[] = item ? (item.kind === 'word' ? wordSteps(item.isNew) : stepsFor(item.isNew)) : []
   const step = steps[stepIndex]
   const concept = catalog?.concepts.find((entry) => entry.id === item?.id)
 
@@ -244,7 +248,10 @@ export function PracticePage() {
     const word = wordById(item.id)
     if (!word) return
     let live = true
-    const file = tempoFile(spokenWordFile(settings, settings.targetLang, wordAudioFile(word, settings.targetLang, settings.viRegion)), 0.7)
+    const file = tempoFile(
+      spokenWordFile(settings, settings.targetLang, wordAudioFile(word, settings.targetLang, settings.viRegion)),
+      wordTempo(settings),
+    )
     const speech = spokenCitation(word, settings.targetLang, settings.viRegion)
     lockedFile.current = file
     setPlaying(true)
@@ -261,7 +268,7 @@ export function PracticePage() {
       file,
       speech,
       settings.targetLang,
-      0.7,
+      1,
       release,
       (time) => {
         if (live && aliveRef.current) setSeconds(time)
@@ -281,8 +288,9 @@ export function PracticePage() {
     })
     return () => {
       live = false
+      stopClip()
     }
-  }, [item?.id, item?.kind, settings])
+  }, [item?.id, item?.kind, settings, step, stepIndex])
 
   useEffect(() => {
     if (item?.kind !== 'word') return
@@ -366,8 +374,10 @@ export function PracticePage() {
   async function hear(file: string, speech: string, rate: SpeedStep): Promise<void> {
     if (!targetLang) return
     const bare = file.slice(file.lastIndexOf('/') + 1)
-    const resolved = bare.startsWith('w.') ? spokenWordFile(settings, targetLang, file) : spokenFile(settings, targetLang, file)
-    const played = tempoFile(resolved, rate)
+    const wordClip = bare.startsWith('w.')
+    const resolved = wordClip ? spokenWordFile(settings, targetLang, file) : spokenFile(settings, targetLang, file)
+    const played = tempoFile(resolved, wordClip ? wordTempo(settings) : rate)
+    const clipRate = wordClip ? 1 : rate
     lockedFile.current = played
     setPlaying(true)
     setOfflineAudio(false)
@@ -383,7 +393,7 @@ export function PracticePage() {
       played,
       speech,
       targetLang,
-      rate,
+      clipRate,
       release,
       (time) => {
         if (aliveRef.current) setSeconds(time)
@@ -436,10 +446,13 @@ export function PracticePage() {
   }
 
   const word = item?.kind === 'word' ? wordById(item.id) : undefined
-  if (item?.kind === 'word' && word && step === 'word') {
+  if (item?.kind === 'word' && word && (step === 'word' || step === 'word-intro')) {
     const speech = spokenCitation(word, targetLang, settings.viRegion)
     const file = wordAudioFile(word, targetLang, settings.viRegion)
     const meaning = spokenCitation(word, app, settings.viRegion)
+    const sound = wordSound(word, targetLang, app, settings.viRegion)
+    const heard = steps.slice(0, stepIndex + 1).filter((entry) => entry === 'word-intro').length
+    const hearTotal = steps.filter((entry) => entry === 'word-intro').length
     const currentWord = word
     const book = catalog
     const cardsNow = snapshot.cards
@@ -463,6 +476,54 @@ export function PracticePage() {
       if (open.length > 0) {
         setQueue((current) => [...current, ...open.map((id) => ({ id, isNew: true, kind: 'sentence' as const }))])
       }
+    }
+    const wordTempoControl = (
+      <WordTempoControl
+        chosen={wordTempo(settings)}
+        title={copy.wordSpeedTitle}
+        hint={copy.wordSpeedHint}
+        slow={copy.speed70}
+        mid={copy.speed85}
+        full={copy.speed100}
+        onPick={(option) => {
+          if (wordTempo(settings) === option) return
+          void saveSettings({ ...settings, wordSpeed: option })
+        }}
+      />
+    )
+    if (step === 'word-intro') {
+      return (
+        <section className="stack learn" data-testid="word-intro">
+          <h2 className="eyebrow">{copy.wordIntroStep(heard, hearTotal)}</h2>
+          {offlineAudio ? (
+            <p className="warn" role="status">
+              {copy.audioOffline}
+            </p>
+          ) : null}
+          <h2>{copy.wordIntro}</h2>
+          <LearnCard>
+            <p className="target-line" data-testid="target-line" lang={targetLang}>
+              {speech}
+            </p>
+            <p className="word-read" data-testid="word-read">
+              {sound.read}
+            </p>
+            <p className="hint" data-testid="word-ipa">
+              {copy.wordIpa} {sound.ipa}
+            </p>
+            <p className="hint">{copy.wordGloss}</p>
+            <p data-testid="word-meaning">{meaning}</p>
+          </LearnCard>
+          {wordTempoControl}
+          <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
+            <span className="play-mark" aria-hidden="true" />
+            {playing ? copy.playingNormal : copy.wordReplay}
+          </button>
+          <button type="button" className="button primary" onClick={goNext}>
+            {copy.next}
+          </button>
+        </section>
+      )
     }
     return (
       <section className="stack learn" data-testid="practice-word">
@@ -504,11 +565,18 @@ export function PracticePage() {
           <p className="target-line" data-testid="target-line" lang={targetLang}>
             {speech}
           </p>
+          <p className="word-read" data-testid="word-read">
+            {sound.read}
+          </p>
+          <p className="hint" data-testid="word-ipa">
+            {copy.wordIpa} {sound.ipa}
+          </p>
           {answered ? <p className="gloss">{meaning}</p> : null}
         </LearnCard>
-        <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 0.7)}>
+        {wordTempoControl}
+        <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
           <span className="play-mark" aria-hidden="true" />
-          {playing ? copy.playingSlow : copy.replaySlow}
+          {playing ? copy.playingNormal : copy.wordReplay}
         </button>
         <h2>{copy.wordPrompt}</h2>
         <ul className="choices">
@@ -635,6 +703,7 @@ export function PracticePage() {
     understand: copy.stepUnderstand(index + 1, queue.length),
     recall: copy.stepRecall(index + 1, queue.length),
     rate: copy.stepRecall(index + 1, queue.length),
+    'word-intro': copy.wordIntro,
     word: copy.wordsFirst,
   }
 
