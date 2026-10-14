@@ -886,6 +886,26 @@ describe('shipped clips', () => {
     60_000,
   )
 
+  it.skipIf(!ready || !clipLangs.includes('de'))(
+    'detects a reversed hello only through the warp reverse check',
+    () => {
+      const file = 'public/audio/de/thorsten-high/meet.hello__any__base.m4a'
+      const samples = decode(file)
+      const reversed = Float32Array.from(samples)
+      reversed.reverse()
+      const coded = throughOpus(withLead(reversed, 16000), 16000)
+      const model = analyzeModel(samples, 16000)
+      const user = analyzeUser(coded, 16000, model.bands)
+      // X5. The frequency warp is skipped when the unshifted shape already
+      // fits the file better backwards. This take's warped shape is not
+      // reversed, so the lock sees the flip only on the bands that skip left
+      // in place. Speech bands are not the check.
+      expect(reversedRecording(model.bands, user.bands), file).toBe(true)
+      expect(user.bands, file).toBe(user.plainBands)
+    },
+    60_000,
+  )
+
   it.skipIf(!ready || !clipLangs.includes('vi'))(
     'keeps two stars when the short Vietnamese yes still has two green bars',
     () => {
@@ -1225,6 +1245,13 @@ describe('shipped clips', () => {
     return byte % 2 === 0 ? 'A' : 'B'
   }
 
+  function gendersOf(templateId: string, userId: string): { template: 'male' | 'female' | null; user: 'male' | 'female' | null } {
+    return {
+      template: VOICES.find((voice) => voice.id === templateId)?.gender ?? null,
+      user: VOICES.find((voice) => voice.id === userId)?.gender ?? null,
+    }
+  }
+
   /**
    * Half A is the even SHA-1 byte of the line file. Counts are the calibration
    * pass under the V2 star rule. A floor and a ceiling sit around each one.
@@ -1377,9 +1404,10 @@ describe('shipped clips', () => {
           expect(rows.length, `${lang} ${voice.id}`).toBeGreaterThan(20)
           let before3 = 0
           let after3 = 0
+          const sameVoice = gendersOf(voice.id, voice.id)
           const starsOf = (score: RepeatScore) =>
             score.verdict
-              ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, lang)
+              ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, lang, sameVoice)
               : 0
           for (let index = 0; index < rows.length; index += 1) {
             const row = rows[index]
@@ -1473,7 +1501,14 @@ describe('shipped clips', () => {
             const bad = grade(row, next.samples)
             if (bad.verdict) {
               wrongJudged += 1
-              const stars = starsFromVerdict(bad.verdict, bad.melodyBar, bad.rhythmBar, bad.sentenceCheck?.backwards ?? false, lang)
+              const stars = starsFromVerdict(
+                bad.verdict,
+                bad.melodyBar,
+                bad.rhythmBar,
+                bad.sentenceCheck?.backwards ?? false,
+                lang,
+                gendersOf(voice.id, voice.id),
+              )
               if (stars === 0) wrongZero += 1
             }
             if (voice.id === anchorId) continue
@@ -1482,7 +1517,14 @@ describe('shipped clips', () => {
             const heard = grade(model, row.samples)
             if (heard.verdict) {
               otherJudged += 1
-              const stars = starsFromVerdict(heard.verdict, heard.melodyBar, heard.rhythmBar, heard.sentenceCheck?.backwards ?? false, lang)
+              const stars = starsFromVerdict(
+                heard.verdict,
+                heard.melodyBar,
+                heard.rhythmBar,
+                heard.sentenceCheck?.backwards ?? false,
+                lang,
+                gendersOf(anchorId, voice.id),
+              )
               const slot = perVoice.get(voice.id) ?? { judged: 0, low: 0 }
               slot.judged += 1
               if (stars <= 1) {

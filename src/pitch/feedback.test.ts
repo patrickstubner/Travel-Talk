@@ -152,11 +152,16 @@ describe('scoring bands', () => {
     expect(sentenceVerdict(near, 'en')).toBe('teilweise')
     expect(sentenceVerdict({ ...same, correlation: 0.2 }, 'vi')).toBe('passt')
     expect(sentenceVerdict({ ...same, correlation: 0 }, 'vi')).toBe('daneben')
+    const sameGender = { template: 'male' as const, user: 'male' as const }
+    const crossGender = { template: 'male' as const, user: 'female' as const }
     expect(starsFromVerdict('teilweise', 'passt', 'teilweise')).toBe(2)
-    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de')).toBe(1)
-    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'pt-BR')).toBe(2)
-    expect(starsFromVerdict('teilweise', 'daneben', 'daneben', false, 'de')).toBe(1)
-    expect(starsFromVerdict('passt', 'daneben', 'daneben', false, 'de')).toBe(1)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', sameGender)).toBe(1)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', crossGender)).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de')).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', { template: 'female', user: null })).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'pt-BR', sameGender)).toBe(2)
+    expect(starsFromVerdict('teilweise', 'daneben', 'daneben', false, 'de', sameGender)).toBe(1)
+    expect(starsFromVerdict('passt', 'daneben', 'daneben', false, 'de', sameGender)).toBe(1)
     expect(starsFromVerdict('passt', 'teilweise', 'teilweise', false, 'pt-BR')).toBe(2)
     expect(starsFromVerdict('daneben', 'teilweise', 'daneben')).toBe(1)
     expect(starsFromVerdict('daneben', 'daneben', 'teilweise')).toBe(1)
@@ -167,13 +172,13 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('daneben', 'daneben', 'daneben')).toBe(0)
     expect(starsFromVerdict('daneben', 'passt', 'passt')).toBe(2)
     expect(starsFromVerdict('passt', 'passt', 'passt', true)).toBe(0)
-    // X5. German S3 on «teilweise» is 2 only when a bar is green. Replacing
-    // `>=` with `>` would turn that one green bar into 1. Portuguese stays at 2.
-    expect(starsFromVerdict('teilweise', 'passt', 'daneben', false, 'de')).toBe(2)
-    expect(starsFromVerdict('teilweise', 'daneben', 'passt', false, 'de')).toBe(2)
-    expect(starsFromVerdict('teilweise', 'teilweise', 'daneben', false, 'de')).toBe(1)
-    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'en')).toBe(2)
-    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'vi')).toBe(2)
+    // Same-gender German S3 is 2 only when a bar is green. Replacing `>=`
+    // with `>` would turn that one green bar into 1. A missing gender stays at 2.
+    expect(starsFromVerdict('teilweise', 'passt', 'daneben', false, 'de', sameGender)).toBe(2)
+    expect(starsFromVerdict('teilweise', 'daneben', 'passt', false, 'de', sameGender)).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'daneben', false, 'de', sameGender)).toBe(1)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'en', sameGender)).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'vi', sameGender)).toBe(2)
     for (const lang of ['de', 'en', 'pt-BR', 'vi'] as const) {
       expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, lang)).toBe(0)
       expect(starsFromVerdict('daneben', 'teilweise', 'teilweise', false, lang)).toBe(1)

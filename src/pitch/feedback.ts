@@ -1208,14 +1208,18 @@ export function sentenceVerdict(check: SentenceCheck, lang: Lang = 'de'): BarSta
   return 'teilweise'
 }
 
+export type SpeakerGender = 'male' | 'female'
+
 /**
  * Star count for the repeat screen. Not stored on the score.
  *
  * 3 only when the sentence is «passt» and both bars are «passt».
  * On «passt» and «teilweise», German rule S3 gives 2 when a bar is
- * «passt» and 1 otherwise. Portuguese, English and Vietnamese stay at 2.
- * On «daneben», 2 only when a bar is «passt», 1 when the better bar is
- * yellow, otherwise 0. A reversed take is 0.
+ * «passt» and 1 otherwise, and only when the template voice and the
+ * speaker are the same known gender. A different gender, or a missing
+ * one, stays on V2: two stars. Portuguese, English and Vietnamese stay
+ * at 2. On «daneben», 2 only when a bar is «passt», 1 when the better
+ * bar is yellow, otherwise 0. A reversed take is 0.
  */
 export function starsFromVerdict(
   verdict: BarState,
@@ -1223,6 +1227,7 @@ export function starsFromVerdict(
   rhythm: BarState | null,
   backwards = false,
   lang: Lang = 'de',
+  genders?: { readonly template?: SpeakerGender | null; readonly user?: SpeakerGender | null } | null,
 ): 0 | 1 | 2 | 3 {
   if (backwards) return 0
   const green = [melody, rhythm].filter((bar) => bar === 'passt').length
@@ -1233,7 +1238,9 @@ export function starsFromVerdict(
     if (yellow >= 1) return 1
     return 0
   }
-  if (lang === 'de') return green >= 1 ? 2 : 1
+  const template = genders?.template
+  const user = genders?.user
+  if (lang === 'de' && template && user && template === user) return green >= 1 ? 2 : 1
   return 2
 }
 
