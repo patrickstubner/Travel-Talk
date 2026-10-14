@@ -2,6 +2,12 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## 0.9.11 Grenze 4 Halbtöne
+
+Geprüft am 14. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.
+
+Die Grenze in `S3_PITCH_SEMITONES` ist 4. Der Median bleibt im Speicher, nicht auf dem Score, nicht in IndexedDB und nicht im Export. Es entsteht kein Profilfeld. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Die CSP bleibt.
+
 ## 0.9.10 Tonhöhe für S3
 
 Geprüft am 14. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.

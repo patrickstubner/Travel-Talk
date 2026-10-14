@@ -23,6 +23,8 @@ import {
   VERDICT_BAND_PASST,
   barFromColours,
   reversedRecording,
+  S3_PITCH_SEMITONES,
+  medianGapSemitones,
   scoreRepeat,
   starsFromVerdict,
   type RepeatScore,
@@ -469,6 +471,117 @@ describe('shipped clips', () => {
     throw new Error(`CLIP_LANG must be one of ${allLangs.join(', ')}`)
   }
   const clipLangs = requested ? allLangs.filter((lang) => lang === requested) : [...allLangs]
+
+  it.skipIf(!ready || !clipLangs.includes('de'))(
+    'keeps German S3 inside 4 semitones on real clips and off beyond them',
+    () => {
+      const nearModel = analyzeModel(decode('public/audio/de/thorsten-high/meet.repeat__any__base.m4a'), 16000)
+      const nearTake = analyzeModel(decode('public/audio/de/meet.repeat__any__base.m4a'), 16000)
+      const farModel = analyzeModel(decode('public/audio/de/thorsten-high/meet.contact__any__base.m4a'), 16000)
+      const farTake = analyzeModel(decode('public/audio/de/meet.contact__any__base.m4a'), 16000)
+      const nearGap = medianGapSemitones(nearModel.medianHz, nearTake.medianHz)
+      const farGap = medianGapSemitones(farModel.medianHz, farTake.medianHz)
+      expect(nearGap, 'meet.repeat').not.toBeNull()
+      expect(farGap, 'meet.contact').not.toBeNull()
+      expect(nearGap ?? 99).toBeLessThanOrEqual(4)
+      expect(farGap ?? 0).toBeGreaterThan(4)
+      expect(farGap ?? 99).toBeLessThan(6)
+      expect(S3_PITCH_SEMITONES).toBe(4)
+      expect(
+        starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', null, {
+          modelHz: nearModel.medianHz,
+          userHz: nearTake.medianHz,
+        }),
+      ).toBe(1)
+      expect(
+        starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', null, {
+          modelHz: farModel.medianHz,
+          userHz: farTake.medianHz,
+        }),
+      ).toBe(2)
+    },
+    60_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'keeps cadu green across three Chrome microphone takes',
+    async () => {
+      const bin = requireChrome()
+      if (!bin) return
+      const text = 'Você pode escrever isso, por favor?'
+      const file = 'public/audio/pt-BR/cadu/emergency.write__any__base.m4a'
+      const padded = withLead(decodeRate(file, 48000), 48000)
+      const captured = await captureChrome(bin, file, padded, 48000, 3)
+      const model = captured[0]
+      if (!model) throw new Error('Chrome hat die Datei nicht dekodiert.')
+      const scores = captured.slice(1).map((take) => scoreChrome(file, text, 'pt-BR', model, take))
+      expectStableGreen(scores, file, ['Você', 'pode', 'escrever', 'isso,', 'por', 'favor?'], 'pt-BR')
+    },
+    120_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('vi'))(
+    'keeps the heard Vietnamese file green across three Chrome microphone takes',
+    async () => {
+      const bin = requireChrome()
+      if (!bin) return
+      const text = 'Xin viết ra giúp tôi.'
+      const file = 'public/audio/vi/vivos-22/emergency.write__any__base.m4a'
+      const padded = withLead(decodeRate(file, 48000), 48000)
+      const captured = await captureChrome(bin, file, padded, 48000, 3)
+      const model = captured[0]
+      if (!model) throw new Error('Chrome hat die Datei nicht dekodiert.')
+      const scores = captured.slice(1).map((take) => scoreChrome(file, text, 'vi', model, take))
+      expectStableGreen(scores, file, ['Xin', 'viết', 'ra', 'giúp', 'tôi.'], 'vi')
+    },
+    120_000,
+  )
+
+  it.skipIf(!ready || !clipLangs.includes('vi'))(
+    'marks a shorter word when another Vietnamese voice is recorded in Chrome',
+    async () => {
+      const bin = requireChrome()
+      if (!bin) return
+      const writeText = 'Xin viết ra giúp tôi.'
+      const writeModel = 'public/audio/vi/vivos-22/emergency.write__any__base.m4a'
+      const writeUser = 'public/audio/vi/vivos-32/emergency.write__any__base.m4a'
+      const writeCapture = await captureChrome(bin, writeModel, withLead(decodeRate(writeUser, 48000), 48000), 48000, 2)
+      const writeHeard = writeCapture[0]
+      if (!writeHeard) throw new Error('Chrome hat die Datei nicht dekodiert.')
+      const writeScores = writeCapture.slice(1).map((take) => scoreChrome(writeModel, writeText, 'vi', writeHeard, take))
+      for (const score of writeScores) {
+        expect(score.rhythmBar, writeModel).not.toBeNull()
+        const toi = score.words?.find((word) => word.text === 'tôi.')
+        expect(toi?.scorable, writeModel).toBe(true)
+        expect(['yellow', 'red']).toContain(toi?.rhythm)
+        expect(toi?.rawRatio ?? 1, writeModel).toBeLessThan(0.7)
+      }
+      const first = writeScores[0]?.words ?? []
+      for (const word of first) {
+        if (word.rawRatio == null) continue
+        const again = writeScores[1]?.words?.find((item) => item.text === word.text)
+        expect(Math.abs((again?.rawRatio ?? 0) - word.rawRatio), word.text).toBeLessThanOrEqual(0.05)
+        if (word.text === 'tôi.') continue
+        if (word.scorable) expect(word.rhythm, word.text).toBe('green')
+      }
+      // The older bundled voice stays inside the green band. Its alignment
+      // does too. The longer vivos-32 take is the one that leaves it.
+      const legacyUser = 'public/audio/vi/emergency.write__any__base.m4a'
+      const legacyCapture = await captureChrome(bin, writeModel, withLead(decodeRate(legacyUser, 48000), 48000), 48000, 1)
+      const legacyHeard = legacyCapture[0]
+      const legacyTake = legacyCapture[1]
+      if (!legacyHeard || !legacyTake) throw new Error('Chrome hat die Datei nicht dekodiert.')
+      const legacy = scoreChrome(writeModel, writeText, 'vi', legacyHeard, legacyTake)
+      expect(legacy.rhythmBar, legacyUser).not.toBeNull()
+      expect(legacy.words?.some((word) => word.melody != null && word.melody !== 'green'), legacyUser).toBe(true)
+      for (const word of legacy.words ?? []) {
+        if (!word.scorable) continue
+        if (word.text === 'giúp') expect(word.rawRatio ?? 9, word.text).toBeLessThanOrEqual(1.45)
+        else expect(word.rhythm, `${legacyUser} ${word.text}`).toBe('green')
+      }
+    },
+    180_000,
+  )
 
   for (const lang of clipLangs) {
     it.skipIf(!ready)(`decodes ${lang} and scores the melody`, () => checkLanguage(lang), 2_400_000)
@@ -1897,7 +2010,7 @@ main().catch((error) => fetch('/fail', { method: 'POST', body: String(error && e
     const timer = setTimeout(() => {
       failure = failure || 'Chrome hat die Takes nicht rechtzeitig geschickt.'
       settle?.()
-    }, ms * takes + 20_000)
+    }, ms * takes + 60_000)
     try {
       await finished
       if (failure) throw new Error(failure)
@@ -1993,85 +2106,7 @@ main().catch((error) => fetch('/fail', { method: 'POST', body: String(error && e
     }
   }
 
-  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
-    'keeps cadu green across three Chrome microphone takes',
-    async () => {
-      const bin = requireChrome()
-      if (!bin) return
-      const text = 'Você pode escrever isso, por favor?'
-      const file = 'public/audio/pt-BR/cadu/emergency.write__any__base.m4a'
-      const padded = withLead(decodeRate(file, 48000), 48000)
-      const captured = await captureChrome(bin, file, padded, 48000, 3)
-      const model = captured[0]
-      if (!model) throw new Error('Chrome hat die Datei nicht dekodiert.')
-      const scores = captured.slice(1).map((take) => scoreChrome(file, text, 'pt-BR', model, take))
-      expectStableGreen(scores, file, ['Você', 'pode', 'escrever', 'isso,', 'por', 'favor?'], 'pt-BR')
-    },
-    90_000,
-  )
 
-  it.skipIf(!ready || !clipLangs.includes('vi'))(
-    'keeps the heard Vietnamese file green across three Chrome microphone takes',
-    async () => {
-      const bin = requireChrome()
-      if (!bin) return
-      const text = 'Xin viết ra giúp tôi.'
-      const file = 'public/audio/vi/vivos-22/emergency.write__any__base.m4a'
-      const padded = withLead(decodeRate(file, 48000), 48000)
-      const captured = await captureChrome(bin, file, padded, 48000, 3)
-      const model = captured[0]
-      if (!model) throw new Error('Chrome hat die Datei nicht dekodiert.')
-      const scores = captured.slice(1).map((take) => scoreChrome(file, text, 'vi', model, take))
-      expectStableGreen(scores, file, ['Xin', 'viết', 'ra', 'giúp', 'tôi.'], 'vi')
-    },
-    90_000,
-  )
-
-  it.skipIf(!ready || !clipLangs.includes('vi'))(
-    'marks a shorter word when another Vietnamese voice is recorded in Chrome',
-    async () => {
-      const bin = requireChrome()
-      if (!bin) return
-      const writeText = 'Xin viết ra giúp tôi.'
-      const writeModel = 'public/audio/vi/vivos-22/emergency.write__any__base.m4a'
-      const writeUser = 'public/audio/vi/vivos-32/emergency.write__any__base.m4a'
-      const writeCapture = await captureChrome(bin, writeModel, withLead(decodeRate(writeUser, 48000), 48000), 48000, 2)
-      const writeHeard = writeCapture[0]
-      if (!writeHeard) throw new Error('Chrome hat die Datei nicht dekodiert.')
-      const writeScores = writeCapture.slice(1).map((take) => scoreChrome(writeModel, writeText, 'vi', writeHeard, take))
-      for (const score of writeScores) {
-        expect(score.rhythmBar, writeModel).not.toBeNull()
-        const toi = score.words?.find((word) => word.text === 'tôi.')
-        expect(toi?.scorable, writeModel).toBe(true)
-        expect(['yellow', 'red']).toContain(toi?.rhythm)
-        expect(toi?.rawRatio ?? 1, writeModel).toBeLessThan(0.7)
-      }
-      const first = writeScores[0]?.words ?? []
-      for (const word of first) {
-        if (word.rawRatio == null) continue
-        const again = writeScores[1]?.words?.find((item) => item.text === word.text)
-        expect(Math.abs((again?.rawRatio ?? 0) - word.rawRatio), word.text).toBeLessThanOrEqual(0.05)
-        if (word.text === 'tôi.') continue
-        if (word.scorable) expect(word.rhythm, word.text).toBe('green')
-      }
-      // The older bundled voice stays inside the green band. Its alignment
-      // does too. The longer vivos-32 take is the one that leaves it.
-      const legacyUser = 'public/audio/vi/emergency.write__any__base.m4a'
-      const legacyCapture = await captureChrome(bin, writeModel, withLead(decodeRate(legacyUser, 48000), 48000), 48000, 1)
-      const legacyHeard = legacyCapture[0]
-      const legacyTake = legacyCapture[1]
-      if (!legacyHeard || !legacyTake) throw new Error('Chrome hat die Datei nicht dekodiert.')
-      const legacy = scoreChrome(writeModel, writeText, 'vi', legacyHeard, legacyTake)
-      expect(legacy.rhythmBar, legacyUser).not.toBeNull()
-      expect(legacy.words?.some((word) => word.melody != null && word.melody !== 'green'), legacyUser).toBe(true)
-      for (const word of legacy.words ?? []) {
-        if (!word.scorable) continue
-        if (word.text === 'giúp') expect(word.rawRatio ?? 9, word.text).toBeLessThanOrEqual(1.45)
-        else expect(word.rhythm, `${legacyUser} ${word.text}`).toBe('green')
-      }
-    },
-    90_000,
-  )
 })
 
 function readRequest(request: IncomingMessage): Promise<Buffer> {

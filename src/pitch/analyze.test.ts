@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { analyzeModelCached } from './analyze-client'
+import { analyzeModelCached, featuresFromWorker } from './analyze-client'
 import { handleAnalysis } from './analyze.worker'
 
 function tone(hz: number): Float32Array {
@@ -34,6 +34,24 @@ describe('pitch analysis', () => {
     expect(result.bands.length).toBeGreaterThan(8)
     expect(result.speechBands.length).toBeGreaterThan(8)
     expect(result.energy.length).toBe(result.contour.length)
+  })
+
+  it('passes the median pitch through the worker reply', () => {
+    const model = handleAnalysis({ id: 3, kind: 'model', samples: tone(120), rate: 16000, modelBands: null })
+    const kept = featuresFromWorker(model)
+    expect(kept.medianHz).toBeCloseTo(120, 0)
+    expect(kept.medianHz).toBe(model.medianHz)
+    const reply = featuresFromWorker({
+      id: 9,
+      contour: [0],
+      energy: [0.1],
+      bands: [[1]],
+      plainBands: [[1]],
+      speechBands: [[1]],
+      medianHz: 280,
+    })
+    expect(reply.medianHz).toBe(280)
+    expect(reply.contour).toEqual([0])
   })
 
   it('does not store or send the samples from the worker', () => {

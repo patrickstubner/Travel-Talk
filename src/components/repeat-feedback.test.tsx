@@ -451,66 +451,76 @@ describe('repeat feedback view', () => {
     expect(screen.getByRole('dialog').textContent ?? '').toMatch(/Ein falscher Satz bekommt nie drei/)
   })
 
-  it('keeps German V2 when the page is not told a gender and the pitches are far', async () => {
+  it('gives one German star when the pitches are close and two when the take is far above', async () => {
     const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
-    vi.mocked(scoreRepeat).mockImplementationOnce((input) => {
-      const score = actual.scoreRepeat(input)
-      const painted = ['qua', 'xin', 'nha'].map((text, index) => ({
-        text,
-        start: words[index]?.start ?? 0,
-        end: words[index]?.end ?? 0,
-        color: 'yellow' as const,
-        melody: 'yellow' as const,
-        rhythm: 'yellow' as const,
-        melodyDistance: 2,
-        rawRatio: 1,
-        userStart: words[index]?.start ?? 0,
-        userEnd: words[index]?.end ?? 0,
-        modelFrame: 0,
-        modelFrameEnd: 1,
-        userFrame: 0,
-        userFrameEnd: 1,
-        tone: null,
-        userShape: 'level' as const,
-        sentence: null,
-        scorable: true,
-      }))
-      return {
-        ...score,
-        words: painted,
-        melodyBar: 'teilweise' as const,
-        rhythmBar: 'teilweise' as const,
-        verdict: 'teilweise' as const,
-        unclear: false,
-        tooShort: false,
-        tooLittleVoice: false,
-        sentenceCheck: {
-          correlation: 0.4,
-          opposedShare: 0.2,
-          order: 1,
-          bands: 0.3,
-          backwards: false,
-        },
-      }
-    })
-    // 110 Hz against 280 Hz is about 16 semitones, past the close-pitch gate.
-    // The live page leaves speaker gender unset. thorsten-high is a male template.
+    const paint = () => {
+      vi.mocked(scoreRepeat).mockImplementationOnce((input) => {
+        const score = actual.scoreRepeat(input)
+        const painted = ['qua', 'xin', 'nha'].map((text, index) => ({
+          text,
+          start: words[index]?.start ?? 0,
+          end: words[index]?.end ?? 0,
+          color: 'yellow' as const,
+          melody: 'yellow' as const,
+          rhythm: 'yellow' as const,
+          melodyDistance: 2,
+          rawRatio: 1,
+          userStart: words[index]?.start ?? 0,
+          userEnd: words[index]?.end ?? 0,
+          modelFrame: 0,
+          modelFrameEnd: 1,
+          userFrame: 0,
+          userFrameEnd: 1,
+          tone: null,
+          userShape: 'level' as const,
+          sentence: null,
+          scorable: true,
+        }))
+        return {
+          ...score,
+          words: painted,
+          melodyBar: 'teilweise' as const,
+          rhythmBar: 'teilweise' as const,
+          verdict: 'teilweise' as const,
+          unclear: false,
+          tooShort: false,
+          tooLittleVoice: false,
+          sentenceCheck: {
+            correlation: 0.4,
+            opposedShare: 0.2,
+            order: 1,
+            bands: 0.3,
+            backwards: false,
+          },
+        }
+      })
+    }
+    const show = (modelHz: number, userHz: number) => {
+      render(
+        <RepeatFeedback
+          copy={de}
+          lang="de"
+          region="south"
+          speech="qua xin nha"
+          words={words}
+          modelSamples={tone(modelHz, modelHz, 1.2)}
+          modelRate={16000}
+          userSamples={tone(userHz, userHz, 1.2)}
+          userRate={16000}
+          modelMissing={false}
+          voiceId="thorsten-high"
+        />,
+      )
+    }
+    // 120 against 140 is about 2.7 semitones, inside the cut. The page sets no gender.
+    paint()
+    show(120, 140)
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('1')
+    cleanup()
+    // 110 against 280 is about 16 semitones. thorsten-high is male.
     // A mutant that defaults the user gender to male would score this 1.
-    render(
-      <RepeatFeedback
-        copy={de}
-        lang="de"
-        region="south"
-        speech="qua xin nha"
-        words={words}
-        modelSamples={tone(110, 110, 1.2)}
-        modelRate={16000}
-        userSamples={tone(280, 280, 1.2)}
-        userRate={16000}
-        modelMissing={false}
-        voiceId="thorsten-high"
-      />,
-    )
+    paint()
+    show(110, 280)
     expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
     fireEvent.click(screen.getByRole('button', { name: 'Was die Sterne bedeuten' }))
     const dialog = screen.getByRole('dialog').textContent ?? ''

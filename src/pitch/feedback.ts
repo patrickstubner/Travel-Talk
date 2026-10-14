@@ -1212,11 +1212,10 @@ export type SpeakerGender = 'male' | 'female'
 
 /**
  * German S3 also runs when the take and the file sit inside this many
- * semitones of median pitch. On half A, after silence and Opus, every
- * thorsten pair stays at or under 6 and mls-4576 is mostly above it.
- * The page does not store a gender, so this gap is what turns S3 on.
+ * semitones of median pitch. The page does not store a gender, so this
+ * gap is what turns S3 on for a learner.
  */
-export const S3_PITCH_SEMITONES = 6
+export const S3_PITCH_SEMITONES = 4
 
 /** Absolute gap of two median pitches, in semitones. Missing or silent is null. */
 export function medianGapSemitones(modelHz?: number | null, userHz?: number | null): number | null {

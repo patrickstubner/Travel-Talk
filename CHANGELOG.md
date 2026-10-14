@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.11 — 2026-10-14
+
+- Die Grenze für die nahe Tonhöhe auf Deutsch ist 4 Halbtöne, nicht mehr 6. Liegt der Median der Aufnahme weiter weg, bleiben «passt» und «teilweise» bei zwei Sternen. Ein grüner Balken gibt weiter zwei, drei Sterne bleiben an «passt» und beiden grünen Balken. Die Zahl wird nicht gespeichert. Es kommt kein Profilfeld dazu.
+- Ein Test auf der Seite gibt bei 120 Hz gegen 140 Hz einen Stern und bei 110 Hz gegen 280 Hz zwei. Die Antwort des Workers behält den Median. Ein Test mit zwei echten Dateien liegt auf beiden Seiten der Grenze: «Können Sie das bitte wiederholen?» von thorsten und thorsten-high darunter, «Können wir Telefonnummern tauschen?» darüber.
+- Die Chrome-Prüfung der Aufnahme startet vor den langen Dateitests. Sie wartet 60 Sekunden über die Aufnahmedauer hinaus, damit ein langsamer Start nicht als «nicht rechtzeitig» zählt.
+
 ## 0.9.10 — 2026-10-14
 
 - Die Erklärung zu den Sternen nennt nur noch die Regel, die in der App gilt. Sie spricht nicht von einem Geschlecht, weil die App danach nicht fragt. Liegt die mittlere Tonhöhe der Aufnahme nahe an der Datei, gilt auf Deutsch bei «passt» und «teilweise» Regel S3: zwei Sterne nur mit einem grünen Balken, sonst einer. Sonst bleiben es zwei. Drei Sterne, «daneben» und rückwärts bleiben, wie sie sind. Die Nähe ist der Abstand der beiden Mediane in Halbtönen, nach derselben Tonhöhenrechnung wie die Kurve. Die Grenze ist 6 Halbtöne. Auf der Kalibrierungshälfte, mit Stille und Opus, bleibt jedes Paar der beiden Männerstimmen darunter, höchstens 5,98. mls-4576 liegt meist darüber, der Median der Abstände bei etwa 9. Die Zahl wird nicht gespeichert, nicht exportiert, und es kommt kein Profilfeld dazu. Ein Test hält fest, dass die Seite ohne gesetztes Geschlecht und bei weit auseinanderliegender Tonhöhe bei zwei Sternen bleibt. Eine Mutante, die das Geschlecht still auf männlich setzt, fällt durch, weil die Vorlage thorsten-high männlich ist und die Tonhöhen in dem Test weit auseinanderliegen.

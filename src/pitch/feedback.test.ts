@@ -197,6 +197,9 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'pt-BR', null, closePitch)).toBe(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'en', null, closePitch)).toBe(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'vi', null, closePitch)).toBe(2)
+    // The take sits far above the file. The gap is absolute, so this stays on V2.
+    expect(medianGapSemitones(110, 280)).toBeGreaterThan(S3_PITCH_SEMITONES)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', { template: 'male', user: null }, { modelHz: 110, userHz: 280 })).toBe(2)
     for (const lang of ['de', 'en', 'pt-BR', 'vi'] as const) {
       expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, lang)).toBe(0)
       expect(starsFromVerdict('daneben', 'teilweise', 'teilweise', false, lang)).toBe(1)
