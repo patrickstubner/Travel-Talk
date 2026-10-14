@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Rollback is a re-run of an old workflow_dispatch run. Only people with
+  # write access can re-run a workflow, and only while that run's Pages
+  # artifact still exists. upload-pages-artifact keeps it for one day.
+  # There is no extra input.
   workflow_dispatch:
 
 permissions:
@@ -193,6 +197,7 @@ jobs:
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: dist
+          retention-days: 1
 
   deploy:
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
@@ -208,28 +213,32 @@ jobs:
       group: pages
       cancel-in-progress: false
     steps:
-      # A queued push must not publish after main has moved. A manual dispatch
-      # is the rollback path, so that run skips the check. The remote URL is
-      # built from runner env vars only.
+      # A queued push must not publish after main has moved. That case is a
+      # notice, not a failed job. A network or ls-remote error still fails.
+      # workflow_dispatch skips the comparison: re-running an old manual run
+      # is the rollback. The remote URL is built from runner env vars only.
       - name: Require this commit to still be the head of main
+        id: head
         run: |
           set -eu
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             echo "Manual dispatch: skipping the check that this commit is still the tip of main."
+            echo "current=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           line=$(git ls-remote "$url" refs/heads/main)
           tip=${line%%[[:space:]]*}
           if [ -z "$tip" ]; then
-            echo "Refusing to deploy: could not read refs/heads/main." >&2
+            echo "Could not read refs/heads/main. Refusing to deploy." >&2
             exit 1
           fi
           if [ "$tip" != "$GITHUB_SHA" ]; then
-            echo "Refusing to deploy: this commit is no longer the head of main." >&2
-            echo "This run: ${GITHUB_SHA}" >&2
-            echo "main:     ${tip}" >&2
-            exit 1
+            echo "::notice::This commit is no longer the head of main. Skipping deploy. This run: ${GITHUB_SHA}. main: ${tip}."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          echo "current=true" >> "$GITHUB_OUTPUT"
       - id: deployment
+        if: steps.head.outputs.current == 'true'
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
