@@ -18,6 +18,11 @@ export function isSpeedStep(value: unknown): value is SpeedStep {
   return value === 0.7 || value === 0.85 || value === 1
 }
 
+/** A new sentence starts slow. Anything else is ignored, so the value cannot name a file. */
+export function storedLearnTempo(value: unknown): SpeedStep {
+  return isSpeedStep(value) ? value : 0.7
+}
+
 export function speedPercent(step: SpeedStep): 70 | 85 | 100 {
   if (step === 0.7) return 70
   if (step === 0.85) return 85

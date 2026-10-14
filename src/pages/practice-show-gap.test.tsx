@@ -86,7 +86,7 @@ describe('remembered file', () => {
         </Ready>
       </AppProvider>,
     )
-    expect(await screen.findByRole('button', { name: 'Läuft langsam.' })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Läuft' })).toBeTruthy()
     await waitFor(() => expect(String(vi.mocked(loadAlignment).mock.calls.at(-1)?.[0])).toMatch(/\.r70\.m4a$/))
     fireEvent.click(screen.getByRole('button', { name: 'Tempo 100' }))
     await waitFor(() => expect(vi.mocked(loadAlignment).mock.calls.length).toBeGreaterThan(0))

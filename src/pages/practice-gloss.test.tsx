@@ -47,7 +47,6 @@ describe('meaning step', () => {
         </ReadyPractice>
       </AppProvider>,
     )
-    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt in normalem Tempo' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
     expect(await screen.findByText('Was bedeutet der Satz?')).toBeTruthy()
@@ -58,7 +57,12 @@ describe('meaning step', () => {
     fireEvent.click(choice as HTMLButtonElement)
     expect(document.querySelector('.word-gloss')).toBeTruthy()
     expect(screen.queryByText('Die Wortzuordnung ist nicht geprüft.')).toBeNull()
+    const linked = document.querySelectorAll('.karaoke button.linked')
+    expect(linked.length).toBeGreaterThan(0)
+    for (const node of document.querySelectorAll('.karaoke span')) expect(node.classList.contains('linked')).toBe(false)
+    expect(screen.queryByText(/punktierte Linie/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Erklärungen zum Satz' }))
     expect(screen.getByText('Die Wortzuordnung ist nicht geprüft.')).toBeTruthy()
+    expect(screen.getByText(/punktierte Linie/)).toBeTruthy()
   })
 })

@@ -30,11 +30,19 @@ function WordRow({
         const link = indexesFor(links, side, index)
         const pressed = active != null && link === active
         const current = side === 'target' && now === index
+        const marked = current ? 'now' : undefined
+        if (link == null) {
+          return (
+            <span key={`${word}-${index}`} className={marked} data-testid={current ? 'word-now' : undefined}>
+              {word}
+            </span>
+          )
+        }
         return (
           <button
             key={`${word}-${index}`}
             type="button"
-            className={current ? 'now' : undefined}
+            className={marked ? `linked ${marked}` : 'linked'}
             aria-pressed={pressed}
             data-testid={current ? 'word-now' : undefined}
             onClick={() => onPick(side, index)}

@@ -43,6 +43,10 @@ describe('daily word block', () => {
   it('puts the six visa words ahead of their sentences', () => {
     const day = buildDay(concepts(), [], 'de-vi', now, 'mix')
     expect(day.items.map((item) => item.id)).toEqual(['w.days', 'w.stay', 'w.documents', 'w.evisa', 'w.extend', 'w.visa'])
+    const skipped = buildDay(concepts(), [], 'de-vi', now, 'mix', true)
+    expect(skipped.items.some((item) => item.kind === 'word')).toBe(false)
+    expect(skipped.items.length).toBeGreaterThan(0)
+    expect(skipped.items.every((item) => !WORDS.some((word) => word.sentences.includes(item.id)))).toBe(true)
     expect(day.items.every((item) => item.kind === 'word' && item.isNew)).toBe(true)
     expect(day.sentenceSlots).toBe(4)
     expect(missingKeyword('visa.days', [], 'de-vi', 'de', 'south')).toBe('Tage')

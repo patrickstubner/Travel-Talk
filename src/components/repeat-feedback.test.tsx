@@ -74,7 +74,8 @@ describe('repeat feedback view', () => {
     const view = screen.getByTestId('repeat-feedback')
     expect(view.hidden).toBe(false)
     expect(view.closest('details')).toBeNull()
-    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('3')
+    expect(screen.getByRole('img', { name: '3 von 3 Sternen' })).toBeTruthy()
     expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
     expect(screen.getByTestId('rhythm-bar').getAttribute('data-state')).toBe('passt')
     expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('green')
@@ -91,7 +92,7 @@ describe('repeat feedback view', () => {
   it('shows the northern hint only for vais1000', () => {
     renderFeedback('vi', tone(140, 280, 1.2), words, 'vivos-22')
     expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
-    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('3')
     expect(screen.queryByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeNull()
   })
 
@@ -132,7 +133,7 @@ describe('repeat feedback view', () => {
     renderFeedback('en', tone(140, 280, 1.2), words, 'joe')
     expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('green')
     expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
-    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('3')
   })
 
   it('passes the loudness of the model and the take into the score', () => {
@@ -228,7 +229,7 @@ describe('repeat feedback view', () => {
     for (const bar of screen.queryAllByTestId(/bar$/)) {
       expect(bar.getAttribute('data-state')).toBeTruthy()
     }
-    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toMatch(/^[0123]$/)
   })
 
   it('keeps the not-assessable sentence readable in show mode', () => {
@@ -388,5 +389,68 @@ describe('repeat feedback view', () => {
     renderFeedback('de')
     expect(screen.getByRole('status').textContent).toBe('In der Datei hat «xin» zu wenig Stimme. Nochmal ändert daran nichts.')
     expect(screen.getByTestId('melody-bar')).toBeTruthy()
+  })
+
+  it('keeps three stars off a wrong sentence and two stars on a fitting sentence with one off bar', async () => {
+    const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
+      ...actual.scoreRepeat(input),
+      melodyBar: 'passt',
+      rhythmBar: 'passt',
+      verdict: 'daneben',
+      sentenceCheck: {
+        correlation: -0.2,
+        opposedShare: 0.8,
+        order: 0.2,
+        bands: 0.4,
+        backwards: false,
+      },
+    }))
+    renderFeedback('de')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
+    expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(2)
+    cleanup()
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
+      ...actual.scoreRepeat(input),
+      melodyBar: 'daneben',
+      rhythmBar: 'passt',
+      verdict: 'passt',
+    }))
+    renderFeedback('de')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
+    cleanup()
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
+      ...actual.scoreRepeat(input),
+      melodyBar: 'daneben',
+      rhythmBar: 'teilweise',
+      verdict: 'daneben',
+    }))
+    renderFeedback('de')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('1')
+    cleanup()
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
+      ...actual.scoreRepeat(input),
+      melodyBar: 'daneben',
+      rhythmBar: 'daneben',
+      verdict: 'daneben',
+      sentenceCheck: {
+        correlation: null,
+        opposedShare: 1,
+        order: null,
+        bands: null,
+        backwards: true,
+      },
+    }))
+    renderFeedback('de')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('0')
+    expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Was die Sterne bedeuten' }))
+    expect(screen.getByRole('dialog').textContent ?? '').toMatch(/Ein falscher Satz bekommt nie drei/)
+  })
+
+  it('draws no stars when the bars are absent', () => {
+    renderFeedback('de', tone(220, 220, 0.2), [{ start: 0, end: 0.2 }])
+    expect(screen.queryByTestId('melody-bar')).toBeNull()
+    expect(screen.queryByTestId('repeat-stars')).toBeNull()
   })
 })

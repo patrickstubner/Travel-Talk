@@ -22,6 +22,8 @@ export type Dictionary = {
   speed70: string
   speed85: string
   speed100: string
+  tempoSlow: string
+  tempoNormal: string
   speedAutoHint: (percent: number) => string
   speedFixedHint: (percent: number) => string
   speedShown: (percent: number) => string
@@ -59,6 +61,10 @@ export type Dictionary = {
     pass: string
     part: string
     off: string
+    stars: (count: number) => string
+    starsInfo: string
+    starsTitle: string
+    starsHint: string
     unclear: string
     noWordTimes: string
     tooShort: string
@@ -106,6 +112,16 @@ export type Dictionary = {
   sessionEmpty: string
   needPair: string
   progress: (index: number, total: number) => string
+  study: {
+    info: string
+    title: string
+    learned: (sentences: number, words: number) => string
+    reviewed: (count: number) => string
+    kept: (percent: number) => string
+    learnedHint: string
+    reviewedHint: string
+    keptHint: string
+  }
   forOther: string
   showPurpose: string
   hideGloss: string
@@ -151,6 +167,13 @@ export type Dictionary = {
   offlineReload: string
   highlightTitle: string
   highlightHint: string
+  skipWords: string
+  skipWordsRemember: string
+  skipWordsInfo: string
+  skipWordsTitle: string
+  skipWordsHint: string
+  skipWordsSetting: string
+  wordDots: string
   glossUnchecked: string
   offlineReady: string
   offlineRetry: string
@@ -332,6 +355,8 @@ export const de: Dictionary = {
   speed70: '70 %',
   speed85: '85 %',
   speed100: '100 %',
+  tempoSlow: 'Langsam',
+  tempoNormal: 'Normal',
   speedAutoHint: (percent) =>
     `Automatisch, dieser Satz mit ${percent} %. Neue und unsichere Sätze starten bei 70 % und steigen nach sicheren Wiederholungen auf 85 % und dann auf 100 %. Eine feste Stufe hier gilt für alles Audio, bis du wieder Automatisch wählst.`,
   speedFixedHint: (percent) => `Fest ${percent} % für alles Audio, bis du wieder Automatisch wählst.`,
@@ -372,6 +397,11 @@ export const de: Dictionary = {
     pass: 'passt',
     part: 'teilweise',
     off: 'daneben',
+    stars: (count) => `${count} von 3 Sternen`,
+    starsInfo: 'Was die Sterne bedeuten',
+    starsTitle: 'Sterne',
+    starsHint:
+      'Drei Sterne nur, wenn der Satz passt und beide Balken passen. Passt oder teilweise bleibt bei zwei, auch wenn ein Balken daneben ist. Bei daneben gibt es zwei nur, wenn ein Balken passt, einen, wenn der bessere Balken teilweise ist, sonst keinen. Rückwärts gibt keinen Stern. Ein falscher Satz bekommt nie drei.',
     unclear: 'Das lässt sich nicht zuordnen. Sprich in derselben Richtung wie die Datei, ohne lange Pause davor.',
     noWordTimes: 'Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.',
     tooShort: 'Zu kurz. Sprich den ganzen Satz.',
@@ -434,6 +464,20 @@ export const de: Dictionary = {
   sessionEmpty: 'Nichts fällig. Öffne eine Situation oder starte die neuen Sätze später erneut.',
   needPair: 'Bitte zuerst ein Sprachpaar wählen.',
   progress: (index, total) => `${index} von ${total}`,
+  study: {
+    info: 'Was die Balken bedeuten',
+    title: 'Lernstand',
+    learned: (sentences, words) =>
+      `${sentences === 1 ? '1 Satz' : `${sentences} Sätze`} und ${words === 1 ? '1 Wort' : `${words} Wörter`} gelernt`,
+    reviewed: (count) => `${count} heute wiederholt`,
+    kept: (percent) => `${percent} Prozent behalten`,
+    learnedHint:
+      'Der erste Balken zählt Sätze und Wörter, die mindestens einmal bewertet wurden. Türkis sind Sätze, Grün sind Wörter. Die Zahl ist die Summe.',
+    reviewedHint:
+      'Der zweite Balken zählt Karten, die schon bekannt waren und heute noch einmal drankamen. Der erste Kontakt an diesem Tag zählt nicht als Wiederholung.',
+    keptHint:
+      'Der dritte Balken ist der Anteil der gelernten Karten im Wiederholungszustand. Das ist keine Note für die Aussprache. Nichts davon verlässt das Gerät.',
+  },
   forOther: 'Für die andere Person',
   showPurpose:
     'Zeigen stellt einen Satz gross auf den Bildschirm, damit du ihn jemandem hinhältst, zum Beispiel im Notfall oder in der Apotheke, und das Audio lässt sich abspielen.',
@@ -489,6 +533,14 @@ export const de: Dictionary = {
   offlineReload: 'Für offline noch nicht vollständig geladen',
   highlightTitle: 'Wörter mitlaufen lassen',
   highlightHint: 'Während die Stimme spielt, wird das Wort markiert. Darunter steht eine Wortzuordnung. Sie ist nicht geprüft.',
+  skipWords: 'Wörter überspringen',
+  skipWordsRemember: 'Für mich merken',
+  skipWordsInfo: 'Was Überspringen bedeutet',
+  skipWordsTitle: 'Wörter überspringen',
+  skipWordsHint:
+    'Die Wörter dieser Sitzung werden ausgelassen. Sie zählen nicht als gelernt und nicht als falsch. Ein Satz, der so ein Wort braucht, bleibt zu.',
+  skipWordsSetting: 'Wörter vor den Sätzen überspringen',
+  wordDots: 'Eine punktierte Linie zeigt ein Wort, das zur Übersetzung darunter gehört. Ein Wort ohne Linie hat keine Zuordnung.',
   glossUnchecked: 'Die Wortzuordnung ist nicht geprüft.',
   offlineReady: 'offline bereit',
   offlineRetry: 'Erneut versuchen',
@@ -507,7 +559,7 @@ export const de: Dictionary = {
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.9.6',
+  version: 'Version 0.9.7',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   aboutLine: 'Zum Satz',
   infoOpen: 'Erklärungen zum Satz',
@@ -568,7 +620,7 @@ export const de: Dictionary = {
   ifThen: 'Wenn ich morgens Kaffee trinke, öffne ich Heute lernen. Das kannst du überspringen.',
   everyPair: 'Sätze gibt es für jede Kombination aus zwei verschiedenen Sprachen.',
   missingLine: 'Für diese Kombination gibt es den Satz noch nicht.',
-  stepSlow: (index, total) => `Neuer Satz · ${index} von ${total} · langsam`,
+  stepSlow: (index, total) => `Neuer Satz · ${index} von ${total}`,
   stepNormal: (index, total) => `Neuer Satz · ${index} von ${total} · normal`,
   stepRepeat: (index, total) => `Nachsprechen · ${index} von ${total}`,
   stepUnderstand: (index, total) => `Hören · ${index} von ${total}`,
@@ -672,6 +724,8 @@ export const en: Dictionary = {
   speed70: '70 %',
   speed85: '85 %',
   speed100: '100 %',
+  tempoSlow: 'Slow',
+  tempoNormal: 'Normal',
   speedAutoHint: (percent) =>
     `Automatic, this line at ${percent} %. New and shaky lines start at 70 % and step up to 85 % and then 100 % after reliable reviews. A fixed step here applies to all audio until you choose Automatic again.`,
   speedFixedHint: (percent) => `Fixed at ${percent} % for all audio until you choose Automatic again.`,
@@ -711,6 +765,11 @@ export const en: Dictionary = {
     pass: 'fits',
     part: 'partly',
     off: 'off',
+    stars: (count) => `${count} of 3 stars`,
+    starsInfo: 'What the stars mean',
+    starsTitle: 'Stars',
+    starsHint:
+      'Three stars only when the sentence fits and both bars fit. Fits or partly stays at two, even if a bar is off. When the sentence is off, two only if a bar fits, one if the better bar is partly, otherwise none. Spoken backwards gets none. A wrong sentence never gets three.',
     unclear: 'This cannot be lined up. Speak in the same direction as the file, without a long pause first.',
     noWordTimes: 'This voice has no word timings. The curve stays, and the words stay grey.',
     tooShort: 'Too short. Say the whole sentence.',
@@ -773,6 +832,19 @@ export const en: Dictionary = {
   sessionEmpty: 'Nothing is due. Open a situation, or start the new lines again later.',
   needPair: 'Choose a language pair first.',
   progress: (index, total) => `${index} of ${total}`,
+  study: {
+    info: 'What the bars mean',
+    title: 'Progress',
+    learned: (sentences, words) =>
+      `${sentences === 1 ? '1 sentence' : `${sentences} sentences`} and ${words === 1 ? '1 word' : `${words} words`} learned`,
+    reviewed: (count) => `${count} reviewed today`,
+    kept: (percent) => `${percent} percent retained`,
+    learnedHint:
+      'The first bar counts sentences and words rated at least once. Teal is sentences, green is words. The number is the sum.',
+    reviewedHint: 'The second bar counts cards that were already known and came up again today. The first meeting that day is not a review.',
+    keptHint:
+      'The third bar is the share of learned cards in the review state. It is not a grade for pronunciation. None of this leaves the device.',
+  },
   forOther: 'For the other person',
   showPurpose:
     'Show puts a phrase large on the screen so you can hold it up to someone else, for example in an emergency or at a pharmacy, and the audio can be played.',
@@ -826,6 +898,14 @@ export const en: Dictionary = {
   offlineReload: 'Not fully loaded for offline yet',
   highlightTitle: 'Follow the words',
   highlightHint: 'While the voice plays, the word is marked. Under the line is a word-by-word gloss. It has not been checked.',
+  skipWords: 'Skip the words',
+  skipWordsRemember: 'Remember for me',
+  skipWordsInfo: 'What skipping does',
+  skipWordsTitle: 'Skip the words',
+  skipWordsHint:
+    'The words in this sitting are left out. They are not counted as learned or as wrong. A line that needs one of those words stays closed.',
+  skipWordsSetting: 'Skip the words before the lines',
+  wordDots: 'A dotted line marks a word that belongs to the translation underneath. A word with no line has no match.',
   glossUnchecked: 'The word links have not been checked.',
   offlineReady: 'ready offline',
   offlineRetry: 'Try again',
@@ -843,7 +923,7 @@ export const en: Dictionary = {
   privacy: 'Progress, recordings and the note stay on this device. No account, no tracking, no font from the network.',
   loading: 'One moment.',
   storageError: 'Local storage is not available.',
-  version: 'Version 0.9.6',
+  version: 'Version 0.9.7',
   exampleAudio: 'The audio speaks the example sentence.',
   aboutLine: 'About this line',
   infoOpen: 'Notes about this line',
@@ -904,7 +984,7 @@ export const en: Dictionary = {
   ifThen: 'When I have coffee in the morning, I open Learn today. You can skip this.',
   everyPair: 'There is a line for every combination of two different languages.',
   missingLine: 'This line is not available for this combination yet.',
-  stepSlow: (index, total) => `New line · ${index} of ${total} · slow`,
+  stepSlow: (index, total) => `New line · ${index} of ${total}`,
   stepNormal: (index, total) => `New line · ${index} of ${total} · normal`,
   stepRepeat: (index, total) => `Repeat aloud · ${index} of ${total}`,
   stepUnderstand: (index, total) => `Listen · ${index} of ${total}`,
@@ -1008,6 +1088,8 @@ export const pt: Dictionary = {
   speed70: '70 %',
   speed85: '85 %',
   speed100: '100 %',
+  tempoSlow: 'Devagar',
+  tempoNormal: 'Normal',
   speedAutoHint: (percent) =>
     `Automático, esta frase em ${percent} %. Frases novas ou pouco firmes começam em 70 % e sobem para 85 % e depois 100 % depois de revisões seguras. Um passo fixo aqui vale para todo o áudio, até você escolher Automático de novo.`,
   speedFixedHint: (percent) => `Fixo em ${percent} % para todo o áudio, até você escolher Automático de novo.`,
@@ -1047,6 +1129,11 @@ export const pt: Dictionary = {
     pass: 'encaixa',
     part: 'em parte',
     off: 'fora',
+    stars: (count) => `${count} de 3 estrelas`,
+    starsInfo: 'O que as estrelas significam',
+    starsTitle: 'Estrelas',
+    starsHint:
+      'Três estrelas só quando a frase encaixa e as duas barras encaixam. Encaixa ou em parte fica em duas, mesmo se uma barra está fora. Quando a frase está fora, duas só se uma barra encaixa, uma se a melhor barra está em parte, senão nenhuma. Ao contrário, nenhuma. Uma frase errada nunca ganha três.',
     unclear: 'Não dá para alinhar. Fale na mesma direção do arquivo, sem uma pausa longa antes.',
     noWordTimes: 'Esta voz não tem os tempos das palavras. A curva fica, e as palavras ficam cinza.',
     tooShort: 'Curto demais. Fale a frase inteira.',
@@ -1109,6 +1196,20 @@ export const pt: Dictionary = {
   sessionEmpty: 'Nada para revisar. Abra uma situação ou comece as frases novas de novo mais tarde.',
   needPair: 'Escolha primeiro um par de línguas.',
   progress: (index, total) => `${index} de ${total}`,
+  study: {
+    info: 'O que as barras significam',
+    title: 'Progresso',
+    learned: (sentences, words) =>
+      `${sentences === 1 ? '1 frase' : `${sentences} frases`} e ${words === 1 ? '1 palavra' : `${words} palavras`} aprendidas`,
+    reviewed: (count) => `${count} revisadas hoje`,
+    kept: (percent) => `${percent} por cento retidas`,
+    learnedHint:
+      'A primeira barra conta frases e palavras avaliadas pelo menos uma vez. Verde-azulado são frases, verde são palavras. O número é a soma.',
+    reviewedHint:
+      'A segunda barra conta cartões que já eram conhecidos e voltaram hoje. O primeiro contato nesse dia não conta como revisão.',
+    keptHint:
+      'A terceira barra é a parte dos cartões aprendidos no estado de revisão. Não é uma nota de pronúncia. Nada disso sai do aparelho.',
+  },
   forOther: 'Para a outra pessoa',
   showPurpose:
     'Mostrar põe uma frase grande na tela para você mostrar a outra pessoa, por exemplo numa emergência ou na farmácia, e o áudio pode ser tocado.',
@@ -1164,6 +1265,14 @@ export const pt: Dictionary = {
   offlineReload: 'Ainda não está completo para offline',
   highlightTitle: 'Acompanhar as palavras',
   highlightHint: 'Enquanto a voz toca, a palavra fica marcada. Abaixo está a relação entre as palavras. Ela não foi revista.',
+  skipWords: 'Pular as palavras',
+  skipWordsRemember: 'Lembrar para mim',
+  skipWordsInfo: 'O que pular significa',
+  skipWordsTitle: 'Pular as palavras',
+  skipWordsHint:
+    'As palavras desta sessão ficam de fora. Elas não contam como aprendidas nem como erradas. Uma frase que precisa de uma dessas palavras continua fechada.',
+  skipWordsSetting: 'Pular as palavras antes das frases',
+  wordDots: 'Uma linha pontilhada mostra uma palavra que tem par na tradução abaixo. Uma palavra sem linha não tem par.',
   glossUnchecked: 'A relação entre as palavras não foi revista.',
   offlineReady: 'pronto offline',
   offlineRetry: 'Tentar de novo',
@@ -1181,7 +1290,7 @@ export const pt: Dictionary = {
   privacy: 'Progresso, gravações e a nota ficam neste aparelho. Sem conta, sem rastreamento, sem fonte da rede.',
   loading: 'Um momento.',
   storageError: 'O armazenamento local não está disponível.',
-  version: 'Version 0.9.6',
+  version: 'Version 0.9.7',
   exampleAudio: 'O áudio fala a frase de exemplo.',
   aboutLine: 'Sobre a frase',
   infoOpen: 'Notas sobre a frase',
@@ -1242,7 +1351,7 @@ export const pt: Dictionary = {
   ifThen: 'Quando tomo café de manhã, abro Aprender hoje. Você pode pular isso.',
   everyPair: 'Há frases para cada combinação de duas línguas diferentes.',
   missingLine: 'Esta frase ainda não existe para esta combinação.',
-  stepSlow: (index, total) => `Frase nova · ${index} de ${total} · devagar`,
+  stepSlow: (index, total) => `Frase nova · ${index} de ${total}`,
   stepNormal: (index, total) => `Frase nova · ${index} de ${total} · normal`,
   stepRepeat: (index, total) => `Repetir em voz alta · ${index} de ${total}`,
   stepUnderstand: (index, total) => `Ouvir · ${index} de ${total}`,
@@ -1346,6 +1455,8 @@ export const vi: Dictionary = {
   speed70: '70 %',
   speed85: '85 %',
   speed100: '100 %',
+  tempoSlow: 'Chậm',
+  tempoNormal: 'Bình thường',
   speedAutoHint: (percent) =>
     `Tự động, câu này ở ${percent} %. Câu mới hoặc chưa chắc bắt đầu ở 70 % và tăng lên 85 % rồi 100 % sau các lần nhớ chắc. Một mức cố định ở đây áp dụng cho mọi audio, cho đến khi bạn chọn Tự động.`,
   speedFixedHint: (percent) => `Cố định ${percent} % cho mọi audio, cho đến khi bạn chọn lại Tự động.`,
@@ -1385,6 +1496,11 @@ export const vi: Dictionary = {
     pass: 'ổn',
     part: 'một phần',
     off: 'lệch',
+    stars: (count) => `${count} trên 3 sao`,
+    starsInfo: 'Sao có nghĩa là gì',
+    starsTitle: 'Sao',
+    starsHint:
+      'Ba sao chỉ khi câu ổn và cả hai cột ổn. Ổn hoặc một phần vẫn là hai sao, kể cả khi một cột lệch. Khi câu lệch, hai sao chỉ nếu một cột ổn, một sao nếu cột tốt hơn là một phần, không thì không sao. Nói ngược không có sao. Câu sai không bao giờ được ba sao.',
     unclear: 'Không xếp được. Nói cùng hướng với tệp, đừng dừng lâu trước khi nói.',
     noWordTimes: 'Giọng này không có thời điểm từng từ. Đường cong vẫn còn, các từ vẫn xám.',
     tooShort: 'Quá ngắn. Nói cả câu.',
@@ -1447,6 +1563,16 @@ export const vi: Dictionary = {
   sessionEmpty: 'Chưa có câu đến hạn. Mở một tình huống hoặc bắt đầu câu mới sau.',
   needPair: 'Hãy chọn một cặp ngôn ngữ trước.',
   progress: (index, total) => `${index} trên ${total}`,
+  study: {
+    info: 'Các cột có nghĩa là gì',
+    title: 'Tiến độ',
+    learned: (sentences, words) => `${sentences} câu và ${words} từ đã học`,
+    reviewed: (count) => `${count} ôn hôm nay`,
+    kept: (percent) => `${percent} phần trăm còn nhớ`,
+    learnedHint: 'Cột thứ nhất đếm câu và từ đã được chấm ít nhất một lần. Xanh lam là câu, xanh lục là từ. Số là tổng.',
+    reviewedHint: 'Cột thứ hai đếm thẻ đã biết và được ôn lại hôm nay. Lần gặp đầu trong ngày không tính là ôn.',
+    keptHint: 'Cột thứ ba là phần thẻ đã học đang ở trạng thái ôn. Đó không phải điểm phát âm. Không có gì rời khỏi máy.',
+  },
   forOther: 'Cho người kia đọc',
   showPurpose:
     'Đưa hiện một câu lớn trên màn hình để đưa cho người khác xem, ví dụ khi cấp cứu hoặc ở nhà thuốc, và có thể phát âm thanh.',
@@ -1500,6 +1626,14 @@ export const vi: Dictionary = {
   offlineReload: 'Chưa tải đủ để dùng offline',
   highlightTitle: 'Theo từng tiếng',
   highlightHint: 'Khi giọng đọc, tiếng đang phát được đánh dấu. Bên dưới là nghĩa từng tiếng. Phần này chưa được kiểm tra.',
+  skipWords: 'Bỏ qua các từ',
+  skipWordsRemember: 'Nhớ cho tôi',
+  skipWordsInfo: 'Bỏ qua nghĩa là gì',
+  skipWordsTitle: 'Bỏ qua các từ',
+  skipWordsHint:
+    'Các từ của buổi này được bỏ qua. Chúng không tính là đã học và cũng không tính là sai. Câu nào cần một từ đó vẫn đóng.',
+  skipWordsSetting: 'Bỏ qua các từ trước câu',
+  wordDots: 'Đường chấm cho biết từ có nghĩa ở dòng dịch bên dưới. Từ không có đường chấm thì không có cặp.',
   glossUnchecked: 'Phần nối nghĩa từng tiếng chưa được kiểm tra.',
   offlineReady: 'sẵn sàng offline',
   offlineRetry: 'Thử lại',
@@ -1517,7 +1651,7 @@ export const vi: Dictionary = {
   privacy: 'Tiến độ, bản ghi và ghi chú ở trên máy này. Không tài khoản, không theo dõi, không phông từ mạng.',
   loading: 'Một lát.',
   storageError: 'Bộ nhớ trên máy không dùng được.',
-  version: 'Version 0.9.6',
+  version: 'Version 0.9.7',
   exampleAudio: 'Audio đọc câu ví dụ.',
   aboutLine: 'Về câu này',
   infoOpen: 'Giải thích về câu này',
@@ -1578,7 +1712,7 @@ export const vi: Dictionary = {
   ifThen: 'Khi sáng uống cà phê, tôi mở Học hôm nay. Bạn có thể bỏ qua.',
   everyPair: 'Có câu cho mỗi cặp hai ngôn ngữ khác nhau.',
   missingLine: 'Câu này chưa có cho cặp ngôn ngữ này.',
-  stepSlow: (index, total) => `Câu mới · ${index} / ${total} · chậm`,
+  stepSlow: (index, total) => `Câu mới · ${index} / ${total}`,
   stepNormal: (index, total) => `Câu mới · ${index} / ${total} · bình thường`,
   stepRepeat: (index, total) => `Nhắc lại · ${index} / ${total}`,
   stepUnderstand: (index, total) => `Nghe · ${index} / ${total}`,

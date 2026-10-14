@@ -54,7 +54,6 @@ function renderPractice(): void {
 
 async function openRepeat(): Promise<void> {
   renderPractice()
-  fireEvent.click(await screen.findByRole('button', { name: 'Jetzt in normalem Tempo' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
   await screen.findByRole('button', { name: 'Aufnehmen' })
 }
@@ -70,23 +69,35 @@ afterEach(() => {
 })
 
 describe('practice microphone', () => {
-  it('blocks Weiter while the microphone is starting, and releases the track on Weiter', async () => {
+  it('hides Weiter while recording and shows it again only after Stopp', async () => {
     const pending = deferredMic()
-    vi.mocked(startMicrophone).mockImplementation(() => pending.promise)
+    let finish: ((recording: { url: string; samples: Float32Array | null; sampleRate: number }) => void) | undefined
+    vi.mocked(startMicrophone).mockImplementation((onStop) => {
+      finish = onStop
+      return pending.promise
+    })
     const release = vi.fn()
+    const stop = vi.fn(() => finish?.({ url: '', samples: null, sampleRate: 0 }))
     await openRepeat()
     fireEvent.click(screen.getByRole('button', { name: 'Aufnehmen' }))
-    expect((screen.getByRole('button', { name: 'Weiter' }) as HTMLButtonElement).disabled).toBe(true)
+    const nextWhileStarting = screen.getByRole('button', { name: 'Weiter' }) as HTMLButtonElement
+    expect(nextWhileStarting.disabled).toBe(true)
     pending.resolve({
-      recorder: { stop: vi.fn(), state: 'recording', stream: { getTracks: () => [] } } as unknown as CaptureSession['recorder'],
+      recorder: { stop, state: 'recording', stream: { getTracks: () => [] } } as unknown as CaptureSession['recorder'],
       release,
     })
-    await screen.findByRole('button', { name: 'Stopp' })
+    const stopButton = await screen.findByRole('button', { name: 'Stopp' })
+    expect(screen.queryByRole('button', { name: 'Weiter' })).toBeNull()
+    expect(screen.getByTestId('learn-record').contains(stopButton)).toBe(true)
     expect(screen.getByRole('heading', { name: 'Nachsprechen · 1 von 4' })).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
+    fireEvent.click(stopButton)
+    expect(stop).toHaveBeenCalled()
+    const next = await screen.findByRole('button', { name: 'Weiter' })
+    expect(screen.queryByRole('button', { name: 'Stopp' })).toBeNull()
+    expect(screen.getByTestId('learn-record').contains(next)).toBe(false)
+    fireEvent.click(next)
     expect(release).toHaveBeenCalled()
     expect(screen.getByRole('heading', { name: 'Der Satz bleibt sichtbar' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Stopp' })).toBeNull()
   })
 
   it('releases a microphone that resolves after the tab was already hidden', async () => {

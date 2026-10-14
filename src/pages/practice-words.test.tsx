@@ -86,6 +86,46 @@ describe('word block', () => {
     expect(screen.queryByRole('button', { name: 'Aufnehmen' })).toBeNull()
   })
 
+  it('skips the word block without grading a card and can remember that', async () => {
+    render(
+      <AppProvider>
+        <ReadyPractice>
+          <MemoryRouter initialEntries={['/practice?kind=new']}>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPractice>
+      </AppProvider>,
+    )
+    expect(await screen.findByRole('button', { name: 'Wörter überspringen' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Für mich merken' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Wörter überspringen' }))
+    expect(await screen.findByRole('heading', { name: /Neuer Satz/ })).toBeTruthy()
+    expect(screen.queryByText('Zuerst die Wörter von heute.')).toBeNull()
+    const repo = new DexieProgressRepository('travel-talk')
+    await waitFor(async () => {
+      const loaded = await repo.load()
+      expect(loaded.cards.filter((card) => card.cardId.startsWith('de-vi:w.'))).toEqual([])
+      expect(loaded.settings.skipWords).toBe(true)
+    })
+    cleanup()
+    render(
+      <AppProvider>
+        <ReadyPractice>
+          <MemoryRouter initialEntries={['/practice?kind=new']}>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ReadyPractice>
+      </AppProvider>,
+    )
+    expect(await screen.findByRole('heading', { name: /Neuer Satz/ })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Wörter überspringen' })).toBeNull()
+    expect((await repo.load()).cards.filter((card) => card.cardId.startsWith('de-vi:w.'))).toEqual([])
+  })
+
   it('opens the sentence for the new word after one due sentence', async () => {
     const loaded = tryLoadCatalog()
     if (!loaded.ok) throw new Error('catalog')

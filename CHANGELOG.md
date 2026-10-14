@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.7 — 2026-10-13
+
+- Ein neuer Satz hat die Tempo-Wahl direkt neben «Anhören»: Langsam, 85 % und Normal. Langsam ist der Anfang. Die Wahl bleibt für diese Person, auch beim nächsten Satz und nach einem Neuladen. «Anhören» spielt immer das gewählte Tempo, so oft man will. «Weiter» steht da, auch während der Wiedergabe und unabhängig vom Tempo. Nur während einer laufenden Aufnahme ist «Weiter» ausgeblendet.
+- Der frühere Schritt «normal» fällt weg, weil die Tempo-Wahl ihn ersetzt. Nach «Normal» kann man wieder «Langsam» wählen. Pfeiltasten bewegen die Wahl. Der Schalter ist eine Gruppe mit `aria-pressed`.
+- Die Wahl liegt nur auf dem Gerät, in den Einstellungen dieser Person. Sie geht nicht in den Export. Ein anderer Wert als 70 %, 85 % oder 100 % wird verworfen, dann gilt Langsam. Es entsteht keine Adresse, und `playbackRate` bleibt 1.
+- Zieltext, Übersetzung, Anhören mit Tempo, dann Aufnahme. Erklärungen bleiben hinter dem Info-Knopf.
+- Nach dem Nachsprechen stehen bis zu drei Sterne. Sie lesen die Satzprüfung aus 0.9.6 und die Balken Melodie und Rhythmus. Drei nur, wenn der Satz passt und beide Balken passen. Passt und teilweise bleiben bei zwei, auch wenn ein Balken daneben ist. Bei daneben gibt es zwei nur, wenn ein Balken passt, einen, wenn der bessere Balken teilweise ist, sonst keinen. Eine Aufnahme rückwärts bleibt ohne Stern. Ein falscher Satz bekommt nie drei. Ohne Balken keine Sterne. Die Sterne werden nicht gespeichert. Die Erklärung steht hinter dem Info-Knopf. Die spätere Spracherkennung bleibt eine andere Fassung.
+- Während die Aufnahme läuft, ist «Weiter» weg, weil Stopp sonst zu nah daran liegt. Nach Stopp kommt «Weiter» wieder. Sonst bleibt «Weiter» sichtbar. Stopp liegt in der Aufnahmezeile, «Weiter» darunter mit Abstand.
+- Der Lernstand dieser Person steht als kleiner Balken auf der Lernseite und etwas grösser auf der Startseite: gelernte Sätze und Wörter, heute wiederholt, behalten. Die Erklärung steht hinter dem Info-Knopf. Die Zahlen bleiben auf dem Gerät.
+- Vor den Sätzen gibt es «Wörter überspringen». Die Wortkarten bleiben, wie sie sind: nicht gelernt und nicht falsch. Ein Satz, der so ein Wort braucht, bleibt zu. «Für mich merken» und die Einstellung speichern das für diese Person, nur auf dem Gerät.
+- Wörter im Satz, die zur Übersetzung darunter gehören, haben eine feine punktierte Linie. Ein Wort ohne Zuordnung hat keine Linie. Die Erklärung steht hinter dem Info-Knopf. Im Zeigen-Modus bleibt die Linie hell auf dunklem Grund.
+
 ## 0.9.6 — 2026-10-13
 
 - Beim Nachsprechen auf Portugiesisch (Brasilien) wird ein Wort seltener rot, wenn die Melodie nur etwas anders ist als die Vorlage. Unter 2,5 Halbtönen bleibt es grün, bis 5 gelb, darüber rot. Vietnamesisch, Deutsch und Englisch bleiben bei 1,5 und 3.

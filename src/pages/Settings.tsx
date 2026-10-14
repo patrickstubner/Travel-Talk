@@ -120,6 +120,20 @@ export function SettingsPage() {
         {copy.highlightTitle}
       </label>
       <p className="hint">{copy.highlightHint}</p>
+      <label className="choice">
+        <input
+          type="checkbox"
+          checked={settings.skipWords === true}
+          onChange={(event) => {
+            const next = { ...settings }
+            if (event.target.checked) next.skipWords = true
+            else delete next.skipWords
+            void saveSettings(next)
+          }}
+        />
+        {copy.skipWordsSetting}
+      </label>
+      <p className="hint">{copy.skipWordsHint}</p>
       {usesLang(settings, 'vi') ? (
         <fieldset>
           <legend>{copy.addressTitle}</legend>

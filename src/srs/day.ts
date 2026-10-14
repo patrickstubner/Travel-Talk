@@ -157,13 +157,17 @@ export function buildDay(
   direction: string,
   now: Date,
   kind: SessionKind = 'mix',
+  /** Leave every word card untouched and spend the sentence slots on lines that are already open. */
+  skipWords = false,
 ): DayPlan {
   const introduced = introducedCount(cards, now)
   const dueCount = dueCountOf(concepts, cards, direction, now)
   const reviews: DayItem[] = []
-  for (const word of WORDS) {
-    const card = cardFor(cards, direction, word.id)
-    if (isDueCard(card, now)) reviews.push({ id: word.id, isNew: false, kind: 'word' })
+  if (!skipWords) {
+    for (const word of WORDS) {
+      const card = cardFor(cards, direction, word.id)
+      if (isDueCard(card, now)) reviews.push({ id: word.id, isNew: false, kind: 'word' })
+    }
   }
   for (const concept of concepts) {
     if (isDueCard(cardFor(cards, direction, concept.id), now)) reviews.push({ id: concept.id, isNew: false, kind: 'sentence' })
@@ -174,7 +178,7 @@ export function buildDay(
   const windowIds = wordSourceIds(concepts, cards, direction, lookAhead)
   const ranked = rankWindow(windowIds, cards, direction)
   const wordsToday = wordsIntroducedToday(cards, now)
-  const wordsTaken = Math.min(wordBudget(dueCount, introduced, wordsToday), ranked.length)
+  const wordsTaken = skipWords ? 0 : Math.min(wordBudget(dueCount, introduced, wordsToday), ranked.length)
   const sentenceSlots = newCardBudget(dueCount, introduced + wordsTaken)
   const wordSlice = ranked.slice(0, wordsTaken).map((word): DayItem => ({ id: word.id, isNew: true, kind: 'word' }))
   const todayWordIds = new Set(wordSlice.map((item) => item.id))
