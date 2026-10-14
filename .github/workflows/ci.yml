@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
-  # Rollback is a re-run of an old workflow_dispatch run. Only people with
-  # write access can re-run a workflow, and only while that run's Pages
-  # artifact still exists. upload-pages-artifact keeps it for one day.
+  # Rollback is a re-run of an old workflow_dispatch run, otherwise a revert commit.
+  # Only people with write access can re-run a workflow, and only while that
+  # run's Pages artifact still exists. upload-pages-artifact keeps it for one day.
   # There is no extra input.
   workflow_dispatch:
 
@@ -163,7 +163,6 @@ jobs:
     needs: [lint, typecheck, test, clips, overflow, build, audit]
     permissions:
       contents: read
-      actions: write
       pages: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
