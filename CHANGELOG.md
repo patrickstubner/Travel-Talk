@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.14 — 2026-10-14
+
+- Schlägt `prompt()` fehl, bleibt das gemerkte Ereignis. Erst nach Erfolg wird es verworfen, damit ein zweiter Tipp noch geht.
+- Chrome, Edge und Firefox auf iOS 16.4 und neuer zeigen denselben kurzen Satz wie Safari: Teilen, dann Zum Home-Bildschirm. Ältere Versionen dieser Browser bleiben ohne Eintrag. Safari bleibt auf jeder iOS-Version. Es wird nichts gespeichert.
+
 ## 0.9.13 — 2026-10-14
 
 - In den Einstellungen steht «Zum Home-Bildschirm». Auf Chromium und Android merkt sich die Seite `beforeinstallprompt` und öffnet die Nachfrage beim Tippen. Auf iOS Safari steht ein kurzer Satz: Teilen, dann Zum Home-Bildschirm. Läuft die App schon allein (`display-mode: standalone` oder `navigator.standalone`), fehlt der Eintrag. Dieselbe Beschriftung gibt es auf Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Es wird nichts gespeichert.
