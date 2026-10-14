@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { de } from '../i18n/dictionary'
+import { de, en, pt, vi as viCopy } from '../i18n/dictionary'
 import { playSequence, stopSlices } from '../audio/slice'
 import { scoreRepeat } from '../pitch/feedback'
 import { RepeatFeedback } from './RepeatFeedback'
@@ -449,6 +449,76 @@ describe('repeat feedback view', () => {
     expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(0)
     fireEvent.click(screen.getByRole('button', { name: 'Was die Sterne bedeuten' }))
     expect(screen.getByRole('dialog').textContent ?? '').toMatch(/Ein falscher Satz bekommt nie drei/)
+  })
+
+  it('keeps German V2 when the page is not told a gender and the pitches are far', async () => {
+    const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => {
+      const score = actual.scoreRepeat(input)
+      const painted = ['qua', 'xin', 'nha'].map((text, index) => ({
+        text,
+        start: words[index]?.start ?? 0,
+        end: words[index]?.end ?? 0,
+        color: 'yellow' as const,
+        melody: 'yellow' as const,
+        rhythm: 'yellow' as const,
+        melodyDistance: 2,
+        rawRatio: 1,
+        userStart: words[index]?.start ?? 0,
+        userEnd: words[index]?.end ?? 0,
+        modelFrame: 0,
+        modelFrameEnd: 1,
+        userFrame: 0,
+        userFrameEnd: 1,
+        tone: null,
+        userShape: 'level' as const,
+        sentence: null,
+        scorable: true,
+      }))
+      return {
+        ...score,
+        words: painted,
+        melodyBar: 'teilweise' as const,
+        rhythmBar: 'teilweise' as const,
+        verdict: 'teilweise' as const,
+        unclear: false,
+        tooShort: false,
+        tooLittleVoice: false,
+        sentenceCheck: {
+          correlation: 0.4,
+          opposedShare: 0.2,
+          order: 1,
+          bands: 0.3,
+          backwards: false,
+        },
+      }
+    })
+    // 110 Hz against 280 Hz is about 16 semitones, past the close-pitch gate.
+    // The live page leaves speaker gender unset. thorsten-high is a male template.
+    // A mutant that defaults the user gender to male would score this 1.
+    render(
+      <RepeatFeedback
+        copy={de}
+        lang="de"
+        region="south"
+        speech="qua xin nha"
+        words={words}
+        modelSamples={tone(110, 110, 1.2)}
+        modelRate={16000}
+        userSamples={tone(280, 280, 1.2)}
+        userRate={16000}
+        modelMissing={false}
+        voiceId="thorsten-high"
+      />,
+    )
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
+    fireEvent.click(screen.getByRole('button', { name: 'Was die Sterne bedeuten' }))
+    const dialog = screen.getByRole('dialog').textContent ?? ''
+    expect(dialog).toMatch(/Ein falscher Satz bekommt nie drei/)
+    expect(dialog).not.toMatch(/Geschlecht|gender|gênero|giới/i)
+    for (const hint of [de, en, pt, viCopy].map((copy) => copy.repeatFeedback.starsHint)) {
+      expect(hint).not.toMatch(/Geschlecht|gender|gênero|giới/i)
+    }
   })
 
   it('draws no stars when the bars are absent', () => {

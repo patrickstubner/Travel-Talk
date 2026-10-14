@@ -23,6 +23,8 @@ import {
   correlation,
   sentenceMelodyBar,
   sentenceVerdict,
+  S3_PITCH_SEMITONES,
+  medianGapSemitones,
   starsFromVerdict,
   wordOrderScore,
   droneAgainstSpeech,
@@ -179,6 +181,22 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('teilweise', 'teilweise', 'daneben', false, 'de', sameGender)).toBe(1)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'en', sameGender)).toBe(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'vi', sameGender)).toBe(2)
+    const edgeHz = 100 * 2 ** (S3_PITCH_SEMITONES / 12)
+    const closePitch = { modelHz: 120, userHz: 140 }
+    const farPitch = { modelHz: 110, userHz: 280 }
+    expect(medianGapSemitones(100, edgeHz)).toBeCloseTo(S3_PITCH_SEMITONES, 5)
+    expect(medianGapSemitones(120, null)).toBeNull()
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', null, closePitch)).toBe(1)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', null, { modelHz: 100, userHz: edgeHz })).toBe(1)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', null, { modelHz: 100, userHz: edgeHz * 2 ** (0.2 / 12) })).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', null, farPitch)).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', null, { modelHz: 120, userHz: null })).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', sameGender, farPitch)).toBe(1)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', crossGender, closePitch)).toBe(1)
+    expect(starsFromVerdict('teilweise', 'passt', 'daneben', false, 'de', null, closePitch)).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'pt-BR', null, closePitch)).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'en', null, closePitch)).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'vi', null, closePitch)).toBe(2)
     for (const lang of ['de', 'en', 'pt-BR', 'vi'] as const) {
       expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, lang)).toBe(0)
       expect(starsFromVerdict('daneben', 'teilweise', 'teilweise', false, lang)).toBe(1)

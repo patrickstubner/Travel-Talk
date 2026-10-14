@@ -73,11 +73,11 @@ export function analysisHop(sampleRate: number): number {
   return hopSeconds(samplesForAnalysis(new Float32Array(0), sampleRate).sampleRate)
 }
 
-export function contourFromSamples(input: Float32Array, rate: number): Contour {
+function trackedHz(input: Float32Array, rate: number): Contour | null {
   const prepared = samplesForAnalysis(input, rate)
   const samples = prepared.samples
   const sampleRate = prepared.sampleRate
-  if (samples.length < FRAME) return []
+  if (samples.length < FRAME) return null
   const detector = PitchDetector.forFloat32Array(FRAME)
   detector.clarityThreshold = CLARITY_MIN
   detector.minVolumeDecibels = -45
@@ -91,12 +91,36 @@ export function contourFromSamples(input: Float32Array, rate: number): Contour {
     if (clarity >= CLARITY_MIN && hz >= PITCH_HZ_MIN && hz <= PITCH_HZ_MAX) pitches.push(hz)
     else pitches.push(null)
   }
-  const repaired = repairHarmonics(pitches)
+  return repairHarmonics(pitches)
+}
+
+function voicedMedian(repaired: Contour): number | null {
   const voiced = repaired.filter((value): value is number => value != null).sort((a, b) => a - b)
-  if (voiced.length < 5) return repaired.map(() => null)
-  const median = voiced[Math.floor(voiced.length / 2)] ?? 1
+  if (voiced.length < 5) return null
+  return voiced[Math.floor(voiced.length / 2)] ?? null
+}
+
+/**
+ * Semitone contour and the median voiced hertz from one pitch track.
+ * The median is not stored. Fewer than five voiced frames leaves it null
+ * and the contour unvoiced, the same rule as before.
+ */
+export function contourAndMedian(input: Float32Array, rate: number): { contour: Contour; medianHz: number | null } {
+  const repaired = trackedHz(input, rate)
+  if (!repaired) return { contour: [], medianHz: null }
+  const median = voicedMedian(repaired)
+  if (median == null) return { contour: repaired.map(() => null), medianHz: null }
   const semis = repaired.map((value) => (value == null ? null : 12 * Math.log2(value / median)))
-  return medianFilter(semis, 5)
+  return { contour: medianFilter(semis, 5), medianHz: median }
+}
+
+/** Median voiced pitch in hertz, after the same harmonic repair as the contour. */
+export function medianPitchHz(input: Float32Array, rate: number): number | null {
+  return contourAndMedian(input, rate).medianHz
+}
+
+export function contourFromSamples(input: Float32Array, rate: number): Contour {
+  return contourAndMedian(input, rate).contour
 }
 
 /**
