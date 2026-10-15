@@ -52,6 +52,7 @@ export function LanguageChoice({
   retainIds?: readonly string[]
 }) {
   const ready = settings.appLang != null && settings.targetLang != null && settings.appLang !== settings.targetLang
+  const sameLanguage = settings.appLang != null && settings.targetLang != null && settings.appLang === settings.targetLang
   const target = settings.targetLang
   const options = target ? voicesFor(target) : []
   const current = target ? selectedVoice(settings, target).id : ''
@@ -74,13 +75,12 @@ export function LanguageChoice({
   }
 
   function pickApp(lang: Lang): void {
-    if (lang === settings.targetLang && settings.appLang) emit({ appLang: lang, targetLang: settings.appLang })
+    if (mode === 'settings' && lang === settings.targetLang && settings.appLang) emit({ appLang: lang, targetLang: settings.appLang })
     else emit({ appLang: lang })
   }
 
   function pickTarget(lang: Lang): void {
-    if (lang === settings.appLang && settings.targetLang) emit({ appLang: settings.targetLang, targetLang: lang })
-    else emit({ targetLang: lang })
+    emit({ targetLang: lang })
   }
 
   function pickVoice(id: string): void {
@@ -185,6 +185,11 @@ export function LanguageChoice({
       ) : null}
       {mode === 'onboarding' ? (
         <>
+          {sameLanguage ? (
+            <p className="hint" role="status">
+              {copy.sameLangHint}
+            </p>
+          ) : null}
           <button type="button" className="button primary" disabled={!ready} onClick={onContinue}>
             {copy.continueOn}
           </button>

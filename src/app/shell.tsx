@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { TopBar } from '../components/TopBar'
 import { htmlLang, interfaceLang } from './labels'
+import { isOnboarded } from '../storage/types'
 import { useApp } from './state'
 import { useCopy, useSettings } from './use-copy'
 
@@ -43,7 +44,7 @@ export function Shell() {
         <p className="brand">{copy.appName}</p>
         <p className="version">{copy.version}</p>
       </header>
-      <TopBar askName={needsName} hidePerson={showMode && !needsName} />
+      <TopBar askName={needsName} hidePerson={showMode && !needsName} hideLang={!isOnboarded(settings)} />
       <div className="layout">
         <nav className="nav" aria-label={copy.appName}>
           <NavLink to="/" end>

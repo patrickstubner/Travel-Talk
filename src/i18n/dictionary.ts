@@ -241,6 +241,8 @@ export type Dictionary = {
   targetLangTitle: string
   targetLangHint: string
   targetLangBody: string
+  sameLangHint: string
+  notSelected: string
   scriptTitle: string
   scriptHint: string
   voiceTitle: string
@@ -622,9 +624,11 @@ export const de: Dictionary = {
   sameChoiceLead: 'Deine Sprache steht hier. Die Sprache, die du lernen willst, steht oben.',
   appLangTitle: 'Sprache der App',
   appLangHint: 'Deine Sprache. Die Seiten und die Übersetzungen sind darin.',
-  targetLangTitle: 'Sprache, die ich lernen will',
+  targetLangTitle: 'Sprache, die du lernen willst',
   targetLangHint: 'Die Sprache, die du lernen willst, steht oben in der Mitte. Das ist nicht deine Sprache. Hier bleibt die Stimme.',
   targetLangBody: 'Die Sprache, die du lernen willst. Das ist nicht die Sprache der Seiten.',
+  sameLangHint: 'Das ist dieselbe Sprache. Wähl eine andere.',
+  notSelected: 'nicht gewählt',
   scriptTitle: 'Schrift und Wörter',
   scriptHint: 'Nur weil die Lernsprache Vietnamesisch ist. Das ist nicht die Stimme.',
   voiceTitle: 'Stimme',
@@ -1002,9 +1006,11 @@ export const en: Dictionary = {
   sameChoiceLead: 'Your language is here. The language you want to learn is at the top.',
   appLangTitle: 'App language',
   appLangHint: 'Your language. The screens and the translations use it.',
-  targetLangTitle: 'Language I want to learn',
+  targetLangTitle: 'Language you want to learn',
   targetLangHint: 'The language you want to learn is at the top. It is not your language. The voice stays here.',
   targetLangBody: 'The language you want to learn. It is not the language of the screens.',
+  sameLangHint: 'That is the same language. Choose another one.',
+  notSelected: 'not selected',
   scriptTitle: 'Script and words',
   scriptHint: 'Only because the language you learn is Vietnamese. This is not the voice.',
   voiceTitle: 'Voice',
@@ -1385,9 +1391,11 @@ export const pt: Dictionary = {
   sameChoiceLead: 'A sua língua fica aqui. A língua que você quer aprender fica em cima.',
   appLangTitle: 'Língua do aplicativo',
   appLangHint: 'A sua língua. As telas e as traduções estão nela.',
-  targetLangTitle: 'Língua que eu quero aprender',
+  targetLangTitle: 'Língua que você quer aprender',
   targetLangHint: 'A língua que você quer aprender fica em cima. Não é a sua língua. A voz fica aqui.',
   targetLangBody: 'A língua que você quer aprender. Não é a língua das telas.',
+  sameLangHint: 'É a mesma língua. Escolha outra.',
+  notSelected: 'não escolhida',
   scriptTitle: 'Escrita e palavras',
   scriptHint: 'Só porque a língua que você aprende é o vietnamita. Isso não é a voz.',
   voiceTitle: 'Voz',
@@ -1762,9 +1770,11 @@ export const vi: Dictionary = {
   sameChoiceLead: 'Ngôn ngữ của bạn ở đây. Ngôn ngữ bạn muốn học ở trên.',
   appLangTitle: 'Ngôn ngữ ứng dụng',
   appLangHint: 'Ngôn ngữ của bạn. Màn hình và bản dịch dùng ngôn ngữ này.',
-  targetLangTitle: 'Ngôn ngữ tôi muốn học',
+  targetLangTitle: 'Ngôn ngữ bạn muốn học',
   targetLangHint: 'Ngôn ngữ bạn muốn học ở trên. Đây không phải ngôn ngữ của bạn. Giọng nói ở đây.',
   targetLangBody: 'Ngôn ngữ bạn muốn học. Đây không phải ngôn ngữ của màn hình.',
+  sameLangHint: 'Đây là cùng một ngôn ngữ. Hãy chọn ngôn ngữ khác.',
+  notSelected: 'chưa chọn',
   scriptTitle: 'Chữ và từ',
   scriptHint: 'Chỉ vì ngôn ngữ bạn học là tiếng Việt. Đây không phải giọng nói.',
   voiceTitle: 'Giọng',

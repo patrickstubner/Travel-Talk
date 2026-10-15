@@ -49,6 +49,12 @@ export type Settings = {
    * Optional in the export. Only 0.7, 0.85 or 1 are kept.
    */
   wordSpeed?: SpeedStep
+  /**
+   * Local only. Not exported.
+   * `true` is written only when this person leaves the first language screen.
+   * `false` means that screen is still open. Missing, with both languages, is an older person and counts as done.
+   */
+  onboarded?: boolean
 }
 
 export type StoredCard = {
@@ -215,7 +221,16 @@ export function coerceSettings(raw: Partial<Settings> & { slow?: boolean; pairId
       ? { moreTargets: cleanMoreTargets(raw.moreTargets, appLang, targetLang) }
       : {}),
     ...(isSpeedStep(raw.wordSpeed) ? { wordSpeed: raw.wordSpeed } : {}),
+    ...(raw.onboarded === true ? { onboarded: true } : {}),
+    ...(raw.onboarded === false ? { onboarded: false } : {}),
   }
+}
+
+/** `true` only after Continue. An older row with both languages and no flag is already done. */
+export function isOnboarded(settings: Settings): boolean {
+  if (settings.onboarded === true) return true
+  if (settings.onboarded === false) return false
+  return settings.appLang != null && settings.targetLang != null
 }
 
 function cleanMoreTargets(value: unknown, appLang: Lang | null, targetLang: Lang | null): Lang[] {

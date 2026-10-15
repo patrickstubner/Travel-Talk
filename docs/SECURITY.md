@@ -6,7 +6,7 @@ Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, ke
 
 Geprüft am 15. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.
 
-Die erste Seite nach dem Namen zeigt beide Wahlen im Text. Gespeichert wird weiter `appLang` und `targetLang` bei dieser Person. Es entsteht kein Profilfeld und kein Export. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Die CSP bleibt.
+Die erste Seite nach dem Namen zeigt beide Wahlen im Text. Gespeichert wird weiter `appLang` und `targetLang` bei dieser Person. `onboarded` ist ein lokales Boolean und wird erst bei Weiter wahr. Es geht nicht in den Export. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Die CSP bleibt.
 
 ## 0.9.14 Nachfrage und iOS-Browser
 

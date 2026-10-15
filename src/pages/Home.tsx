@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { voiceProgress } from '../audio/offline'
 import { selectedVoice, voicesFor, voicesKeptByOthers, withDefaultVoices } from '../audio/voices'
@@ -12,22 +12,17 @@ import { WORDS } from '../../content/words'
 import { buildDay, missingKeyword } from '../srs/day'
 import { cardIdFor, currentDirection, dueConcepts, isDueCard, orderedConcepts, usableConcepts } from '../srs/session'
 import type { Dictionary } from '../i18n/dictionary'
-import type { Settings } from '../storage/types'
+import { isOnboarded, type Settings } from '../storage/types'
 
 export function HomePage() {
   const { catalog, snapshot, saveSettings } = useApp()
   const settings = useSettings()
   const copy = useCopy()
-  const [confirmed, setConfirmed] = useState(false)
-  const startedComplete = useRef<boolean | null>(null)
-  if (snapshot && startedComplete.current === null) {
-    startedComplete.current = Boolean(settings.appLang && settings.targetLang)
-  }
   if (!catalog || !snapshot) return null
   const direction = currentDirection(settings.appLang, settings.targetLang)
-  const stayOnboarding = startedComplete.current === false && !confirmed
+  const onboarded = isOnboarded(settings)
 
-  if (stayOnboarding || !direction || !settings.appLang || !settings.targetLang) {
+  if (!onboarded || !direction || !settings.appLang || !settings.targetLang) {
     return (
       <LanguageChoice
         settings={settings}
@@ -35,13 +30,12 @@ export function HomePage() {
         ui={settings.appLang ?? 'de'}
         mode="onboarding"
         onChange={(patch) => {
-          const next = { ...settings, ...patch }
+          const next = { ...settings, ...patch, onboarded: false }
           void saveSettings(next.appLang && next.targetLang ? withDefaultVoices(next) : next)
         }}
         onContinue={() => {
-          if (!settings.appLang || !settings.targetLang) return
-          setConfirmed(true)
-          void saveSettings(withDefaultVoices(settings))
+          if (!settings.appLang || !settings.targetLang || settings.appLang === settings.targetLang) return
+          void saveSettings(withDefaultVoices({ ...settings, onboarded: true }))
         }}
       />
     )
