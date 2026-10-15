@@ -118,6 +118,8 @@ h1 { font-size: 2rem; line-height: 1.15; margin: 0.2rem 0; }
 .speak-actions { display: flex; flex-direction: column; gap: 0.75rem; }
 .speak-actions .learn-next { margin-top: 0; }
 .speak-actions > .button { width: 100%; }
+.action-row { display: flex; flex-direction: column; gap: 0.75rem; }
+.action-row > .button { width: 100%; }
 .learn-stop { display: block; width: 100%; }
 .skip-row { display: flex; align-items: center; gap: 0.45rem; }
 .skip-row .button.wide { flex: 1; }
@@ -461,6 +463,36 @@ a.menu-card span { color: var(--muted); }
   }
   .learn .speak-actions.session-action > .button,
   .learn .speak-actions.session-action > .play-row {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    margin-top: 0;
+    box-shadow: none;
+  }
+  .learn .speak-actions.session-action.tempo-with-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+  .learn .tempo-with-actions > .tempo-bar,
+  .learn .tempo-with-actions > .speed {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+  }
+  .learn .speak-actions.session-action.tempo-with-actions > .button {
+    flex: none;
+    width: 100%;
+  }
+  .learn .speak-actions.session-action.tempo-with-actions > .action-row {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  .learn .speak-actions.session-action.tempo-with-actions > .action-row > .button,
+  .learn .speak-actions.session-action.tempo-with-actions > .action-row > .play-row {
     flex: 1 1 0;
     width: auto;
     min-width: 0;

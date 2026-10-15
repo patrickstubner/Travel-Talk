@@ -534,15 +534,17 @@ export function PracticePage() {
             <p className="hint">{copy.wordGloss}</p>
             <p data-testid="word-meaning">{meaning}</p>
           </LearnCard>
-          {wordTempoControl}
-          <div className="speak-actions session-action" data-testid="word-actions">
-            <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
-              <span className="play-mark" aria-hidden="true" />
-              {playing ? copy.playingNormal : copy.wordReplay}
-            </button>
-            <button type="button" className="button primary" onClick={goNext}>
-              {copy.next}
-            </button>
+          <div className="speak-actions session-action tempo-with-actions" data-testid="word-actions">
+            {wordTempoControl}
+            <div className="action-row">
+              <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
+                <span className="play-mark" aria-hidden="true" />
+                {playing ? copy.playingNormal : copy.wordReplay}
+              </button>
+              <button type="button" className="button primary" onClick={goNext}>
+                {copy.next}
+              </button>
+            </div>
           </div>
         </section>
       )
@@ -595,7 +597,7 @@ export function PracticePage() {
           </p>
           {answered ? <p className="gloss">{meaning}</p> : null}
         </LearnCard>
-        {wordTempoControl}
+        {answered && (item.isNew || picked !== word.id) ? null : wordTempoControl}
         {answered && (item.isNew || picked !== word.id) ? null : (
           <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
             <span className="play-mark" aria-hidden="true" />
@@ -619,14 +621,17 @@ export function PracticePage() {
         {answered && picked === word.id ? <p className="hint">{copy.wordRight}</p> : null}
         {answered && picked !== word.id ? <p className="hint">{copy.wordWrong(meaning)}</p> : null}
         {answered && (item.isNew || picked !== word.id) ? (
-          <div className="speak-actions session-action" data-testid="word-actions">
-            <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
-              <span className="play-mark" aria-hidden="true" />
-              {playing ? copy.playingNormal : copy.wordReplay}
-            </button>
-            <button type="button" className="button primary" onClick={goNext}>
-              {copy.next}
-            </button>
+          <div className="speak-actions session-action tempo-with-actions" data-testid="word-actions">
+            {wordTempoControl}
+            <div className="action-row">
+              <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
+                <span className="play-mark" aria-hidden="true" />
+                {playing ? copy.playingNormal : copy.wordReplay}
+              </button>
+              <button type="button" className="button primary" onClick={goNext}>
+                {copy.next}
+              </button>
+            </div>
           </div>
         ) : null}
         {answered && !item.isNew && picked === word.id ? (
@@ -777,16 +782,18 @@ export function PracticePage() {
             {sentence}
             {glossLine}
           </LearnCard>
-          <div className="tempo-bar" data-testid="learn-actions">
-            <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(target.file, target.speech, chosen)}>
-              <span className="play-mark" aria-hidden="true" />
-              {playing ? copy.playing : copy.play}
+          <div className="speak-actions session-action tempo-with-actions" data-testid="learn-actions">
+            <div className="tempo-bar">
+              <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(target.file, target.speech, chosen)}>
+                <span className="play-mark" aria-hidden="true" />
+                {playing ? copy.playing : copy.play}
+              </button>
+              <TempoSwitch value={chosen} onChange={chooseTempo} label={copy.speedTitle} slow={copy.tempoSlow} mid={copy.speed85} normal={copy.tempoNormal} />
+            </div>
+            <button type="button" className="button primary" onClick={goNext}>
+              {copy.next}
             </button>
-            <TempoSwitch value={chosen} onChange={chooseTempo} label={copy.speedTitle} slow={copy.tempoSlow} mid={copy.speed85} normal={copy.tempoNormal} />
           </div>
-          <button type="button" className="button primary session-action" onClick={goNext}>
-            {copy.next}
-          </button>
         </>
       ) : null}
       {step === 'repeat' ? (
@@ -795,19 +802,6 @@ export function PracticePage() {
             {sentence}
             {glossLine}
           </LearnCard>
-          <div className="tempo-bar" data-testid="learn-actions">
-            <button
-              type="button"
-              className="play-row"
-              aria-pressed={playing}
-              disabled={recording || micStarting}
-              onClick={() => void hear(target.file, target.speech, chosen)}
-            >
-              <span className="play-mark" aria-hidden="true" />
-              {playing ? copy.playing : copy.play}
-            </button>
-            <TempoSwitch value={chosen} onChange={chooseTempo} label={copy.speedTitle} slow={copy.tempoSlow} mid={copy.speed85} normal={copy.tempoNormal} />
-          </div>
           {targetLang === 'pt-BR' ? <PortugueseModelStatus copy={copy} /> : null}
           <div className="learn-speak" data-testid="learn-record">
             {micNote ? <p className="voice-note">{copy.micSkipped}</p> : null}
@@ -831,7 +825,21 @@ export function PracticePage() {
             ) : null}
             {take && !take.samples && !recording ? <p role="status">{copy.pitchEmpty}</p> : null}
           </div>
-          <div className={recording || !micStarting ? 'speak-actions session-action' : 'speak-actions'} data-testid="speak-actions">
+          <div className={recording || !micStarting ? 'speak-actions session-action tempo-with-actions' : 'speak-actions tempo-with-actions'} data-testid="speak-actions">
+            <div className="tempo-bar" data-testid="learn-actions">
+              <button
+                type="button"
+                className="play-row"
+                aria-pressed={playing}
+                disabled={recording || micStarting}
+                onClick={() => void hear(target.file, target.speech, chosen)}
+              >
+                <span className="play-mark" aria-hidden="true" />
+                {playing ? copy.playing : copy.play}
+              </button>
+              <TempoSwitch value={chosen} onChange={chooseTempo} label={copy.speedTitle} slow={copy.tempoSlow} mid={copy.speed85} normal={copy.tempoNormal} />
+            </div>
+            <div className="action-row">
             {recording ? (
               <button type="button" className="button accent learn-stop" onClick={() => sessionRef.current?.recorder.stop()}>
                 {copy.stop}
@@ -891,6 +899,7 @@ export function PracticePage() {
                 {copy.next}
               </button>
             )}
+            </div>
           </div>
         </>
       ) : null}
@@ -902,15 +911,17 @@ export function PracticePage() {
           </LearnCard>
           <h2>{item.isNew ? copy.visibleTitle : copy.meaningPrompt}</h2>
           {item.isNew ? <p>{copy.meaningPrompt}</p> : null}
-          <button
-            type="button"
-            className="play-row"
-            aria-pressed={playing}
-            onClick={() => void hear(target.file, target.speech, 1)}
-          >
-            <span className="play-mark" aria-hidden="true" />
-            {playing ? copy.playingNormal : copy.play}
-          </button>
+          {answered ? null : (
+            <button
+              type="button"
+              className="play-row"
+              aria-pressed={playing}
+              onClick={() => void hear(target.file, target.speech, 1)}
+            >
+              <span className="play-mark" aria-hidden="true" />
+              {playing ? copy.playingNormal : copy.play}
+            </button>
+          )}
           <ul className="choices">
             {choices.map((choice) => {
               const line = resolvePlayback(choice, app, settings.viRegion, prefsFromSettings(app, settings))
@@ -933,9 +944,20 @@ export function PracticePage() {
           </ul>
           {answered ? <p className="hint">{copy.afterChoice}</p> : null}
           {answered ? (
-            <button type="button" className="button primary session-action" onClick={goNext}>
-              {copy.next}
-            </button>
+            <div className="speak-actions session-action" data-testid="meaning-actions">
+              <button
+                type="button"
+                className="play-row"
+                aria-pressed={playing}
+                onClick={() => void hear(target.file, target.speech, 1)}
+              >
+                <span className="play-mark" aria-hidden="true" />
+                {playing ? copy.playingNormal : copy.play}
+              </button>
+              <button type="button" className="button primary" onClick={goNext}>
+                {copy.next}
+              </button>
+            </div>
           ) : null}
         </>
       ) : null}
