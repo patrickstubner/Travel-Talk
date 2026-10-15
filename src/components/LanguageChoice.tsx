@@ -78,6 +78,11 @@ export function LanguageChoice({
     else emit({ appLang: lang })
   }
 
+  function pickTarget(lang: Lang): void {
+    if (lang === settings.appLang && settings.targetLang) emit({ appLang: settings.targetLang, targetLang: lang })
+    else emit({ targetLang: lang })
+  }
+
   function pickVoice(id: string): void {
     if (!target) return
     if (id !== shown) previousVoice.current = shown
@@ -129,7 +134,21 @@ export function LanguageChoice({
           ))}
         </div>
       </section>
-      <p className="hint">{copy.targetLangHint}</p>
+      {mode === 'onboarding' ? (
+        <section className="card pad">
+          <h2>{copy.targetLangTitle}</h2>
+          <p className="hint">{copy.targetLangBody}</p>
+          <div className="choice-grid" role="group" aria-label={copy.targetLangTitle}>
+            {APP_LANGS.map((lang) => (
+              <button key={lang} type="button" aria-pressed={settings.targetLang === lang} onClick={() => pickTarget(lang)}>
+                {LANG_LABEL[lang][ui]}
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <p className="hint">{copy.targetLangHint}</p>
+      )}
       {target ? (
         <section className="card pad">
           <h2>{copy.voiceTitle}</h2>

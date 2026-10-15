@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.15 — 2026-10-15
+
+- Zu Beginn stehen beide Sprachen im Text, untereinander. Zuerst die Sprache der App, deine Sprache. Danach die Sprache, die du lernen willst. Weiter bleibt aus, bis beide gewählt sind und sich unterscheiden. Dieselbe Sprache zweimal ist keine Richtung. Danach zeigt die Leiste oben dieselben Werte. Die Texte trennen «deine Sprache» und «die Sprache, die du lernen willst», auf Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. Gespeichert wird weiter nur bei dieser Person, in denselben Feldern.
+
 ## 0.9.14 — 2026-10-14
 
 - Schlägt `prompt()` fehl, bleibt das gemerkte Ereignis. Erst nach Erfolg wird es verworfen, damit ein zweiter Tipp noch geht.

@@ -17,8 +17,12 @@ afterEach(() => {
   cleanup()
 })
 
+function pickIn(board: HTMLElement, group: string, language: string): void {
+  fireEvent.click(within(within(board).getByRole('group', { name: group })).getByRole('button', { name: language }))
+}
+
 describe('home onboarding', () => {
-  it('enables continue after the app language and the target language at the top', async () => {
+  it('enables continue after both languages are chosen in the body, then shows them in the header', async () => {
     render(
       <AppProvider>
         <MemoryRouter>
@@ -33,15 +37,32 @@ describe('home onboarding', () => {
     expect(await screen.findByTestId('name-ask')).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Wie sollen wir dich nennen?'), { target: { value: 'A' } })
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Deutsch' }))
-    fireEvent.click(screen.getByRole('button', { name: /^Sprache, die du lernst/ }))
-    const groups = await screen.findAllByRole('group', { name: 'Sprache, die du lernst' })
-    fireEvent.click(within(groups[groups.length - 1]!).getByRole('button', { name: 'Vietnamesisch' }))
-    const next = await screen.findByRole('button', { name: 'Weiter zu Heute lernen' })
+    const board = await screen.findByTestId('onboarding')
+    const groups = within(board).getAllByRole('group')
+    expect(groups.map((group) => group.getAttribute('aria-label'))).toEqual(['Sprache der App', 'Sprache, die ich lernen will'])
+    expect(within(board).getByText('Deine Sprache. Die Seiten und die Übersetzungen sind darin.')).toBeTruthy()
+    expect(within(board).getByText('Die Sprache, die du lernen willst. Das ist nicht die Sprache der Seiten.')).toBeTruthy()
+    expect(within(board).queryByText(/oben/)).toBeNull()
+    const next = within(board).getByRole('button', { name: 'Weiter zu Heute lernen' })
+    expect((next as HTMLButtonElement).disabled).toBe(true)
+    pickIn(board, 'Sprache der App', 'Deutsch')
+    expect((next as HTMLButtonElement).disabled).toBe(true)
+    pickIn(board, 'Sprache, die ich lernen will', 'Deutsch')
+    expect((next as HTMLButtonElement).disabled).toBe(true)
+    pickIn(board, 'Sprache, die ich lernen will', 'Vietnamesisch')
     await waitFor(() => expect((next as HTMLButtonElement).disabled).toBe(false))
+    await waitFor(async () => {
+      const saved = await new DexieProgressRepository('travel-talk').load()
+      expect(saved.settings.appLang).toBe('de')
+      expect(saved.settings.targetLang).toBe('vi')
+    })
     fireEvent.click(next)
     expect(await screen.findByRole('heading', { name: 'Heute lernen' })).toBeTruthy()
     expect(screen.queryByTestId('onboarding')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Wer lernt?: A' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Sprache, die ich lernen will: Vietnamesisch, Süd, Standard' }).textContent).toBe(
+      'Vietnamesisch · Süd, Standard',
+    )
   })
 
   it('stores the default voices when both languages are chosen and the page is left', async () => {
@@ -60,10 +81,9 @@ describe('home onboarding', () => {
     expect(await screen.findByTestId('name-ask')).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Wie sollen wir dich nennen?'), { target: { value: 'A' } })
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Deutsch' }))
-    fireEvent.click(screen.getByRole('button', { name: /^Sprache, die du lernst/ }))
-    const groups = await screen.findAllByRole('group', { name: 'Sprache, die du lernst' })
-    fireEvent.click(within(groups[groups.length - 1]!).getByRole('button', { name: 'Vietnamesisch' }))
+    const board = await screen.findByTestId('onboarding')
+    pickIn(board, 'Sprache der App', 'Deutsch')
+    pickIn(board, 'Sprache, die ich lernen will', 'Vietnamesisch')
     await waitFor(() => expect((screen.getByRole('button', { name: 'Weiter zu Heute lernen' }) as HTMLButtonElement).disabled).toBe(false))
     await waitFor(async () => {
       const saved = await new DexieProgressRepository('travel-talk').load()
