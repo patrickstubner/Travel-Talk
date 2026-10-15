@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.1 — 2026-10-15
+
+- In der Wortrunde liegen «Noch einmal hören» und «Weiter» in derselben Leiste. Die Leiste bleibt unten, die beiden Knöpfe liegen nebeneinander und decken sich nicht. Ein Tipp auf «Weiter» geht zum nächsten Schritt, auch quer und hoch. Vorher lag der klebende Knopf über «Noch einmal hören», und der Tipp spielte das Wort noch einmal ab.
+
 ## 0.10.0 — 2026-10-15
 
 - Auf der Übungsseite bleibt der Hauptknopf unten kleben, sobald er bedienbar ist. Das gilt auf einem schmalen Bildschirm und auf einem kurzen, auch quer (Höhe bis 500 px). Liegt die Leiste unten, sitzt der Knopf darüber. Liegt die Leiste seitlich, zählt nur die sichere Zone. Auf dem Nachsprechen teilen sich «Aufnehmen» und «Weiter» diese Leiste, damit «Weiter» das Aufnehmen nicht verdeckt. Ein ausgeschalteter Knopf und «Fertig» bleiben im Text. Während das Mikrofon startet, bleibt die Leiste im Text. Der zusätzliche Abstand unten gilt nur auf der Übungsseite, damit der Knopf den Text nicht zudeckt. Ein fokussiertes Element scrollt über Knopf und Leiste. Auf einem schmalen Bildschirm sind die Abstände und die Schrift der Lernzeile etwas enger.
