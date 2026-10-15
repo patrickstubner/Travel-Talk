@@ -1,5 +1,6 @@
 import { publicUrl } from '../public-url'
 import { fetchVerifiedBytes, mayFetchModel, sha256Hex, type ModelCache } from './model-bytes'
+import { CONTENT_WER_CORRECT, CONTENT_WER_PARTIAL, confirmedPortuguese, portugueseContentRate, portugueseGrammar } from './text-match'
 import { VoskModel } from './vosk-client'
 
 /**
@@ -164,10 +165,17 @@ export function acceptPortugueseModel(): void {
 export async function recognizePortuguese(
   samples: Float32Array,
   sampleRate: number,
-  grammar: string | null = null,
+  expected = '',
 ): Promise<{ text: string; confidence: number | null } | null> {
   if (!speechModelsInThisRun() || sampleRate <= 0 || samples.length === 0) return null
   const ready = await ensurePortugueseModel()
   if (!ready) return null
-  return ready.recognize(samples, sampleRate, grammar)
+  const free = await ready.recognize(samples, sampleRate, null)
+  if (!free) return null
+  const grammarText = portugueseGrammar(expected)
+  const rate = portugueseContentRate(expected, free.text, free.confidence)
+  const partial = Math.abs(rate - CONTENT_WER_PARTIAL) < 1e-9
+  if (!grammarText || rate <= CONTENT_WER_CORRECT || partial) return free
+  const checked = await ready.recognize(samples, sampleRate, grammarText)
+  return confirmedPortuguese(expected, free, checked)
 }

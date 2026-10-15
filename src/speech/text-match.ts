@@ -43,6 +43,12 @@ export const SHORT_CER_CORRECT = 0.13
 export const SHORT_CONFIDENCE_MIN = 0.35
 
 /**
+ * A grammar pass may replace a contradictory free pass only at or above
+ * this mean word confidence. Measured on half B after Opus.
+ */
+export const GRAMMAR_CONFIRM_CONFIDENCE = 0.9
+
+/**
  * Same word for the speaker's gender. senhor and senhora are different
  * lines, so they are not a pair.
  */
@@ -60,24 +66,49 @@ function variantFold(text: string): string {
 }
 
 /**
- * Words the small model often drops or adds on a short line.
- * é folds to e. senhor and senhora stay different words.
+ * Small words that may be missing without penalty. é folds to e.
+ * senhor and senhora stay different words. por, com and que stay,
+ * because they carry the short line.
  */
-const FUNCTION_WORDS = new Set(['eu', 'a', 'o', 'e'])
+const FUNCTION_WORDS = new Set([
+  'eu',
+  'a',
+  'o',
+  'e',
+  'de',
+  'da',
+  'do',
+  'em',
+  'na',
+  'no',
+  'um',
+  'uma',
+  'os',
+  'as',
+  'se',
+  'me',
+  'te',
+  'ao',
+  'nos',
+  'nas',
+])
 
 /**
  * Portuguese content rate. Gender pairs compare equal. On a line of one
  * to four words, the sentence still counts when the only differences are
  * eu, a, o or e, or one letter inside a word, and the recogniser is sure
  * enough. Up to six words, the same order still counts when one word only
- * grows at the front («turista», «motorista»), when senhor or senhora
- * is smeared into assim, or when the heard words are an ordered half
- * of the line. A line that is only that address does not.
+ * grows at the front («turista», «motorista»), or when senhor or senhora
+ * is smeared into assim. A line that is only that address does not.
+ * An ordered half of the line stays in the middle band. Only the small
+ * function words may be missing without that penalty.
  * A different content word stays on the plain word error, so
  * «estou com febre» is not «estou com tontura». Longer lines stay on the
- * word error alone. A grammar of only the expected words pulled a
- * different sentence into that line, so the page does not set one.
+ * word error alone.
  */
+/** Middle of the open band between a full sentence and gibberish. */
+export const CONTENT_WER_PARTIAL = (CONTENT_WER_CORRECT + CONTENT_WER_GIBBERISH) / 2
+
 /** Heard words the small model uses when it smears «a senhora». */
 const ADDRESS_SMEAR = new Set(['assim', 'agosto', 'agora'])
 
@@ -89,20 +120,61 @@ export function portugueseContentRate(expected: string, heard: string, confidenc
   const foldedHeard = variantFold(heard)
   const count = foldedExpected.split(' ').filter(Boolean).length
   const wer = wordErrorRate(foldedExpected, foldedHeard)
-  if (count < 1 || count > ALIGN_LINE_WORDS) return wer
-  if (wer <= CONTENT_WER_CORRECT) return wer
-  if (confidence != null && confidence < SHORT_CONFIDENCE_MIN) return wer
-  if (
-    shortLineAligned(foldedExpected, foldedHeard) ||
-    addressAligned(foldedExpected, foldedHeard) ||
-    partialCover(foldedExpected, foldedHeard)
-  ) {
-    return 0
+  const unsure = confidence != null && confidence < SHORT_CONFIDENCE_MIN
+  if (count >= 1 && count <= ALIGN_LINE_WORDS && !unsure && partialCover(foldedExpected, foldedHeard)) {
+    return CONTENT_WER_PARTIAL
   }
+  if (wer <= CONTENT_WER_CORRECT) return wer
+  if (unsure || count < 1 || count > ALIGN_LINE_WORDS) return wer
+  if (shortLineAligned(foldedExpected, foldedHeard) || addressAligned(foldedExpected, foldedHeard)) return 0
   if (count > SHORT_LINE_WORDS) return wer
   const cer = charErrorRate(foldedExpected, foldedHeard)
   if (cer <= SHORT_CER_CORRECT) return Math.min(wer, CONTENT_WER_CORRECT)
   return wer
+}
+
+export type HeardLine = {
+  readonly text: string
+  readonly confidence: number | null
+}
+
+function withoutUnknown(text: string): string {
+  return text
+    .replace(/\[unk\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Free pass wins when it already is the sentence, and when it is a clean
+ * half: the grammar must not fill the missing content words back in.
+ * Otherwise the grammar counts when the expected words come back.
+ * [unk] is dropped first. A contradictory free pass yields only when that
+ * confirmation is sure enough.
+ */
+export function confirmedPortuguese(expected: string, free: HeardLine | null, grammar: HeardLine | null): HeardLine | null {
+  if (free && portugueseContentRate(expected, free.text, free.confidence) <= CONTENT_WER_CORRECT) return free
+  if (free && cleanPartial(expected, free.text)) return free
+  if (!grammar) return free
+  const cleaned = { text: withoutUnknown(grammar.text), confidence: grammar.confidence }
+  const confirmed = portugueseContentRate(expected, cleaned.text, null) <= CONTENT_WER_CORRECT
+  if (!confirmed) return free
+  const sure = (cleaned.confidence ?? 0) >= GRAMMAR_CONFIRM_CONFIDENCE
+  if (free && freePassContradicts(expected, free.text) && !sure) return free
+  return cleaned
+}
+
+function cleanPartial(expected: string, heard: string): boolean {
+  const foldedExpected = variantFold(expected)
+  const count = foldedExpected.split(' ').filter(Boolean).length
+  if (count < 1 || count > ALIGN_LINE_WORDS) return false
+  return partialCover(foldedExpected, variantFold(heard))
+}
+
+function freePassContradicts(expected: string, heard: string): boolean {
+  const left = contentTokens(variantFold(expected))
+  const right = contentTokens(variantFold(heard))
+  return right.some((word) => !left.some((item) => tinyWord(item, word)))
 }
 
 function contentTokens(text: string): string[] {
@@ -186,13 +258,23 @@ function addressAligned(expected: string, heard: string): boolean {
 }
 
 /**
- * Grammar for a short Portuguese line: the expected words, obrigado or
- * obrigada when that is the pair, and [unk]. Longer lines return null so
- * nonsense is not pulled into the sentence.
+ * Grammar for a second pass: the expected words, obrigado or obrigada
+ * when that is the pair, and [unk]. The page uses it only to confirm a
+ * free pass that missed the sentence.
  */
+function grammarWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+}
+
 export function portugueseGrammar(speech: string): string | null {
-  const words = foldSpeech(speech).split(' ').filter(Boolean)
-  if (words.length < 1 || words.length > SHORT_LINE_WORDS) return null
+  const words = grammarWords(speech)
+  if (words.length < 1) return null
   const phrases = new Set<string>(['[unk]', words.join(' ')])
   for (let index = 0; index < words.length; index += 1) {
     const group = GENDER_VARIANTS.find((entry) => entry.includes(words[index] ?? ''))

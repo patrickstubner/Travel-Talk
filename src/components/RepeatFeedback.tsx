@@ -165,7 +165,7 @@ export function RepeatFeedback({
   useEffect(() => {
     if (lang !== 'pt-BR' || !speechModelsInThisRun()) return undefined
     let cancel = false
-    void recognizePortuguese(userSamples, userRate).then((result) => {
+    void recognizePortuguese(userSamples, userRate, speech).then((result) => {
       if (cancel) return
       setHeard(
         result
@@ -176,7 +176,7 @@ export function RepeatFeedback({
     return () => {
       cancel = true
     }
-  }, [lang, userRate, userSamples])
+  }, [lang, speech, userRate, userSamples])
   const speechKnown = heard?.samples === userSamples
   const heardText = speechKnown ? heard.text : null
   const wer = lang === 'pt-BR' && heardText != null ? portugueseContentRate(speech, heardText, heard?.confidence) : null

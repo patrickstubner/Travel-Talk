@@ -261,7 +261,7 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { wer: 0.34 })).toBe(3)
     expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { wer: 0, prosody: true })).toBe(4)
     expect(starsFromVerdict('daneben', 'passt', 'daneben', false, 'pt-BR', null, null, { wer: 0, prosody: false })).toBe(5)
-    expect(starsFromVerdict('passt', 'passt', 'passt', false, 'pt-BR', null, null, { wer: 0.4, prosody: true })).toBe(4)
+    expect(starsFromVerdict('passt', 'passt', 'passt', false, 'pt-BR', null, null, { wer: 0.4, prosody: true })).toBeLessThanOrEqual(3)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', { template: 'male', user: 'male' }, null, { wer: 0 })).toBe(2)
     expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { bands: 0.2 })).toBe(0)
   })

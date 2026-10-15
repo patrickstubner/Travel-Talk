@@ -1340,7 +1340,7 @@ export type StarCount = 0 | 1 | 2 | 3 | 4 | 5
  * is at most 1, even if the tune matched. Between those, and when
  * `wer` is missing, a spectrum past SPECTRAL_DISTANCE_MAX is at most
  * 1, unless `prosody` is true. A matched tune is 4, unless the base
- * count is already 5. The middle band never reaches 5. German, English
+ * count is already 5. The middle band stays at most 3. German, English
  * and Vietnamese ignore the field.
  */
 export function starsFromVerdict(
@@ -1389,7 +1389,7 @@ export function starsFromVerdict(
   else if (prosody === false && offScript && scored > 1) scored = 1
   else if (prosody == null && offScript && scored > 1) scored = 1
   else if (prosody == null && hasBands && !offScript && (green >= 1 || yellow >= 1) && scored < 3) scored = 3
-  if (hasWer && scored > 4) return 4
+  if (hasWer && scored > 3) return 3
   return scored
 }
 
