@@ -36,8 +36,9 @@ async function openRepeat(page: Page): Promise<void> {
   await page.getByRole('heading', { name: 'Heute lernen' }).waitFor()
   await page.getByRole('link', { name: 'Heute lernen' }).click()
   const record = page.getByRole('button', { name: 'Aufnehmen', exact: true })
+  const skip = page.getByTestId('skip-words')
+  await expect(skip.or(record)).toBeVisible()
   for (let step = 0; step < 8 && (await record.count()) === 0; step += 1) {
-    const skip = page.getByTestId('skip-words')
     if (await skip.count()) await skip.click()
     else await page.getByRole('button', { name: 'Weiter', exact: true }).click()
   }
