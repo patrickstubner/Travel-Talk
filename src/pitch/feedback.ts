@@ -1,6 +1,7 @@
 import type { Lang } from '../../content/phrase'
 import { centerSlackFrames, describeShape, voicedValues, type Contour, type ShapeName } from './contour'
 import { bandDistance } from './spectrum'
+import { CONTENT_WER_CORRECT, CONTENT_WER_GIBBERISH } from '../speech/text-match'
 
 /**
  * Bands for the first version. They are a starting point set by the author,
@@ -1331,14 +1332,15 @@ export function wordMatchesReferences(
  * when a bar is «passt», 1 when the better bar is yellow, otherwise 0.
  * A reversed take is 0.
  *
- * Portuguese reads `content` when it is passed. A spectrum past
- * SPECTRAL_DISTANCE_MAX is at most 1, unless `prosody` is true: the
- * word tunes matched the file or another male voice. A matched tune
- * is at least 2. The same-file band distance does not separate a
- * correct second voice from babble, so the tune match is what keeps a
- * short correct take. Missing bands and a missing `prosody` keep the
- * old count when the spectrum is absent. German, English and
- * Vietnamese ignore the field.
+ * Portuguese reads `content` when it is passed. When `wer` is present
+ * it decides the words: at or below CONTENT_WER_CORRECT the take is at
+ * least 2, and 3 when the melody matches (`prosody` or a green melody
+ * bar). At or above CONTENT_WER_GIBBERISH the take is at most 1, even
+ * if the tune matched. Between those, and when `wer` is missing, a
+ * spectrum past SPECTRAL_DISTANCE_MAX is at most 1, unless `prosody`
+ * is true. A matched tune is at least 2. Missing bands and a missing
+ * `prosody` keep the old count when the spectrum is absent. German,
+ * English and Vietnamese ignore the field.
  */
 export function starsFromVerdict(
   verdict: BarState,
@@ -1348,7 +1350,7 @@ export function starsFromVerdict(
   lang: Lang = 'de',
   genders?: { readonly template?: SpeakerGender | null; readonly user?: SpeakerGender | null } | null,
   pitch?: { readonly modelHz?: number | null; readonly userHz?: number | null } | null,
-  content?: { readonly bands?: number | null; readonly prosody?: boolean | null } | null,
+  content?: { readonly bands?: number | null; readonly prosody?: boolean | null; readonly wer?: number | null } | null,
 ): 0 | 1 | 2 | 3 {
   if (backwards) return 0
   const green = [melody, rhythm].filter((bar) => bar === 'passt').length
@@ -1369,15 +1371,24 @@ export function starsFromVerdict(
     raw = lang === 'de' && (sameGender || closePitch) ? (green >= 1 ? 2 : 1) : 2
   }
   if (lang !== 'pt-BR') return raw
+  const wer = content?.wer
+  const hasWer = typeof wer === 'number' && Number.isFinite(wer)
+  if (hasWer && wer <= CONTENT_WER_CORRECT) {
+    if (content?.prosody === true || melody === 'passt') return 3
+    return 2
+  }
+  if (hasWer && wer >= CONTENT_WER_GIBBERISH) return raw > 1 ? 1 : raw
   const bands = content?.bands
   const hasBands = typeof bands === 'number' && Number.isFinite(bands)
   const offScript = hasBands && bands > SPECTRAL_DISTANCE_MAX['pt-BR']
   const prosody = content?.prosody
-  if (prosody === true && raw < 2) return 2
-  if (prosody === false && offScript) return raw > 1 ? 1 : raw
-  if (prosody == null && offScript) return raw > 1 ? 1 : raw
-  if (prosody == null && hasBands && !offScript && (green >= 1 || yellow >= 1) && raw < 2) return 2
-  return raw
+  let scored = raw
+  if (prosody === true && scored < 2) scored = 2
+  else if (prosody === false && offScript && scored > 1) scored = 1
+  else if (prosody == null && offScript && scored > 1) scored = 1
+  else if (prosody == null && hasBands && !offScript && (green >= 1 || yellow >= 1) && scored < 2) scored = 2
+  if (hasWer && scored > 2) return 2
+  return scored
 }
 
 /** Share of successive placed words whose recording span still moves forward. */

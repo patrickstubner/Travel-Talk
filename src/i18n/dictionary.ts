@@ -197,6 +197,8 @@ export type Dictionary = {
   installIos: string
   privacy: string
   loading: string
+  speechProgress: (percent: number) => string
+  speechFallback: string
   storageError: string
   version: string
   exampleAudio: string
@@ -420,7 +422,7 @@ export const de: Dictionary = {
     starsInfo: 'Was die Sterne bedeuten',
     starsTitle: 'Sterne',
     starsHint:
-      'Drei Sterne nur, wenn der Satz passt und beide Balken passen. Liegt die Tonhöhe nahe an der Datei, geben passt und teilweise auf Deutsch zwei Sterne nur mit einem grünen Balken, sonst einen. Sonst zwei. Bei daneben zwei nur mit einem grünen Balken, einen, wenn der bessere Balken teilweise ist, sonst keinen. Rückwärts keinen. Ein falscher Satz bekommt nie drei.',
+      'Drei Sterne nur, wenn der Satz passt und beide Balken passen. Liegt die Tonhöhe nahe an der Datei, geben passt und teilweise auf Deutsch zwei Sterne nur mit einem grünen Balken, sonst einen. Sonst zwei. Bei daneben zwei nur mit einem grünen Balken, einen, wenn der bessere Balken teilweise ist, sonst keinen. Rückwärts keinen. Ein falscher Satz bekommt nie drei. Auf Portugiesisch liest die Seite die Wörter, wenn die Spracherkennung da ist. Unsinn bekommt höchstens einen Stern, die richtigen Wörter mindestens zwei, und drei, wenn die Melodie auch trifft.',
     barsFit: 'Zwei Sterne. Die Balken passen, der Satz noch nicht ganz.',
     unclear: 'Das lässt sich nicht zuordnen. Sprich in derselben Richtung wie die Datei, ohne lange Pause davor.',
     noWordTimes: 'Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.',
@@ -583,6 +585,8 @@ export const de: Dictionary = {
   privacy:
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
+  speechProgress: (percent) => `Spracherkennung für Portugiesisch, ${percent} Prozent.`,
+  speechFallback: 'Die Spracherkennung fehlt. Es gilt die Wertung ohne die Wörter.',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
   version: 'Version 0.11.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
@@ -806,7 +810,7 @@ export const en: Dictionary = {
     starsInfo: 'What the stars mean',
     starsTitle: 'Stars',
     starsHint:
-      'Three stars only when the sentence fits and both bars fit. When the pitch is close to the file, German fits or partly is two stars only with a green bar, otherwise one. Otherwise two. When the sentence is off, two only if a bar fits, one if the better bar is partly, otherwise none. Spoken backwards gets none. A wrong sentence never gets three.',
+      'Three stars only when the sentence fits and both bars fit. When the pitch is close to the file, German fits or partly is two stars only with a green bar, otherwise one. Otherwise two. When the sentence is off, two only if a bar fits, one if the better bar is partly, otherwise none. Spoken backwards gets none. A wrong sentence never gets three. In Portuguese the page reads the words when speech recognition is here. Nonsense gets at most one star, the right words at least two, and three when the melody matches too.',
     barsFit: 'Two stars. The bars fit, the sentence does not quite.',
     unclear: 'This cannot be lined up. Speak in the same direction as the file, without a long pause first.',
     noWordTimes: 'This voice has no word timings. The curve stays, and the words stay grey.',
@@ -965,6 +969,8 @@ export const en: Dictionary = {
   installIos: 'Tap Share, then Add to Home Screen.',
   privacy: 'Progress, recordings and the note stay on this device. No account, no tracking, no font from the network.',
   loading: 'One moment.',
+  speechProgress: (percent) => `Portuguese speech recognition, ${percent} percent.`,
+  speechFallback: 'Speech recognition is missing. The score stays without the words.',
   storageError: 'Local storage is not available.',
   version: 'Version 0.11.0',
   exampleAudio: 'The audio speaks the example sentence.',
@@ -1188,7 +1194,7 @@ export const pt: Dictionary = {
     starsInfo: 'O que as estrelas significam',
     starsTitle: 'Estrelas',
     starsHint:
-      'Três estrelas só quando a frase encaixa e as duas barras encaixam. Quando o tom está perto do arquivo, encaixa ou em parte em alemão fica em duas só com uma barra verde, senão em uma. Senão duas. Quando a frase está fora, duas só se uma barra encaixa, uma se a melhor barra está em parte, senão nenhuma. Ao contrário, nenhuma. Uma frase errada nunca ganha três.',
+      'Três estrelas só quando a frase encaixa e as duas barras encaixam. Quando o tom está perto do arquivo, encaixa ou em parte em alemão fica em duas só com uma barra verde, senão em uma. Senão duas. Quando a frase está fora, duas só se uma barra encaixa, uma se a melhor barra está em parte, senão nenhuma. Ao contrário, nenhuma. Uma frase errada nunca ganha três. Em português a página lê as palavras quando o reconhecimento de fala está aqui. Bobagem fica em no máximo uma estrela, as palavras certas em pelo menos duas, e três quando a melodia também acerta.',
     barsFit: 'Duas estrelas. As barras encaixam, a frase ainda não.',
     unclear: 'Não dá para alinhar. Fale na mesma direção do arquivo, sem uma pausa longa antes.',
     noWordTimes: 'Esta voz não tem os tempos das palavras. A curva fica, e as palavras ficam cinza.',
@@ -1350,6 +1356,8 @@ export const pt: Dictionary = {
   installIos: 'Toque em Compartilhar e depois em Adicionar à Tela de Início.',
   privacy: 'Progresso, gravações e a nota ficam neste aparelho. Sem conta, sem rastreamento, sem fonte da rede.',
   loading: 'Um momento.',
+  speechProgress: (percent) => `Reconhecimento de fala em português, ${percent} por cento.`,
+  speechFallback: 'O reconhecimento de fala não está aqui. A nota fica sem as palavras.',
   storageError: 'O armazenamento local não está disponível.',
   version: 'Version 0.11.0',
   exampleAudio: 'O áudio fala a frase de exemplo.',
@@ -1573,7 +1581,7 @@ export const vi: Dictionary = {
     starsInfo: 'Sao có nghĩa là gì',
     starsTitle: 'Sao',
     starsHint:
-      'Ba sao chỉ khi câu ổn và cả hai cột ổn. Khi đường thanh gần tệp, với tiếng Đức ổn hoặc một phần là hai sao chỉ khi có một cột xanh, không thì một sao. Không thì hai sao. Khi câu lệch, hai sao chỉ nếu một cột ổn, một sao nếu cột tốt hơn là một phần, không thì không sao. Nói ngược không có sao. Câu sai không bao giờ được ba sao.',
+      'Ba sao chỉ khi câu ổn và cả hai cột ổn. Khi đường thanh gần tệp, với tiếng Đức ổn hoặc một phần là hai sao chỉ khi có một cột xanh, không thì một sao. Không thì hai sao. Khi câu lệch, hai sao chỉ nếu một cột ổn, một sao nếu cột tốt hơn là một phần, không thì không sao. Nói ngược không có sao. Câu sai không bao giờ được ba sao. Với tiếng Bồ Đào Nha, trang đọc các từ khi có nhận dạng giọng nói. Nói linh tinh nhiều nhất một sao, đúng từ thì ít nhất hai sao, và ba sao khi giai điệu cũng khớp.',
     barsFit: 'Hai sao. Hai cột ổn, câu chưa hẳn.',
     unclear: 'Không xếp được. Nói cùng hướng với tệp, đừng dừng lâu trước khi nói.',
     noWordTimes: 'Giọng này không có thời điểm từng từ. Đường cong vẫn còn, các từ vẫn xám.',
@@ -1729,6 +1737,8 @@ export const vi: Dictionary = {
   installIos: 'Chạm Chia sẻ, rồi Thêm vào Màn hình chính.',
   privacy: 'Tiến độ, bản ghi và ghi chú ở trên máy này. Không tài khoản, không theo dõi, không phông từ mạng.',
   loading: 'Một lát.',
+  speechProgress: (percent) => `Nhận dạng giọng nói tiếng Bồ Đào Nha, ${percent} phần trăm.`,
+  speechFallback: 'Không có nhận dạng giọng nói. Điểm giữ cách cũ, không đọc từ.',
   storageError: 'Bộ nhớ trên máy không dùng được.',
   version: 'Version 0.11.0',
   exampleAudio: 'Audio đọc câu ví dụ.',

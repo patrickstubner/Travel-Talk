@@ -14,6 +14,7 @@ import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { fixedPart, lineContext, pairPart, speedPart, voiceCaption } from '../audio/notes'
 import { RepeatFeedback } from '../components/RepeatFeedback'
+import { PortugueseModelStatus } from '../speech/PortugueseModelStatus'
 import { KaraokeLine } from '../components/KaraokeLine'
 import { LearnCard } from '../components/LearnCard'
 import { RichText } from '../components/RichText'
@@ -346,6 +347,7 @@ export function PhrasePage() {
         </div>
       </div>
       <div className="learn-speak" data-testid="learn-record">
+        {targetLang === 'pt-BR' ? <PortugueseModelStatus copy={copy} /> : null}
         {micError ? <p role="alert">{copy.micDenied}</p> : null}
         <div className="row">
           {recording ? (

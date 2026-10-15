@@ -9,14 +9,14 @@ const BASE = '/Travel-Talk/'
 
 const CSP = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'",
   "style-src 'self'",
   "style-src-attr 'none'",
   "img-src 'self' data:",
   "media-src 'self' blob:",
   "connect-src 'self'",
   "font-src 'self'",
-  "worker-src 'self'",
+  "worker-src 'self' blob:",
   "manifest-src 'self'",
   "object-src 'none'",
   "base-uri 'none'",
@@ -80,6 +80,24 @@ export default defineConfig({
                   cacheName: 'travel-talk-audio',
                   cacheableResponse: { statuses: [200] },
                   expiration: { maxEntries: 12000, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                },
+              },
+              {
+                urlPattern: /\/Travel-Talk\/models\/vosk-model-small-pt-.*\.tar\.gz$/,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'travel-talk-vosk',
+                  cacheableResponse: { statuses: [200] },
+                  expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                },
+              },
+              {
+                urlPattern: /\/Travel-Talk\/static\/js\/.*vosk.*\.js$/,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'travel-talk-vosk-script',
+                  cacheableResponse: { statuses: [200] },
+                  expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 365 },
                 },
               },
             ],

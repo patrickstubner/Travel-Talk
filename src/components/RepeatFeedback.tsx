@@ -21,6 +21,8 @@ import {
   type ToneId,
   type ToneShape,
 } from '../pitch/feedback'
+import { wordErrorRate } from '../speech/text-match'
+import { recognizePortuguese, speechModelsInThisRun } from '../speech/vosk-pt'
 
 const TONE_ORDER: ToneId[] = ['ngang', 'huyen', 'sac', 'hoi', 'nga', 'nang']
 const NO_REFERENCES: ReadonlyArray<{ samples: Float32Array; sampleRate: number; words?: WordTime[] | null }> = []
@@ -157,6 +159,19 @@ export function RepeatFeedback({
 }) {
   const [view, setView] = useState<'result' | 'word' | 'tones'>('result')
   const [selected, setSelected] = useState(0)
+  const [heard, setHeard] = useState<{ samples: Float32Array; text: string | null } | null>(null)
+  useEffect(() => {
+    if (lang !== 'pt-BR' || !speechModelsInThisRun()) return undefined
+    let cancel = false
+    void recognizePortuguese(userSamples, userRate).then((text) => {
+      if (!cancel) setHeard({ samples: userSamples, text })
+    })
+    return () => {
+      cancel = true
+    }
+  }, [lang, userRate, userSamples])
+  const heardText = heard?.samples === userSamples ? heard.text : null
+  const wer = lang === 'pt-BR' && heardText != null ? wordErrorRate(speech, heardText) : null
   const offThread = pitchWorker() != null
   const [remote, setRemote] = useState<{ model: ClipFeatures | null; user: ClipFeatures | null } | null>(null)
   const syncModel = useMemo(
@@ -277,7 +292,13 @@ export function RepeatFeedback({
   }
 
   return (
-    <section className="pitch repeat-feedback" data-testid="repeat-feedback" aria-label={copy.pitchTitle}>
+    <section
+      className="pitch repeat-feedback"
+      data-testid="repeat-feedback"
+      data-heard={heardText === null ? undefined : heardText}
+      data-speech-state={heard?.samples === userSamples ? (heard.text == null ? 'failed' : 'ready') : 'pending'}
+      aria-label={copy.pitchTitle}
+    >
       {view === 'result' ? (
         <Result
           copy={copy}
@@ -293,6 +314,7 @@ export function RepeatFeedback({
           tooShort={userDuration < SHORT_SECONDS || score?.tooShort === true}
           timingMissing={!timingsPending && words == null && !modelMissing && modelSamples != null}
           tooQuiet={! (userDuration < SHORT_SECONDS) && (score?.tooLittleVoice === true || (modelMissing && userQuiet))}
+          wer={wer}
           onWord={(index) => {
             setSelected(index)
             setView('word')
@@ -373,6 +395,7 @@ function Result({
   timingMissing,
   tooShort,
   tooQuiet,
+  wer,
   onWord,
 }: {
   copy: Dictionary
@@ -388,6 +411,7 @@ function Result({
   timingMissing: boolean
   tooShort: boolean
   tooQuiet: boolean
+  wer: number | null
   onWord: (index: number) => void
 }) {
   const feedback = copy.repeatFeedback
@@ -421,7 +445,7 @@ function Result({
             user: speakerGender,
           },
           { modelHz, userHz },
-          { bands: score?.sentenceCheck?.bands, prosody: score?.melodyFit },
+          { bands: score?.sentenceCheck?.bands, prosody: score?.melodyFit, wer },
         )
       : null
   const barsFit = stars === 2 && melodyBar === 'passt' && rhythmBar === 'passt' && verdict !== 'passt'

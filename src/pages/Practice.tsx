@@ -20,6 +20,7 @@ import { LearnCard } from '../components/LearnCard'
 import { TempoSwitch } from '../components/TempoSwitch'
 import { WordTempoControl } from '../components/WordTempo'
 import { RepeatFeedback } from '../components/RepeatFeedback'
+import { PortugueseModelStatus } from '../speech/PortugueseModelStatus'
 import { StudyProgress } from '../components/StudyProgress'
 import { RichText } from '../components/RichText'
 import { wordSound } from '../../content/word-sounds'
@@ -807,6 +808,7 @@ export function PracticePage() {
             </button>
             <TempoSwitch value={chosen} onChange={chooseTempo} label={copy.speedTitle} slow={copy.tempoSlow} mid={copy.speed85} normal={copy.tempoNormal} />
           </div>
+          {targetLang === 'pt-BR' ? <PortugueseModelStatus copy={copy} /> : null}
           <div className="learn-speak" data-testid="learn-record">
             {micNote ? <p className="voice-note">{copy.micSkipped}</p> : null}
             {take?.samples && !recording && !micStarting ? (

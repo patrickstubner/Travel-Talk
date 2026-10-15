@@ -476,7 +476,7 @@ a.menu-card span { color: var(--muted); }
   .learn-next { margin-top: 0.35rem; }
   .pitch-canvas-compact { max-height: 2rem; }
   .learn .session-action:not(:disabled) {
-    bottom: calc(3.5rem + env(safe-area-inset-bottom));
+    bottom: calc(2.7rem + env(safe-area-inset-bottom));
   }
   .nav {
     position: fixed;
@@ -491,10 +491,27 @@ a.menu-card span { color: var(--muted); }
     padding-bottom: calc(0.35rem + env(safe-area-inset-bottom));
   }
   .show-mode .nav { background: #1c2228; }
-  .app { padding-bottom: calc(4.6rem + env(safe-area-inset-bottom)); }
+  .app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-bottom: calc(2.7rem + env(safe-area-inset-bottom));
+  }
+  .layout { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+  main { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; padding-bottom: 0; }
+  .practice {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-bottom: 0;
+    gap: 0.28rem;
+  }
+  .practice > .speak-actions { margin-top: auto; }
   .nav a { min-width: 0; text-align: center; font-size: 0.78rem; padding: 0.4rem 0.28rem; }
-  main { padding-bottom: 1rem; }
 }
+.voice-note progress { display: block; width: 100%; margin-top: 0.35rem; accent-color: var(--teal); }
 
 .repeat-plots, .repeat-words, .repeat-pair, .repeat-board { display: flex; gap: 0.45rem; align-items: stretch; max-width: 100%; }
 .repeat-plots > div, .repeat-words > button, .repeat-board > .word-card { flex: var(--span, 1) 1 0%; min-width: 0; max-width: 100%; }

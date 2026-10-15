@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { wordErrorRate } from '../speech/text-match'
 import { contourFromSamples, dtwDistance, voicedValues, type Contour } from './contour'
 import {
   DIRECTION_MIN,
@@ -246,6 +247,23 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { bands: 0.8, prosody: true })).toBeGreaterThanOrEqual(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'daneben', false, 'pt-BR', null, null, { bands: 0.8, prosody: false })).toBeLessThanOrEqual(1)
     expect(starsFromVerdict('passt', 'passt', 'passt', false, 'pt-BR', null, null, { bands: 0.8, prosody: true })).toBe(3)
+  })
+
+  it('lets recognised Portuguese words outrank the tune', () => {
+    const sentence = 'Eu preciso de ajuda.'
+    const gibberish = wordErrorRate(sentence, 'bing bang bong bung')
+    const correct = wordErrorRate(sentence, 'Eu preciso de ajuda!')
+    expect(gibberish).toBeGreaterThanOrEqual(0.5)
+    expect(correct).toBeLessThanOrEqual(0.34)
+    expect(starsFromVerdict('passt', 'passt', 'passt', false, 'pt-BR', null, null, { wer: gibberish, prosody: true, bands: 0.1 })).toBeLessThanOrEqual(1)
+    expect(starsFromVerdict('daneben', 'passt', 'passt', false, 'pt-BR', null, null, { wer: 0.5, prosody: true })).toBeLessThanOrEqual(1)
+    expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { wer: correct, prosody: false, bands: 0.9 })).toBeGreaterThanOrEqual(2)
+    expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { wer: 0.34 })).toBe(2)
+    expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { wer: 0, prosody: true })).toBe(3)
+    expect(starsFromVerdict('daneben', 'passt', 'daneben', false, 'pt-BR', null, null, { wer: 0, prosody: false })).toBe(3)
+    expect(starsFromVerdict('passt', 'passt', 'passt', false, 'pt-BR', null, null, { wer: 0.4, prosody: true })).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', { template: 'male', user: 'male' }, null, { wer: 0 })).toBe(1)
+    expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { bands: 0.2 })).toBe(0)
   })
 })
 
