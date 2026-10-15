@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.2 — 2026-10-15
+
+- Ein neues Wort beginnt bei «Was bedeutet das Wort?». Die drei Seiten «Hören · n von 3» entfallen. Das Wort spielt einmal beim Öffnen, wenn der Browser es erlaubt. Schrift, Umschrift, Tempo, «Noch einmal hören» und «Wörter überspringen» stehen auf derselben Seite.
+
 ## 0.10.1 — 2026-10-15
 
 - In der Wortrunde liegen «Noch einmal hören» und «Weiter» in derselben Leiste. Die Leiste bleibt unten, die beiden Knöpfe liegen nebeneinander und decken sich nicht. Ein Tipp auf «Weiter» geht zum nächsten Schritt, auch quer und hoch. Vorher lag der klebende Knopf über «Noch einmal hören», und der Tipp spielte das Wort noch einmal ab.

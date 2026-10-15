@@ -10,7 +10,7 @@ async function openWordRound(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Weiter zu Heute lernen' }).click()
   await page.getByRole('heading', { name: 'Heute lernen' }).waitFor()
   await page.getByRole('link', { name: 'Heute lernen' }).click()
-  await page.getByTestId('word-intro').waitFor()
+  await page.getByTestId('practice-word').waitFor()
 }
 
 /** Replay and Continue share one bar. A scroll must not lay one over the other. */
@@ -48,7 +48,7 @@ async function overlapProblems(page: Page): Promise<string[]> {
   })
 }
 
-test('word round one Continue tap advances at 844x390 and portrait', async ({ page }) => {
+test('new word shows the meaning question at once at 844x390 and portrait', async ({ page }) => {
   test.setTimeout(120_000)
   await openWordRound(page)
   for (const viewport of [
@@ -57,10 +57,18 @@ test('word round one Continue tap advances at 844x390 and portrait', async ({ pa
   ]) {
     await page.setViewportSize(viewport)
     await page.reload()
-    await page.getByTestId('word-intro').waitFor()
-    await expect(page.locator('h2.eyebrow').first()).toHaveText('Hören · 1 von 3')
+    await page.getByTestId('practice-word').waitFor()
+    await expect(page.getByRole('heading', { name: 'Was bedeutet das Wort?' })).toBeVisible()
+    await expect(page.getByTestId('word-intro')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Weiter', exact: true })).toHaveCount(0)
+    await expect(page.getByTestId('skip-words')).toBeVisible()
+    await expect(page.getByTestId('target-line')).toBeVisible()
+    await expect(page.getByTestId('word-ipa')).toBeVisible()
+    await expect(page.getByTestId('word-speed')).toBeVisible()
+    await expect(page.locator('[data-testid="practice-word"] button.play-row')).toHaveText(/Noch einmal hören/)
+    await expect(page.locator('.choices button').first()).toBeVisible()
+    await page.locator('.choices button').first().click()
+    await page.getByTestId('word-actions').waitFor()
     expect(await overlapProblems(page)).toEqual([])
-    await page.getByTestId('word-actions').getByRole('button', { name: 'Weiter', exact: true }).click()
-    await expect(page.locator('h2.eyebrow').first()).toHaveText('Hören · 2 von 3')
   }
 })

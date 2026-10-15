@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { WORDS, spokenCitation } from '../../content/words'
 import { chaoTones, syllableTones, wordSound } from '../../content/word-sounds'
-import { WORD_INTRO_PASSES, wordSteps } from '../srs/word-steps'
+import { wordSteps } from '../srs/word-steps'
 import type { Lang } from '../../content/phrase'
 
 const langs: Lang[] = ['de', 'en', 'pt-BR', 'vi']
@@ -64,9 +64,8 @@ describe('word sounds', () => {
     }
   })
 
-  it('hears a new word three times before the question', () => {
-    expect(WORD_INTRO_PASSES).toBe(3)
-    expect(wordSteps(true)).toEqual(['word-intro', 'word-intro', 'word-intro', 'word'])
+  it('opens a new word on the question', () => {
+    expect(wordSteps(true)).toEqual(['word'])
     expect(wordSteps(false)).toEqual(['word'])
   })
 })

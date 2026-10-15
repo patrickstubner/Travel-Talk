@@ -446,13 +446,11 @@ export function PracticePage() {
   }
 
   const word = item?.kind === 'word' ? wordById(item.id) : undefined
-  if (item?.kind === 'word' && word && (step === 'word' || step === 'word-intro')) {
+  if (item?.kind === 'word' && word && step === 'word') {
     const speech = spokenCitation(word, targetLang, settings.viRegion)
     const file = wordAudioFile(word, targetLang, settings.viRegion)
     const meaning = spokenCitation(word, app, settings.viRegion)
     const sound = wordSound(word, targetLang, app, settings.viRegion)
-    const heard = steps.slice(0, stepIndex + 1).filter((entry) => entry === 'word-intro').length
-    const hearTotal = steps.filter((entry) => entry === 'word-intro').length
     const currentWord = word
     const book = catalog
     const cardsNow = snapshot.cards
@@ -491,42 +489,6 @@ export function PracticePage() {
         }}
       />
     )
-    if (step === 'word-intro') {
-      return (
-        <section className="stack learn practice" data-testid="word-intro">
-          <h2 className="eyebrow">{copy.wordIntroStep(heard, hearTotal)}</h2>
-          {offlineAudio ? (
-            <p className="warn" role="status">
-              {copy.audioOffline}
-            </p>
-          ) : null}
-          <h2>{copy.wordIntro}</h2>
-          <LearnCard>
-            <p className="target-line" data-testid="target-line" lang={targetLang}>
-              {speech}
-            </p>
-            <p className="word-read" data-testid="word-read">
-              {sound.read}
-            </p>
-            <p className="hint" data-testid="word-ipa">
-              {copy.wordIpa} {sound.ipa}
-            </p>
-            <p className="hint">{copy.wordGloss}</p>
-            <p data-testid="word-meaning">{meaning}</p>
-          </LearnCard>
-          {wordTempoControl}
-          <div className="speak-actions session-action" data-testid="word-actions">
-            <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
-              <span className="play-mark" aria-hidden="true" />
-              {playing ? copy.playingNormal : copy.wordReplay}
-            </button>
-            <button type="button" className="button primary" onClick={goNext}>
-              {copy.next}
-            </button>
-          </div>
-        </section>
-      )
-    }
     return (
       <section className="stack learn practice" data-testid="practice-word">
         {study}
@@ -708,7 +670,6 @@ export function PracticePage() {
     understand: copy.stepUnderstand(index + 1, queue.length),
     recall: copy.stepRecall(index + 1, queue.length),
     rate: copy.stepRecall(index + 1, queue.length),
-    'word-intro': copy.wordIntro,
     word: copy.wordsFirst,
   }
 
