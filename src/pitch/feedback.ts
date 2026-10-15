@@ -1380,9 +1380,9 @@ export function applyRhythmWeight(stars: StarCount, rhythm: BarState | null, lan
  * spectrum: past SPECTRAL_DISTANCE_MAX is at most 1, unless `prosody`
  * is true. A matched tune is 4, unless the base count is already 5.
  * German, English and Vietnamese do not read the spectrum. Their
- * recognition, when it ran, only caps the count at 4. It does not
- * raise a take to 3 and it does not cut one down to 1. German S3
- * stays: a fitting sentence with no green bar remains 2.
+ * recognition, when it ran, only caps the count at 4, after the rhythm
+ * weight. It does not raise a take to 3 and it does not cut one down
+ * to 1. German S3 stays: a fitting sentence with no green bar remains 2.
  */
 export function starsFromVerdict(
   verdict: BarState,
@@ -1394,7 +1394,10 @@ export function starsFromVerdict(
   pitch?: { readonly modelHz?: number | null; readonly userHz?: number | null } | null,
   content?: { readonly bands?: number | null; readonly prosody?: boolean | null; readonly wer?: number | null } | null,
 ): StarCount {
-  return applyRhythmWeight(starsBeforeRhythm(verdict, melody, rhythm, backwards, lang, genders, pitch, content), rhythm, lang)
+  const weighted = applyRhythmWeight(starsBeforeRhythm(verdict, melody, rhythm, backwards, lang, genders, pitch, content), rhythm, lang)
+  const wer = content?.wer
+  if (lang !== 'pt-BR' && typeof wer === 'number' && Number.isFinite(wer) && weighted > 4) return 4
+  return weighted
 }
 
 /** The star count before RHYTHM_STAR_WEIGHT. The screen uses starsFromVerdict. */
@@ -1426,9 +1429,9 @@ export function starsBeforeRhythm(
     else if (strict && green === 0) raw = 2
     else raw = 3
   }
+  if (lang !== 'pt-BR') return raw
   const wer = content?.wer
   const hasWer = typeof wer === 'number' && Number.isFinite(wer)
-  if (lang !== 'pt-BR') return hasWer && raw > 4 ? 4 : raw
   if (hasWer && wer <= CONTENT_WER_CORRECT) {
     if (melody === 'passt') return 5
     if (content?.prosody === true) return 4

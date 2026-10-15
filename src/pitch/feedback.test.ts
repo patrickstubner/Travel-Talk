@@ -281,6 +281,8 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('passt', 'passt', 'passt', false, 'pt-BR', null, null, { wer: 0.4, prosody: true })).toBeLessThanOrEqual(3)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', { template: 'male', user: 'male' }, null, { wer: 0 })).toBe(2)
     expect(starsFromVerdict('passt', 'passt', 'passt', false, 'de', null, null, { wer: 1 })).toBe(4)
+    expect(starsFromVerdict('passt', 'passt', 'teilweise', false, 'de', null, null, { wer: 0 })).toBe(4)
+    expect(starsFromVerdict('passt', 'passt', 'daneben', false, 'de', null, null, { wer: 0 })).toBe(3)
     expect(starsFromVerdict('passt', 'passt', 'passt', false, 'de', null, null, { wer: 0 })).toBe(4)
     expect(starsFromVerdict('passt', 'passt', 'passt', false, 'de', null, null, { wer: 0.4 })).toBe(4)
     expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'en', null, null, { wer: 0 })).toBe(0)
