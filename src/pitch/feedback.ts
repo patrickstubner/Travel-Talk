@@ -1,6 +1,7 @@
 import type { Lang } from '../../content/phrase'
 import { centerSlackFrames, describeShape, voicedValues, type Contour, type ShapeName } from './contour'
 import { bandDistance } from './spectrum'
+import { CONTENT_WER_CORRECT, CONTENT_WER_GIBBERISH } from '../speech/text-match'
 
 /**
  * Bands for the first version. They are a starting point set by the author,
@@ -190,6 +191,12 @@ export type RepeatScore = {
   /** Sentence check. Null when the take was not scored. Stars stay off the score. */
   sentenceCheck: SentenceCheck | null
   verdict: BarState | null
+  /**
+   * pt-BR only. True when the word tunes match the file or another male
+   * voice, before the sentence bar is tightened. Null for other languages
+   * and when the take was not scored. Stars read this. It is not stored.
+   */
+  melodyFit: boolean | null
 }
 
 export function melodyBand(distance: number, lang: Lang = 'de'): Band {
@@ -1224,17 +1231,156 @@ export function medianGapSemitones(modelHz?: number | null, userHz?: number | nu
 }
 
 /**
- * Star count for the repeat screen. Not stored on the score.
+ * Semitones of slack around the min/max of the reference voices.
+ * A point inside that band still counts as their range.
+ */
+export const REFERENCE_ENVELOPE_SLACK = 1
+
+function voicedSeries(contour: Contour): number[] {
+  const values: number[] = []
+  for (const value of contour) if (value != null) values.push(value)
+  return values
+}
+
+/** Linear resample. The result has `length` points. Too short a series is null. */
+function resampleSeries(series: readonly number[], length: number): number[] | null {
+  if (series.length < 2 || length < 2) return null
+  const out: number[] = []
+  for (let index = 0; index < length; index += 1) {
+    const at = (index / (length - 1)) * (series.length - 1)
+    const left = Math.floor(at)
+    const right = Math.min(series.length - 1, left + 1)
+    const frac = at - left
+    out.push((series[left] ?? 0) * (1 - frac) + (series[right] ?? 0) * frac)
+  }
+  return out
+}
+
+/** Another voice of the same sentence, already in semitones around its own median. */
+export type MelodyReference = {
+  contour: Contour
+  hop: number
+  words?: ReadonlyArray<{ start: number; end: number }> | null
+}
+
+/** The same fraction of a full-sentence contour. Both ends are inside the contour. */
+export function sliceFraction(contour: Contour, startFrac: number, endFrac: number): Contour {
+  if (contour.length === 0) return []
+  const start = Math.max(0, Math.min(contour.length - 1, Math.floor(startFrac * contour.length)))
+  const end = Math.max(start + 1, Math.min(contour.length, Math.ceil(Math.max(startFrac, endFrac) * contour.length)))
+  return contour.slice(start, end)
+}
+
+function sliceTimes(contour: Contour, hop: number, start: number, end: number): Contour {
+  if (!(hop > 0) || contour.length === 0 || !(end > start)) return []
+  const frame = Math.max(0, Math.min(contour.length - 1, Math.floor(start / hop)))
+  const frameEnd = Math.max(frame + 1, Math.min(contour.length, Math.ceil(end / hop)))
+  return contour.slice(frame, frameEnd)
+}
+
+/**
+ * The user's word against other voices of the same sentence.
+ * Every contour is already semitones relative to that speaker's median.
+ * A mean distance under `green` to any `others` entry counts.
+ * With two or more curves in `envelope`, a point inside their min/max
+ * plus REFERENCE_ENVELOPE_SLACK counts as well. One curve has no range.
+ */
+export function wordMatchesReferences(
+  user: Contour,
+  others: readonly Contour[],
+  green: number,
+  envelope: readonly Contour[] = others,
+): boolean {
+  const voiced = voicedSeries(user)
+  if (voiced.length < MIN_WORD_VOICED) return false
+  const otherSeries = others
+    .map((contour) => resampleSeries(voicedSeries(contour), voiced.length))
+    .filter((slice): slice is number[] => slice != null)
+  for (const slice of otherSeries) {
+    let sum = 0
+    for (let index = 0; index < voiced.length; index += 1) sum += Math.abs((voiced[index] ?? 0) - (slice[index] ?? 0))
+    if (sum / voiced.length < green) return true
+  }
+  const bounds = envelope
+    .map((contour) => resampleSeries(voicedSeries(contour), voiced.length))
+    .filter((slice): slice is number[] => slice != null)
+  if (bounds.length < 2) return false
+  for (let index = 0; index < voiced.length; index += 1) {
+    let low = Infinity
+    let high = -Infinity
+    for (const slice of bounds) {
+      const value = slice[index] ?? 0
+      if (value < low) low = value
+      if (value > high) high = value
+    }
+    const point = voiced[index] ?? 0
+    if (point < low - REFERENCE_ENVELOPE_SLACK || point > high + REFERENCE_ENVELOPE_SLACK) return false
+  }
+  return true
+}
+
+export type StarCount = 0 | 1 | 2 | 3 | 4 | 5
+
+/**
+ * How much a rhythm miss costs on the way to 4 and 5.
+ * Yellow costs one step, red costs two, and the weight scales that.
+ * A missing bar costs nothing.
  *
- * 3 only when the sentence is «passt» and both bars are «passt».
- * On «passt» and «teilweise», German rule S3 gives 2 when a bar is
- * «passt» and 1 otherwise. S3 runs when the template voice and the
- * speaker are the same known gender, or when the median pitches are
- * within S3_PITCH_SEMITONES. A different gender with a far or missing
- * pitch, and a missing gender with a far or missing pitch, stay on V2:
- * two stars. Portuguese, English and Vietnamese stay at 2. On
- * «daneben», 2 only when a bar is «passt», 1 when the better bar is
- * yellow, otherwise 0. A reversed take is 0.
+ * German and English are 1. Both are stress-timed: the beat is part of
+ * the sentence (Pike 1945; Grabe and Low 2002).
+ * Brazilian Portuguese is 0.5. It is syllable-timed beside European
+ * Portuguese, and the stress contrast is weaker (Frota and Vigário 2001).
+ * Vietnamese is 0.3. The contrast is the tone, scored here as melody,
+ * and the language has no lexical stress (Brunelle 2017).
+ */
+export const RHYTHM_STAR_WEIGHT: Record<Lang, number> = {
+  de: 1,
+  en: 1,
+  'pt-BR': 0.5,
+  vi: 0.3,
+}
+
+/**
+ * Pulls a 4 or a 5 down by RHYTHM_STAR_WEIGHT. The result stays at least
+ * 2, so a fitting sentence stays in the grey zone instead of becoming a miss.
+ */
+export function applyRhythmWeight(stars: StarCount, rhythm: BarState | null, lang: Lang): StarCount {
+  if (stars < 4 || rhythm == null || rhythm === 'passt') return stars
+  const steps = rhythm === 'daneben' ? 2 : 1
+  const next = stars - Math.round(steps * RHYTHM_STAR_WEIGHT[lang])
+  if (next >= 5) return 5
+  if (next === 4) return 4
+  if (next === 3) return 3
+  return 2
+}
+
+/**
+ * Star count for the repeat screen. Not stored on the score. Five stars.
+ * The same scale in every language. 4 and 5 are a match. 2 and 3 are the
+ * grey zone between a fitting sentence and a wrong one. 0 and 1 are a
+ * wrong sentence.
+ *
+ * 5 only when the sentence is «passt» and the melody bar is «passt»,
+ * and the rhythm weight still leaves it there. A wrong sentence
+ * («daneben») is at most 1: 1 when a bar is yellow or green, otherwise
+ * 0. A green melody on a wrong sentence stays 1. A reversed take is 0.
+ * A sentence that still belongs («passt» or «teilweise») is at least 2.
+ * A green melody bar is 4 before the rhythm weight. German rule S3 holds
+ * a fitting sentence with no green bar at 2. S3 runs when the template
+ * voice and the speaker are the same known gender, or when the median
+ * pitches are within S3_PITCH_SEMITONES. English, Portuguese and
+ * Vietnamese do not use S3.
+ *
+ * Portuguese reads `content` when it is passed. When `wer` is present
+ * it decides the words: at or below CONTENT_WER_CORRECT the take is at
+ * least 3, 4 when the tune matches another voice, and 5 when the
+ * melody bar is green too. At or above CONTENT_WER_GIBBERISH the take
+ * is at most 1, even if the tune matched. Between those, and when
+ * `wer` is missing, a spectrum past SPECTRAL_DISTANCE_MAX is at most
+ * 1, unless `prosody` is true. A matched tune is 4, unless the base
+ * count is already 5. The middle band stays at most 3. German, English
+ * and Vietnamese ignore the field. The rhythm weight runs after that,
+ * and only on a 4 or a 5.
  */
 export function starsFromVerdict(
   verdict: BarState,
@@ -1244,24 +1390,60 @@ export function starsFromVerdict(
   lang: Lang = 'de',
   genders?: { readonly template?: SpeakerGender | null; readonly user?: SpeakerGender | null } | null,
   pitch?: { readonly modelHz?: number | null; readonly userHz?: number | null } | null,
-): 0 | 1 | 2 | 3 {
+  content?: { readonly bands?: number | null; readonly prosody?: boolean | null; readonly wer?: number | null } | null,
+): StarCount {
+  return applyRhythmWeight(starsBeforeRhythm(verdict, melody, rhythm, backwards, lang, genders, pitch, content), rhythm, lang)
+}
+
+/** The star count before RHYTHM_STAR_WEIGHT. The screen uses starsFromVerdict. */
+export function starsBeforeRhythm(
+  verdict: BarState,
+  melody: BarState | null,
+  rhythm: BarState | null,
+  backwards = false,
+  lang: Lang = 'de',
+  genders?: { readonly template?: SpeakerGender | null; readonly user?: SpeakerGender | null } | null,
+  pitch?: { readonly modelHz?: number | null; readonly userHz?: number | null } | null,
+  content?: { readonly bands?: number | null; readonly prosody?: boolean | null; readonly wer?: number | null } | null,
+): StarCount {
   if (backwards) return 0
   const green = [melody, rhythm].filter((bar) => bar === 'passt').length
   const yellow = [melody, rhythm].filter((bar) => bar === 'teilweise').length
-  if (verdict === 'passt' && green === 2) return 3
-  if (verdict === 'daneben') {
-    if (green >= 1) return 2
-    if (yellow >= 1) return 1
-    return 0
+  let raw: StarCount
+  if (verdict === 'daneben') raw = green >= 1 || yellow >= 1 ? 1 : 0
+  else {
+    const template = genders?.template
+    const user = genders?.user
+    const sameGender = Boolean(template && user && template === user)
+    const gap = medianGapSemitones(pitch?.modelHz, pitch?.userHz)
+    // log2 of an exact power of two can sit a few ulps over the cut.
+    const closePitch = gap != null && gap <= S3_PITCH_SEMITONES + 1e-9
+    const strict = lang === 'de' && (sameGender || closePitch)
+    if (verdict === 'passt' && melody === 'passt') raw = 5
+    else if (melody === 'passt') raw = 4
+    else if (strict && green === 0) raw = 2
+    else raw = 3
   }
-  const template = genders?.template
-  const user = genders?.user
-  const sameGender = Boolean(template && user && template === user)
-  const gap = medianGapSemitones(pitch?.modelHz, pitch?.userHz)
-  // log2 of an exact power of two can sit a few ulps over the cut.
-  const closePitch = gap != null && gap <= S3_PITCH_SEMITONES + 1e-9
-  if (lang === 'de' && (sameGender || closePitch)) return green >= 1 ? 2 : 1
-  return 2
+  if (lang !== 'pt-BR') return raw
+  const wer = content?.wer
+  const hasWer = typeof wer === 'number' && Number.isFinite(wer)
+  if (hasWer && wer <= CONTENT_WER_CORRECT) {
+    if (melody === 'passt') return 5
+    if (content?.prosody === true) return 4
+    return 3
+  }
+  if (hasWer && wer >= CONTENT_WER_GIBBERISH) return raw > 1 ? 1 : raw
+  const bands = content?.bands
+  const hasBands = typeof bands === 'number' && Number.isFinite(bands)
+  const offScript = hasBands && bands > SPECTRAL_DISTANCE_MAX['pt-BR']
+  const prosody = content?.prosody
+  let scored = raw
+  if (prosody === true && scored < 4) scored = 4
+  else if (prosody === false && offScript && scored > 1) scored = 1
+  else if (prosody == null && offScript && scored > 1) scored = 1
+  else if (prosody == null && hasBands && !offScript && (green >= 1 || yellow >= 1) && scored < 3) scored = 3
+  if (hasWer && scored > 3) return 3
+  return scored
 }
 
 /** Share of successive placed words whose recording span still moves forward. */
@@ -1331,6 +1513,16 @@ export function scoreRepeat(input: {
    */
   modelSpeechBands?: readonly (readonly number[])[] | null
   userSpeechBands?: readonly (readonly number[])[] | null
+  /**
+   * Other voices of the same sentence. Each contour is already semitones
+   * relative to that speaker's median. pt-BR only. The selected voice
+   * stays `model` and is what the page plays. A word it did not paint
+   * green becomes green when it matches one of these, or sits in the
+   * range they span together with `model`. Word times, when present,
+   * slice that voice. Otherwise the same fraction of the contour is used.
+   * A band distance over the language limit does not get that upgrade.
+   */
+  references?: readonly MelodyReference[] | null
 }): RepeatScore {
   const modelThin = thin(input.model, input.modelHop > 0 ? input.modelHop : 0.01)
   const userThin = thin(input.user, input.userHop > 0 ? input.userHop : 0.01)
@@ -1362,6 +1554,7 @@ export function scoreRepeat(input: {
     otherSentence: false,
     sentenceCheck: null,
     verdict: null,
+    melodyFit: null,
     reason: tooShort ? 'short' : fileThin ? 'file' : tooLittleVoice ? 'quiet' : null,
   }
   const lockBands = input.userPlainBands && input.userPlainBands.length > 0 ? input.userPlainBands : input.userBands
@@ -1444,6 +1637,33 @@ export function scoreRepeat(input: {
   }
   const directions: WordDirection[] = []
   const rhythmAlign = rhythmPath(input.modelBands, input.userBands, model.length, heard.length, modelSpan, userSpan)
+  const fullBands =
+    input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0
+      ? bandDistance(input.modelBands, lockBands)
+      : null
+  const spokenBands =
+    input.modelSpeechBands &&
+    input.userSpeechBands &&
+    input.modelSpeechBands.length > 0 &&
+    input.userSpeechBands.length > 0
+      ? bandDistance(input.modelSpeechBands, input.userSpeechBands)
+      : null
+  // Silence at the ends moves the window, so the trimmed distance is the one
+  // that still matches the file. A codec pass can move the energy cut, and
+  // then the untrimmed distance is the lower one. The sentence uses the lower.
+  const takeBands = fullBands == null ? spokenBands : spokenBands == null ? fullBands : Math.min(fullBands, spokenBands)
+  const wrongWords = takeBands != null && takeBands > SPECTRAL_DISTANCE_MAX[input.lang]
+  const referenceContours = input.lang === 'pt-BR' && !wrongWords ? (input.references ?? []).filter((item) => item.contour.length > 0) : []
+  const acceptsReference = (userSlice: Contour, frame: number, frameEnd: number, wordIndex: number): boolean => {
+    if (referenceContours.length === 0 || model.length === 0) return false
+    const modelSlice = model.slice(frame, frameEnd)
+    const others = referenceContours.map((reference) => {
+      const timed = reference.words?.[wordIndex]
+      if (timed && timed.end > timed.start) return sliceTimes(reference.contour, reference.hop, timed.start, timed.end)
+      return sliceFraction(reference.contour, frame / model.length, frameEnd / model.length)
+    })
+    return wordMatchesReferences(userSlice, others, MELODY_LIMITS['pt-BR'].green, [modelSlice, ...others])
+  }
   const words = input.words.map((word, wordIndex) => {
     const frame = Math.max(0, Math.min(model.length - 1, Math.floor(word.start / modelHop)))
     let frameEnd = Math.max(frame + 1, Math.min(model.length, Math.ceil(word.end / modelHop)))
@@ -1506,6 +1726,19 @@ export function scoreRepeat(input: {
       // with the file. A warped path and a missed pitch window used to
       // paint the word yellow; that word stays grey.
       const reliable = fromPath != null && fromPath >= RHYTHM_GREEN_MIN && fromPath <= RHYTHM_GREEN_MAX
+      const missedSlice = heard.slice(Math.min(userFrame, heard.length), Math.min(heard.length, userFrameEnd))
+      if (scorable && word.end > word.start && acceptsReference(missedSlice, frame, frameEnd, wordIndex)) {
+        const rhythm = reliable && userVoiced >= MIN_WORD_VOICED && fromPath != null ? rhythmBand(fromPath) : null
+        const melody: Band = 'green'
+        return {
+          ...base,
+          color: rhythm == null ? melody : worseBand(melody, rhythm),
+          melody,
+          rhythm,
+          rawRatio: fromPath,
+          userShape: describeShape(missedSlice),
+        }
+      }
       if (!scorable || !reliable || userVoiced < MIN_WORD_VOICED) return base
       const rhythm = rhythmBand(fromPath)
       return { ...base, color: rhythm, rhythm, rawRatio: fromPath }
@@ -1538,6 +1771,7 @@ export function scoreRepeat(input: {
     if (scorable && modelRange >= MOVING_RANGE && pitchCorr != null && !follows && melody === 'green') {
       melody = 'yellow'
     }
+    if (melody !== 'green' && acceptsReference(userSlice, frame, frameEnd, wordIndex)) melody = 'green'
     // The path says how many recording frames this word took. The loud span
     // of a linearly mapped window is only the fallback, and the scale is
     // only the fallback after that: the scale never leaves the green band.
@@ -1622,24 +1856,10 @@ export function scoreRepeat(input: {
         backwards: true,
       },
       verdict: 'daneben',
+      melodyFit: null,
       reason: 'unclear',
     }
   }
-  const fullBands =
-    input.modelBands && lockBands && input.modelBands.length > 0 && lockBands.length > 0
-      ? bandDistance(input.modelBands, lockBands)
-      : null
-  const spokenBands =
-    input.modelSpeechBands &&
-    input.userSpeechBands &&
-    input.modelSpeechBands.length > 0 &&
-    input.userSpeechBands.length > 0
-      ? bandDistance(input.modelSpeechBands, input.userSpeechBands)
-      : null
-  // Silence at the ends moves the window, so the trimmed distance is the one
-  // that still matches the file. A codec pass can move the energy cut, and
-  // then the untrimmed distance is the lower one. The sentence uses the lower.
-  const takeBands = fullBands == null ? spokenBands : spokenBands == null ? fullBands : Math.min(fullBands, spokenBands)
   const alignedCorr = contourCorrelation(model, heard, rhythmAlign ?? path)
   const knownDirections = directions.filter((direction) => direction !== 'unknown')
   const opposedShare =
@@ -1680,6 +1900,7 @@ export function scoreRepeat(input: {
     otherSentence: false,
     sentenceCheck,
     verdict: hasColour ? verdict : null,
+    melodyFit: input.lang === 'pt-BR' && hasColour ? melodyColours === 'passt' : null,
     reason: hasColour && !fewWords ? null : 'few',
   }
 }

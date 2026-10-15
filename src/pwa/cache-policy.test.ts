@@ -10,6 +10,8 @@ describe('precache policy', () => {
     expect(precacheMatches('index.html')).toBe(true)
     expect(precacheMatches('audio/de/emergency.help__any__base.align.json')).toBe(false)
     expect(precacheMatches('sw.js')).toBe(false)
+    expect(precacheMatches('models/vosk-model-small-pt-0.3.tar.gz')).toBe(false)
+    expect(precacheMatches('static/js/vosk.abc123.js')).toBe(false)
 
     const root = 'public'
     let count = 0

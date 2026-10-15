@@ -1,0 +1,21 @@
+vosk-model-small-pt-0.3
+Apache-2.0
+
+The archive vosk-model-small-pt-0.3.tar.gz is the Alpha Cephei model
+vosk-model-small-pt-0.3, listed at https://alphacephei.com/vosk/models
+as Apache 2.0, 31M, lightweight wideband Portuguese for Android and Raspberry Pi.
+Published word error rate there: 68.92 on coraa dev, 32.60 on Common Voice test.
+
+Upstream zip:
+https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip
+SHA-256 6e1ce909032e1afa7a88e68a3d628ecafff302bdf195befab308826c395e93b7
+Size 32453112 bytes.
+
+This tar.gz is that zip repacked, same files, one top folder
+vosk-model-small-pt-0.3, which is the layout vosk-browser reads.
+It is not rearranged into the newer am/ and conf/ folders.
+SHA-256 b0dba777c534e3adfce4c72340225182962dfc62d6dc4b4bf67dccd1bb4694dd
+Size 32454947 bytes.
+
+The page checks that hash before it loads the archive. The recogniser
+is vosk-browser 0.0.8, also Apache-2.0.

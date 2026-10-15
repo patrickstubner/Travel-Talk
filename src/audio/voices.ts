@@ -80,6 +80,17 @@ export function voicesFor(lang: Lang): CatalogVoice[] {
   return VOICES.filter((voice) => voice.lang === lang && voice.bundled).sort((a, b) => a.order - b.order)
 }
 
+/**
+ * Male Piper voices used only to judge a pt-BR melody. The selected voice
+ * is left out because the page already compares against it, and it is
+ * still the one that plays. XTTS stays out: those clips are not male
+ * references. No other language has this set.
+ */
+export function melodyReferenceVoices(lang: Lang, selectedId: string): CatalogVoice[] {
+  if (lang !== 'pt-BR') return []
+  return voicesFor(lang).filter((voice) => voice.provider === 'piper' && voice.gender === 'male' && voice.id !== selectedId)
+}
+
 /** A stored id is kept only when this build ships that voice. */
 export function isBundledVoiceId(lang: Lang, id: string): boolean {
   return VOICES.some((voice) => voice.bundled && voice.lang === lang && voice.id === id)

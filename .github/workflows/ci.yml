@@ -189,7 +189,13 @@ jobs:
           if (index !== fallback) throw new Error('SPA_FALLBACK_MISSING')
           if (!index.includes('Content-Security-Policy')) throw new Error('CSP_MISSING')
           if (!index.includes("default-src 'self'")) throw new Error('CSP_DEFAULT')
+          if (!index.includes("script-src 'self'")) throw new Error('CSP_SCRIPT')
           if (index.includes('unsafe-inline') || index.includes('unsafe-eval')) throw new Error('CSP_LOOSE')
+          if (!index.includes("worker-src 'self'")) throw new Error('CSP_WORKER')
+          if (index.includes("worker-src 'self' blob:")) throw new Error('CSP_LOOSE')
+          const swPolicy = sw.includes("script-src 'unsafe-eval' 'wasm-unsafe-eval'")
+          if (!swPolicy) throw new Error('CSP_WORKER_HEADER')
+          if (!sw.includes("caches.delete('travel-talk-vosk-script')")) throw new Error('VOSK_SCRIPT_CACHE')
           if (!manifest.includes('/Travel-Talk/')) throw new Error('MANIFEST_BASE')
           if (/\/help\/[a-z0-9][^"'\\\s]*\.m4a/.test(sw)) throw new Error('HELP_IN_PRECACHE')
           EOF

@@ -21,8 +21,11 @@ import {
   type ToneId,
   type ToneShape,
 } from '../pitch/feedback'
+import { portugueseContentRate } from '../speech/text-match'
+import { portugueseSpeechState, recognizePortuguese, speechModelsInThisRun, subscribePortugueseSpeech } from '../speech/vosk-pt'
 
 const TONE_ORDER: ToneId[] = ['ngang', 'huyen', 'sac', 'hoi', 'nga', 'nang']
+const NO_REFERENCES: ReadonlyArray<{ samples: Float32Array; sampleRate: number; words?: WordTime[] | null }> = []
 
 /** Curve fill and strokes. Light pages keep the 0.8.0 colours. Show mode uses a dark wash and light strokes. */
 export function curveColors(dark: boolean, band: Band | null): { wash: string; model: string; you: string; guide: string } {
@@ -126,6 +129,7 @@ export function RepeatFeedback({
   timingsPending = false,
   uiLang,
   speakerGender = null,
+  referenceClips = NO_REFERENCES,
 }: {
   copy: Dictionary
   lang: Lang
@@ -147,9 +151,37 @@ export function RepeatFeedback({
   speakerGender?: 'male' | 'female' | null
   /** App language for the star note. The target language stays `lang`. */
   uiLang?: Lang
+  /**
+   * Other voices of the same sentence, for the melody comparison only.
+   * Playback stays on `modelSamples`. An empty list scores the selected voice.
+   */
+  referenceClips?: ReadonlyArray<{ samples: Float32Array; sampleRate: number; words?: WordTime[] | null }>
 }) {
   const [view, setView] = useState<'result' | 'word' | 'tones'>('result')
   const [selected, setSelected] = useState(0)
+  const [heard, setHeard] = useState<{ samples: Float32Array; text: string | null; confidence: number | null } | null>(null)
+  const [modelPhase, setModelPhase] = useState(portugueseSpeechState().phase)
+  useEffect(() => subscribePortugueseSpeech((next) => setModelPhase(next.phase)), [])
+  useEffect(() => {
+    if (lang !== 'pt-BR' || !speechModelsInThisRun()) return undefined
+    let cancel = false
+    void recognizePortuguese(userSamples, userRate, speech).then((result) => {
+      if (cancel) return
+      setHeard(
+        result
+          ? { samples: userSamples, text: result.text, confidence: result.confidence }
+          : { samples: userSamples, text: null, confidence: null },
+      )
+    })
+    return () => {
+      cancel = true
+    }
+  }, [lang, speech, userRate, userSamples])
+  const speechKnown = heard?.samples === userSamples
+  const heardText = speechKnown ? heard.text : null
+  const wer = lang === 'pt-BR' && heardText != null ? portugueseContentRate(speech, heardText, heard?.confidence) : null
+  const speechPending = lang === 'pt-BR' && speechModelsInThisRun() && !speechKnown
+  const speechFailed = lang === 'pt-BR' && speechModelsInThisRun() && speechKnown && heardText == null && modelPhase !== 'failed'
   const offThread = pitchWorker() != null
   const [remote, setRemote] = useState<{ model: ClipFeatures | null; user: ClipFeatures | null } | null>(null)
   const syncModel = useMemo(
@@ -185,6 +217,39 @@ export function RepeatFeedback({
   }, [modelRate, modelSamples, offThread, userRate, userSamples])
   const modelFeatures = offThread ? (remote?.model ?? null) : syncModel
   const userFeatures = offThread ? (remote?.user ?? null) : syncUser
+  const [referenceContours, setReferenceContours] = useState<Array<{ contour: Contour; sampleRate: number; words: WordTime[] | null }>>([])
+  useEffect(() => {
+    if (referenceClips.length === 0) {
+      setReferenceContours((current) => (current.length === 0 ? current : []))
+      return undefined
+    }
+    let cancel = false
+    const run = async () => {
+      const contours: Array<{ contour: Contour; sampleRate: number; words: WordTime[] | null }> = []
+      for (const clip of referenceClips) {
+        if (!(clip.sampleRate > 0) || clip.samples.length === 0) continue
+        try {
+          const features = offThread
+            ? await analyzeModelCached(clip.samples, clip.sampleRate)
+            : analyzeModel(clip.samples, clip.sampleRate)
+          if (cancel) return
+          contours.push({ contour: features.contour, sampleRate: clip.sampleRate, words: clip.words ?? null })
+        } catch {
+          if (cancel) return
+          contours.push({
+            contour: analyzeModel(clip.samples, clip.sampleRate).contour,
+            sampleRate: clip.sampleRate,
+            words: clip.words ?? null,
+          })
+        }
+      }
+      if (!cancel) setReferenceContours(contours)
+    }
+    void run()
+    return () => {
+      cancel = true
+    }
+  }, [offThread, referenceClips])
   const score = useMemo<RepeatScore | null>(() => {
     if (!modelFeatures || !userFeatures || modelRate <= 0 || userRate <= 0) return null
     const labels = splitWords(speech)
@@ -205,8 +270,13 @@ export function RepeatFeedback({
       userPlainBands: userFeatures.plainBands,
       modelSpeechBands: modelFeatures.speechBands,
       userSpeechBands: userFeatures.speechBands,
+      references: referenceContours.map((reference) => ({
+        contour: reference.contour,
+        hop: analysisHop(reference.sampleRate),
+        words: reference.words,
+      })),
     })
-  }, [lang, modelFeatures, modelRate, region, speech, userFeatures, userRate, userSamples, words])
+  }, [lang, modelFeatures, modelRate, referenceContours, region, speech, userFeatures, userRate, userSamples, words])
 
   useEffect(() => {
     setView('result')
@@ -232,7 +302,15 @@ export function RepeatFeedback({
   }
 
   return (
-    <section className="pitch repeat-feedback" data-testid="repeat-feedback" aria-label={copy.pitchTitle}>
+    <section
+      className="pitch repeat-feedback"
+      data-testid="repeat-feedback"
+      data-heard={heardText === null ? undefined : heardText}
+      data-speech-state={
+        lang !== 'pt-BR' || !speechModelsInThisRun() ? 'off' : speechKnown ? (heardText == null ? 'failed' : 'ready') : 'pending'
+      }
+      aria-label={copy.pitchTitle}
+    >
       {view === 'result' ? (
         <Result
           copy={copy}
@@ -248,6 +326,9 @@ export function RepeatFeedback({
           tooShort={userDuration < SHORT_SECONDS || score?.tooShort === true}
           timingMissing={!timingsPending && words == null && !modelMissing && modelSamples != null}
           tooQuiet={! (userDuration < SHORT_SECONDS) && (score?.tooLittleVoice === true || (modelMissing && userQuiet))}
+          wer={wer}
+          speechPending={speechPending}
+          speechFailed={speechFailed}
           onWord={(index) => {
             setSelected(index)
             setView('word')
@@ -328,6 +409,9 @@ function Result({
   timingMissing,
   tooShort,
   tooQuiet,
+  wer,
+  speechPending,
+  speechFailed,
   onWord,
 }: {
   copy: Dictionary
@@ -343,6 +427,9 @@ function Result({
   timingMissing: boolean
   tooShort: boolean
   tooQuiet: boolean
+  wer: number | null
+  speechPending: boolean
+  speechFailed: boolean
   onWord: (index: number) => void
 }) {
   const feedback = copy.repeatFeedback
@@ -376,9 +463,10 @@ function Result({
             user: speakerGender,
           },
           { modelHz, userHz },
+          { bands: score?.sentenceCheck?.bands, prosody: score?.melodyFit, wer },
         )
       : null
-  const barsFit = stars === 2 && melodyBar === 'passt' && rhythmBar === 'passt' && verdict !== 'passt'
+  const barsFit = stars === 4 && melodyBar === 'passt' && rhythmBar === 'passt' && verdict !== 'passt'
   const gapWord = scored?.find((word) => !word.scorable)
   const notice = tooShort
     ? feedback.tooShort
@@ -461,7 +549,12 @@ function Result({
           ))}
         </div>
       ) : null}
-      {stars != null ? <TakeStars count={stars} copy={copy} speechLang={uiLang} /> : null}
+      {speechFailed ? (
+        <p className="voice-note" role="status" data-testid="speech-result-fallback">
+          {copy.speechFallback}
+        </p>
+      ) : null}
+      {stars != null && !speechPending ? <TakeStars count={stars} copy={copy} speechLang={uiLang} /> : null}
       {barsFit ? (
         <p className="take-note" role="status" data-testid="bars-fit">
           {feedback.barsFit}
@@ -485,12 +578,12 @@ function Result({
   )
 }
 
-function TakeStars({ count, copy, speechLang }: { count: 0 | 1 | 2 | 3; copy: Dictionary; speechLang: Lang }) {
+function TakeStars({ count, copy, speechLang }: { count: 0 | 1 | 2 | 3 | 4 | 5; copy: Dictionary; speechLang: Lang }) {
   const feedback = copy.repeatFeedback
   return (
     <div className="take-stars" data-testid="repeat-stars" data-stars={count}>
       <p className="take-stars-row" role="img" aria-label={feedback.stars(count)}>
-        {[1, 2, 3].map((star) => (
+        {[1, 2, 3, 4, 5].map((star) => (
           <span key={star} className={star <= count ? 'star on' : 'star'} aria-hidden="true">
             ★
           </span>

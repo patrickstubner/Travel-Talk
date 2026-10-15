@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { AUDIO_FILE, voiceFile } from '../content/resolve'
 import { defaultSettings } from '../storage/types'
-import { SHIP_CLARIBEL, VOICE_SAMPLE, filesForVoice, previewFile, selectedVoice, spokenFile, spokenWordFile, VOICES, voicesFor, voicesKeptByOthers, withDefaultVoices } from './voices'
+import { SHIP_CLARIBEL, VOICE_SAMPLE, filesForVoice, melodyReferenceVoices, previewFile, selectedVoice, spokenFile, spokenWordFile, VOICES, voicesFor, voicesKeptByOthers, withDefaultVoices } from './voices'
 
 describe('voices', () => {
   it('lists faber as a man, with the dataset description rather than the silent model card', () => {
@@ -12,6 +12,11 @@ describe('voices', () => {
     expect(faber?.gender).toBe('male')
     expect(cadu?.gender).toBe('male')
     expect(voicesFor('pt-BR').filter((voice) => voice.provider === 'piper').every((voice) => voice.gender === 'male')).toBe(true)
+    expect(melodyReferenceVoices('pt-BR', 'cadu').map((voice) => voice.id)).toEqual(['faber'])
+    expect(melodyReferenceVoices('pt-BR', 'faber').map((voice) => voice.id)).toEqual(['cadu'])
+    expect(melodyReferenceVoices('pt-BR', 'daisy-studious').map((voice) => voice.id)).toEqual(['cadu', 'faber'])
+    expect(melodyReferenceVoices('de', 'thorsten-high')).toEqual([])
+    expect(melodyReferenceVoices('vi', 'vivos-22')).toEqual([])
   })
 
   it('keeps the old files when no voice is stored and writes a male voice for a new user', () => {
