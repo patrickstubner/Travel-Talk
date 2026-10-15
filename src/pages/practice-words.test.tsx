@@ -15,14 +15,12 @@ import { emptyCard, reviewCard, toStored, Rating } from '../srs/scheduler'
 import { playClip } from '../audio/player'
 import { PracticePage } from './Practice'
 
-async function throughIntro() {
-  for (let pass = 0; pass < 3; pass += 1) {
-    fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
-  }
-}
-
 vi.mock('../audio/player', () => ({
-  playClip: vi.fn(async () => 'file'),
+  playClip: vi.fn(async (...args: unknown[]) => {
+    const onEnd = args[4]
+    if (typeof onEnd === 'function') onEnd()
+    return 'file'
+  }),
   stopClip: vi.fn(),
 }))
 
@@ -58,13 +56,17 @@ describe('word block', () => {
         </ReadyPractice>
       </AppProvider>,
     )
-    expect(await screen.findByTestId('word-intro')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Neues Wort' })).toBeTruthy()
+    expect(await screen.findByTestId('practice-word')).toBeTruthy()
+    expect(screen.queryByTestId('word-intro')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Was bedeutet das Wort?' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Wörter überspringen' })).toBeTruthy()
     expect(screen.getByTestId('target-line').textContent).toBe('ngày')
     expect(screen.getByTestId('word-read').textContent).toBe('ngai, fallend')
-    expect(screen.getByTestId('word-meaning').textContent).toBe('Tage')
-    expect(screen.queryByRole('heading', { name: 'Was bedeutet das Wort?' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Tage' })).toBeNull()
+    expect(screen.getByTestId('word-ipa').textContent).toMatch(/IPA/)
+    expect(await screen.findByRole('button', { name: 'Noch einmal hören' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Weiter$/ })).toBeNull()
+    expect(screen.queryByTestId('word-meaning')).toBeNull()
+    expect(await screen.findByRole('button', { name: 'Tage' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Aufnehmen' })).toBeNull()
     await waitFor(() => {
       const call = vi.mocked(playClip).mock.calls.at(-1)
@@ -74,8 +76,6 @@ describe('word block', () => {
     })
     const repoBefore = new DexieProgressRepository('travel-talk')
     expect((await repoBefore.load()).cards.find((card) => card.cardId === 'de-vi:w.days')).toBeUndefined()
-    await throughIntro()
-    expect(await screen.findByRole('heading', { name: 'Was bedeutet das Wort?' })).toBeTruthy()
     fireEvent.click(await screen.findByRole('button', { name: 'Tage' }))
     expect(await screen.findByText('Das stimmt.')).toBeTruthy()
     const repo = new DexieProgressRepository('travel-talk')
@@ -98,7 +98,6 @@ describe('word block', () => {
         </ReadyPractice>
       </AppProvider>,
     )
-    await throughIntro()
     fireEvent.click(await screen.findByRole('button', { name: 'bleiben' }))
     expect(await screen.findByText('Gemeint ist «Tage».')).toBeTruthy()
     const repo = new DexieProgressRepository('travel-talk')
@@ -121,7 +120,6 @@ describe('word block', () => {
         </ReadyPractice>
       </AppProvider>,
     )
-    await throughIntro()
     expect(await screen.findByRole('button', { name: 'Wörter überspringen' })).toBeTruthy()
     fireEvent.click(screen.getByRole('checkbox', { name: 'Für mich merken' }))
     fireEvent.click(screen.getByRole('button', { name: 'Wörter überspringen' }))
@@ -187,8 +185,8 @@ describe('word block', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Weiter' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Ich habe es gesagt' }))
     fireEvent.click(await screen.findByRole('button', { name: /Später wieder/ }))
-    expect(await screen.findByText('giấy tờ')).toBeTruthy()
-    await throughIntro()
+    expect(await screen.findByRole('heading', { name: 'Was bedeutet das Wort?' })).toBeTruthy()
+    expect(screen.getByText('giấy tờ')).toBeTruthy()
     fireEvent.click(await screen.findByRole('button', { name: 'Dokumente' }))
     await waitFor(async () => {
       const saved = (await repo.load()).cards.find((card) => card.cardId === 'de-vi:w.documents')

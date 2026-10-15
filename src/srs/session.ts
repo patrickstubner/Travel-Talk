@@ -10,7 +10,7 @@ export const SESSION_REVIEW_CAP = 8
 
 export type SessionKind = 'mix' | 'review' | 'new'
 export type SessionItem = { id: string; isNew: boolean }
-export type LearnStep = 'slow' | 'normal' | 'repeat' | 'understand' | 'recall' | 'rate' | 'word-intro' | 'word'
+export type LearnStep = 'slow' | 'normal' | 'repeat' | 'understand' | 'recall' | 'rate' | 'word'
 
 export function cardIdFor(direction: string, conceptId: string): string {
   return `${direction}:${conceptId}`
