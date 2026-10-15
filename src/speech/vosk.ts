@@ -135,6 +135,30 @@ async function browserCache(): Promise<ModelCache | null> {
   }
 }
 
+/** Megabytes shown before a download and again next to a stored model. */
+export function speechMegabytes(bytes: number): number {
+  return Math.max(1, Math.round(bytes / 1_000_000))
+}
+
+/** Checked archives already on the device. This does not fetch. */
+export async function cachedSpeechModels(): Promise<Array<{ lang: Lang; bytes: number }>> {
+  const found: Array<{ lang: Lang; bytes: number }> = []
+  for (const lang of Object.keys(SPEECH_MODELS) as Lang[]) {
+    if (await speechModelCached(lang)) found.push({ lang, bytes: SPEECH_MODELS[lang].bytes })
+  }
+  return found
+}
+
+/** Drops one stored archive and the worker that was reading it. This does not fetch. */
+export async function deleteSpeechModel(lang: Lang): Promise<void> {
+  const spec = SPEECH_MODELS[lang]
+  const cache = await browserCache()
+  if (cache) await cache.drop(modelUrl(spec.file))
+  accepted.delete(lang)
+  if (active === lang) active = null
+  release(lang)
+}
+
 /** True when the checked archive for this language is already on the device. This does not fetch. */
 export async function speechModelCached(lang: Lang): Promise<boolean> {
   const spec = SPEECH_MODELS[lang]

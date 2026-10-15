@@ -43,8 +43,9 @@ export const SHORT_CER_CORRECT = 0.13
 export const SHORT_CONFIDENCE_MIN = 0.35
 
 /**
- * A grammar pass may replace a contradictory free pass only at or above
- * this mean word confidence. Measured on half B after Opus.
+ * A grammar pass confirms the sentence only at or above this mean word
+ * confidence, including when the free pass heard nothing. Measured on
+ * half B after Opus.
  */
 export const GRAMMAR_CONFIRM_CONFIDENCE = 0.9
 
@@ -138,30 +139,21 @@ export type HeardLine = {
   readonly confidence: number | null
 }
 
-function withoutUnknown(text: string): string {
-  return text
-    .replace(/\[unk\]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
 /**
  * Free pass wins when it already is the sentence, and when it is a clean
  * half: the grammar must not fill the missing content words back in.
- * Otherwise the grammar counts when the expected words come back.
- * [unk] is dropped first. A contradictory free pass yields only when that
- * confirmation is sure enough.
+ * A grammar result that still contains [unk] is discarded whole.
+ * Anything else confirms only when the expected words come back and the
+ * mean word confidence is high enough, even if the free pass was empty.
  */
 export function confirmedPortuguese(expected: string, free: HeardLine | null, grammar: HeardLine | null): HeardLine | null {
   if (free && portugueseContentRate(expected, free.text, free.confidence) <= CONTENT_WER_CORRECT) return free
   if (free && cleanPartial(expected, free.text)) return free
-  if (!grammar) return free
-  const cleaned = { text: withoutUnknown(grammar.text), confidence: grammar.confidence }
-  const confirmed = portugueseContentRate(expected, cleaned.text, null) <= CONTENT_WER_CORRECT
+  if (!grammar || grammar.text.includes('[unk]')) return free
+  const confirmed = portugueseContentRate(expected, grammar.text, null) <= CONTENT_WER_CORRECT
   if (!confirmed) return free
-  const sure = (cleaned.confidence ?? 0) >= GRAMMAR_CONFIRM_CONFIDENCE
-  if (free && freePassContradicts(expected, free.text) && !sure) return free
-  return cleaned
+  if ((grammar.confidence ?? 0) < GRAMMAR_CONFIRM_CONFIDENCE) return free
+  return grammar
 }
 
 function cleanPartial(expected: string, heard: string): boolean {
@@ -169,12 +161,6 @@ function cleanPartial(expected: string, heard: string): boolean {
   const count = foldedExpected.split(' ').filter(Boolean).length
   if (count < 1 || count > ALIGN_LINE_WORDS) return false
   return partialCover(foldedExpected, variantFold(heard))
-}
-
-function freePassContradicts(expected: string, heard: string): boolean {
-  const left = contentTokens(variantFold(expected))
-  const right = contentTokens(variantFold(heard))
-  return right.some((word) => !left.some((item) => tinyWord(item, word)))
 }
 
 function contentTokens(text: string): string[] {

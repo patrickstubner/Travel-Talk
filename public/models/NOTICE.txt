@@ -1,5 +1,5 @@
 Small Vosk models from https://alphacephei.com/vosk/models
-Apache-2.0
+Apache-2.0. The licence text is LICENSE-Apache-2.0.txt in this folder.
 
 The page loads one archive, only for the language being practised.
 Each tar.gz is the Alpha Cephei zip repacked, same files, one top folder,

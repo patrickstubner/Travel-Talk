@@ -202,6 +202,8 @@ export type Dictionary = {
   speechOffer: (language: string, megabytes: number) => string
   speechOfferSave: (language: string, megabytes: number) => string
   speechLoad: string
+  speechStoredTitle: string
+  speechForget: (language: string, megabytes: number) => string
   storageError: string
   version: string
   exampleAudio: string
@@ -594,6 +596,8 @@ export const de: Dictionary = {
   speechOfferSave: (language, megabytes) =>
     `Dein Gerät spart Daten. Spracherkennung für ${language} ist ${megabytes} MB. Sie lädt nur, wenn du tippst.`,
   speechLoad: 'Laden',
+  speechStoredTitle: 'Spracherkennung auf dem Gerät',
+  speechForget: (language, megabytes) => `${language} löschen, ${megabytes} MB`,
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
   version: 'Version 1.0.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
@@ -982,6 +986,8 @@ export const en: Dictionary = {
   speechOfferSave: (language, megabytes) =>
     `This device is saving data. ${language} speech recognition is ${megabytes} MB. It downloads only when you tap.`,
   speechLoad: 'Download',
+  speechStoredTitle: 'Speech recognition on this device',
+  speechForget: (language, megabytes) => `Delete ${language}, ${megabytes} MB`,
   storageError: 'Local storage is not available.',
   version: 'Version 1.0.0',
   exampleAudio: 'The audio speaks the example sentence.',
@@ -1373,6 +1379,8 @@ export const pt: Dictionary = {
   speechOfferSave: (language, megabytes) =>
     `Este aparelho está economizando dados. O reconhecimento de fala em ${language} tem ${megabytes} MB. Só baixa quando você toca.`,
   speechLoad: 'Baixar',
+  speechStoredTitle: 'Reconhecimento de fala neste aparelho',
+  speechForget: (language, megabytes) => `Apagar ${language}, ${megabytes} MB`,
   storageError: 'O armazenamento local não está disponível.',
   version: 'Version 1.0.0',
   exampleAudio: 'O áudio fala a frase de exemplo.',
@@ -1758,6 +1766,8 @@ export const vi: Dictionary = {
   speechOfferSave: (language, megabytes) =>
     `Máy này đang tiết kiệm dữ liệu. Nhận dạng giọng nói ${language} nặng ${megabytes} MB. Chỉ tải khi bạn chạm.`,
   speechLoad: 'Tải',
+  speechStoredTitle: 'Nhận dạng giọng nói trên máy',
+  speechForget: (language, megabytes) => `Xóa ${language}, ${megabytes} MB`,
   storageError: 'Bộ nhớ trên máy không dùng được.',
   version: 'Version 1.0.0',
   exampleAudio: 'Audio đọc câu ví dụ.',

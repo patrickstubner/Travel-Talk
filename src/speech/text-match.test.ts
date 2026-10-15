@@ -87,14 +87,18 @@ describe('folded speech', () => {
     const filled = { text: 'olá tudo bem a senhora', confidence: 1 }
     expect(confirmedPortuguese('Olá, tudo bem, a senhora?', half, filled)?.text).toBe('olá tudo bem')
     const missed = { text: '', confidence: null }
-    const confirmed = { text: 'eu preciso de ajuda', confidence: 0.8 }
+    const quiet = { text: 'eu preciso de ajuda', confidence: GRAMMAR_CONFIRM_CONFIDENCE - 0.1 }
+    expect(confirmedPortuguese(expected, missed, quiet)).toBe(missed)
+    expect(confirmedPortuguese(expected, null, quiet)).toBeNull()
+    const confirmed = { text: 'eu preciso de ajuda', confidence: GRAMMAR_CONFIRM_CONFIDENCE }
     expect(confirmedPortuguese(expected, missed, confirmed)).toEqual(confirmed)
+    expect(confirmedPortuguese(expected, null, confirmed)).toEqual(confirmed)
     const other = { text: 'estou com febre', confidence: 0.95 }
     expect(confirmedPortuguese('Eu estou com tontura.', other, { text: 'eu estou com tontura', confidence: 1 })?.text).toBe('eu estou com tontura')
     expect(confirmedPortuguese('Eu estou com tontura.', other, { text: 'eu estou com tontura', confidence: GRAMMAR_CONFIRM_CONFIDENCE - 0.1 })?.text).toBe(
       'estou com febre',
     )
-    expect(confirmedPortuguese(expected, missed, { text: '[unk] eu preciso de ajuda', confidence: 0.95 })?.text).toBe('eu preciso de ajuda')
-    expect(confirmedPortuguese(expected, missed, { text: '[unk]', confidence: 0.2 })?.text).toBe('')
+    expect(confirmedPortuguese(expected, missed, { text: '[unk] eu preciso de ajuda', confidence: 0.95 })).toBe(missed)
+    expect(confirmedPortuguese(expected, missed, { text: '[unk]', confidence: 1 })).toBe(missed)
   })
 })

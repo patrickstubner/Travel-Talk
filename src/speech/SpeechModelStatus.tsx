@@ -7,6 +7,7 @@ import {
   acceptSpeechModel,
   connectionSavesData,
   prepareSpeechModel,
+  speechMegabytes,
   speechModelsInThisRun,
   speechState,
   subscribeSpeech,
@@ -18,7 +19,7 @@ export function SpeechModelStatus({ copy, lang, uiLang }: { copy: Dictionary; la
   const [state, setState] = useState<SpeechState>(speechState(lang))
   const [offer, setOffer] = useState(false)
   const [saveData, setSaveData] = useState(false)
-  const megabytes = Math.max(1, Math.round(SPEECH_MODELS[lang].bytes / 1_000_000))
+  const megabytes = speechMegabytes(SPEECH_MODELS[lang].bytes)
   const name = LANG_LABEL[lang][uiLang]
   useEffect(() => {
     if (!speechModelsInThisRun()) return undefined

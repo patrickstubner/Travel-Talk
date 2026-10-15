@@ -1371,16 +1371,18 @@ export function applyRhythmWeight(stars: StarCount, rhythm: BarState | null, lan
  * pitches are within S3_PITCH_SEMITONES. English, Portuguese and
  * Vietnamese do not use S3.
  *
- * Every language reads `wer` when speech recognition produced it. At or
+ * Portuguese reads `wer` when speech recognition produced it. At or
  * below CONTENT_WER_CORRECT the take is at least 3, 4 when the tune
- * matches, and 5 when the melody bar is green too. That floor replaces
- * German S3. At or above CONTENT_WER_GIBBERISH the take is at most 1,
- * even if the tune matched. Between those, German, English and
- * Vietnamese stay at most 4. Portuguese stays at most 3. When `wer` is
- * missing, the count above stays. Portuguese still reads the spectrum
- * then: past SPECTRAL_DISTANCE_MAX is at most 1, unless `prosody` is
- * true. A matched tune is 4, unless the base count is already 5.
- * German, English and Vietnamese do not read the spectrum.
+ * matches, and 5 when the melody bar is green too. At or above
+ * CONTENT_WER_GIBBERISH the take is at most 1, even if the tune
+ * matched. Between those, Portuguese stays at most 3. When `wer` is
+ * missing, the count above stays, and Portuguese still reads the
+ * spectrum: past SPECTRAL_DISTANCE_MAX is at most 1, unless `prosody`
+ * is true. A matched tune is 4, unless the base count is already 5.
+ * German, English and Vietnamese do not read the spectrum. Their
+ * recognition, when it ran, only caps the count at 4. It does not
+ * raise a take to 3 and it does not cut one down to 1. German S3
+ * stays: a fitting sentence with no green bar remains 2.
  */
 export function starsFromVerdict(
   verdict: BarState,
@@ -1426,13 +1428,13 @@ export function starsBeforeRhythm(
   }
   const wer = content?.wer
   const hasWer = typeof wer === 'number' && Number.isFinite(wer)
+  if (lang !== 'pt-BR') return hasWer && raw > 4 ? 4 : raw
   if (hasWer && wer <= CONTENT_WER_CORRECT) {
     if (melody === 'passt') return 5
     if (content?.prosody === true) return 4
     return 3
   }
   if (hasWer && wer >= CONTENT_WER_GIBBERISH) return raw > 1 ? 1 : raw
-  if (lang !== 'pt-BR') return hasWer && raw > 4 ? 4 : raw
   const bands = content?.bands
   const hasBands = typeof bands === 'number' && Number.isFinite(bands)
   const offScript = hasBands && bands > SPECTRAL_DISTANCE_MAX['pt-BR']
