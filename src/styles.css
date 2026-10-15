@@ -556,7 +556,7 @@ a.menu-card span { color: var(--muted); }
 .score-track.teilweise .score-fill { background: var(--gold); }
 .score-track.daneben .score-fill { background: var(--clay); }
 .take-stars { display: flex; align-items: center; gap: 0.55rem; margin: 0.35rem 0 0.15rem; }
-.take-stars-row { display: flex; gap: 0.28rem; margin: 0; font-size: 2.6rem; line-height: 1; }
+.take-stars-row { display: flex; gap: 0.16rem; margin: 0; font-size: 2.05rem; line-height: 1; }
 .take-note { margin: 0.1rem 0 0.25rem; color: var(--ink); }
 .take-stars .star { color: transparent; -webkit-text-stroke: 2px #8a5a12; }
 .take-stars .star.on { color: #8a5a12; -webkit-text-stroke: 0; }

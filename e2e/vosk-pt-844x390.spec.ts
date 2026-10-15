@@ -92,6 +92,6 @@ test('portuguese model loads at 844x390 and scores the sentence', async ({ baseU
   const heard = await page.getByTestId('repeat-feedback').getAttribute('data-heard')
   expect(state, `heard: ${heard}`).toBe('ready')
   const stars = Number(await page.getByTestId('repeat-stars').getAttribute('data-stars'))
-  expect(stars, `heard: ${heard}`).toBeGreaterThanOrEqual(2)
+  expect(stars, `heard: ${heard}`).toBeGreaterThanOrEqual(3)
   await browser.close()
 })

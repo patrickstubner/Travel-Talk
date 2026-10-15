@@ -448,7 +448,7 @@ function Result({
           { bands: score?.sentenceCheck?.bands, prosody: score?.melodyFit, wer },
         )
       : null
-  const barsFit = stars === 2 && melodyBar === 'passt' && rhythmBar === 'passt' && verdict !== 'passt'
+  const barsFit = stars === 4 && melodyBar === 'passt' && rhythmBar === 'passt' && verdict !== 'passt'
   const gapWord = scored?.find((word) => !word.scorable)
   const notice = tooShort
     ? feedback.tooShort
@@ -555,12 +555,12 @@ function Result({
   )
 }
 
-function TakeStars({ count, copy, speechLang }: { count: 0 | 1 | 2 | 3; copy: Dictionary; speechLang: Lang }) {
+function TakeStars({ count, copy, speechLang }: { count: 0 | 1 | 2 | 3 | 4 | 5; copy: Dictionary; speechLang: Lang }) {
   const feedback = copy.repeatFeedback
   return (
     <div className="take-stars" data-testid="repeat-stars" data-stars={count}>
       <p className="take-stars-row" role="img" aria-label={feedback.stars(count)}>
-        {[1, 2, 3].map((star) => (
+        {[1, 2, 3, 4, 5].map((star) => (
           <span key={star} className={star <= count ? 'star on' : 'star'} aria-hidden="true">
             ★
           </span>

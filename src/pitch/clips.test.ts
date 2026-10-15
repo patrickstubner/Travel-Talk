@@ -493,13 +493,13 @@ describe('shipped clips', () => {
           modelHz: nearModel.medianHz,
           userHz: nearTake.medianHz,
         }),
-      ).toBe(1)
+      ).toBe(2)
       expect(
         starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', null, {
           modelHz: farModel.medianHz,
           userHz: farTake.medianHz,
         }),
-      ).toBe(2)
+      ).toBe(3)
     },
     60_000,
   )
@@ -518,7 +518,7 @@ describe('shipped clips', () => {
           modelHz: model.medianHz,
           userHz: take.medianHz,
         }),
-      ).toBe(2)
+      ).toBe(3)
     },
     60_000,
   )
@@ -1040,7 +1040,7 @@ describe('shipped clips', () => {
   )
 
   it.skipIf(!ready || !clipLangs.includes('vi'))(
-    'keeps two stars when the short Vietnamese yes still has two green bars',
+    'keeps four stars when the short Vietnamese yes still has two green bars',
     () => {
       const file = 'public/audio/vi/meet.yes__south__base.m4a'
       const text = 'Dạ.'
@@ -1074,7 +1074,7 @@ describe('shipped clips', () => {
       expect(score.melodyBar, file).toBe('passt')
       expect(score.rhythmBar, file).toBe('passt')
       expect(score.verdict, file).not.toBe('passt')
-      expect(stars, file).toBe(2)
+      expect(stars, file).toBe(4)
     },
     60_000,
   )
@@ -1194,7 +1194,7 @@ describe('shipped clips', () => {
         null,
         { bands: correct.sentenceCheck?.bands, prosody: correct.melodyFit },
       )
-      expect(correctStars).toBeGreaterThanOrEqual(2)
+      expect(correctStars).toBeGreaterThanOrEqual(4)
     },
     60_000,
   )
@@ -1393,7 +1393,7 @@ describe('shipped clips', () => {
         const stars = score.verdict
           ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, 'pt-BR')
           : 0
-        expect(stars, label).not.toBe(3)
+        expect(stars, label).not.toBe(5)
       }
     },
     720_000,
@@ -1434,7 +1434,7 @@ describe('shipped clips', () => {
             'pt-BR',
           )
         : 0
-      expect(sameStars, senhor).not.toBe(3)
+      expect(sameStars, senhor).not.toBe(5)
 
       const ambulance = 'public/audio/pt-BR/cadu/emergency.ambulance__any__base.m4a'
       const farther = scoreHeard(ambulance, decode('public/audio/pt-BR/emergency.ambulance__any__base.m4a'), 'Pode chamar uma ambulância, por favor?')
@@ -1492,7 +1492,7 @@ describe('shipped clips', () => {
   }
 
   it.skipIf(!ready)(
-    'never gives a wrong sentence or a reversed take passt or three stars',
+    'never gives a wrong sentence or a reversed take passt or five stars',
     () => {
       for (const lang of clipLangs) {
         const voices = VOICES.filter((voice) => voice.bundled && voice.lang === lang)
@@ -1571,7 +1571,7 @@ describe('shipped clips', () => {
             const stars = score.verdict
               ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, lang)
               : 0
-            expect(stars, label).not.toBe(3)
+            expect(stars, label).not.toBe(5)
           }
         }
         const byVoice = new Map<string, typeof clips>()
@@ -1605,7 +1605,7 @@ describe('shipped clips', () => {
           const stars = score.verdict
             ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, lang)
             : 0
-          expect(stars, label).not.toBe(3)
+          expect(stars, label).not.toBe(5)
         }
         for (const voice of voices) {
           const rows = byVoice.get(voice.id) ?? []
@@ -1626,7 +1626,7 @@ describe('shipped clips', () => {
               before3 += 1
               // Silence before and after the take, then the same file through opus.
               // The band distance stays inside the cap. When the bars stay
-              // «passt», the third star stays too. A codec or a lead-in can
+              // «passt», the five stars stay too. A codec or a lead-in can
               // move one word off green; that is not the pause.
               const padded = grade(row, withLead(row.samples, 16000))
               const coded = grade(row, throughOpus(row.samples, 16000))
@@ -1635,15 +1635,15 @@ describe('shipped clips', () => {
               const barsHeld = coded.melodyBar === 'passt' && coded.rhythmBar === 'passt'
               const codedBands = coded.sentenceCheck?.bands
               const silenceKept =
-                starsOf(self) === 3 &&
+                starsOf(self) === 5 &&
                 paddedBands != null &&
                 paddedBands <= VERDICT_BAND_PASST &&
-                (!paddedBars || starsOf(padded) === 3)
+                (!paddedBars || starsOf(padded) === 5)
               const opusKept =
-                starsOf(self) === 3 &&
+                starsOf(self) === 5 &&
                 codedBands != null &&
                 codedBands <= VERDICT_BAND_PASST &&
-                (!barsHeld || starsOf(coded) === 3)
+                (!barsHeld || starsOf(coded) === 5)
               if (silenceKept && opusKept) after3 += 1
             }
             if (next.text !== row.text) refuse(grade(row, next.samples), `${lang} ${voice.id} wrong ${row.file}`)
@@ -1697,8 +1697,8 @@ describe('shipped clips', () => {
         const perVoice = new Map<string, { judged: number; low: number }>()
         // mls-4576 stays out of these counts. Half A against thorsten-high was
         // already over the 25 % aim before S3. The checks above still cover
-        // this voice: no «passt», no third star on a wrong or reversed take,
-        // and a matching take keeps three stars.
+        // this voice: no «passt», no fifth star on a wrong or reversed take,
+        // and a matching take keeps five stars.
         const censusVoices = voices.filter((voice) => voice.id !== 'mls-4576')
         for (const voice of censusVoices) {
           const rows = (byVoice.get(voice.id) ?? []).filter((row) => clipHalf(row.file) === 'A')
@@ -2185,9 +2185,11 @@ main().catch((error) => fetch('/fail', { method: 'POST', body: String(error && e
       const stars = score.verdict
         ? starsFromVerdict(score.verdict, score.melodyBar, score.rhythmBar, score.sentenceCheck?.backwards ?? false, lang)
         : 0
-      // Two green bars and two stars means the sentence is not «passt».
-      // The page says so. Raising the stars would score a wrong sentence.
-      if (stars === 2) expect(score.verdict, `${file} ${score.sentenceCheck?.correlation} ${score.sentenceCheck?.bands}`).not.toBe('passt')
+      // Two green bars and four stars means the sentence is not «passt».
+      // Five needs the sentence as well. A wrong sentence stays at one.
+      if (score.verdict === 'passt') expect(stars, file).toBe(5)
+      else if (score.verdict === 'daneben') expect(stars, file).toBeLessThanOrEqual(1)
+      else expect(stars, file).toBe(4)
     }
     const first = scores[0]?.words ?? []
     for (const word of first) {

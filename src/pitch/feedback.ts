@@ -1319,28 +1319,29 @@ export function wordMatchesReferences(
   return true
 }
 
+export type StarCount = 0 | 1 | 2 | 3 | 4 | 5
+
 /**
- * Star count for the repeat screen. Not stored on the score.
+ * Star count for the repeat screen. Not stored on the score. Five stars.
  *
- * 3 only when the sentence is «passt» and both bars are «passt».
- * On «passt» and «teilweise», German rule S3 gives 2 when a bar is
- * «passt» and 1 otherwise. S3 runs when the template voice and the
- * speaker are the same known gender, or when the median pitches are
- * within S3_PITCH_SEMITONES. A different gender with a far or missing
- * pitch, and a missing gender with a far or missing pitch, stay on V2:
- * two stars. English and Vietnamese stay at 2. On «daneben», 2 only
- * when a bar is «passt», 1 when the better bar is yellow, otherwise 0.
- * A reversed take is 0.
+ * 5 only when the sentence is «passt» and the melody bar is «passt».
+ * A wrong sentence («daneben») is at most 1: 1 when a bar is yellow or
+ * green, otherwise 0. A reversed take is 0. A sentence that still
+ * belongs («passt» or «teilweise») is at least 2. A green melody bar
+ * is 4. German rule S3 holds a fitting sentence with no green bar at
+ * 2. S3 runs when the template voice and the speaker are the same
+ * known gender, or when the median pitches are within
+ * S3_PITCH_SEMITONES. English, Portuguese and Vietnamese do not use S3.
  *
  * Portuguese reads `content` when it is passed. When `wer` is present
  * it decides the words: at or below CONTENT_WER_CORRECT the take is at
- * least 2, and 3 when the melody matches (`prosody` or a green melody
- * bar). At or above CONTENT_WER_GIBBERISH the take is at most 1, even
- * if the tune matched. Between those, and when `wer` is missing, a
- * spectrum past SPECTRAL_DISTANCE_MAX is at most 1, unless `prosody`
- * is true. A matched tune is at least 2. Missing bands and a missing
- * `prosody` keep the old count when the spectrum is absent. German,
- * English and Vietnamese ignore the field.
+ * least 3, 4 when the tune matches another voice, and 5 when the
+ * melody bar is green too. At or above CONTENT_WER_GIBBERISH the take
+ * is at most 1, even if the tune matched. Between those, and when
+ * `wer` is missing, a spectrum past SPECTRAL_DISTANCE_MAX is at most
+ * 1, unless `prosody` is true. A matched tune is 4, unless the base
+ * count is already 5. The middle band never reaches 5. German, English
+ * and Vietnamese ignore the field.
  */
 export function starsFromVerdict(
   verdict: BarState,
@@ -1351,31 +1352,32 @@ export function starsFromVerdict(
   genders?: { readonly template?: SpeakerGender | null; readonly user?: SpeakerGender | null } | null,
   pitch?: { readonly modelHz?: number | null; readonly userHz?: number | null } | null,
   content?: { readonly bands?: number | null; readonly prosody?: boolean | null; readonly wer?: number | null } | null,
-): 0 | 1 | 2 | 3 {
+): StarCount {
   if (backwards) return 0
   const green = [melody, rhythm].filter((bar) => bar === 'passt').length
   const yellow = [melody, rhythm].filter((bar) => bar === 'teilweise').length
-  let raw: 0 | 1 | 2 | 3
-  if (verdict === 'passt' && green === 2) raw = 3
-  else if (verdict === 'daneben') {
-    if (green >= 1) raw = 2
-    else if (yellow >= 1) raw = 1
-    else raw = 0
-  } else {
+  let raw: StarCount
+  if (verdict === 'daneben') raw = green >= 1 || yellow >= 1 ? 1 : 0
+  else {
     const template = genders?.template
     const user = genders?.user
     const sameGender = Boolean(template && user && template === user)
     const gap = medianGapSemitones(pitch?.modelHz, pitch?.userHz)
     // log2 of an exact power of two can sit a few ulps over the cut.
     const closePitch = gap != null && gap <= S3_PITCH_SEMITONES + 1e-9
-    raw = lang === 'de' && (sameGender || closePitch) ? (green >= 1 ? 2 : 1) : 2
+    const strict = lang === 'de' && (sameGender || closePitch)
+    if (verdict === 'passt' && melody === 'passt') raw = 5
+    else if (melody === 'passt') raw = 4
+    else if (strict && green === 0) raw = 2
+    else raw = 3
   }
   if (lang !== 'pt-BR') return raw
   const wer = content?.wer
   const hasWer = typeof wer === 'number' && Number.isFinite(wer)
   if (hasWer && wer <= CONTENT_WER_CORRECT) {
-    if (content?.prosody === true || melody === 'passt') return 3
-    return 2
+    if (melody === 'passt') return 5
+    if (content?.prosody === true) return 4
+    return 3
   }
   if (hasWer && wer >= CONTENT_WER_GIBBERISH) return raw > 1 ? 1 : raw
   const bands = content?.bands
@@ -1383,11 +1385,11 @@ export function starsFromVerdict(
   const offScript = hasBands && bands > SPECTRAL_DISTANCE_MAX['pt-BR']
   const prosody = content?.prosody
   let scored = raw
-  if (prosody === true && scored < 2) scored = 2
+  if (prosody === true && scored < 4) scored = 4
   else if (prosody === false && offScript && scored > 1) scored = 1
   else if (prosody == null && offScript && scored > 1) scored = 1
-  else if (prosody == null && hasBands && !offScript && (green >= 1 || yellow >= 1) && scored < 2) scored = 2
-  if (hasWer && scored > 2) return 2
+  else if (prosody == null && hasBands && !offScript && (green >= 1 || yellow >= 1) && scored < 3) scored = 3
+  if (hasWer && scored > 4) return 4
   return scored
 }
 
