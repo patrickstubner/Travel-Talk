@@ -70,13 +70,27 @@ test('portuguese model loads at 844x390 and scores the sentence', async ({ baseU
   await page.route('**/arrival.days__any__base.r70.m4a', async (route) => {
     await route.fulfill({ status: 200, contentType: 'audio/wav', body: Buffer.from(modelWav) })
   })
-  const model = page.waitForResponse((response) => response.url().includes('vosk-model-small-pt-0.3.tar.gz') && response.ok())
+  let modelHits = 0
+  await page.route('**/*vosk-model-small-pt-0.3.tar.gz', async (route) => {
+    modelHits += 1
+    if (modelHits > 1) {
+      await route.fulfill({ status: 200, contentType: 'application/gzip', body: Buffer.from('tampered-model') })
+      return
+    }
+    await route.continue()
+  })
   await openPortugueseRepeat(page)
+  const offer = page.getByTestId('speech-offer')
+  await expect(offer).toBeVisible()
+  expect(modelHits).toBe(0)
+  const model = page.waitForResponse((response) => response.url().includes('vosk-model-small-pt-0.3.tar.gz') && response.ok())
+  await page.getByTestId('speech-load').click()
   const progress = page.getByTestId('speech-progress')
   await expect(progress).toBeVisible()
   const response = await model
   expect(Number(response.headers()['content-length'])).toBe(32454947)
   await expect(progress).toHaveCount(0, { timeout: 120_000 })
+  expect(modelHits).toBe(1)
   await expect(page.getByTestId('speech-fallback')).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Aufnehmen', exact: true }).click()

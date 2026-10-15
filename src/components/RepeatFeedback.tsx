@@ -21,8 +21,8 @@ import {
   type ToneId,
   type ToneShape,
 } from '../pitch/feedback'
-import { wordErrorRate } from '../speech/text-match'
-import { recognizePortuguese, speechModelsInThisRun } from '../speech/vosk-pt'
+import { portugueseContentRate } from '../speech/text-match'
+import { portugueseSpeechState, recognizePortuguese, speechModelsInThisRun, subscribePortugueseSpeech } from '../speech/vosk-pt'
 
 const TONE_ORDER: ToneId[] = ['ngang', 'huyen', 'sac', 'hoi', 'nga', 'nang']
 const NO_REFERENCES: ReadonlyArray<{ samples: Float32Array; sampleRate: number; words?: WordTime[] | null }> = []
@@ -159,19 +159,29 @@ export function RepeatFeedback({
 }) {
   const [view, setView] = useState<'result' | 'word' | 'tones'>('result')
   const [selected, setSelected] = useState(0)
-  const [heard, setHeard] = useState<{ samples: Float32Array; text: string | null } | null>(null)
+  const [heard, setHeard] = useState<{ samples: Float32Array; text: string | null; confidence: number | null } | null>(null)
+  const [modelPhase, setModelPhase] = useState(portugueseSpeechState().phase)
+  useEffect(() => subscribePortugueseSpeech((next) => setModelPhase(next.phase)), [])
   useEffect(() => {
     if (lang !== 'pt-BR' || !speechModelsInThisRun()) return undefined
     let cancel = false
-    void recognizePortuguese(userSamples, userRate).then((text) => {
-      if (!cancel) setHeard({ samples: userSamples, text })
+    void recognizePortuguese(userSamples, userRate).then((result) => {
+      if (cancel) return
+      setHeard(
+        result
+          ? { samples: userSamples, text: result.text, confidence: result.confidence }
+          : { samples: userSamples, text: null, confidence: null },
+      )
     })
     return () => {
       cancel = true
     }
   }, [lang, userRate, userSamples])
-  const heardText = heard?.samples === userSamples ? heard.text : null
-  const wer = lang === 'pt-BR' && heardText != null ? wordErrorRate(speech, heardText) : null
+  const speechKnown = heard?.samples === userSamples
+  const heardText = speechKnown ? heard.text : null
+  const wer = lang === 'pt-BR' && heardText != null ? portugueseContentRate(speech, heardText, heard?.confidence) : null
+  const speechPending = lang === 'pt-BR' && speechModelsInThisRun() && !speechKnown
+  const speechFailed = lang === 'pt-BR' && speechModelsInThisRun() && speechKnown && heardText == null && modelPhase !== 'failed'
   const offThread = pitchWorker() != null
   const [remote, setRemote] = useState<{ model: ClipFeatures | null; user: ClipFeatures | null } | null>(null)
   const syncModel = useMemo(
@@ -296,7 +306,9 @@ export function RepeatFeedback({
       className="pitch repeat-feedback"
       data-testid="repeat-feedback"
       data-heard={heardText === null ? undefined : heardText}
-      data-speech-state={heard?.samples === userSamples ? (heard.text == null ? 'failed' : 'ready') : 'pending'}
+      data-speech-state={
+        lang !== 'pt-BR' || !speechModelsInThisRun() ? 'off' : speechKnown ? (heardText == null ? 'failed' : 'ready') : 'pending'
+      }
       aria-label={copy.pitchTitle}
     >
       {view === 'result' ? (
@@ -315,6 +327,8 @@ export function RepeatFeedback({
           timingMissing={!timingsPending && words == null && !modelMissing && modelSamples != null}
           tooQuiet={! (userDuration < SHORT_SECONDS) && (score?.tooLittleVoice === true || (modelMissing && userQuiet))}
           wer={wer}
+          speechPending={speechPending}
+          speechFailed={speechFailed}
           onWord={(index) => {
             setSelected(index)
             setView('word')
@@ -396,6 +410,8 @@ function Result({
   tooShort,
   tooQuiet,
   wer,
+  speechPending,
+  speechFailed,
   onWord,
 }: {
   copy: Dictionary
@@ -412,6 +428,8 @@ function Result({
   tooShort: boolean
   tooQuiet: boolean
   wer: number | null
+  speechPending: boolean
+  speechFailed: boolean
   onWord: (index: number) => void
 }) {
   const feedback = copy.repeatFeedback
@@ -531,7 +549,12 @@ function Result({
           ))}
         </div>
       ) : null}
-      {stars != null ? <TakeStars count={stars} copy={copy} speechLang={uiLang} /> : null}
+      {speechFailed ? (
+        <p className="voice-note" role="status" data-testid="speech-result-fallback">
+          {copy.speechFallback}
+        </p>
+      ) : null}
+      {stars != null && !speechPending ? <TakeStars count={stars} copy={copy} speechLang={uiLang} /> : null}
       {barsFit ? (
         <p className="take-note" role="status" data-testid="bars-fit">
           {feedback.barsFit}

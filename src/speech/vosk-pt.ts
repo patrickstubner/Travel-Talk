@@ -1,9 +1,10 @@
 import { publicUrl } from '../public-url'
-import type { Model } from 'vosk-browser'
+import { fetchVerifiedBytes, mayFetchModel, sha256Hex, type ModelCache } from './model-bytes'
+import { VoskModel } from './vosk-client'
 
 /**
  * The archive the page serves. It is the Alpha Cephei zip
- * vosk-model-small-pt-0.3 repacked as tar.gz, which is what vosk-browser reads.
+ * vosk-model-small-pt-0.3 repacked as tar.gz, which is what the worker reads.
  * SHA-256 of that tar.gz. The upstream zip is
  * 6e1ce909032e1afa7a88e68a3d628ecafff302bdf195befab308826c395e93b7.
  */
@@ -24,8 +25,9 @@ type Listener = (state: SpeechState) => void
 
 let state: SpeechState = { phase: 'idle', progress: 0 }
 const listeners = new Set<Listener>()
-let loading: Promise<Model | null> | null = null
-let model: Model | null = null
+let loading: Promise<VoskModel | null> | null = null
+let model: VoskModel | null = null
+let accepted = false
 
 export function portugueseSpeechState(): SpeechState {
   return state
@@ -48,149 +50,124 @@ export function speechModelsInThisRun(): boolean {
   return mode !== 'test'
 }
 
+export function connectionSavesData(): boolean {
+  const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
+  return connection?.saveData === true
+}
+
 function modelUrl(): string {
   return new URL(publicUrl(PORTUGUESE_MODEL_FILE), window.location.href).href
 }
 
-async function sha256(bytes: ArrayBuffer): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', bytes)
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
-}
-
-async function readCached(url: string): Promise<ArrayBuffer | null> {
+async function browserCache(): Promise<ModelCache | null> {
   if (!('caches' in window)) return null
-  const cache = await caches.open(CACHE)
-  const hit = await cache.match(url)
-  if (!hit) return null
-  return hit.arrayBuffer()
-}
-
-async function store(url: string, bytes: ArrayBuffer): Promise<void> {
-  if (!('caches' in window)) return
-  const cache = await caches.open(CACHE)
-  await cache.put(url, new Response(bytes, { headers: { 'Content-Type': 'application/gzip', 'Content-Length': String(bytes.byteLength) } }))
-}
-
-async function download(url: string): Promise<ArrayBuffer | null> {
-  const cached = await readCached(url)
-  if (cached) {
-    if ((await sha256(cached)) === PORTUGUESE_MODEL_SHA256) {
-      publish({ phase: 'loading', progress: 100 })
-      return cached
+  try {
+    const cache = await caches.open(CACHE)
+    return {
+      async match(url) {
+        const hit = await cache.match(url)
+        return hit ? hit.arrayBuffer() : null
+      },
+      async put(url, body) {
+        await cache.put(
+          url,
+          new Response(body, { headers: { 'Content-Type': 'application/gzip', 'Content-Length': String(body.byteLength) } }),
+        )
+      },
+      async drop(url) {
+        await cache.delete(url)
+      },
     }
-    if ('caches' in window) {
-      const cache = await caches.open(CACHE)
-      await cache.delete(url)
-    }
-  }
-  const response = await fetch(url, { cache: 'reload' })
-  if (!response.ok || !response.body) return null
-  const total = Number(response.headers.get('Content-Length')) || PORTUGUESE_MODEL_BYTES
-  const reader = response.body.getReader()
-  const chunks: Uint8Array[] = []
-  let received = 0
-  for (;;) {
-    const step = await reader.read()
-    if (step.done) break
-    chunks.push(step.value)
-    received += step.value.byteLength
-    publish({ phase: 'loading', progress: Math.min(99, Math.round((received / total) * 100)) })
-  }
-  const bytes = new Uint8Array(received)
-  let offset = 0
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-  const buffer = bytes.buffer
-  if ((await sha256(buffer)) !== PORTUGUESE_MODEL_SHA256) {
-    if ('caches' in window) {
-      const cache = await caches.open(CACHE)
-      await cache.delete(url)
-    }
+  } catch {
     return null
   }
-  await store(url, buffer)
-  publish({ phase: 'loading', progress: 100 })
-  return buffer
 }
 
-async function loadModel(): Promise<Model | null> {
+/** True when the checked archive is already on the device. This does not fetch. */
+export async function portugueseModelCached(): Promise<boolean> {
+  const cache = await browserCache()
+  if (!cache) return false
+  const hit = await cache.match(modelUrl())
+  if (!hit) return false
+  if ((await sha256Hex(hit)) === PORTUGUESE_MODEL_SHA256) return true
+  await cache.drop(modelUrl())
+  return false
+}
+
+async function loadModel(): Promise<VoskModel | null> {
   const url = modelUrl()
-  const bytes = await download(url)
+  const bytes = await fetchVerifiedBytes(
+    { url, sha256: PORTUGUESE_MODEL_SHA256, bytes: PORTUGUESE_MODEL_BYTES },
+    {
+      fetch: (input, init) => fetch(input, init),
+      openCache: browserCache,
+      onProgress: (progress) => publish({ phase: 'loading', progress }),
+    },
+  )
   if (!bytes) return null
-  const vosk = await import(/* webpackChunkName: "vosk" */ 'vosk-browser')
-  return vosk.createModel(url)
+  publish({ phase: 'loading', progress: 100 })
+  return VoskModel.open(url, bytes)
 }
 
-/** Start the one download. Later calls share it. A failure stays failed until reload. */
-export function ensurePortugueseModel(): Promise<Model | null> {
+/**
+ * Start the download after the person asks, or from a checked cache.
+ * A failure stays failed until reload. Without a yes, this does not fetch.
+ */
+export function ensurePortugueseModel(): Promise<VoskModel | null> {
   if (!speechModelsInThisRun()) return Promise.resolve(null)
   if (model) return Promise.resolve(model)
+  if (!accepted) return Promise.resolve(null)
   if (!loading) {
     publish({ phase: 'loading', progress: state.progress })
-    loading = loadModel()
+    const pending = loadModel()
       .then((next) => {
+        if (loading !== pending) {
+          next?.terminate()
+          return null
+        }
         model = next
         publish(next ? { phase: 'ready', progress: 100 } : { phase: 'failed', progress: 0 })
         return next
       })
       .catch(() => {
-        publish({ phase: 'failed', progress: 0 })
+        if (loading === pending) publish({ phase: 'failed', progress: 0 })
         return null
       })
+    loading = pending
   }
   return loading
 }
 
+/** Use the checked cache when it is there. Otherwise wait for a tap. Never fetches by itself. */
+export async function preparePortugueseModel(): Promise<'cached' | 'offer'> {
+  if (!speechModelsInThisRun()) return 'offer'
+  if (await portugueseModelCached()) {
+    accepted = true
+    void ensurePortugueseModel()
+    return 'cached'
+  }
+  return 'offer'
+}
+
+/** The tap that allows the download. saveData does not add a silent fetch of its own. */
+export function acceptPortugueseModel(): void {
+  accepted = true
+  if (!mayFetchModel({ cached: false, accepted })) return
+  void ensurePortugueseModel()
+}
+
 /**
- * Recognised words, or null when the model is missing or the worker fails.
+ * Recognised words, or null when the model is missing, declined, or the worker fails.
  * An empty string is a real result: the model heard no words.
+ * A timeout is null, so the page keeps the rating without the words.
  */
-export async function recognizePortuguese(samples: Float32Array, sampleRate: number): Promise<string | null> {
+export async function recognizePortuguese(
+  samples: Float32Array,
+  sampleRate: number,
+  grammar: string | null = null,
+): Promise<{ text: string; confidence: number | null } | null> {
   if (!speechModelsInThisRun() || sampleRate <= 0 || samples.length === 0) return null
   const ready = await ensurePortugueseModel()
   if (!ready) return null
-  return new Promise((resolve) => {
-    let text = ''
-    let settled = false
-    let finalRequested = false
-    let quiet = 0
-    let timer = 0
-    const recognizer = new ready.KaldiRecognizer(sampleRate)
-    const finish = (value: string | null) => {
-      if (settled) return
-      settled = true
-      window.clearTimeout(timer)
-      window.clearTimeout(quiet)
-      try {
-        recognizer.remove()
-      } catch {
-        // The worker may already have dropped it.
-      }
-      resolve(value)
-    }
-    const arm = () => {
-      window.clearTimeout(quiet)
-      quiet = window.setTimeout(() => finish(text), 1200)
-    }
-    timer = window.setTimeout(() => finish(text), 15000)
-    recognizer.on('result', (message) => {
-      if (message.event !== 'result') return
-      const next = message.result?.text ?? ''
-      if (next) text = next
-      if (finalRequested && text) arm()
-    })
-    recognizer.on('error', () => finish(null))
-    try {
-      const width = 4800
-      for (let index = 0; index < samples.length; index += width) {
-        recognizer.acceptWaveformFloat(samples.subarray(index, index + width), sampleRate)
-      }
-      finalRequested = true
-      recognizer.retrieveFinalResult()
-    } catch {
-      finish(null)
-    }
-  })
+  return ready.recognize(samples, sampleRate, grammar)
 }

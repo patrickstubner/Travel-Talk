@@ -7,10 +7,13 @@
     "node": ">=22"
   },
   "scripts": {
+    "predev": "node scripts/emit-vosk-worker.mjs",
     "dev": "rsbuild dev",
+    "prebuild": "node scripts/emit-vosk-worker.mjs",
     "build": "rsbuild build",
     "preview": "rsbuild preview",
     "typecheck": "tsc --noEmit",
+    "pretest": "node scripts/emit-vosk-worker.mjs",
     "test": "vitest run",
     "test:overflow": "playwright test",
     "test:clips": "vitest run --config vitest.clips.config.ts",

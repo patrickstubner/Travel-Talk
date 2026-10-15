@@ -1,28 +1,12 @@
-import { copyFileSync, readFileSync } from 'node:fs'
+import { copyFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { defineConfig, type RsbuildPluginAPI } from '@rsbuild/core'
 import { pluginReact } from '@rsbuild/plugin-react'
 import { generateSW } from 'workbox-build'
 import { HELP_CACHE, HELP_CACHE_LIMIT, PRECACHE_BYTE_BUDGET, PRECACHE_ENTRY_BUDGET, PRECACHE_GLOBS, PRECACHE_IGNORES } from './src/pwa/cache-policy'
+import { PAGE_CSP, voskServiceWorkerPrelude } from './src/pwa/csp'
 
 const BASE = '/Travel-Talk/'
-
-const CSP = [
-  "default-src 'self'",
-  "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'",
-  "style-src 'self'",
-  "style-src-attr 'none'",
-  "img-src 'self' data:",
-  "media-src 'self' blob:",
-  "connect-src 'self'",
-  "font-src 'self'",
-  "worker-src 'self' blob:",
-  "manifest-src 'self'",
-  "object-src 'none'",
-  "base-uri 'none'",
-  "form-action 'none'",
-  "frame-src 'none'",
-].join('; ')
 
 export default defineConfig({
   plugins: [
@@ -33,7 +17,7 @@ export default defineConfig({
       setup(api: RsbuildPluginAPI) {
         api.modifyHTML((html) => {
           if (html.includes('Content-Security-Policy')) return html
-          return html.replace('<head>', `<head>\n    <meta http-equiv="Content-Security-Policy" content="${CSP}" />`)
+          return html.replace('<head>', `<head>\n    <meta http-equiv="Content-Security-Policy" content="${PAGE_CSP}" />`)
         })
         api.onAfterBuild(async ({ environments }) => {
           const dist = Object.values(environments)[0]?.distPath
@@ -91,22 +75,15 @@ export default defineConfig({
                   expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 365 },
                 },
               },
-              {
-                urlPattern: /\/Travel-Talk\/static\/js\/.*vosk.*\.js$/,
-                handler: 'CacheFirst',
-                options: {
-                  cacheName: 'travel-talk-vosk-script',
-                  cacheableResponse: { statuses: [200] },
-                  expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 365 },
-                },
-              },
             ],
           })
           if (result.warnings.length > 0) throw new Error(result.warnings.join('\n'))
           if (result.count > PRECACHE_ENTRY_BUDGET || result.size > PRECACHE_BYTE_BUDGET) {
             throw new Error(`PRECACHE_TOO_BIG count=${result.count} size=${result.size}`)
           }
-          const sw = readFileSync(join(dist, 'sw.js'), 'utf8')
+          const generated = readFileSync(join(dist, 'sw.js'), 'utf8')
+          const sw = `${voskServiceWorkerPrelude()}\n${generated}`
+          writeFileSync(join(dist, 'sw.js'), sw)
           if (/\/help\/[a-z0-9][^"'\\\s]*\.m4a/.test(sw)) throw new Error('HELP_IN_PRECACHE')
         })
       },

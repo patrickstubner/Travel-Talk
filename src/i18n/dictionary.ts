@@ -199,6 +199,9 @@ export type Dictionary = {
   loading: string
   speechProgress: (percent: number) => string
   speechFallback: string
+  speechOffer: (megabytes: number) => string
+  speechOfferSave: (megabytes: number) => string
+  speechLoad: string
   storageError: string
   version: string
   exampleAudio: string
@@ -587,6 +590,10 @@ export const de: Dictionary = {
   loading: 'Einen Moment.',
   speechProgress: (percent) => `Spracherkennung für Portugiesisch, ${percent} Prozent.`,
   speechFallback: 'Die Spracherkennung fehlt. Es gilt die Wertung ohne die Wörter.',
+  speechOffer: (megabytes) => `Spracherkennung für Portugiesisch laden, ${megabytes} MB?`,
+  speechOfferSave: (megabytes) =>
+    `Dein Gerät spart Daten. Spracherkennung für Portugiesisch ist ${megabytes} MB. Sie lädt nur, wenn du tippst.`,
+  speechLoad: 'Laden',
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
   version: 'Version 0.11.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
@@ -971,6 +978,10 @@ export const en: Dictionary = {
   loading: 'One moment.',
   speechProgress: (percent) => `Portuguese speech recognition, ${percent} percent.`,
   speechFallback: 'Speech recognition is missing. The score stays without the words.',
+  speechOffer: (megabytes) => `Download Portuguese speech recognition, ${megabytes} MB?`,
+  speechOfferSave: (megabytes) =>
+    `This device is saving data. Portuguese speech recognition is ${megabytes} MB. It downloads only when you tap.`,
+  speechLoad: 'Download',
   storageError: 'Local storage is not available.',
   version: 'Version 0.11.0',
   exampleAudio: 'The audio speaks the example sentence.',
@@ -1358,6 +1369,10 @@ export const pt: Dictionary = {
   loading: 'Um momento.',
   speechProgress: (percent) => `Reconhecimento de fala em português, ${percent} por cento.`,
   speechFallback: 'O reconhecimento de fala não está aqui. A nota fica sem as palavras.',
+  speechOffer: (megabytes) => `Baixar o reconhecimento de fala em português, ${megabytes} MB?`,
+  speechOfferSave: (megabytes) =>
+    `Este aparelho está economizando dados. O reconhecimento de fala em português tem ${megabytes} MB. Só baixa quando você toca.`,
+  speechLoad: 'Baixar',
   storageError: 'O armazenamento local não está disponível.',
   version: 'Version 0.11.0',
   exampleAudio: 'O áudio fala a frase de exemplo.',
@@ -1739,6 +1754,10 @@ export const vi: Dictionary = {
   loading: 'Một lát.',
   speechProgress: (percent) => `Nhận dạng giọng nói tiếng Bồ Đào Nha, ${percent} phần trăm.`,
   speechFallback: 'Không có nhận dạng giọng nói. Điểm giữ cách cũ, không đọc từ.',
+  speechOffer: (megabytes) => `Tải nhận dạng giọng nói tiếng Bồ Đào Nha, ${megabytes} MB?`,
+  speechOfferSave: (megabytes) =>
+    `Máy này đang tiết kiệm dữ liệu. Nhận dạng giọng nói tiếng Bồ Đào Nha nặng ${megabytes} MB. Chỉ tải khi bạn chạm.`,
+  speechLoad: 'Tải',
   storageError: 'Bộ nhớ trên máy không dùng được.',
   version: 'Version 0.11.0',
   exampleAudio: 'Audio đọc câu ví dụ.',
