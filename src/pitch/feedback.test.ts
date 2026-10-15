@@ -264,7 +264,7 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('passt', 'passt', 'passt', false, 'pt-BR', null, null, { bands: 0.8, prosody: true })).toBe(5)
   })
 
-  it('lets recognised Portuguese words outrank the tune', () => {
+  it('lets recognised words outrank the tune in every language', () => {
     const sentence = 'Eu preciso de ajuda.'
     const gibberish = wordErrorRate(sentence, 'bing bang bong bung')
     const correct = wordErrorRate(sentence, 'Eu preciso de ajuda!')
@@ -279,7 +279,13 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('daneben', 'passt', 'passt', false, 'pt-BR', null, null, { wer: 0, prosody: false })).toBe(5)
     expect(starsFromVerdict('daneben', 'passt', 'daneben', false, 'pt-BR', null, null, { wer: 0, prosody: false })).toBe(4)
     expect(starsFromVerdict('passt', 'passt', 'passt', false, 'pt-BR', null, null, { wer: 0.4, prosody: true })).toBeLessThanOrEqual(3)
-    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', { template: 'male', user: 'male' }, null, { wer: 0 })).toBe(2)
+    expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', { template: 'male', user: 'male' }, null, { wer: 0 })).toBe(3)
+    expect(starsFromVerdict('passt', 'passt', 'passt', false, 'de', null, null, { wer: 1 })).toBeLessThanOrEqual(1)
+    expect(starsFromVerdict('passt', 'passt', 'passt', false, 'de', null, null, { wer: 0.4 })).toBe(4)
+    expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'en', null, null, { wer: 0 })).toBe(3)
+    expect(starsFromVerdict('daneben', 'passt', 'daneben', false, 'en', null, null, { wer: 0 })).toBe(5)
+    expect(starsFromVerdict('passt', 'passt', 'passt', false, 'vi', null, null, { wer: 0.5, prosody: true })).toBeLessThanOrEqual(1)
+    expect(starsFromVerdict('passt', 'passt', 'passt', false, 'vi', null, null, { wer: 0.4 })).toBe(4)
     expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { bands: 0.2 })).toBe(0)
   })
 })

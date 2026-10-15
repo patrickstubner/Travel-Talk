@@ -67,12 +67,12 @@ export default defineConfig({
                 },
               },
               {
-                urlPattern: /\/Travel-Talk\/models\/vosk-model-small-pt-.*\.tar\.gz$/,
+                urlPattern: /\/Travel-Talk\/models\/vosk-model-small-.*\.tar\.gz$/,
                 handler: 'CacheFirst',
                 options: {
                   cacheName: 'travel-talk-vosk',
                   cacheableResponse: { statuses: [200] },
-                  expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                  expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 365 },
                 },
               },
             ],

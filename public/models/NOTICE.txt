@@ -1,21 +1,59 @@
-vosk-model-small-pt-0.3
+Small Vosk models from https://alphacephei.com/vosk/models
 Apache-2.0
 
-The archive vosk-model-small-pt-0.3.tar.gz is the Alpha Cephei model
-vosk-model-small-pt-0.3, listed at https://alphacephei.com/vosk/models
-as Apache 2.0, 31M, lightweight wideband Portuguese for Android and Raspberry Pi.
-Published word error rate there: 68.92 on coraa dev, 32.60 on Common Voice test.
+The page loads one archive, only for the language being practised.
+Each tar.gz is the Alpha Cephei zip repacked, same files, one top folder,
+which is the layout vosk-browser reads. Nothing is moved between folders.
+The page checks the tar.gz SHA-256 before it loads the archive.
+The recogniser is vosk-browser 0.0.8, also Apache-2.0.
 
+vosk-model-small-de-0.15
+Apache-2.0. The zip contains COPYING, the Apache Licence 2.0.
+Listed as 45M, lightweight wideband German. Published word error rate
+there: 13.75 on Tuda-de test, 30.67 on a podcast.
+Upstream zip:
+https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip
+SHA-256 b7e53c90b1f0a38456f4cd62b366ecd58803cd97cd42b06438e2c131713d5e43
+Size 46499967 bytes.
+tar.gz SHA-256 96239a97c3ea21a5e10dc98a64ca90b33b321174fdaf1bf23330100cee318eae
+Size 46501380 bytes.
+Not shipped: vosk-model-small-de-zamia-0.3 is LGPL-3.0.
+
+vosk-model-small-en-us-0.15
+Apache-2.0 on the publisher's model list. The zip README names
+Alpha Cephei Inc, 2020, and does not repeat the licence text.
+Listed as 40M, lightweight wideband US English. Published word error
+rate there: 9.85 on LibriSpeech test-clean, 10.38 on TED-LIUM.
+Upstream zip:
+https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
+SHA-256 30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498
+Size 41205931 bytes.
+tar.gz SHA-256 c047d1aadfde789344ba10c5b7eb05665f77bdbc71e14fa17d138d66ae2bb6d6
+Size 41206105 bytes.
+Not shipped: vosk-model-small-en-us-zamia-0.5 is LGPL-3.0.
+
+vosk-model-small-pt-0.3
+Apache-2.0. Listed as 31M, lightweight wideband Portuguese.
+Published word error rate there: 68.92 on coraa dev, 32.60 on Common Voice test.
 Upstream zip:
 https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip
 SHA-256 6e1ce909032e1afa7a88e68a3d628ecafff302bdf195befab308826c395e93b7
 Size 32453112 bytes.
-
-This tar.gz is that zip repacked, same files, one top folder
-vosk-model-small-pt-0.3, which is the layout vosk-browser reads.
-It is not rearranged into the newer am/ and conf/ folders.
-SHA-256 b0dba777c534e3adfce4c72340225182962dfc62d6dc4b4bf67dccd1bb4694dd
+tar.gz SHA-256 b0dba777c534e3adfce4c72340225182962dfc62d6dc4b4bf67dccd1bb4694dd
 Size 32454947 bytes.
+The files stay in the older flat layout. They are not moved into am/ and conf/.
+Not shipped: vosk-model-pt-fb-v0.1.1-20220516_2113 is GPLv3.
 
-The page checks that hash before it loads the archive. The recogniser
-is vosk-browser 0.0.8, also Apache-2.0.
+vosk-model-small-vn-0.4
+Apache-2.0 on the publisher's model list. The zip README gives the
+word error rate and does not repeat the licence text.
+Listed as 32M, lightweight Vietnamese. Published word error rate there:
+15.70 on Vivos test.
+Upstream zip:
+https://alphacephei.com/vosk/models/vosk-model-small-vn-0.4.zip
+SHA-256 efe5c8494212110471a79befc48c79da679e5b1fc52a4ffb500222ff86d622e5
+Size 33656337 bytes.
+tar.gz SHA-256 28942c7bb5cc1ec7acc8937f56817ed08a6f935c0d9adfb68804e72736932d40
+Size 33657483 bytes.
+Not shipped: the larger vosk-model-vn-0.4 is also Apache 2.0 and 78M.
+The small model is the one the page uses.

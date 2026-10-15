@@ -21,8 +21,8 @@ import {
   type ToneId,
   type ToneShape,
 } from '../pitch/feedback'
-import { portugueseContentRate } from '../speech/text-match'
-import { portugueseSpeechState, recognizePortuguese, speechModelsInThisRun, subscribePortugueseSpeech } from '../speech/vosk-pt'
+import { portugueseContentRate, wordErrorRate } from '../speech/text-match'
+import { recognizeSpeech, speechModelsInThisRun, speechState, subscribeSpeech } from '../speech/vosk'
 
 const TONE_ORDER: ToneId[] = ['ngang', 'huyen', 'sac', 'hoi', 'nga', 'nang']
 const NO_REFERENCES: ReadonlyArray<{ samples: Float32Array; sampleRate: number; words?: WordTime[] | null }> = []
@@ -160,12 +160,12 @@ export function RepeatFeedback({
   const [view, setView] = useState<'result' | 'word' | 'tones'>('result')
   const [selected, setSelected] = useState(0)
   const [heard, setHeard] = useState<{ samples: Float32Array; text: string | null; confidence: number | null } | null>(null)
-  const [modelPhase, setModelPhase] = useState(portugueseSpeechState().phase)
-  useEffect(() => subscribePortugueseSpeech((next) => setModelPhase(next.phase)), [])
+  const [modelPhase, setModelPhase] = useState(speechState(lang).phase)
+  useEffect(() => subscribeSpeech(lang, (next) => setModelPhase(next.phase)), [lang])
   useEffect(() => {
-    if (lang !== 'pt-BR' || !speechModelsInThisRun()) return undefined
+    if (!speechModelsInThisRun()) return undefined
     let cancel = false
-    void recognizePortuguese(userSamples, userRate, speech).then((result) => {
+    void recognizeSpeech(lang, userSamples, userRate, speech).then((result) => {
       if (cancel) return
       setHeard(
         result
@@ -179,9 +179,10 @@ export function RepeatFeedback({
   }, [lang, speech, userRate, userSamples])
   const speechKnown = heard?.samples === userSamples
   const heardText = speechKnown ? heard.text : null
-  const wer = lang === 'pt-BR' && heardText != null ? portugueseContentRate(speech, heardText, heard?.confidence) : null
-  const speechPending = lang === 'pt-BR' && speechModelsInThisRun() && !speechKnown
-  const speechFailed = lang === 'pt-BR' && speechModelsInThisRun() && speechKnown && heardText == null && modelPhase !== 'failed'
+  const wer =
+    heardText == null ? null : lang === 'pt-BR' ? portugueseContentRate(speech, heardText, heard?.confidence) : wordErrorRate(speech, heardText)
+  const speechPending = speechModelsInThisRun() && !speechKnown
+  const speechFailed = speechModelsInThisRun() && speechKnown && heardText == null && modelPhase !== 'failed'
   const offThread = pitchWorker() != null
   const [remote, setRemote] = useState<{ model: ClipFeatures | null; user: ClipFeatures | null } | null>(null)
   const syncModel = useMemo(
@@ -307,7 +308,7 @@ export function RepeatFeedback({
       data-testid="repeat-feedback"
       data-heard={heardText === null ? undefined : heardText}
       data-speech-state={
-        lang !== 'pt-BR' || !speechModelsInThisRun() ? 'off' : speechKnown ? (heardText == null ? 'failed' : 'ready') : 'pending'
+        !speechModelsInThisRun() ? 'off' : speechKnown ? (heardText == null ? 'failed' : 'ready') : 'pending'
       }
       aria-label={copy.pitchTitle}
     >

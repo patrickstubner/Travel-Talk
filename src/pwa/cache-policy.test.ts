@@ -11,6 +11,9 @@ describe('precache policy', () => {
     expect(precacheMatches('audio/de/emergency.help__any__base.align.json')).toBe(false)
     expect(precacheMatches('sw.js')).toBe(false)
     expect(precacheMatches('models/vosk-model-small-pt-0.3.tar.gz')).toBe(false)
+    expect(precacheMatches('models/vosk-model-small-de-0.15.tar.gz')).toBe(false)
+    expect(precacheMatches('models/vosk-model-small-en-us-0.15.tar.gz')).toBe(false)
+    expect(precacheMatches('models/vosk-model-small-vn-0.4.tar.gz')).toBe(false)
     expect(precacheMatches('static/js/vosk.abc123.js')).toBe(false)
 
     const root = 'public'
