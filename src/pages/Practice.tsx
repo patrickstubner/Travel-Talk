@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { Concept } from '../../content/phrase'
-import { selectedVoice, spokenFile, spokenWordFile } from '../audio/voices'
-import { resolvePlayback } from '../content/resolve'
+import { melodyReferenceVoices, selectedVoice, spokenFile, spokenWordFile } from '../audio/voices'
+import { resolvePlayback, voiceFile } from '../content/resolve'
 import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
 import { decodeContourFile, playClip, stopClip } from '../audio/player'
 import { linksFor } from '../content/word-links'
@@ -81,6 +81,7 @@ export function PracticePage() {
   const [micStarting, setMicStarting] = useState(false)
   const [take, setTake] = useState<{ url: string; samples: Float32Array | null; sampleRate: number } | null>(null)
   const [modelTake, setModelTake] = useState<{ samples: Float32Array; sampleRate: number } | null>(null)
+  const [referenceTakes, setReferenceTakes] = useState<Array<{ samples: Float32Array; sampleRate: number; words: WordTime[] | null }>>([])
   const [modelMissing, setModelMissing] = useState(false)
   const [feedbackTimes, setFeedbackTimes] = useState<WordTime[] | null>(null)
   const [timingsPending, setTimingsPending] = useState(false)
@@ -217,6 +218,7 @@ export function PracticePage() {
   useEffect(() => {
     if (step !== 'repeat' || !take?.samples || !concept || !settings.targetLang) {
       setModelTake(null)
+      setReferenceTakes([])
       setFeedbackTimes(null)
       setModelMissing(false)
       setTimingsPending(false)
@@ -224,7 +226,12 @@ export function PracticePage() {
     }
     const line = resolvePlayback(concept, settings.targetLang, settings.viRegion, prefsFromSettings(settings.targetLang, settings))
     if (!line) return
-    const file = tempoFile(spokenFile(settings, settings.targetLang, line.file), storedLearnTempo(settings.learnTempo))
+    const tempo = storedLearnTempo(settings.learnTempo)
+    const file = tempoFile(spokenFile(settings, settings.targetLang, line.file), tempo)
+    const selected = selectedVoice(settings, settings.targetLang)
+    const referenceFiles = melodyReferenceVoices(settings.targetLang, selected.id).map((voice) =>
+      tempoFile(voiceFile(line.file, voice.id, voice.legacy), tempo),
+    )
     let live = true
     setTimingsPending(true)
     void decodeContourFile(file).then(async (decoded) => {
@@ -236,6 +243,18 @@ export function PracticePage() {
       setModelMissing(!decoded)
       if (decoded && aligned && alignmentFitsDuration(aligned, duration, alignmentScale(file))) setFeedbackTimes(aligned)
       else setFeedbackTimes(null)
+      const loaded = await Promise.all(
+        referenceFiles.map(async (name) => {
+          const clip = await decodeContourFile(name)
+          if (!clip) return null
+          const aligned = await loadAlignment(name, line.speech)
+          const clipDuration = clip.samples.length / clip.sampleRate
+          const words = aligned && alignmentFitsDuration(aligned, clipDuration, alignmentScale(name)) ? aligned : null
+          return { samples: clip.samples, sampleRate: clip.sampleRate, words }
+        }),
+      )
+      if (!live) return
+      setReferenceTakes(loaded.filter((clip): clip is { samples: Float32Array; sampleRate: number; words: WordTime[] | null } => clip != null))
       setTimingsPending(false)
     })
     return () => {
@@ -805,6 +824,7 @@ export function PracticePage() {
                 modelMissing={modelMissing}
                 timingsPending={timingsPending}
                 voiceId={selectedVoice(settings, targetLang).id}
+                referenceClips={referenceTakes}
               />
             ) : null}
             {take && !take.samples && !recording ? <p role="status">{copy.pitchEmpty}</p> : null}

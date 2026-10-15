@@ -23,6 +23,7 @@ import {
 } from '../pitch/feedback'
 
 const TONE_ORDER: ToneId[] = ['ngang', 'huyen', 'sac', 'hoi', 'nga', 'nang']
+const NO_REFERENCES: ReadonlyArray<{ samples: Float32Array; sampleRate: number; words?: WordTime[] | null }> = []
 
 /** Curve fill and strokes. Light pages keep the 0.8.0 colours. Show mode uses a dark wash and light strokes. */
 export function curveColors(dark: boolean, band: Band | null): { wash: string; model: string; you: string; guide: string } {
@@ -126,6 +127,7 @@ export function RepeatFeedback({
   timingsPending = false,
   uiLang,
   speakerGender = null,
+  referenceClips = NO_REFERENCES,
 }: {
   copy: Dictionary
   lang: Lang
@@ -147,6 +149,11 @@ export function RepeatFeedback({
   speakerGender?: 'male' | 'female' | null
   /** App language for the star note. The target language stays `lang`. */
   uiLang?: Lang
+  /**
+   * Other voices of the same sentence, for the melody comparison only.
+   * Playback stays on `modelSamples`. An empty list scores the selected voice.
+   */
+  referenceClips?: ReadonlyArray<{ samples: Float32Array; sampleRate: number; words?: WordTime[] | null }>
 }) {
   const [view, setView] = useState<'result' | 'word' | 'tones'>('result')
   const [selected, setSelected] = useState(0)
@@ -185,6 +192,39 @@ export function RepeatFeedback({
   }, [modelRate, modelSamples, offThread, userRate, userSamples])
   const modelFeatures = offThread ? (remote?.model ?? null) : syncModel
   const userFeatures = offThread ? (remote?.user ?? null) : syncUser
+  const [referenceContours, setReferenceContours] = useState<Array<{ contour: Contour; sampleRate: number; words: WordTime[] | null }>>([])
+  useEffect(() => {
+    if (referenceClips.length === 0) {
+      setReferenceContours((current) => (current.length === 0 ? current : []))
+      return undefined
+    }
+    let cancel = false
+    const run = async () => {
+      const contours: Array<{ contour: Contour; sampleRate: number; words: WordTime[] | null }> = []
+      for (const clip of referenceClips) {
+        if (!(clip.sampleRate > 0) || clip.samples.length === 0) continue
+        try {
+          const features = offThread
+            ? await analyzeModelCached(clip.samples, clip.sampleRate)
+            : analyzeModel(clip.samples, clip.sampleRate)
+          if (cancel) return
+          contours.push({ contour: features.contour, sampleRate: clip.sampleRate, words: clip.words ?? null })
+        } catch {
+          if (cancel) return
+          contours.push({
+            contour: analyzeModel(clip.samples, clip.sampleRate).contour,
+            sampleRate: clip.sampleRate,
+            words: clip.words ?? null,
+          })
+        }
+      }
+      if (!cancel) setReferenceContours(contours)
+    }
+    void run()
+    return () => {
+      cancel = true
+    }
+  }, [offThread, referenceClips])
   const score = useMemo<RepeatScore | null>(() => {
     if (!modelFeatures || !userFeatures || modelRate <= 0 || userRate <= 0) return null
     const labels = splitWords(speech)
@@ -205,8 +245,13 @@ export function RepeatFeedback({
       userPlainBands: userFeatures.plainBands,
       modelSpeechBands: modelFeatures.speechBands,
       userSpeechBands: userFeatures.speechBands,
+      references: referenceContours.map((reference) => ({
+        contour: reference.contour,
+        hop: analysisHop(reference.sampleRate),
+        words: reference.words,
+      })),
     })
-  }, [lang, modelFeatures, modelRate, region, speech, userFeatures, userRate, userSamples, words])
+  }, [lang, modelFeatures, modelRate, referenceContours, region, speech, userFeatures, userRate, userSamples, words])
 
   useEffect(() => {
     setView('result')
@@ -376,6 +421,7 @@ function Result({
             user: speakerGender,
           },
           { modelHz, userHz },
+          { bands: score?.sentenceCheck?.bands, prosody: score?.melodyFit },
         )
       : null
   const barsFit = stars === 2 && melodyBar === 'passt' && rhythmBar === 'passt' && verdict !== 'passt'

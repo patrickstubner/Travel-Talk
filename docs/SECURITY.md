@@ -2,6 +2,12 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## 0.11.0 Portugiesische Sterne und Melodie
+
+Geprüft am 15. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.
+
+Die Sterne lesen die Klangfolge, die die Seite schon rechnet. Es kommt kein Spracherkenner dazu. faster-whisper (Code MIT, Gewichte MIT) und Vosk (Apache-2.0) bleiben ausserhalb der App. Die Phonemuhr von Piper bleibt ein Werkzeug der Erzeugung, nicht der Aufnahme. `pt_BR-jeff-medium` und `pt_BR-edresson-low` werden nicht geladen: jeff hat dieselbe lessac-Basis, edresson ist von `en_US-ryan` feinjustiert, und ryan ist CC BY-NC-SA. Der Vergleich nimmt die vorhandenen Dateien von cadu und faber. Die gewählte Stimme bleibt die Wiedergabe. Die Sterne werden nicht gespeichert und gehen nicht in den Export. `getUserMedia` bleibt echoCancellation true, noiseSuppression false, autoGainControl false. Die CSP bleibt.
+
 ## 0.10.1 Wortrunde, ein Tipp
 
 Geprüft am 15. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.

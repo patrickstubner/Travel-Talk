@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { selectedVoice, spokenFile } from '../audio/voices'
-import { resolvePlayback } from '../content/resolve'
+import { melodyReferenceVoices, selectedVoice, spokenFile } from '../audio/voices'
+import { resolvePlayback, voiceFile } from '../content/resolve'
 import { directionId } from '../domain/direction'
 import { alignmentFitsDuration, alignmentScale, loadAlignment, type WordTime } from '../audio/align'
 import { decodeContourFile, playClip, stopClip } from '../audio/player'
@@ -70,6 +70,7 @@ export function PhrasePage() {
   const [micError, setMicError] = useState(false)
   const [userAudio, setUserAudio] = useState<{ samples: Float32Array; sampleRate: number } | null>(null)
   const [modelAudio, setModelAudio] = useState<{ samples: Float32Array; sampleRate: number } | null>(null)
+  const [referenceTakes, setReferenceTakes] = useState<Array<{ samples: Float32Array; sampleRate: number; words: WordTime[] | null }>>([])
   const [modelMissing, setModelMissing] = useState(false)
   const [feedbackTimes, setFeedbackTimes] = useState<WordTime[] | null>(null)
   const [timingsPending, setTimingsPending] = useState(false)
@@ -113,6 +114,12 @@ export function PhrasePage() {
   }, [conceptId])
 
   const targetSpeech = target?.speech ?? ''
+  const referenceKey =
+    target && targetLang
+      ? melodyReferenceVoices(targetLang, selectedVoice(settings, targetLang).id)
+          .map((voice) => tempoFile(voiceFile(target.file, voice.id, voice.legacy), step))
+          .join('\n')
+      : ''
   useEffect(() => {
     let live = true
     if (!followWords || !timingFile || !targetSpeech) {
@@ -131,11 +138,13 @@ export function PhrasePage() {
     let active = true
     if (!userAudio || !alignFile || !targetSpeech) {
       setModelAudio(null)
+      setReferenceTakes([])
       setModelMissing(false)
       setFeedbackTimes(null)
       setTimingsPending(false)
       return
     }
+    const referenceFiles = referenceKey ? referenceKey.split('\n') : []
     setTimingsPending(true)
     void decodeContourFile(alignFile).then(async (decoded) => {
       if (!active) return
@@ -146,12 +155,24 @@ export function PhrasePage() {
       setModelMissing(!decoded)
       if (decoded && aligned && alignmentFitsDuration(aligned, duration, alignmentScale(alignFile))) setFeedbackTimes(aligned)
       else setFeedbackTimes(null)
+      const loaded = await Promise.all(
+        referenceFiles.map(async (name) => {
+          const clip = await decodeContourFile(name)
+          if (!clip) return null
+          const aligned = await loadAlignment(name, targetSpeech)
+          const clipDuration = clip.samples.length / clip.sampleRate
+          const words = aligned && alignmentFitsDuration(aligned, clipDuration, alignmentScale(name)) ? aligned : null
+          return { samples: clip.samples, sampleRate: clip.sampleRate, words }
+        }),
+      )
+      if (!active) return
+      setReferenceTakes(loaded.filter((clip): clip is { samples: Float32Array; sampleRate: number; words: WordTime[] | null } => clip != null))
       setTimingsPending(false)
     })
     return () => {
       active = false
     }
-  }, [alignFile, targetSpeech, userAudio])
+  }, [alignFile, referenceKey, targetSpeech, userAudio])
 
   if (!catalog || !concept || !direction || !app || !targetLang || !target || !source) {
     return <p>{direction ? copy.noResults : copy.needPair}</p>
@@ -366,6 +387,7 @@ export function PhrasePage() {
             modelMissing={modelMissing}
             timingsPending={timingsPending}
             voiceId={selectedVoice(settings, targetLang).id}
+            referenceClips={referenceTakes}
           />
         ) : null}
         {!userAudio && mineUrl ? <p role="status">{copy.pitchEmpty}</p> : null}

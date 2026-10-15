@@ -26,6 +26,7 @@ import {
   S3_PITCH_SEMITONES,
   medianGapSemitones,
   scoreRepeat,
+  SPECTRAL_DISTANCE_MAX,
   starsFromVerdict,
   type RepeatScore,
 } from './feedback'
@@ -1123,6 +1124,80 @@ describe('shipped clips', () => {
       userSpeechBands: user.speechBands,
     })
   }
+
+  it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
+    'caps a different pt-BR sentence at one star and keeps faber of the same sentence',
+    () => {
+      const lines = allSpeechLines(rawCatalog.concepts).filter((line) => line.lang === 'pt-BR')
+      const help = lines.find((line) => line.file.endsWith('emergency.help__any__base.m4a'))
+      const other = lines.find((line) => line.file.endsWith('transport.07.here__any__base.m4a'))
+      expect(help?.text).toBeTruthy()
+      expect(other?.text).toBeTruthy()
+      if (!help || !other) return
+      const modelFile = `public/audio/${voiceFile(help.file, 'cadu', false)}`
+      const nonsense = scoreHeard(modelFile, decode(`public/audio/${voiceFile(other.file, 'cadu', false)}`), help.text)
+      const nonsenseBands = nonsense.sentenceCheck?.bands ?? null
+      expect(nonsenseBands, nonsense.verdict ?? 'none').not.toBeNull()
+      expect(nonsenseBands ?? 0).toBeGreaterThan(SPECTRAL_DISTANCE_MAX['pt-BR'])
+      const nonsenseStars = starsFromVerdict(
+        nonsense.verdict ?? 'teilweise',
+        nonsense.melodyBar,
+        nonsense.rhythmBar,
+        nonsense.sentenceCheck?.backwards ?? false,
+        'pt-BR',
+        null,
+        null,
+        { bands: nonsenseBands },
+      )
+      expect(nonsenseStars).toBeLessThanOrEqual(1)
+
+      const doctor = lines.find((line) => line.file.endsWith('emergency.doctor__any__base.m4a'))
+      expect(doctor?.text).toBeTruthy()
+      if (!doctor) return
+      const doctorModel = `public/audio/${voiceFile(doctor.file, 'cadu', false)}`
+      const faberFile = `public/audio/${voiceFile(doctor.file, 'faber', true)}`
+      const faberSamples = decode(faberFile)
+      const cadu = analyzeModel(decode(doctorModel), 16000)
+      const faber = analyzeModel(faberSamples, 16000)
+      const heard = analyzeUser(faberSamples, 16000, cadu.bands)
+      const texts = splitWords(doctor.text)
+      const times = parseAlignment(JSON.parse(readFileSync(doctorModel.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+      const faberTimes = parseAlignment(JSON.parse(readFileSync(faberFile.replace(/\.m4a$/, '.align.json'), 'utf8')), texts.length)
+      const words = (times ?? []).map((word, index) => ({ ...word, text: texts[index] ?? '' }))
+      const correct = scoreRepeat({
+        model: cadu.contour,
+        user: heard.contour,
+        modelHop: 0.01,
+        userHop: 0.01,
+        words,
+        lang: 'pt-BR',
+        region: 'south',
+        userDuration: faberSamples.length / 16000,
+        modelEnergy: cadu.energy,
+        userEnergy: heard.energy,
+        modelBands: cadu.bands,
+        userBands: heard.bands,
+        userPlainBands: heard.plainBands,
+        modelSpeechBands: cadu.speechBands,
+        userSpeechBands: heard.speechBands,
+        references: [{ contour: faber.contour, hop: 0.01, words: faberTimes }],
+      })
+      expect(correct.verdict).toBeTruthy()
+      expect(correct.melodyFit).toBe(true)
+      const correctStars = starsFromVerdict(
+        correct.verdict ?? 'daneben',
+        correct.melodyBar,
+        correct.rhythmBar,
+        correct.sentenceCheck?.backwards ?? false,
+        'pt-BR',
+        null,
+        null,
+        { bands: correct.sentenceCheck?.bands, prosody: correct.melodyFit },
+      )
+      expect(correctStars).toBeGreaterThanOrEqual(2)
+    },
+    60_000,
+  )
 
   it.skipIf(!ready || !clipLangs.includes('pt-BR'))(
     'marks fewer words red when another correct pt-BR voice is scored against cadu',

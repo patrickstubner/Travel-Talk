@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { de, en, pt, vi as viCopy } from '../i18n/dictionary'
 import { playSequence, stopSlices } from '../audio/slice'
@@ -135,6 +135,34 @@ describe('repeat feedback view', () => {
     expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('green')
     expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
     expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('3')
+  })
+
+  it('passes another voice contour into the score and keeps the played file', async () => {
+    const played = tone(140, 280, 1.2)
+    const other = tone(180, 120, 1.2)
+    render(
+      <RepeatFeedback
+        copy={de}
+        lang="pt-BR"
+        region="south"
+        speech="qua xin nha"
+        words={words}
+        modelSamples={played}
+        modelRate={16000}
+        userSamples={played}
+        userRate={16000}
+        modelMissing={false}
+        voiceId="cadu"
+        referenceClips={[{ samples: other, sampleRate: 16000 }]}
+      />,
+    )
+    await waitFor(() => {
+      const input = vi.mocked(scoreRepeat).mock.calls.at(-1)?.[0]
+      expect(input?.references?.length).toBe(1)
+    })
+    const input = vi.mocked(scoreRepeat).mock.calls.at(-1)?.[0]
+    expect(input?.model.length ?? 0).toBeGreaterThan(8)
+    expect(input?.references?.[0]).not.toEqual(input?.model)
   })
 
   it('passes the loudness of the model and the take into the score', () => {

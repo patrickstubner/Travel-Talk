@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.0 — 2026-10-15
+
+- Auf Portugiesisch (Brasilien) lesen die Sterne die Klangfolge mit. Liegt ihr Abstand über 0,5 und die Melodie trifft keine der Männerstimmen, gibt es höchstens einen Stern. Trifft die Melodie die Datei, die andere Männerstimme oder die Spanne dazwischen, bleiben es mindestens zwei, auch wenn eine einzelne Datei über 0,5 liegt. Darunter, ohne diese Auskunft, bleibt ein gelber oder grüner Balken bei mindestens zwei. Drei Sterne bleiben an «passt» und beiden grünen Balken. Rückwärts bleibt ohne Stern. Fehlt die Klangfolge, bleibt die alte Zählung. Deutsch, Englisch und Vietnamesisch lesen das Feld nicht. Die Sterne werden weiter nicht gespeichert. Der Bandabstand trennt «bing bang bong bung» nicht zuverlässig von einer richtigen zweiten Stimme: gemessen liegt das Geplapper oft zwischen 0,45 und 0,58, faber derselben Zeile kann auf einem kurzen Satz darüber liegen. Deshalb ist der Abstand keine Worterkennung.
+- Die Melodie eines Wortes wird mit jeder männlichen Piper-Stimme derselben Zeile verglichen, nicht nur mit der gewählten. Das sind cadu und faber. Die Kurve ist schon in Halbtönen um den Median der sprechenden Person. Trifft die Aufnahme eine der Stimmen, oder liegt sie in der Spanne dazwischen, wird das Wort grün. Die gewählte Stimme bleibt die Wiedergabe. Eine falsche Klangfolge übernimmt die Farbe nicht.
+- Geprüft und nicht mitgeliefert: `pt_BR-jeff-medium` (Datensatz CC0, von lessac feinjustiert, dieselbe unklare Research-Basis) und `pt_BR-edresson-low` (Datensatz CC BY 4.0, feinjustiert von `en_US-ryan`, und ryan ist CC BY-NC-SA). Kein neues Paket, kein Modell in der App. Die Klangfolge ist die, die schon für die Satzprüfung da ist. faster-whisper und Vosk bleiben draussen.
+
 ## 0.10.1 — 2026-10-15
 
 - In der Wortrunde liegen «Noch einmal hören» und «Weiter» in derselben Leiste. Die Leiste bleibt unten, die beiden Knöpfe liegen nebeneinander und decken sich nicht. Ein Tipp auf «Weiter» geht zum nächsten Schritt, auch quer und hoch. Vorher lag der klebende Knopf über «Noch einmal hören», und der Tipp spielte das Wort noch einmal ab.
