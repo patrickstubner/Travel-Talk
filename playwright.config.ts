@@ -36,5 +36,10 @@ export default defineConfig({
   projects: [
     { name: 'de', grep: /German ten-word/, use: { ...phone, launchOptions: { args: micArgs(deMicWav) } } },
     { name: 'en', grep: /English ten-word/, use: { ...phone, launchOptions: { args: micArgs(enMicWav) } } },
+    {
+      name: 'landscape',
+      grep: /844x390/,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 844, height: 390 }, deviceScaleFactor: 1 },
+    },
   ],
 })

@@ -783,9 +783,28 @@ export function PracticePage() {
             </button>
             <TempoSwitch value={chosen} onChange={chooseTempo} label={copy.speedTitle} slow={copy.tempoSlow} mid={copy.speed85} normal={copy.tempoNormal} />
           </div>
-          {micNote ? <p className="voice-note">{copy.micSkipped}</p> : null}
           <div className="learn-speak" data-testid="learn-record">
-          <div className="row">
+            {micNote ? <p className="voice-note">{copy.micSkipped}</p> : null}
+            {take?.samples && !recording && !micStarting ? (
+              <RepeatFeedback
+                copy={copy}
+                lang={targetLang}
+                uiLang={app}
+                region={settings.viRegion}
+                speech={target.speech}
+                words={feedbackTimes}
+                modelSamples={modelTake?.samples ?? null}
+                modelRate={modelTake?.sampleRate ?? 0}
+                userSamples={take.samples}
+                userRate={take.sampleRate}
+                modelMissing={modelMissing}
+                timingsPending={timingsPending}
+                voiceId={selectedVoice(settings, targetLang).id}
+              />
+            ) : null}
+            {take && !take.samples && !recording ? <p role="status">{copy.pitchEmpty}</p> : null}
+          </div>
+          <div className={recording || !micStarting ? 'speak-actions session-action' : 'speak-actions'} data-testid="speak-actions">
             {recording ? (
               <button type="button" className="button accent learn-stop" onClick={() => sessionRef.current?.recorder.stop()}>
                 {copy.stop}
@@ -840,36 +859,12 @@ export function PracticePage() {
                 {take ? copy.repeatFeedback.again : copy.record}
               </button>
             )}
+            {recording ? null : (
+              <button type="button" className="button primary learn-next" disabled={micStarting} onClick={goNext}>
+                {copy.next}
+              </button>
+            )}
           </div>
-          {take?.samples && !recording && !micStarting ? (
-            <RepeatFeedback
-              copy={copy}
-              lang={targetLang}
-              uiLang={app}
-              region={settings.viRegion}
-              speech={target.speech}
-              words={feedbackTimes}
-              modelSamples={modelTake?.samples ?? null}
-              modelRate={modelTake?.sampleRate ?? 0}
-              userSamples={take.samples}
-              userRate={take.sampleRate}
-              modelMissing={modelMissing}
-              timingsPending={timingsPending}
-              voiceId={selectedVoice(settings, targetLang).id}
-            />
-          ) : null}
-          {take && !take.samples && !recording ? <p role="status">{copy.pitchEmpty}</p> : null}
-          </div>
-          {recording ? null : (
-            <button
-              type="button"
-              className={micStarting ? 'button primary learn-next' : 'button primary session-action learn-next'}
-              disabled={micStarting}
-              onClick={goNext}
-            >
-              {copy.next}
-            </button>
-          )}
         </>
       ) : null}
       {step === 'understand' ? (
