@@ -515,13 +515,15 @@ export function PracticePage() {
             <p data-testid="word-meaning">{meaning}</p>
           </LearnCard>
           {wordTempoControl}
-          <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
-            <span className="play-mark" aria-hidden="true" />
-            {playing ? copy.playingNormal : copy.wordReplay}
-          </button>
-          <button type="button" className="button primary session-action" onClick={goNext}>
-            {copy.next}
-          </button>
+          <div className="speak-actions session-action" data-testid="word-actions">
+            <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
+              <span className="play-mark" aria-hidden="true" />
+              {playing ? copy.playingNormal : copy.wordReplay}
+            </button>
+            <button type="button" className="button primary" onClick={goNext}>
+              {copy.next}
+            </button>
+          </div>
         </section>
       )
     }
@@ -574,10 +576,12 @@ export function PracticePage() {
           {answered ? <p className="gloss">{meaning}</p> : null}
         </LearnCard>
         {wordTempoControl}
-        <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
-          <span className="play-mark" aria-hidden="true" />
-          {playing ? copy.playingNormal : copy.wordReplay}
-        </button>
+        {answered && (item.isNew || picked !== word.id) ? null : (
+          <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
+            <span className="play-mark" aria-hidden="true" />
+            {playing ? copy.playingNormal : copy.wordReplay}
+          </button>
+        )}
         <h2>{copy.wordPrompt}</h2>
         <ul className="choices">
           {wordOptions.map((id) => {
@@ -594,10 +598,16 @@ export function PracticePage() {
         </ul>
         {answered && picked === word.id ? <p className="hint">{copy.wordRight}</p> : null}
         {answered && picked !== word.id ? <p className="hint">{copy.wordWrong(meaning)}</p> : null}
-        {answered && item.isNew ? (
-          <button type="button" className="button primary session-action" onClick={goNext}>
-            {copy.next}
-          </button>
+        {answered && (item.isNew || picked !== word.id) ? (
+          <div className="speak-actions session-action" data-testid="word-actions">
+            <button type="button" className="play-row" aria-pressed={playing} onClick={() => void hear(file, speech, 1)}>
+              <span className="play-mark" aria-hidden="true" />
+              {playing ? copy.playingNormal : copy.wordReplay}
+            </button>
+            <button type="button" className="button primary" onClick={goNext}>
+              {copy.next}
+            </button>
+          </div>
         ) : null}
         {answered && !item.isNew && picked === word.id ? (
           <div className="rate-grid">
@@ -624,11 +634,6 @@ export function PracticePage() {
               </button>
             ))}
           </div>
-        ) : null}
-        {answered && !item.isNew && picked !== word.id ? (
-          <button type="button" className="button primary session-action" onClick={goNext}>
-            {copy.next}
-          </button>
         ) : null}
       </section>
     )

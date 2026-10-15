@@ -459,7 +459,8 @@ a.menu-card span { color: var(--muted); }
     gap: 0.5rem;
     background: var(--paper);
   }
-  .learn .speak-actions.session-action > .button {
+  .learn .speak-actions.session-action > .button,
+  .learn .speak-actions.session-action > .play-row {
     flex: 1 1 0;
     width: auto;
     min-width: 0;
