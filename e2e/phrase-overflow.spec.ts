@@ -46,6 +46,15 @@ async function expectCompactResult(page: Page, shot: string): Promise<void> {
   await expect(page.getByTestId('melody-bar')).toBeVisible()
   await expect(page.getByTestId('rhythm-bar')).toBeVisible()
   await expect(page.locator('.word-card')).toHaveCount(10)
+  const stars = page.getByTestId('repeat-stars')
+  await expect(stars).toBeVisible()
+  await expect(stars.getByRole('img')).toHaveAttribute('aria-label', /^[0-5] (von 5 Sternen|of 5 stars)$/)
+  await expect(stars.locator('.star')).toHaveCount(5)
+  const starBox = await stars.locator('.take-stars-row').boundingBox()
+  const viewport = page.viewportSize()
+  expect(starBox).toBeTruthy()
+  expect(starBox!.x).toBeGreaterThanOrEqual(0)
+  expect(starBox!.x + starBox!.width).toBeLessThanOrEqual((viewport?.width ?? 375) + 1)
   await page.screenshot({ path: shot, fullPage: true })
   const result = await page.locator('[data-testid="repeat-feedback"]').evaluate((section) => {
     const cards = [...section.querySelectorAll('.word-card')].map((card) => {

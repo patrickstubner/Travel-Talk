@@ -1461,16 +1461,13 @@ describe('shipped clips', () => {
 
   /**
    * Half A is the even SHA-1 byte of the line file. Counts are the calibration
-   * pass under the V2 star rule. A floor and a ceiling sit around each one.
-   * «Höchstens 1 Stern» is 0 or 1. The aim is 20 % per language and 25 % per
-   * voice. Deutsch and Englisch stay inside that. German S3 gives one star
-   * when the sentence still fits and neither bar is green, so thorsten on
-   * half A is 9/68. Portugiesisch does not meet 20/25. The locked ceilings
-   * are 28 % of the language and 35 % of one
-   * voice: 95/375 and Claribel 24/75. Vietnamese «daneben» starts below a
-   * pitch correlation of 0.2, so it misses 20/25 as well: 48/235 and
-   * vais1000 39/117. Those ceilings, 23 % and 36 %, are the measured
-   * compromise, not a second rule.
+   * pass. A floor and a ceiling sit around each one. «Höchstens 1 Stern» is
+   * 0 or 1. On the five-star scale a wrong sentence with a yellow or green
+   * bar is 1, where a green bar used to be 2, so those takes join this
+   * bucket. Word colours did not move. German S3 with no green bar is 2, so
+   * it leaves the bucket. The measured locks, not a second rule: Deutsch
+   * 19/68 and thorsten 19/68, Englisch 7/44, Portugiesisch 136/375 and
+   * Claribel 33/75, Vietnamesisch 62/235 and vais1000 46/117.
    */
   const HALF_A_BOUNDS: Record<
     'de' | 'en' | 'pt-BR' | 'vi',
@@ -1485,10 +1482,10 @@ describe('shipped clips', () => {
       voiceShare: number
     }
   > = {
-    de: { otherJudged: 68, otherLow: [7, 11], coloured: 246, red: [55, 71], wrongJudged: 136, wrongZero: [8, 14], lowShare: 0.2, voiceShare: 0.25 },
-    en: { otherJudged: 44, otherLow: [1, 4], coloured: 105, red: [36, 50], wrongJudged: 88, wrongZero: [2, 8], lowShare: 0.2, voiceShare: 0.25 },
-    'pt-BR': { otherJudged: 375, otherLow: [85, 105], coloured: 1411, red: [300, 366], wrongJudged: 437, wrongZero: [3, 9], lowShare: 0.28, voiceShare: 0.35 },
-    vi: { otherJudged: 235, otherLow: [42, 54], coloured: 1046, red: [310, 386], wrongJudged: 353, wrongZero: [10, 18], lowShare: 0.23, voiceShare: 0.36 },
+    de: { otherJudged: 68, otherLow: [17, 21], coloured: 246, red: [55, 71], wrongJudged: 136, wrongZero: [8, 14], lowShare: 0.32, voiceShare: 0.32 },
+    en: { otherJudged: 44, otherLow: [5, 9], coloured: 105, red: [36, 50], wrongJudged: 88, wrongZero: [2, 8], lowShare: 0.22, voiceShare: 0.25 },
+    'pt-BR': { otherJudged: 375, otherLow: [130, 142], coloured: 1411, red: [300, 366], wrongJudged: 437, wrongZero: [3, 9], lowShare: 0.39, voiceShare: 0.48 },
+    vi: { otherJudged: 235, otherLow: [58, 66], coloured: 1046, red: [310, 386], wrongJudged: 353, wrongZero: [10, 18], lowShare: 0.29, voiceShare: 0.44 },
   }
 
   it.skipIf(!ready)(
