@@ -1322,16 +1322,54 @@ export function wordMatchesReferences(
 export type StarCount = 0 | 1 | 2 | 3 | 4 | 5
 
 /**
- * Star count for the repeat screen. Not stored on the score. Five stars.
+ * How much a rhythm miss costs on the way to 4 and 5.
+ * Yellow costs one step, red costs two, and the weight scales that.
+ * A missing bar costs nothing.
  *
- * 5 only when the sentence is «passt» and the melody bar is «passt».
- * A wrong sentence («daneben») is at most 1: 1 when a bar is yellow or
- * green, otherwise 0. A reversed take is 0. A sentence that still
- * belongs («passt» or «teilweise») is at least 2. A green melody bar
- * is 4. German rule S3 holds a fitting sentence with no green bar at
- * 2. S3 runs when the template voice and the speaker are the same
- * known gender, or when the median pitches are within
- * S3_PITCH_SEMITONES. English, Portuguese and Vietnamese do not use S3.
+ * German and English are 1. Both are stress-timed: the beat is part of
+ * the sentence (Pike 1945; Grabe and Low 2002).
+ * Brazilian Portuguese is 0.5. It is syllable-timed beside European
+ * Portuguese, and the stress contrast is weaker (Frota and Vigário 2001).
+ * Vietnamese is 0.3. The contrast is the tone, scored here as melody,
+ * and the language has no lexical stress (Brunelle 2017).
+ */
+export const RHYTHM_STAR_WEIGHT: Record<Lang, number> = {
+  de: 1,
+  en: 1,
+  'pt-BR': 0.5,
+  vi: 0.3,
+}
+
+/**
+ * Pulls a 4 or a 5 down by RHYTHM_STAR_WEIGHT. The result stays at least
+ * 2, so a fitting sentence stays in the grey zone instead of becoming a miss.
+ */
+export function applyRhythmWeight(stars: StarCount, rhythm: BarState | null, lang: Lang): StarCount {
+  if (stars < 4 || rhythm == null || rhythm === 'passt') return stars
+  const steps = rhythm === 'daneben' ? 2 : 1
+  const next = stars - Math.round(steps * RHYTHM_STAR_WEIGHT[lang])
+  if (next >= 5) return 5
+  if (next === 4) return 4
+  if (next === 3) return 3
+  return 2
+}
+
+/**
+ * Star count for the repeat screen. Not stored on the score. Five stars.
+ * The same scale in every language. 4 and 5 are a match. 2 and 3 are the
+ * grey zone between a fitting sentence and a wrong one. 0 and 1 are a
+ * wrong sentence.
+ *
+ * 5 only when the sentence is «passt» and the melody bar is «passt»,
+ * and the rhythm weight still leaves it there. A wrong sentence
+ * («daneben») is at most 1: 1 when a bar is yellow or green, otherwise
+ * 0. A green melody on a wrong sentence stays 1. A reversed take is 0.
+ * A sentence that still belongs («passt» or «teilweise») is at least 2.
+ * A green melody bar is 4 before the rhythm weight. German rule S3 holds
+ * a fitting sentence with no green bar at 2. S3 runs when the template
+ * voice and the speaker are the same known gender, or when the median
+ * pitches are within S3_PITCH_SEMITONES. English, Portuguese and
+ * Vietnamese do not use S3.
  *
  * Portuguese reads `content` when it is passed. When `wer` is present
  * it decides the words: at or below CONTENT_WER_CORRECT the take is at
@@ -1341,9 +1379,24 @@ export type StarCount = 0 | 1 | 2 | 3 | 4 | 5
  * `wer` is missing, a spectrum past SPECTRAL_DISTANCE_MAX is at most
  * 1, unless `prosody` is true. A matched tune is 4, unless the base
  * count is already 5. The middle band stays at most 3. German, English
- * and Vietnamese ignore the field.
+ * and Vietnamese ignore the field. The rhythm weight runs after that,
+ * and only on a 4 or a 5.
  */
 export function starsFromVerdict(
+  verdict: BarState,
+  melody: BarState | null,
+  rhythm: BarState | null,
+  backwards = false,
+  lang: Lang = 'de',
+  genders?: { readonly template?: SpeakerGender | null; readonly user?: SpeakerGender | null } | null,
+  pitch?: { readonly modelHz?: number | null; readonly userHz?: number | null } | null,
+  content?: { readonly bands?: number | null; readonly prosody?: boolean | null; readonly wer?: number | null } | null,
+): StarCount {
+  return applyRhythmWeight(starsBeforeRhythm(verdict, melody, rhythm, backwards, lang, genders, pitch, content), rhythm, lang)
+}
+
+/** The star count before RHYTHM_STAR_WEIGHT. The screen uses starsFromVerdict. */
+export function starsBeforeRhythm(
   verdict: BarState,
   melody: BarState | null,
   rhythm: BarState | null,

@@ -27,6 +27,8 @@ import {
   sentenceVerdict,
   S3_PITCH_SEMITONES,
   medianGapSemitones,
+  RHYTHM_STAR_WEIGHT,
+  starsBeforeRhythm,
   starsFromVerdict,
   wordMatchesReferences,
   wordOrderScore,
@@ -159,7 +161,8 @@ describe('scoring bands', () => {
     expect(sentenceVerdict({ ...same, correlation: 0 }, 'vi')).toBe('daneben')
     const sameGender = { template: 'male' as const, user: 'male' as const }
     const crossGender = { template: 'male' as const, user: 'female' as const }
-    expect(starsFromVerdict('teilweise', 'passt', 'teilweise')).toBe(4)
+    expect(starsFromVerdict('teilweise', 'passt', 'passt')).toBe(4)
+    expect(starsFromVerdict('teilweise', 'passt', 'teilweise')).toBe(3)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', sameGender)).toBe(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', crossGender)).toBe(3)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de')).toBe(3)
@@ -178,8 +181,9 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('daneben', 'passt', 'passt')).toBe(1)
     expect(starsFromVerdict('passt', 'passt', 'passt', true)).toBe(0)
     // Same-gender German S3 stays at 2 when no bar is green. A green melody
-    // bar is 4. A missing gender is not S3 and stays at 3.
-    expect(starsFromVerdict('teilweise', 'passt', 'daneben', false, 'de', sameGender)).toBe(4)
+    // with a red rhythm is 2, because German rhythm has full weight.
+    // A missing gender is not S3 and stays at 3.
+    expect(starsFromVerdict('teilweise', 'passt', 'daneben', false, 'de', sameGender)).toBe(2)
     expect(starsFromVerdict('teilweise', 'daneben', 'passt', false, 'de', sameGender)).toBe(3)
     expect(starsFromVerdict('teilweise', 'teilweise', 'daneben', false, 'de', sameGender)).toBe(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'en', sameGender)).toBe(3)
@@ -196,7 +200,7 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', null, { modelHz: 120, userHz: null })).toBe(3)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', sameGender, farPitch)).toBe(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', crossGender, closePitch)).toBe(2)
-    expect(starsFromVerdict('teilweise', 'passt', 'daneben', false, 'de', null, closePitch)).toBe(4)
+    expect(starsFromVerdict('teilweise', 'passt', 'daneben', false, 'de', null, closePitch)).toBe(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'pt-BR', null, closePitch)).toBe(3)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'en', null, closePitch)).toBe(3)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'vi', null, closePitch)).toBe(3)
@@ -211,8 +215,18 @@ describe('scoring bands', () => {
       expect(starsFromVerdict('daneben', 'teilweise', 'daneben', false, lang)).toBe(1)
       expect(starsFromVerdict('daneben', 'passt', 'daneben', false, lang)).toBe(1)
       expect(starsFromVerdict('daneben', null, null, false, lang)).toBe(0)
-      expect(starsFromVerdict('passt', 'passt', 'teilweise', false, lang)).toBe(5)
+      expect(starsFromVerdict('daneben', 'passt', 'passt', false, lang)).toBe(1)
     }
+    expect(starsFromVerdict('passt', 'passt', 'teilweise', false, 'de')).toBe(4)
+    expect(starsFromVerdict('passt', 'passt', 'teilweise', false, 'en')).toBe(4)
+    expect(starsFromVerdict('passt', 'passt', 'teilweise', false, 'pt-BR')).toBe(4)
+    expect(starsFromVerdict('passt', 'passt', 'teilweise', false, 'vi')).toBe(5)
+    expect(starsFromVerdict('passt', 'passt', 'daneben', false, 'de')).toBe(3)
+    expect(starsFromVerdict('passt', 'passt', 'daneben', false, 'en')).toBe(3)
+    expect(starsFromVerdict('passt', 'passt', 'daneben', false, 'pt-BR')).toBe(4)
+    expect(starsFromVerdict('passt', 'passt', 'daneben', false, 'vi')).toBe(4)
+    expect(RHYTHM_STAR_WEIGHT).toEqual({ de: 1, en: 1, 'pt-BR': 0.5, vi: 0.3 })
+    expect(starsBeforeRhythm('passt', 'passt', 'teilweise', false, 'de')).toBe(5)
     expect(WARP_REVERSE_GAP).toBe(REVERSE_BAND_GAP)
     expect(wordOrderScore([{ userStart: 0, userEnd: 0.2 }, { userStart: 0.3, userEnd: 0.5 }])).toBe(1)
     expect(wordOrderScore([{ userStart: 0.4, userEnd: 0.6 }, { userStart: 0.1, userEnd: 0.2 }])).toBe(0)
@@ -240,11 +254,12 @@ describe('scoring bands', () => {
     // German S3 does not read the bands. A close spectrum must not lift 2 to 3.
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', sameGender, null, words)).toBe(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', sameGender, null, nonsense)).toBe(2)
-    expect(starsFromVerdict('teilweise', 'passt', 'daneben', false, 'de', sameGender, { modelHz: 120, userHz: 140 }, words)).toBe(4)
+    expect(starsFromVerdict('teilweise', 'passt', 'daneben', false, 'de', sameGender, { modelHz: 120, userHz: 140 }, words)).toBe(2)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'en', null, null, words)).toBe(3)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'vi', null, null, nonsense)).toBe(3)
     // A matched tune is not thrown out because one file's spectrum sits past the limit.
-    expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { bands: 0.8, prosody: true })).toBe(4)
+    expect(starsFromVerdict('daneben', 'daneben', null, false, 'pt-BR', null, null, { bands: 0.8, prosody: true })).toBe(4)
+    expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { bands: 0.8, prosody: true })).toBe(3)
     expect(starsFromVerdict('teilweise', 'teilweise', 'daneben', false, 'pt-BR', null, null, { bands: 0.8, prosody: false })).toBeLessThanOrEqual(1)
     expect(starsFromVerdict('passt', 'passt', 'passt', false, 'pt-BR', null, null, { bands: 0.8, prosody: true })).toBe(5)
   })
@@ -259,8 +274,10 @@ describe('scoring bands', () => {
     expect(starsFromVerdict('daneben', 'passt', 'passt', false, 'pt-BR', null, null, { wer: 0.5, prosody: true })).toBeLessThanOrEqual(1)
     expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { wer: correct, prosody: false, bands: 0.9 })).toBeGreaterThanOrEqual(3)
     expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { wer: 0.34 })).toBe(3)
-    expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { wer: 0, prosody: true })).toBe(4)
-    expect(starsFromVerdict('daneben', 'passt', 'daneben', false, 'pt-BR', null, null, { wer: 0, prosody: false })).toBe(5)
+    expect(starsFromVerdict('daneben', 'daneben', null, false, 'pt-BR', null, null, { wer: 0, prosody: true })).toBe(4)
+    expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { wer: 0, prosody: true })).toBe(3)
+    expect(starsFromVerdict('daneben', 'passt', 'passt', false, 'pt-BR', null, null, { wer: 0, prosody: false })).toBe(5)
+    expect(starsFromVerdict('daneben', 'passt', 'daneben', false, 'pt-BR', null, null, { wer: 0, prosody: false })).toBe(4)
     expect(starsFromVerdict('passt', 'passt', 'passt', false, 'pt-BR', null, null, { wer: 0.4, prosody: true })).toBeLessThanOrEqual(3)
     expect(starsFromVerdict('teilweise', 'teilweise', 'teilweise', false, 'de', { template: 'male', user: 'male' }, null, { wer: 0 })).toBe(2)
     expect(starsFromVerdict('daneben', 'daneben', 'daneben', false, 'pt-BR', null, null, { bands: 0.2 })).toBe(0)
