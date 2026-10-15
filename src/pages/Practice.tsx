@@ -435,7 +435,7 @@ export function PracticePage() {
           {queue.every((entry) => entry.isNew) ? <p>{copy.noReviewWasDue}</p> : null}
           <p>{copy.tomorrowReviews}</p>
         </div>
-        <Link className="button primary session-action" to="/">
+        <Link className="button primary" to="/">
           {copy.done}
         </Link>
         <button type="button" className="button wide" onClick={() => setRun((value) => value + 1)}>
@@ -493,7 +493,7 @@ export function PracticePage() {
     )
     if (step === 'word-intro') {
       return (
-        <section className="stack learn" data-testid="word-intro">
+        <section className="stack learn practice" data-testid="word-intro">
           <h2 className="eyebrow">{copy.wordIntroStep(heard, hearTotal)}</h2>
           {offlineAudio ? (
             <p className="warn" role="status">
@@ -526,7 +526,7 @@ export function PracticePage() {
       )
     }
     return (
-      <section className="stack learn" data-testid="practice-word">
+      <section className="stack learn practice" data-testid="practice-word">
         {study}
         <h2 className="eyebrow">{copy.wordsFirst}</h2>
         <div className="skip-row">
@@ -738,7 +738,7 @@ export function PracticePage() {
             : []
 
   return (
-    <section className="stack learn" data-testid="practice">
+    <section className="stack learn practice" data-testid="practice">
       {study}
       <h2 className="eyebrow">{heading[step]}</h2>
       {offlineAudio ? (
@@ -787,13 +787,13 @@ export function PracticePage() {
           <div className="learn-speak" data-testid="learn-record">
           <div className="row">
             {recording ? (
-              <button type="button" className="button accent session-action learn-stop" onClick={() => sessionRef.current?.recorder.stop()}>
+              <button type="button" className="button accent learn-stop" onClick={() => sessionRef.current?.recorder.stop()}>
                 {copy.stop}
               </button>
             ) : (
               <button
                 type="button"
-                className="button accent session-action"
+                className="button accent"
                 disabled={micStarting}
                 onClick={() => {
                   stopClip()
@@ -861,7 +861,12 @@ export function PracticePage() {
           {take && !take.samples && !recording ? <p role="status">{copy.pitchEmpty}</p> : null}
           </div>
           {recording ? null : (
-            <button type="button" className="button primary session-action learn-next" disabled={micStarting} onClick={goNext}>
+            <button
+              type="button"
+              className={micStarting ? 'button primary learn-next' : 'button primary session-action learn-next'}
+              disabled={micStarting}
+              onClick={goNext}
+            >
               {copy.next}
             </button>
           )}

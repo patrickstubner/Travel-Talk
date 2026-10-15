@@ -2,7 +2,7 @@
 
 ## 0.10.0 — 2026-10-15
 
-- Auf den Übungsseiten bleibt der Hauptknopf unten kleben, sobald er bedienbar ist. Ein ausgeschalteter Knopf bleibt im Text. Der Abstand zur Leiste unten lässt die sichere Zone des Geräts frei. Der Text darunter bekommt denselben Abstand, damit der Knopf ihn nicht zudeckt. Auf einem schmalen Bildschirm sind die Abstände und die Schrift der Lernzeile etwas enger.
+- Auf der Übungsseite bleibt der Hauptknopf unten kleben, sobald er bedienbar ist. Das gilt auf einem schmalen Bildschirm und auf einem kurzen, auch quer (Höhe bis 500 px). Liegt die Leiste unten, sitzt der Knopf darüber. Liegt die Leiste seitlich, zählt nur die sichere Zone. Ein ausgeschalteter Knopf, «Fertig» und «Aufnehmen» bleiben im Text. Der zusätzliche Abstand unten gilt nur auf der Übungsseite, damit der Knopf den Text nicht zudeckt. Ein fokussiertes Element scrollt über Knopf und Leiste. Auf einem schmalen Bildschirm sind die Abstände und die Schrift der Lernzeile etwas enger.
 
 ## 0.9.15 — 2026-10-15
 

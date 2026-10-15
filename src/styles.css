@@ -440,17 +440,25 @@ a.menu-card span { color: var(--muted); }
 }
 .rate-grid span { color: var(--muted); font-size: 0.85rem; }
 
+@media (max-width: 799px), (max-height: 500px) {
+  html { scroll-padding-bottom: calc(8rem + env(safe-area-inset-bottom)); }
+  .learn .session-action:not(:disabled) {
+    position: sticky;
+    bottom: env(safe-area-inset-bottom);
+    z-index: 4;
+    box-shadow: 0 0 0 0.45rem var(--paper);
+  }
+  .practice { padding-bottom: 3.4rem; }
+}
+
 @media (max-width: 799px) {
-  .learn { gap: 0.28rem; padding-bottom: 3.4rem; }
+  .learn { gap: 0.28rem; }
   .learn-card { padding: 0.45rem 0.55rem 0.4rem; }
   .learn .target-line { font-size: 1.45rem; line-height: 1.2; }
   .learn-next { margin-top: 0.35rem; }
   .pitch-canvas-compact { max-height: 2rem; }
   .learn .session-action:not(:disabled) {
-    position: sticky;
     bottom: calc(3.5rem + env(safe-area-inset-bottom));
-    z-index: 4;
-    box-shadow: 0 0 0 0.45rem var(--paper);
   }
   .nav {
     position: fixed;
