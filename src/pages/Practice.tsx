@@ -435,7 +435,7 @@ export function PracticePage() {
           {queue.every((entry) => entry.isNew) ? <p>{copy.noReviewWasDue}</p> : null}
           <p>{copy.tomorrowReviews}</p>
         </div>
-        <Link className="button primary" to="/">
+        <Link className="button primary session-action" to="/">
           {copy.done}
         </Link>
         <button type="button" className="button wide" onClick={() => setRun((value) => value + 1)}>
@@ -519,7 +519,7 @@ export function PracticePage() {
             <span className="play-mark" aria-hidden="true" />
             {playing ? copy.playingNormal : copy.wordReplay}
           </button>
-          <button type="button" className="button primary" onClick={goNext}>
+          <button type="button" className="button primary session-action" onClick={goNext}>
             {copy.next}
           </button>
         </section>
@@ -595,7 +595,7 @@ export function PracticePage() {
         {answered && picked === word.id ? <p className="hint">{copy.wordRight}</p> : null}
         {answered && picked !== word.id ? <p className="hint">{copy.wordWrong(meaning)}</p> : null}
         {answered && item.isNew ? (
-          <button type="button" className="button primary" onClick={goNext}>
+          <button type="button" className="button primary session-action" onClick={goNext}>
             {copy.next}
           </button>
         ) : null}
@@ -626,7 +626,7 @@ export function PracticePage() {
           </div>
         ) : null}
         {answered && !item.isNew && picked !== word.id ? (
-          <button type="button" className="button primary" onClick={goNext}>
+          <button type="button" className="button primary session-action" onClick={goNext}>
             {copy.next}
           </button>
         ) : null}
@@ -759,7 +759,7 @@ export function PracticePage() {
             </button>
             <TempoSwitch value={chosen} onChange={chooseTempo} label={copy.speedTitle} slow={copy.tempoSlow} mid={copy.speed85} normal={copy.tempoNormal} />
           </div>
-          <button type="button" className="button primary" onClick={goNext}>
+          <button type="button" className="button primary session-action" onClick={goNext}>
             {copy.next}
           </button>
         </>
@@ -787,13 +787,13 @@ export function PracticePage() {
           <div className="learn-speak" data-testid="learn-record">
           <div className="row">
             {recording ? (
-              <button type="button" className="button accent learn-stop" onClick={() => sessionRef.current?.recorder.stop()}>
+              <button type="button" className="button accent session-action learn-stop" onClick={() => sessionRef.current?.recorder.stop()}>
                 {copy.stop}
               </button>
             ) : (
               <button
                 type="button"
-                className="button accent"
+                className="button accent session-action"
                 disabled={micStarting}
                 onClick={() => {
                   stopClip()
@@ -861,7 +861,7 @@ export function PracticePage() {
           {take && !take.samples && !recording ? <p role="status">{copy.pitchEmpty}</p> : null}
           </div>
           {recording ? null : (
-            <button type="button" className="button primary learn-next" disabled={micStarting} onClick={goNext}>
+            <button type="button" className="button primary session-action learn-next" disabled={micStarting} onClick={goNext}>
               {copy.next}
             </button>
           )}
@@ -906,7 +906,7 @@ export function PracticePage() {
           </ul>
           {answered ? <p className="hint">{copy.afterChoice}</p> : null}
           {answered ? (
-            <button type="button" className="button primary" onClick={goNext}>
+            <button type="button" className="button primary session-action" onClick={goNext}>
               {copy.next}
             </button>
           ) : null}
