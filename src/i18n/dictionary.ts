@@ -197,11 +197,13 @@ export type Dictionary = {
   installIos: string
   privacy: string
   loading: string
-  speechProgress: (percent: number) => string
+  speechProgress: (language: string, percent: number) => string
   speechFallback: string
-  speechOffer: (megabytes: number) => string
-  speechOfferSave: (megabytes: number) => string
+  speechOffer: (language: string, megabytes: number) => string
+  speechOfferSave: (language: string, megabytes: number) => string
   speechLoad: string
+  speechStoredTitle: string
+  speechForget: (language: string, megabytes: number) => string
   storageError: string
   version: string
   exampleAudio: string
@@ -425,7 +427,7 @@ export const de: Dictionary = {
     starsInfo: 'Was die Sterne bedeuten',
     starsTitle: 'Sterne',
     starsHint:
-      'Fünf Sterne nur, wenn der Satz passt und die Melodie grün ist. Ein falscher Satz oder Unsinn bekommt höchstens einen Stern. Ein Satz, der passt oder teilweise ist, bekommt mindestens zwei. Sind die Wörter richtig und die Melodie schwach, sind es drei. Sind die Wörter richtig und die Melodie gut, sind es vier, und fünf, wenn Satz und Melodie beide grün sind. Liegt die Tonhöhe nahe an der Datei, bleibt Deutsch ohne grünen Balken bei zwei. Rückwärts keinen. Ein falscher Satz bekommt nie fünf. Auf Portugiesisch gelten die Wörter, sobald die Spracherkennung da ist.',
+      'Fünf Sterne nur, wenn der Satz passt und die Melodie grün ist. Ein falscher Satz oder Unsinn bekommt höchstens einen Stern. Ein Satz, der passt oder teilweise ist, bekommt mindestens zwei. Sind die Wörter richtig und die Melodie schwach, sind es drei. Sind die Wörter richtig und die Melodie gut, sind es vier, und fünf, wenn Satz und Melodie beide grün sind. Liegt die Tonhöhe nahe an der Datei, bleibt Deutsch ohne grünen Balken bei zwei. Rückwärts keinen. Ein falscher Satz bekommt nie fünf. Sobald die Spracherkennung da ist, gelten die Wörter in der Sprache, die du übst.',
     barsFit: 'Vier Sterne. Die Balken passen, der Satz noch nicht ganz.',
     unclear: 'Das lässt sich nicht zuordnen. Sprich in derselben Richtung wie die Datei, ohne lange Pause davor.',
     noWordTimes: 'Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.',
@@ -588,14 +590,16 @@ export const de: Dictionary = {
   privacy:
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
-  speechProgress: (percent) => `Spracherkennung für Portugiesisch, ${percent} Prozent.`,
+  speechProgress: (language, percent) => `Spracherkennung für ${language}, ${percent} Prozent.`,
   speechFallback: 'Die Spracherkennung fehlt. Es gilt die Wertung ohne die Wörter.',
-  speechOffer: (megabytes) => `Spracherkennung für Portugiesisch laden, ${megabytes} MB?`,
-  speechOfferSave: (megabytes) =>
-    `Dein Gerät spart Daten. Spracherkennung für Portugiesisch ist ${megabytes} MB. Sie lädt nur, wenn du tippst.`,
+  speechOffer: (language, megabytes) => `Spracherkennung für ${language} laden, ${megabytes} MB?`,
+  speechOfferSave: (language, megabytes) =>
+    `Dein Gerät spart Daten. Spracherkennung für ${language} ist ${megabytes} MB. Sie lädt nur, wenn du tippst.`,
   speechLoad: 'Laden',
+  speechStoredTitle: 'Spracherkennung auf dem Gerät',
+  speechForget: (language, megabytes) => `${language} löschen, ${megabytes} MB`,
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.11.0',
+  version: 'Version 1.0.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   aboutLine: 'Zum Satz',
   infoOpen: 'Erklärungen zum Satz',
@@ -817,7 +821,7 @@ export const en: Dictionary = {
     starsInfo: 'What the stars mean',
     starsTitle: 'Stars',
     starsHint:
-      'Five stars only when the sentence fits and the melody bar is green. A wrong sentence or nonsense gets at most one star. A sentence that fits or partly fits gets at least two. Right words and a weak melody are three. Right words and a good melody are four, and five when the sentence and the melody are both green. When the pitch is close to the file, German with no green bar stays at two. Spoken backwards gets none. A wrong sentence never gets five. In Portuguese the page reads the words when speech recognition is here.',
+      'Five stars only when the sentence fits and the melody bar is green. A wrong sentence or nonsense gets at most one star. A sentence that fits or partly fits gets at least two. Right words and a weak melody are three. Right words and a good melody are four, and five when the sentence and the melody are both green. When the pitch is close to the file, German with no green bar stays at two. Spoken backwards gets none. A wrong sentence never gets five. The page reads the words in the language you practise when speech recognition is here.',
     barsFit: 'Four stars. The bars fit, the sentence does not quite.',
     unclear: 'This cannot be lined up. Speak in the same direction as the file, without a long pause first.',
     noWordTimes: 'This voice has no word timings. The curve stays, and the words stay grey.',
@@ -976,14 +980,16 @@ export const en: Dictionary = {
   installIos: 'Tap Share, then Add to Home Screen.',
   privacy: 'Progress, recordings and the note stay on this device. No account, no tracking, no font from the network.',
   loading: 'One moment.',
-  speechProgress: (percent) => `Portuguese speech recognition, ${percent} percent.`,
+    speechProgress: (language, percent) => `${language} speech recognition, ${percent} percent.`,
   speechFallback: 'Speech recognition is missing. The score stays without the words.',
-  speechOffer: (megabytes) => `Download Portuguese speech recognition, ${megabytes} MB?`,
-  speechOfferSave: (megabytes) =>
-    `This device is saving data. Portuguese speech recognition is ${megabytes} MB. It downloads only when you tap.`,
+  speechOffer: (language, megabytes) => `Download ${language} speech recognition, ${megabytes} MB?`,
+  speechOfferSave: (language, megabytes) =>
+    `This device is saving data. ${language} speech recognition is ${megabytes} MB. It downloads only when you tap.`,
   speechLoad: 'Download',
+  speechStoredTitle: 'Speech recognition on this device',
+  speechForget: (language, megabytes) => `Delete ${language}, ${megabytes} MB`,
   storageError: 'Local storage is not available.',
-  version: 'Version 0.11.0',
+  version: 'Version 1.0.0',
   exampleAudio: 'The audio speaks the example sentence.',
   aboutLine: 'About this line',
   infoOpen: 'Notes about this line',
@@ -1205,7 +1211,7 @@ export const pt: Dictionary = {
     starsInfo: 'O que as estrelas significam',
     starsTitle: 'Estrelas',
     starsHint:
-      'Cinco estrelas só quando a frase encaixa e a melodia está verde. Uma frase errada ou bobagem fica em no máximo uma estrela. Uma frase que encaixa ou encaixa em parte fica em pelo menos duas. Palavras certas e melodia fraca: três. Palavras certas e melodia boa: quatro, e cinco quando a frase e a melodia estão verdes. Quando o tom está perto do arquivo, o alemão sem barra verde fica em duas. Ao contrário, nenhuma. Uma frase errada nunca ganha cinco. Em português a página lê as palavras quando o reconhecimento de fala está aqui.',
+      'Cinco estrelas só quando a frase encaixa e a melodia está verde. Uma frase errada ou bobagem fica em no máximo uma estrela. Uma frase que encaixa ou encaixa em parte fica em pelo menos duas. Palavras certas e melodia fraca: três. Palavras certas e melodia boa: quatro, e cinco quando a frase e a melodia estão verdes. Quando o tom está perto do arquivo, o alemão sem barra verde fica em duas. Ao contrário, nenhuma. Uma frase errada nunca ganha cinco. A página lê as palavras na língua que você pratica quando o reconhecimento de fala está aqui.',
     barsFit: 'Quatro estrelas. As barras encaixam, a frase ainda não.',
     unclear: 'Não dá para alinhar. Fale na mesma direção do arquivo, sem uma pausa longa antes.',
     noWordTimes: 'Esta voz não tem os tempos das palavras. A curva fica, e as palavras ficam cinza.',
@@ -1367,14 +1373,16 @@ export const pt: Dictionary = {
   installIos: 'Toque em Compartilhar e depois em Adicionar à Tela de Início.',
   privacy: 'Progresso, gravações e a nota ficam neste aparelho. Sem conta, sem rastreamento, sem fonte da rede.',
   loading: 'Um momento.',
-  speechProgress: (percent) => `Reconhecimento de fala em português, ${percent} por cento.`,
+    speechProgress: (language, percent) => `Reconhecimento de fala em ${language}, ${percent} por cento.`,
   speechFallback: 'O reconhecimento de fala não está aqui. A nota fica sem as palavras.',
-  speechOffer: (megabytes) => `Baixar o reconhecimento de fala em português, ${megabytes} MB?`,
-  speechOfferSave: (megabytes) =>
-    `Este aparelho está economizando dados. O reconhecimento de fala em português tem ${megabytes} MB. Só baixa quando você toca.`,
+  speechOffer: (language, megabytes) => `Baixar o reconhecimento de fala em ${language}, ${megabytes} MB?`,
+  speechOfferSave: (language, megabytes) =>
+    `Este aparelho está economizando dados. O reconhecimento de fala em ${language} tem ${megabytes} MB. Só baixa quando você toca.`,
   speechLoad: 'Baixar',
+  speechStoredTitle: 'Reconhecimento de fala neste aparelho',
+  speechForget: (language, megabytes) => `Apagar ${language}, ${megabytes} MB`,
   storageError: 'O armazenamento local não está disponível.',
-  version: 'Version 0.11.0',
+  version: 'Version 1.0.0',
   exampleAudio: 'O áudio fala a frase de exemplo.',
   aboutLine: 'Sobre a frase',
   infoOpen: 'Notas sobre a frase',
@@ -1596,7 +1604,7 @@ export const vi: Dictionary = {
     starsInfo: 'Sao có nghĩa là gì',
     starsTitle: 'Sao',
     starsHint:
-      'Năm sao chỉ khi câu ổn và cột giai điệu xanh. Câu sai hoặc nói linh tinh nhiều nhất một sao. Câu ổn hoặc một phần thì ít nhất hai sao. Đúng từ mà giai điệu yếu là ba sao. Đúng từ và giai điệu tốt là bốn sao, và năm sao khi câu và giai điệu đều xanh. Khi đường thanh gần tệp, tiếng Đức không có cột xanh thì giữ hai sao. Nói ngược không có sao. Câu sai không bao giờ được năm sao. Với tiếng Bồ Đào Nha, trang đọc các từ khi có nhận dạng giọng nói.',
+      'Năm sao chỉ khi câu ổn và cột giai điệu xanh. Câu sai hoặc nói linh tinh nhiều nhất một sao. Câu ổn hoặc một phần thì ít nhất hai sao. Đúng từ mà giai điệu yếu là ba sao. Đúng từ và giai điệu tốt là bốn sao, và năm sao khi câu và giai điệu đều xanh. Khi đường thanh gần tệp, tiếng Đức không có cột xanh thì giữ hai sao. Nói ngược không có sao. Câu sai không bao giờ được năm sao. Khi có nhận dạng giọng nói, trang đọc các từ của ngôn ngữ bạn đang luyện.',
     barsFit: 'Bốn sao. Hai cột ổn, câu chưa hẳn.',
     unclear: 'Không xếp được. Nói cùng hướng với tệp, đừng dừng lâu trước khi nói.',
     noWordTimes: 'Giọng này không có thời điểm từng từ. Đường cong vẫn còn, các từ vẫn xám.',
@@ -1752,14 +1760,16 @@ export const vi: Dictionary = {
   installIos: 'Chạm Chia sẻ, rồi Thêm vào Màn hình chính.',
   privacy: 'Tiến độ, bản ghi và ghi chú ở trên máy này. Không tài khoản, không theo dõi, không phông từ mạng.',
   loading: 'Một lát.',
-  speechProgress: (percent) => `Nhận dạng giọng nói tiếng Bồ Đào Nha, ${percent} phần trăm.`,
+    speechProgress: (language, percent) => `Nhận dạng giọng nói ${language}, ${percent} phần trăm.`,
   speechFallback: 'Không có nhận dạng giọng nói. Điểm giữ cách cũ, không đọc từ.',
-  speechOffer: (megabytes) => `Tải nhận dạng giọng nói tiếng Bồ Đào Nha, ${megabytes} MB?`,
-  speechOfferSave: (megabytes) =>
-    `Máy này đang tiết kiệm dữ liệu. Nhận dạng giọng nói tiếng Bồ Đào Nha nặng ${megabytes} MB. Chỉ tải khi bạn chạm.`,
+  speechOffer: (language, megabytes) => `Tải nhận dạng giọng nói ${language}, ${megabytes} MB?`,
+  speechOfferSave: (language, megabytes) =>
+    `Máy này đang tiết kiệm dữ liệu. Nhận dạng giọng nói ${language} nặng ${megabytes} MB. Chỉ tải khi bạn chạm.`,
   speechLoad: 'Tải',
+  speechStoredTitle: 'Nhận dạng giọng nói trên máy',
+  speechForget: (language, megabytes) => `Xóa ${language}, ${megabytes} MB`,
   storageError: 'Bộ nhớ trên máy không dùng được.',
-  version: 'Version 0.11.0',
+  version: 'Version 1.0.0',
   exampleAudio: 'Audio đọc câu ví dụ.',
   aboutLine: 'Về câu này',
   infoOpen: 'Giải thích về câu này',

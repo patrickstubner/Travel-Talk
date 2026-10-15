@@ -1371,16 +1371,18 @@ export function applyRhythmWeight(stars: StarCount, rhythm: BarState | null, lan
  * pitches are within S3_PITCH_SEMITONES. English, Portuguese and
  * Vietnamese do not use S3.
  *
- * Portuguese reads `content` when it is passed. When `wer` is present
- * it decides the words: at or below CONTENT_WER_CORRECT the take is at
- * least 3, 4 when the tune matches another voice, and 5 when the
- * melody bar is green too. At or above CONTENT_WER_GIBBERISH the take
- * is at most 1, even if the tune matched. Between those, and when
- * `wer` is missing, a spectrum past SPECTRAL_DISTANCE_MAX is at most
- * 1, unless `prosody` is true. A matched tune is 4, unless the base
- * count is already 5. The middle band stays at most 3. German, English
- * and Vietnamese ignore the field. The rhythm weight runs after that,
- * and only on a 4 or a 5.
+ * Portuguese reads `wer` when speech recognition produced it. At or
+ * below CONTENT_WER_CORRECT the take is at least 3, 4 when the tune
+ * matches, and 5 when the melody bar is green too. At or above
+ * CONTENT_WER_GIBBERISH the take is at most 1, even if the tune
+ * matched. Between those, Portuguese stays at most 3. When `wer` is
+ * missing, the count above stays, and Portuguese still reads the
+ * spectrum: past SPECTRAL_DISTANCE_MAX is at most 1, unless `prosody`
+ * is true. A matched tune is 4, unless the base count is already 5.
+ * German, English and Vietnamese do not read the spectrum. Their
+ * recognition, when it ran, only caps the count at 4, after the rhythm
+ * weight. It does not raise a take to 3 and it does not cut one down
+ * to 1. German S3 stays: a fitting sentence with no green bar remains 2.
  */
 export function starsFromVerdict(
   verdict: BarState,
@@ -1392,7 +1394,10 @@ export function starsFromVerdict(
   pitch?: { readonly modelHz?: number | null; readonly userHz?: number | null } | null,
   content?: { readonly bands?: number | null; readonly prosody?: boolean | null; readonly wer?: number | null } | null,
 ): StarCount {
-  return applyRhythmWeight(starsBeforeRhythm(verdict, melody, rhythm, backwards, lang, genders, pitch, content), rhythm, lang)
+  const weighted = applyRhythmWeight(starsBeforeRhythm(verdict, melody, rhythm, backwards, lang, genders, pitch, content), rhythm, lang)
+  const wer = content?.wer
+  if (lang !== 'pt-BR' && typeof wer === 'number' && Number.isFinite(wer) && weighted > 4) return 4
+  return weighted
 }
 
 /** The star count before RHYTHM_STAR_WEIGHT. The screen uses starsFromVerdict. */

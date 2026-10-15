@@ -2,12 +2,22 @@ import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { PORTUGUESE_MODEL_BYTES, PORTUGUESE_MODEL_FILE, PORTUGUESE_MODEL_SHA256 } from './vosk-pt'
+import type { Lang } from '../../content/phrase'
+import { SPEECH_MODELS } from './vosk'
 
-describe('portuguese model archive', () => {
-  it('matches the pinned size and sha-256', () => {
-    const bytes = readFileSync(fileURLToPath(new URL(`../../public/${PORTUGUESE_MODEL_FILE}`, import.meta.url)))
-    expect(bytes.byteLength).toBe(PORTUGUESE_MODEL_BYTES)
-    expect(createHash('sha256').update(bytes).digest('hex')).toBe(PORTUGUESE_MODEL_SHA256)
+const LANGS: Lang[] = ['de', 'en', 'pt-BR', 'vi']
+
+describe('speech model archives', () => {
+  it('pins one Apache small model for every language', () => {
+    expect(Object.keys(SPEECH_MODELS).sort()).toEqual([...LANGS].sort())
+    for (const lang of LANGS) {
+      const spec = SPEECH_MODELS[lang]
+      const bytes = readFileSync(fileURLToPath(new URL(`../../public/${spec.file}`, import.meta.url)))
+      expect(bytes.byteLength, lang).toBe(spec.bytes)
+      expect(createHash('sha256').update(bytes).digest('hex'), lang).toBe(spec.sha256)
+      expect(spec.sha256, lang).toMatch(/^[0-9a-f]{64}$/)
+      expect(spec.zipSha256, lang).toMatch(/^[0-9a-f]{64}$/)
+      expect(spec.file.endsWith('.tar.gz'), lang).toBe(true)
+    }
   })
 })

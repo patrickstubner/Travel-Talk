@@ -20,7 +20,7 @@ import { LearnCard } from '../components/LearnCard'
 import { TempoSwitch } from '../components/TempoSwitch'
 import { WordTempoControl } from '../components/WordTempo'
 import { RepeatFeedback } from '../components/RepeatFeedback'
-import { PortugueseModelStatus } from '../speech/PortugueseModelStatus'
+import { SpeechModelStatus } from '../speech/SpeechModelStatus'
 import { StudyProgress } from '../components/StudyProgress'
 import { RichText } from '../components/RichText'
 import { wordSound } from '../../content/word-sounds'
@@ -802,7 +802,7 @@ export function PracticePage() {
             {sentence}
             {glossLine}
           </LearnCard>
-          {targetLang === 'pt-BR' ? <PortugueseModelStatus copy={copy} /> : null}
+          <SpeechModelStatus copy={copy} lang={targetLang} uiLang={app} />
           <div className="learn-speak" data-testid="learn-record">
             {micNote ? <p className="voice-note">{copy.micSkipped}</p> : null}
             {take?.samples && !recording && !micStarting ? (

@@ -1,34 +1,38 @@
 import { useEffect, useState } from 'react'
+import type { Lang } from '../../content/phrase'
+import { LANG_LABEL } from '../app/labels'
 import type { Dictionary } from '../i18n/dictionary'
 import {
-  PORTUGUESE_MODEL_BYTES,
-  acceptPortugueseModel,
+  SPEECH_MODELS,
+  acceptSpeechModel,
   connectionSavesData,
-  portugueseSpeechState,
-  preparePortugueseModel,
+  prepareSpeechModel,
+  speechMegabytes,
   speechModelsInThisRun,
-  subscribePortugueseSpeech,
+  speechState,
+  subscribeSpeech,
   type SpeechState,
-} from './vosk-pt'
+} from './vosk'
 
-const MEGABYTES = Math.max(1, Math.round(PORTUGUESE_MODEL_BYTES / 1_000_000))
-
-/** Asks before the download. A checked cache loads without a tap. saveData never starts one. */
-export function PortugueseModelStatus({ copy }: { copy: Dictionary }) {
-  const [state, setState] = useState<SpeechState>(portugueseSpeechState)
+/** Asks before the download for the language being practised. A checked cache loads without a tap. */
+export function SpeechModelStatus({ copy, lang, uiLang }: { copy: Dictionary; lang: Lang; uiLang: Lang }) {
+  const [state, setState] = useState<SpeechState>(speechState(lang))
   const [offer, setOffer] = useState(false)
   const [saveData, setSaveData] = useState(false)
+  const megabytes = speechMegabytes(SPEECH_MODELS[lang].bytes)
+  const name = LANG_LABEL[lang][uiLang]
   useEffect(() => {
     if (!speechModelsInThisRun()) return undefined
     setSaveData(connectionSavesData())
-    const stop = subscribePortugueseSpeech(setState)
-    void preparePortugueseModel().then((next) => setOffer(next === 'offer'))
+    setOffer(false)
+    const stop = subscribeSpeech(lang, setState)
+    void prepareSpeechModel(lang).then((next) => setOffer(next === 'offer'))
     return stop
-  }, [])
+  }, [lang])
   if (state.phase === 'loading') {
     return (
       <p className="voice-note" role="status" data-testid="speech-progress">
-        {copy.speechProgress(state.progress)}
+        {copy.speechProgress(name, state.progress)}
         <progress value={state.progress} max={100} />
       </p>
     )
@@ -43,13 +47,13 @@ export function PortugueseModelStatus({ copy }: { copy: Dictionary }) {
   if (offer && state.phase !== 'ready') {
     return (
       <p className="voice-note" data-testid="speech-offer">
-        {saveData ? copy.speechOfferSave(MEGABYTES) : copy.speechOffer(MEGABYTES)}{' '}
+        {saveData ? copy.speechOfferSave(name, megabytes) : copy.speechOffer(name, megabytes)}{' '}
         <button
           type="button"
           data-testid="speech-load"
           onClick={() => {
             setOffer(false)
-            acceptPortugueseModel()
+            acceptSpeechModel(lang)
           }}
         >
           {copy.speechLoad}
