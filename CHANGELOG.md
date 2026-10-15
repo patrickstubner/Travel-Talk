@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.0 — 2026-10-15
+
+- Auf der Übungsseite bleibt der Hauptknopf unten kleben, sobald er bedienbar ist. Das gilt auf einem schmalen Bildschirm und auf einem kurzen, auch quer (Höhe bis 500 px). Liegt die Leiste unten, sitzt der Knopf darüber. Liegt die Leiste seitlich, zählt nur die sichere Zone. Auf dem Nachsprechen teilen sich «Aufnehmen» und «Weiter» diese Leiste, damit «Weiter» das Aufnehmen nicht verdeckt. Ein ausgeschalteter Knopf und «Fertig» bleiben im Text. Während das Mikrofon startet, bleibt die Leiste im Text. Der zusätzliche Abstand unten gilt nur auf der Übungsseite, damit der Knopf den Text nicht zudeckt. Ein fokussiertes Element scrollt über Knopf und Leiste. Auf einem schmalen Bildschirm sind die Abstände und die Schrift der Lernzeile etwas enger.
+
 ## 0.9.15 — 2026-10-15
 
 - Zu Beginn stehen beide Sprachen im Text, untereinander. Zuerst die Sprache der App, deine Sprache. Danach die Sprache, die du lernen willst. Weiter bleibt aus, bis beide gewählt sind und sich unterscheiden. Dieselbe Sprache zweimal ist keine Richtung. Danach zeigt die Leiste oben dieselben Werte. Die Texte trennen «deine Sprache» und «die Sprache, die du lernen willst», auf Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. In allen vier Sprachen bleibt es bei «du», «you», «você» oder «bạn». Ohne Wahl sagt die Leiste «nicht gewählt».
