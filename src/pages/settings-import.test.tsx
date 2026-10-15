@@ -91,8 +91,8 @@ async function chooseLanguages(): Promise<void> {
   fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
   await screen.findByRole('button', { name: /Wer lernt\?: A/ })
   fireEvent.click(within(screen.getByRole('group', { name: 'Sprache der App' })).getByRole('button', { name: 'Deutsch' }))
-  fireEvent.click(screen.getByRole('button', { name: /^Sprache, die du lernst/ }))
-  const groups = await screen.findAllByRole('group', { name: 'Sprache, die du lernst' })
+  fireEvent.click(screen.getByRole('button', { name: /^Sprache, die du lernen willst/ }))
+  const groups = await screen.findAllByRole('group', { name: 'Sprache, die du lernen willst' })
   fireEvent.click(within(groups[groups.length - 1]!).getByRole('button', { name: 'Vietnamesisch' }))
   await waitFor(() => {
     expect((screen.getByRole('button', { name: 'Fortschritt exportieren' }) as HTMLButtonElement).disabled).toBe(false)
@@ -233,8 +233,8 @@ describe('settings import', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Person hinzufügen' }))
     await screen.findByRole('button', { name: 'Wer lernt?: B' })
     fireEvent.click(within(screen.getByRole('group', { name: 'Sprache der App' })).getByRole('button', { name: 'Deutsch' }))
-    fireEvent.click(screen.getByRole('button', { name: /^Sprache, die du lernst/ }))
-    const groups = await screen.findAllByRole('group', { name: 'Sprache, die du lernst' })
+    fireEvent.click(screen.getByRole('button', { name: /^Sprache, die du lernen willst/ }))
+    const groups = await screen.findAllByRole('group', { name: 'Sprache, die du lernen willst' })
     fireEvent.click(within(groups[groups.length - 1]!).getByRole('button', { name: 'Englisch' }))
     await waitFor(() => {
       expect((screen.getByRole('button', { name: 'Alle Personen exportieren' }) as HTMLButtonElement).disabled).toBe(false)

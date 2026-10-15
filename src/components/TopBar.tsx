@@ -23,7 +23,15 @@ export function withTarget(settings: Settings, lang: Lang): Settings {
   return next
 }
 
-export function TopBar({ askName = false, hidePerson = false }: { askName?: boolean; hidePerson?: boolean }) {
+export function TopBar({
+  askName = false,
+  hidePerson = false,
+  hideLang = false,
+}: {
+  askName?: boolean
+  hidePerson?: boolean
+  hideLang?: boolean
+}) {
   const { snapshot, saveSettings, switchPerson, addPerson, renamePerson, deletePerson } = useApp()
   const settings = useSettings()
   const copy = useCopy()
@@ -82,7 +90,7 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
 
   const target = settings.targetLang
   const variant = target === 'vi' ? (settings.viRegion === 'north' ? copy.regionNorth : copy.regionSouth) : ''
-  const targetText = target ? LANG_LABEL[target][ui] : copy.targetLangTitle
+  const targetText = target ? LANG_LABEL[target][ui] : copy.notSelected
   const personText = active?.name || copy.personNameAsk
   const showRegion = settings.appLang === 'vi' || target === 'vi'
 
@@ -155,17 +163,19 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
           <bdi>{personText}</bdi>
         </button>
       )}
-      <button
-        ref={langButton}
-        type="button"
-        className="top-trigger"
-        aria-expanded={open === 'lang'}
-        aria-controls={langMenu}
-        aria-label={variant ? `${copy.targetLangTitle}: ${targetText}, ${variant}` : `${copy.targetLangTitle}: ${targetText}`}
-        onClick={() => setOpen((value) => (value === 'lang' ? null : 'lang'))}
-      >
-        {variant ? `${targetText} · ${variant}` : targetText}
-      </button>
+      {hideLang ? null : (
+        <button
+          ref={langButton}
+          type="button"
+          className="top-trigger"
+          aria-expanded={open === 'lang'}
+          aria-controls={langMenu}
+          aria-label={variant ? `${copy.targetLangTitle}: ${targetText}, ${variant}` : `${copy.targetLangTitle}: ${targetText}`}
+          onClick={() => setOpen((value) => (value === 'lang' ? null : 'lang'))}
+        >
+          {variant ? `${targetText} · ${variant}` : targetText}
+        </button>
+      )}
       {!hidePerson && open === 'person' ? (
         <div ref={menuRef} id={personMenu} className="top-menu" role="group" aria-label={copy.whoTitle}>
           {people.map((person) => (
@@ -255,7 +265,7 @@ export function TopBar({ askName = false, hidePerson = false }: { askName?: bool
           <p className="hint person-shared">{copy.whoShared}</p>
         </div>
       ) : null}
-      {open === 'lang' ? (
+      {!hideLang && open === 'lang' ? (
         <div ref={menuRef} id={langMenu} className="top-menu" role="group" aria-label={copy.targetLangTitle}>
           <div className="choice-grid" role="group" aria-label={copy.targetLangTitle}>
             {APP_LANGS.map((lang) => (

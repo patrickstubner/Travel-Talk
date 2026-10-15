@@ -17,12 +17,6 @@ function shotDir(): string {
 const SHOTS = shotDir()
 const PHRASE = '#/phrase/day.numbers'
 
-async function pickTarget(page: Page, menuName: RegExp, language: string): Promise<void> {
-  await page.getByRole('button', { name: menuName }).click()
-  const groups = page.getByRole('group', { name: menuName })
-  await groups.last().getByRole('button', { name: language, exact: true }).click()
-}
-
 async function openPhrase(page: Page): Promise<void> {
   await page.goto('#/')
   await page.getByRole('textbox', { name: 'Wie sollen wir dich nennen?' }).fill('A')
@@ -122,8 +116,9 @@ async function expectCompactResult(page: Page, shot: string): Promise<void> {
 test('German ten-word sentence stays compact at 375 px', async ({ page }) => {
   await serveSentence(page, deMicWav)
   await openPhrase(page)
-  await page.getByRole('button', { name: 'Englisch', exact: true }).click()
-  await pickTarget(page, /^Language you are learning/, 'German')
+  const germanBoard = page.getByTestId('onboarding')
+  await germanBoard.getByRole('group', { name: 'Sprache der App' }).getByRole('button', { name: 'Englisch', exact: true }).click()
+  await germanBoard.getByRole('group', { name: 'Language you want to learn' }).getByRole('button', { name: 'German', exact: true }).click()
   await page.getByRole('button', { name: 'Continue to Learn today' }).click()
   await page.goto(PHRASE)
   await record(page, 'Record', 'Stop')
@@ -133,8 +128,9 @@ test('German ten-word sentence stays compact at 375 px', async ({ page }) => {
 test('English ten-word sentence stays compact at 375 px', async ({ page }) => {
   await serveSentence(page, enMicWav)
   await openPhrase(page)
-  await page.getByRole('button', { name: 'Deutsch', exact: true }).click()
-  await pickTarget(page, /^Sprache, die du lernst/, 'Englisch')
+  const englishBoard = page.getByTestId('onboarding')
+  await englishBoard.getByRole('group', { name: 'Sprache der App' }).getByRole('button', { name: 'Deutsch', exact: true }).click()
+  await englishBoard.getByRole('group', { name: 'Sprache, die du lernen willst' }).getByRole('button', { name: 'Englisch', exact: true }).click()
   await page.getByRole('button', { name: 'Weiter zu Heute lernen' }).click()
   await page.goto(PHRASE)
   await record(page, 'Aufnehmen', 'Stopp')

@@ -325,8 +325,9 @@ describe('import', () => {
   })
 
   it('keeps the voice hint out of the export', () => {
-    const text = toExport({ settings: { ...current, voiceHintSeen: true }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
+    const text = toExport({ settings: { ...current, voiceHintSeen: true, onboarded: true }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
     expect(text).not.toContain('voiceHintSeen')
+    expect(text).not.toContain('onboarded')
     const withHighlight = toExport({ settings: { ...current, highlightWords: false }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))
     expect(withHighlight).not.toContain('highlightWords')
     const withTempo = toExport({ settings: { ...current, learnTempo: 0.7 }, cards: [] }, new Date('2026-10-11T00:00:00.000Z'))

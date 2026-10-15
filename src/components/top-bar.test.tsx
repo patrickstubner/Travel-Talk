@@ -52,9 +52,9 @@ describe('top bar', () => {
       </AppProvider>,
     )
     const ask = await screen.findByRole('button', { name: /^Wer lernt\?/ })
-    const language = screen.getByRole('button', { name: /^Sprache, die du lernst/ })
+    const language = screen.getByRole('button', { name: /^Sprache, die du lernen willst/ })
     expect(ask.compareDocumentPosition(language) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.queryByRole('group', { name: 'Sprache, die du lernst' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Sprache, die du lernen willst' })).toBeNull()
     fireEvent.click(ask)
     await screen.findByText(/Eine von zehn/)
     const name = screen.getByLabelText('Wie sollen wir dich nennen?')
@@ -64,21 +64,21 @@ describe('top bar', () => {
     const named = await screen.findByRole('button', { name: 'Wer lernt?: A' })
     expect(named.querySelector('bdi')?.textContent).toBe('A')
     fireEvent.click(language)
-    const groups = await screen.findAllByRole('group', { name: 'Sprache, die du lernst' })
+    const groups = await screen.findAllByRole('group', { name: 'Sprache, die du lernen willst' })
     fireEvent.click(within(groups[groups.length - 1]!).getByRole('button', { name: 'Vietnamesisch' }))
-    const learning = await screen.findByRole('button', { name: 'Sprache, die du lernst: Vietnamesisch, Süd, Standard' })
+    const learning = await screen.findByRole('button', { name: 'Sprache, die du lernen willst: Vietnamesisch, Süd, Standard' })
     expect(learning.textContent).toBe('Vietnamesisch · Süd, Standard')
     fireEvent.click(learning)
     const region = await screen.findByRole('group', { name: 'Vietnamesisch' })
     fireEvent.click(within(region).getByRole('button', { name: 'Nord, Variante' }))
-    expect(screen.getByRole('button', { name: 'Sprache, die du lernst: Vietnamesisch, Nord, Variante' }).textContent).toBe(
+    expect(screen.getByRole('button', { name: 'Sprache, die du lernen willst: Vietnamesisch, Nord, Variante' }).textContent).toBe(
       'Vietnamesisch · Nord, Variante',
     )
     fireEvent.click(named)
     fireEvent.change(screen.getByLabelText('Person hinzufügen'), { target: { value: 'B' } })
     fireEvent.click(screen.getByRole('button', { name: 'Person hinzufügen' }))
     const second = await screen.findByRole('button', { name: 'Wer lernt?: B' })
-    expect(screen.getByRole('button', { name: /^Sprache, die du lernst: Sprache, die du lernst/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Sprache, die du lernen willst: nicht gewählt' }).textContent).toBe('nicht gewählt')
     fireEvent.click(second)
     const listed = screen.getByRole('button', { name: (value) => value === 'A' })
     expect(listed.querySelector('bdi')?.textContent).toBe('A')
@@ -189,7 +189,7 @@ describe('top bar', () => {
     )
     expect(await screen.findByText('zeigen')).toBeTruthy()
     expect(screen.queryByRole('button', { name: /Wer lernt\?: A/ })).toBeNull()
-    expect(screen.getByRole('button', { name: /Sprache, die du lernst/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Sprache, die du lernen willst/ })).toBeTruthy()
     cleanup()
 
     let release: (value: boolean) => void = () => undefined

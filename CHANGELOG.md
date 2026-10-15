@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.15 — 2026-10-15
+
+- Zu Beginn stehen beide Sprachen im Text, untereinander. Zuerst die Sprache der App, deine Sprache. Danach die Sprache, die du lernen willst. Weiter bleibt aus, bis beide gewählt sind und sich unterscheiden. Dieselbe Sprache zweimal ist keine Richtung. Danach zeigt die Leiste oben dieselben Werte. Die Texte trennen «deine Sprache» und «die Sprache, die du lernen willst», auf Deutsch, Englisch, Portugiesisch (Brasilien) und Vietnamesisch. In allen vier Sprachen bleibt es bei «du», «you», «você» oder «bạn». Ohne Wahl sagt die Leiste «nicht gewählt».
+- Wählt man die Sprache der App noch einmal als Lernsprache, bleibt die Sprache der App. Es wird nicht getauscht. Weiter bleibt aus, und ein kurzer Satz sagt, dass es dieselbe Sprache ist.
+- `onboarded` wird erst bei Weiter auf wahr gesetzt. Ein Neuladen davor zeigt die Seite wieder. Eine Person, die beide Sprachen schon hat und das Feld nicht führt, gilt als fertig. Das Feld bleibt auf dem Gerät und geht nicht in den Export. Während dieser Seite fehlt die Lernsprache in der Leiste oben.
+
 ## 0.9.14 — 2026-10-14
 
 - Schlägt `prompt()` fehl, bleibt das gemerkte Ereignis. Erst nach Erfolg wird es verworfen, damit ein zweiter Tipp noch geht.
