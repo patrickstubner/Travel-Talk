@@ -37,7 +37,7 @@
     "@types/react-dom": "19.3.0",
     "eslint": "10.12.0",
     "eslint-plugin-react-hooks": "7.1.1",
-    "fake-indexeddb": "6.2.5",
+    "fake-indexeddb": "6.2.7",
     "happy-dom": "20.14.6",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
