@@ -232,7 +232,7 @@
 
 > **Entscheid 16.11.2026 (Projektinhaber):** Kein Fokus-Modus. Die Tab-Leiste bleibt auch in Übungen und auf der Phrasen-Seite immer sichtbar. Die Sterne-Bedingungen in [`gui-konzept.md`](gui-konzept.md) sind die verbindliche Basis für die 5-Sterne-Kalibrierung am 27.11.
 
-**Umfang:** Wireframes 1, 5, 6, 7 und 13. Tab-Leiste bleibt auf Phrase, Üben und Sitzung fertig sichtbar; kein Fokus-Modus und kein ✕-Beenden ohne Tab-Leiste. (Einige ältere Wireframes zeigen noch den verworfenen Fokus-Modus; massgebend sind dieser Entscheid und [`gui-konzept.md`](gui-konzept.md).)
+**Umfang:** Wireframes 1, 5, 6, 7 und 13. Tab-Leiste bleibt auf Phrase, Üben und Sitzung fertig sichtbar; kein Fokus-Modus und kein ✕-Beenden ohne Tab-Leiste. (Die Wireframes in [`wireframes.html`](wireframes.html) zeigen die Tab-Leiste auf Phrase, Üben und Sitzung fertig.)
 - Das Onboarding zeigt die aus dem Browser erkannte App-Sprache vorausgewählt («erkannt aus deinem Browser», änderbar), danach folgt die Wahl der Lernsprache. Beide lassen sich später unter Ich → Sprachen ändern (Vorgabe des Projektinhabers, 13.11.2026).
 
 **Akzeptanzkriterien**
