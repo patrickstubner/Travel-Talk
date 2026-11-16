@@ -1,4 +1,12 @@
-# STATUS.md – Stand 16.11.2026, Commit 8ae1686, Version 0.10.2
+# STATUS.md – Stand 16.11.2026, Basis main 6166d70 (0.10.2), Branch `chore/cloud-agent-setup`
+
+## Nachtrag 16.11.2026: Cloud-Agent-Setup
+Branch `chore/cloud-agent-setup` (Draft-PR, Basis jetzt `main` nach Merge von #71 und #72, nicht mergen bis Stabschef und Projektinhaber Ja sagen).
+- `.cursor/environment.json` und `.cursor/install-dev-tools.sh`: ripgrep 14.1.1, ast-grep 0.51.2, codebase-memory-mcp 0.12.1, Versionen und SHA-256 gepinnt. Bei `package-lock.json`: `npm ci --ignore-scripts` (Node 22).
+- `.cursorignore` für Lockfiles, Build, Audio, Modelle, Index-Ordner und die Wireframe-PNGs unter `docs/architektur/wireframes/` (Markdown und HTML bleiben im Kontext).
+- Abschnitt «Cursor Cloud specific instructions» in AGENTS.md ergänzt.
+- Der gehostete Graphify-MCP wird unter cursor.com/agents verbunden, nicht durch diesen PR.
+- Nachzug CA-1/CA-2: Binaries nur unter `~/.local/bin` (kein `sudo`, kein `/usr/local/bin`); PATH setzt das Skript in `~/.profile` und `~/.bashrc`. `.codebase-memory/` steht in `.gitignore` und `.cursorignore`. corepack schreibt nach `~/.local/bin` und `COREPACK_HOME` im Home-Verzeichnis.
 
 ## Aktuelles Ziel
 Ab 27.11.2026: Audit auf `main` beheben, Vosk 1.0 mit 5 Sternen, danach der Umbau R1–R4.
@@ -6,7 +14,8 @@ Ab 27.11.2026: Audit auf `main` beheben, Vosk 1.0 mit 5 Sternen, danach der Umba
 ## Erledigt
 - 0.10.2 live auf GitHub Pages (Changelog 15.10.2026).
 - Architektur-Review und Plan R1–R8, G1–G4 (13.11.2026), Issues #59–#70 angelegt.
-- AGENTS.md, ARCHITECTURE.md, STATUS.md (dieser PR, lokal ohne Cloud Agent).
+- AGENTS.md, ARCHITECTURE.md, STATUS.md (PR #71 gemergt, live seit 16.11.2026).
+- Architekturplan unter `docs/architektur/` (PR #72 gemergt, live seit 16.11.2026).
 
 ## Plan ab 27.11.2026 (Reihenfolge massgebend, Daten Richtwerte)
 1. **Audit-Fix auf `main`:** `npm audit` zeigt am 16.11.2026 18 Funde, davon 3 hoch (happy-dom, zod, undici), 12 moderat, 3 niedrig. Deshalb ist der CI-Job audit auf `main` und auf allen PRs rot.
@@ -23,11 +32,10 @@ Ab 27.11.2026: Audit auf `main` beheben, Vosk 1.0 mit 5 Sternen, danach der Umba
 
 ## Offen / Entscheide nötig (wer?)
 - Spanisch als Sprache: nach Vosk 1.0, Umfang offen – Patrick
-- Architektur-Plan vom 13.11. (ADRs, Bausteine, Testplan) als `docs/architektur/` ins Repo? – Patrick
 
 ## Offene PRs (16.11.2026)
 - #53 happy-dom 20.14.6 → 21.0.4 (Dependabot, Major) – wartet bis 27.11.
-- dieser Docs-PR
+- dieser Draft-PR: Cloud-Agent-Setup (`chore/cloud-agent-setup`), Basis `main`
 
 ## Bekannte Probleme / Risiken
 - CI auf `main` rot (seit 9.11.2026, nicht durch Docs-PRs verursacht): audit (18 Funde, davon 3 hoch), dazu overflow (Playwright-Installation auf dem Runner) sowie clips (en) und clips (pt-BR). Lint, Typecheck, Test und Build sind grün. Behebung im Audit-/CI-Block ab 27.11.
@@ -38,3 +46,4 @@ Ab 27.11.2026: Audit auf `main` beheben, Vosk 1.0 mit 5 Sternen, danach der Umba
 - rg und ast-grep: Import-Richtungen zwischen Ordnern (Zyklen), Routen, Dexie-Versionen.
 - `npm audit` lokal gegen `package-lock.json`.
 - Geschätzt 1 kurzer Cloud-Agent-Lauf vermieden (Doku-Paket).
+- 16.11. (Merge von main in diesen Branch, CA-1/CA-2): kein Cloud Agent, kein Rebase.

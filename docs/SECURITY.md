@@ -2,6 +2,18 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## Cloud-Agent-Setup (16.11.2026)
+
+Geprüft am Branch `chore/cloud-agent-setup`. Kein Anwendungs-Versionsbump (0.10.2 bleibt). Kein neues Laufzeitpaket, kein neues Netz in der App, keine Secrets in den neuen Dateien.
+
+Neu im Repo (nur für Cursor Cloud Agent VMs, nicht in der App): `.cursor/environment.json`, `.cursor/install-dev-tools.sh`, `.cursorignore`. Das Skript lädt ripgrep 14.1.1, ast-grep 0.51.2 und codebase-memory-mcp 0.12.1 von offiziellen GitHub-Releases, prüft SHA-256, setzt kein `curl|bash` ein und ruft nicht `codebase-memory-mcp install` oder `update` auf. `npm ci` läuft mit `--ignore-scripts`. UI und Auto-Index von codebase-memory-mcp sind aus.
+
+Keine kritischen, hohen oder mittleren Befunde in diesen Dateien. Lieferkettenrisiko der Dritt-Binaries bleibt trotz Hash-Prüfung (niedrig). Node 22 muss in der Cloud-Umgebung bereits vorhanden sein; das Skript installiert Node nicht.
+
+`npm audit` auf diesem Stand folgt dem bekannten Rot auf `main` (Behebung ab 27.11.2026). Lint, Typecheck, Tests und Build sind lokal geprüft.
+
+Nachzug 16.11.2026 (CA-1, CA-2): Das Install-Skript kopiert nicht mehr nach `/usr/local/bin` und verwendet kein `sudo`; die Werkzeuge liegen nur unter `~/.local/bin`, PATH setzt das Skript in `~/.profile` und `~/.bashrc`. `.codebase-memory/` steht in `.gitignore` und `.cursorignore`.
+
 ## 0.10.2 Wortfrage sofort
 
 Geprüft am 15. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.

@@ -1,0 +1,42 @@
+# Abhängigkeiten und Lockfiles (Terminal/MCP bleiben lesbar)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lock
+bun.lockb
+node_modules/
+
+# Build- und Test-Artefakte
+dist/
+dev-dist/
+.cache/
+.vite/
+coverage/
+test-results/
+playwright-report/
+tools/lines.json
+tools/voices/
+
+# Audio und Modelle (Manifest bleibt lesbar)
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.flac
+*.onnx
+*.wasm
+
+# Grosse Screenshots
+docs/screenshots/
+docs/architektur/wireframes/
+
+# Lokale Index-Ordner, nie committen
+.codegraph/
+graphify-out/
+.serena/
+.codebase-memory/
+
+# Umgebung
+.env
+.env.*
+*.local
