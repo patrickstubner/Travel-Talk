@@ -1,5 +1,12 @@
 # STATUS.md – Stand 16.11.2026, Commit 8ae1686, Version 0.10.2
 
+## Nachtrag 16.11.2026: Cloud-Agent-Setup
+Branch `chore/cloud-agent-setup` (Draft-PR, sitzt auf #71, nicht mergen bis Stabschef und Projektinhaber Ja sagen).
+- `.cursor/environment.json` und `.cursor/install-dev-tools.sh`: ripgrep 14.1.1, ast-grep 0.51.2, codebase-memory-mcp 0.12.1, Versionen und SHA-256 gepinnt. Bei `package-lock.json`: `npm ci --ignore-scripts` (Node 22).
+- `.cursorignore` für Lockfiles, Build, Audio, Modelle, Index-Ordner.
+- Abschnitt «Cursor Cloud specific instructions» in AGENTS.md ergänzt.
+- Der gehostete Graphify-MCP wird unter cursor.com/agents verbunden, nicht durch diesen PR.
+
 ## Aktuelles Ziel
 Ab 27.11.2026: Audit auf `main` beheben, Vosk 1.0 mit 5 Sternen, danach der Umbau R1–R4.
 
@@ -27,7 +34,9 @@ Ab 27.11.2026: Audit auf `main` beheben, Vosk 1.0 mit 5 Sternen, danach der Umba
 
 ## Offene PRs (16.11.2026)
 - #53 happy-dom 20.14.6 → 21.0.4 (Dependabot, Major) – wartet bis 27.11.
-- dieser Docs-PR
+- #71 AGENTS.md, ARCHITECTURE.md, STATUS.md (Grundlage dieses Branches)
+- #72 Architekturplan unter docs/architektur/
+- dieser Draft-PR: Cloud-Agent-Setup (`chore/cloud-agent-setup`)
 
 ## Bekannte Probleme / Risiken
 - CI auf `main` rot (seit 9.11.2026, nicht durch Docs-PRs verursacht): audit (18 Funde, davon 3 hoch), dazu overflow (Playwright-Installation auf dem Runner) sowie clips (en) und clips (pt-BR). Lint, Typecheck, Test und Build sind grün. Behebung im Audit-/CI-Block ab 27.11.

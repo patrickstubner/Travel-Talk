@@ -59,3 +59,35 @@ Pflicht-Checks auf `main` (Ruleset): lint, typecheck, test, build, audit. CI lä
 - Keine bezahlten Dienste und kein On-Demand ohne Patricks Ja.
 - Merge immer als Squash-Merge mit `--match-head-commit <SHA>`. Autor und Committer nur mit der GitHub-noreply-Adresse des Repo-Kontos.
 - Für Travel Talk gilt zusätzlich die gespeicherte Travel-Talk-Merge-Regel, auch für G1–G4 und R7 (ohne extra Vorschau, Entscheid Patrick 13.11.2026).
+
+## Cursor Cloud specific instructions
+
+Cloud Agents starten in einer eigenen Ubuntu-VM, ohne den gemeinsamen Rechner. Diese Hinweise gelten nur dort.
+
+### Zuerst lesen
+- AGENTS.md, ARCHITECTURE.md und STATUS.md, in dieser Reihenfolge.
+- Sind sie unklar oder nicht aktuell: konkret nachfragen, nicht raten.
+
+### Werkzeuge in dieser Umgebung
+Das Install-Skript `.cursor/install-dev-tools.sh` legt im Build bereit:
+- `rg` (ripgrep 14.1.1) für Zeilensuche
+- `ast-grep` (0.51.2) für strukturelle Suche; auf Linux den Befehl `ast-grep` nutzen, nicht `sg`
+- `codebase-memory-mcp` (0.12.1) für Aufrufer, Impact und Architektur. Der Index liegt unter `~/.cache/codebase-memory-mcp/` und wird im Build erzeugt.
+
+Weitere Tools können später im selben Skript ergänzt werden (Version und SHA-256 pinnen, kein `curl|bash`).
+
+npm-Abhängigkeiten: `npm ci --ignore-scripts` (wie in der CI, Node 22). Playwright-Browser nur installieren, wenn Layout-Tests wirklich laufen sollen.
+
+### Reihenfolge bei Struktur-Fragen
+1. STATUS.md und ARCHITECTURE.md.
+2. Index-Tool, bevor ganze Dateien gelesen werden:
+   - `codebase-memory-mcp cli --quiet list_projects '{}'`
+   - `codebase-memory-mcp cli --quiet trace_path '{"project":"<name>","function_name":"<Symbol>","direction":"inbound","depth":2}'`
+   - `codebase-memory-mcp cli --quiet get_architecture '{"project":"<name>"}'`
+3. `ast-grep` oder `rg` für Muster und exakte Zeichenketten.
+4. Dateien nur gezielt lesen.
+
+### Graphify-MCP (gehostet, falls verbunden)
+Wenn unter cursor.com/agents ein HTTP-MCP namens `graphify` auf `https://api.graphify.com/mcp` eingerichtet und per OAuth angemeldet ist, den Graphen für Aufrufer, Impact und Tests nutzen (`list_repositories`, `graphify_find`, `graphify_callers`, `graphify_impact`). Der gehostete Graph zeigt den indexierten GitHub-Stand, keine uncommitteten lokalen Änderungen. Fehlt die Verbindung oder weicht der Stand ab: `codebase-memory-mcp` in dieser VM verwenden.
+
+Nicht `codebase-memory-mcp install` oder `update` ausführen (ändert Agent-Konfigurationen oder lädt Binaries). Index-Ordner `.codegraph/`, `graphify-out/` und `.serena/` nicht committen.
