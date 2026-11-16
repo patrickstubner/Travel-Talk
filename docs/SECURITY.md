@@ -12,6 +12,8 @@ Keine kritischen, hohen oder mittleren Befunde in diesen Dateien. Lieferkettenri
 
 `npm audit` auf diesem Stand folgt dem bekannten Rot auf `main` (Behebung ab 27.11.2026). Lint, Typecheck, Tests und Build sind lokal geprüft.
 
+Nachzug 16.11.2026 (CA-1, CA-2): Das Install-Skript kopiert nicht mehr nach `/usr/local/bin` und verwendet kein `sudo`; die Werkzeuge liegen nur unter `~/.local/bin`, PATH setzt das Skript in `~/.profile` und `~/.bashrc`. `.codebase-memory/` steht in `.gitignore` und `.cursorignore`.
+
 ## 0.10.2 Wortfrage sofort
 
 Geprüft am 15. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.

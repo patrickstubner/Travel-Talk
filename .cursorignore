@@ -33,6 +33,7 @@ docs/screenshots/
 .codegraph/
 graphify-out/
 .serena/
+.codebase-memory/
 
 # Umgebung
 .env

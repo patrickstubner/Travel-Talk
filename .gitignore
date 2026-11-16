@@ -19,3 +19,4 @@ playwright-report/
 .codegraph/
 graphify-out/
 .serena/
+.codebase-memory/

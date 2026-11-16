@@ -3,6 +3,9 @@
 # Aufruf aus der Repo-Wurzel: bash .cursor/install-dev-tools.sh
 # Kein curl|bash, keine Secrets, keine Agent-Configs ändern.
 # Weitere Tools: unten im Block «Weitere Tools (Erweiterung)» Version, URL und SHA-256 ergänzen.
+#
+# Paketmanager: npm (package-lock.json), pnpm (pnpm-lock.yaml, Version aus packageManager)
+# oder kein Install, wenn kein Lockfile da ist. Node: engines in package.json, sonst >= 22.
 set -euo pipefail
 
 ROOT="$(pwd)"
@@ -14,7 +17,7 @@ trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$BIN"
 export PATH="${BIN}:${PATH}"
 
-# --- Gepinnte Versionen (offizielle GitHub-Releases, Stand der Box 15./16.11.2026) ---
+# --- Gepinnte Versionen (offizielle GitHub-Releases, Stand 15./16.11.2026) ---
 RG_VERSION="14.1.1"
 RG_URL="https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-unknown-linux-musl.tar.gz"
 RG_SHA256="4cf9f2741e6c465ffdb7c26f38056a59e2a2544b51f7cc128ef28337eeae4d8e"
@@ -52,11 +55,9 @@ verify_sha256() {
 }
 
 install_binary() {
+  # Nur ~/.local/bin. Kein sudo, kein /usr/local/bin (CA-1).
   local src="$1" name="$2"
   install -m 0755 "$src" "${BIN}/${name}"
-  if sudo -n true 2>/dev/null && [[ -d /usr/local/bin ]]; then
-    sudo -n install -m 0755 "$src" "/usr/local/bin/${name}" || true
-  fi
 }
 
 ensure_path() {
@@ -77,8 +78,37 @@ tool_ok() {
 }
 
 extract_named_bin() {
-  # $1=archive dir root, $2=desired name
   find "$1" -type f -name "$2" ! -name '*.md' ! -name '*.txt' | head -n 1
+}
+
+require_node() {
+  if ! command -v node >/dev/null 2>&1; then
+    echo "error: Node.js fehlt. Bitte Node in der Cloud-Umgebung bereitstellen (siehe engines in package.json bzw. .nvmrc). Dieses Skript installiert Node nicht." >&2
+    exit 1
+  fi
+  if [[ -f "${ROOT}/package.json" ]]; then
+    if ! node -e '
+const fs = require("fs");
+const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+const eng = (pkg.engines && pkg.engines.node) || ">=22";
+const [maj, min, pat] = process.versions.node.split(".").map((n) => parseInt(n, 10));
+const m = /^(>=|>|=)?\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?/.exec(String(eng));
+if (!m) process.exit(0);
+const needMaj = parseInt(m[2], 10);
+const needMin = parseInt(m[3] || "0", 10);
+const needPat = parseInt(m[4] || "0", 10);
+const op = m[1] || ">=";
+const cmp = maj - needMaj || min - needMin || pat - needPat;
+const ok = op === ">" ? cmp > 0 : op === "=" ? cmp === 0 : cmp >= 0;
+if (!ok) {
+  console.error("error: Node " + process.versions.node + " erfüllt engines.node \"" + eng + "\" nicht.");
+  process.exit(1);
+}
+'; then
+      exit 1
+    fi
+  fi
+  echo "Node $(node -v) ist vorhanden."
 }
 
 # --- ripgrep ---
@@ -153,19 +183,34 @@ codebase-memory-mcp config set auto_index false >/dev/null
 
 # --- Repo-Abhängigkeiten ---
 if [[ -f "${ROOT}/package-lock.json" ]]; then
-  if ! command -v node >/dev/null 2>&1; then
-    echo "error: Node.js fehlt. Travel Talk braucht Node 22 (engines: >=22). Node nicht in diesem Skript nachinstallieren." >&2
-    exit 1
-  fi
-  NODE_MAJOR="$(node -p "process.versions.node.split('.')[0]")"
-  if [[ "$NODE_MAJOR" -lt 22 ]]; then
-    echo "error: Node ${NODE_MAJOR} ist zu alt, nötig ist >= 22." >&2
-    exit 1
-  fi
+  require_node
   echo "Installiere npm-Abhängigkeiten mit npm ci --ignore-scripts…"
   npm ci --ignore-scripts
+elif [[ -f "${ROOT}/pnpm-lock.yaml" ]]; then
+  require_node
+  PNPM_PIN="$(node -p "const p=require('./package.json').packageManager||''; const m=/^pnpm@(.+)$/.exec(p); m?m[1]:''" 2>/dev/null || true)"
+  if ! command -v corepack >/dev/null 2>&1 && ! command -v pnpm >/dev/null 2>&1; then
+    echo "error: pnpm fehlt und corepack ist nicht verfügbar. pnpm in der Cloud-Umgebung bereitstellen, nicht per curl|bash." >&2
+    exit 1
+  fi
+  # Shims und Cache nur unter dem Home-Verzeichnis, nicht nach /usr/local (kein sudo, CA-1).
+  if command -v corepack >/dev/null 2>&1; then
+    export COREPACK_HOME="${COREPACK_HOME:-${HOME}/.cache/corepack}"
+    mkdir -p "${COREPACK_HOME}" "${BIN}"
+    echo "Aktiviere pnpm über corepack${PNPM_PIN:+ (@${PNPM_PIN})} in ${BIN}…"
+    corepack enable --install-directory "${BIN}"
+    if [[ -n "$PNPM_PIN" ]]; then
+      corepack prepare "pnpm@${PNPM_PIN}" --activate
+    fi
+  fi
+  echo "Installiere pnpm-Abhängigkeiten mit pnpm install --frozen-lockfile…"
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD="${PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD:-1}" pnpm install --frozen-lockfile
+elif [[ -f "${ROOT}/yarn.lock" ]]; then
+  require_node
+  echo "error: yarn.lock gefunden, Yarn-Install ist in diesem Skript noch nicht hinterlegt. Bitte analog zu npm/pnpm ergänzen." >&2
+  exit 1
 else
-  echo "Kein package-lock.json, npm ci übersprungen."
+  echo "Kein npm-/pnpm-Lockfile, Abhängigkeit-Install übersprungen."
 fi
 
 # --- Index bauen (gehört zum Build-Snapshot) ---
@@ -180,7 +225,7 @@ codebase-memory-mcp cli --quiet list_projects '{}' || true
 
 ensure_path
 
-echo "Fertig. Werkzeuge:"
+echo "Fertig. Binaries unter ${BIN} (in PATH). Werkzeuge:"
 rg --version | head -n 1
 ast-grep --version
 codebase-memory-mcp --version

@@ -6,6 +6,7 @@ Branch `chore/cloud-agent-setup` (Draft-PR, sitzt auf #71, nicht mergen bis Stab
 - `.cursorignore` für Lockfiles, Build, Audio, Modelle, Index-Ordner.
 - Abschnitt «Cursor Cloud specific instructions» in AGENTS.md ergänzt.
 - Der gehostete Graphify-MCP wird unter cursor.com/agents verbunden, nicht durch diesen PR.
+- Nachzug CA-1/CA-2: Binaries nur unter `~/.local/bin` (kein `sudo`, kein `/usr/local/bin`); PATH setzt das Skript in `~/.profile` und `~/.bashrc`. `.codebase-memory/` steht in `.gitignore` und `.cursorignore`.
 
 ## Aktuelles Ziel
 Ab 27.11.2026: Audit auf `main` beheben, Vosk 1.0 mit 5 Sternen, danach der Umbau R1–R4.
