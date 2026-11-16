@@ -28,6 +28,7 @@ tools/voices/
 
 # Grosse Screenshots
 docs/screenshots/
+docs/architektur/wireframes/
 
 # Lokale Index-Ordner, nie committen
 .codegraph/
