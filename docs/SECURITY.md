@@ -14,6 +14,12 @@ Keine kritischen, hohen oder mittleren Befunde in diesen Dateien. Lieferkettenri
 
 Nachzug 16.11.2026 (CA-1, CA-2): Das Install-Skript kopiert nicht mehr nach `/usr/local/bin` und verwendet kein `sudo`; die Werkzeuge liegen nur unter `~/.local/bin`, PATH setzt das Skript in `~/.profile` und `~/.bashrc`. `.codebase-memory/` steht in `.gitignore` und `.cursorignore`.
 
+## Nachtrag 20.11.2026: MCP-Allowlist
+
+Geprüft auf Basis main 15f2fec. Nur Konfiguration: `.cursor/environment.json` (neu `mcpServerAllowlist`), Abschnitt in AGENTS.md, STATUS.md. Kein Anwendungscode, keine neuen Abhängigkeiten, keine Secrets, keine Personendaten, keine lokalen Rechnerpfade. Schema-Prüfung der JSON-Datei gegen https://cursor.com/schemas/environment.schema.json bestanden (Negativprobe mit unbekanntem Feld wird abgelehnt).
+
+Wirkung: Agents dieser Umgebung laden nur den gehosteten Graphify-MCP; alle anderen User- und Team-MCP-Server sind gesperrt (weniger Tool-Beschreibungen pro Anfrage, kleinere Angriffsfläche durch fremde MCP-Tools). Keine kritischen, hohen oder mittleren Befunde. (M1, Info) Die Datei wirkt nur, wenn die Umgebung auf cursor.com sie verwendet; sonst gilt die Dashboard-Einstellung. (M2, Info) Passt das URL-Muster nicht, ist Graphify gesperrt und der Agent nutzt `codebase-memory-mcp` (steht in AGENTS.md). Nicht in der Cloud getestet.
+
 ## 0.10.2 Wortfrage sofort
 
 Geprüft am 15. Oktober 2026. Kein neues Paket, kein neues Netz, kein neues Recht. `npm audit` bleibt der Stand vom 13. Oktober 2026: 0 Schwachstellen.
