@@ -1,8 +1,15 @@
 # STATUS.md – Stand 16.11.2026, Basis main 6166d70 (0.10.2), Branch `chore/cloud-agent-setup`
 
 ## Nachtrag 22.11.2026: Audit-Fix und pnpm
-Branch `chore/pnpm-audit-fix` (Draft-PR, Basis main 15f2fec, nicht mergen bis Stabschef-Ok und Ja von Patrick). Kein App-Code, kein Versionsbump.
+Branch `chore/pnpm-audit-fix` (PR #77, gemergt, Basis war main 15f2fec). Kein App-Code, kein Versionsbump.
 - Mindestalter neuer Paketversionen 4 Tage: `pnpm-workspace.yaml` mit `minimumReleaseAge: 5760`, Regel in `AGENTS.md` und Sicherheitsnotiz, Dependabot-`cooldown` (mindestens 4 Tage). Lockfile geprüft: alle Pakete älter als 4 Tage (jüngstes: minimatch 11.0.9, 5,7 Tage). **Übergangsausnahmen in `minimumReleaseAgeExclude` (Kommentar «Übergang Einführung 4-Tage-Regel, entfernen ab 26.11.2026»): keine, weil kein bestehendes Paket jünger als 4 Tage ist.** Sicherheits-Ausnahmen: keine nötig.
+
+## Nachtrag 20.11.2026: MCP-Allowlist für Cloud-Agent-Umgebung
+Branch `chore/mcp-allowlist` (PR #74, Basis `main` nach #77, nicht mergen bis Stabschef-Ok und Ja des Projektinhabers). Kein Versionsbump.
+- `.cursor/environment.json`: neu `mcpServerAllowlist` mit genau einem Eintrag, dem gehosteten Graphify-MCP (`https://api.graphify.com/mcp`). Alle anderen User- und Team-MCP-Server sind für Agents dieser Umgebung gesperrt, Cursor-eigene MCP-Server nicht. Feldnamen laut https://cursor.com/schemas/environment.schema.json; die Datei wurde gegen das Schema geprüft.
+- AGENTS.md (Cloud-Abschnitt): Regel «MCP-Liste schlank halten; Serena nur nach positivem lokalem Test, dann ersetzt es codebase-memory-mcp».
+- Die Datei wirkt nur, wenn «environment.json location» der Umgebung auf cursor.com auf dieses Repo zeigt. Sonst gleichen Eintrag im Dashboard von Hand setzen (Abschnitt «MCP servers» der Umgebung). Ungetestet: kein Cloud Agent gestartet (Kontingent bis 27.11.2026 erschöpft).
+- Stabschef-Befund N1: in der Nachtragszeile zu #77 steht «Ja des Projektinhabers» statt «Ja von Patrick».
 
 ## Nachtrag 16.11.2026: Cloud-Agent-Setup
 Branch `chore/cloud-agent-setup` (Draft-PR, Basis jetzt `main` nach Merge von #71 und #72, nicht mergen bis Stabschef und Projektinhaber Ja sagen).
