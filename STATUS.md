@@ -1,4 +1,10 @@
-# STATUS.md – Stand 22.11.2026, beruht auf Commit bfd1778 (Branch `docs/antigravity-setup`, Basis main 15f2fec)
+# STATUS.md – Stand 22.11.2026, beruht auf Commit facb7ba (Branch `docs/antigravity-setup`, Basis main 15f2fec)
+
+## Nachtrag 22.11.2026 (Abend): Korrekturen nach Stabschef-Prüfung
+Commit `facb7ba`. Nur Doku, kein App-Code, kein Cloud Agent.
+- Abschnitt «Zusammenarbeit mehrerer Agents»: vor dem Merge geht der Head-SHA an Stabschef, auf dessen Ok warten, Merge erst nach dem Ja des Projektinhabers.
+- Vornamen in `AGENTS.md` und `STATUS.md` durch «Projektinhaber» ersetzt.
+- Dieser PR (#75) soll erst nach #74 (MCP-Allowlist) gemergt werden.
 
 ## Nachtrag 22.11.2026: Vorbereitung für lokale Arbeit mit Google Antigravity
 Branch `docs/antigravity-setup` (PR offen, nicht mergen bis Stabschef-Ok und Ja des Projektinhabers). Nur Doku, kein App-Code, kein Cloud Agent. Von der Doku-Änderung unberührt: `.cursor/`, `.cursorignore`, Code, `package*.json`.
