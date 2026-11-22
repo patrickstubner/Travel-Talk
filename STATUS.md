@@ -1,5 +1,12 @@
 # STATUS.md – Stand 22.11.2026, Branch `docs/gui-prototyp`, Basis `main` nach #75 (f910f78)
 
+## Nachtrag 22.11.2026 (Abend): Korrekturen nach Stabschef-Prüfung an #76
+Commit `92057a6`. Draft, nicht mergen. Kein Cloud Agent.
+- **M1 (mittel, behoben):** `prototype/**` steht in `eslint.config.js` unter `ignores`. `pnpm run lint` lokal grün.
+- **N2 (niedrig, behoben):** Profil-IDs in `data-person` werden mit `esc()` ausgegeben. `learned` (auch in `per.*`) wird beim Laden aus localStorage als Array geprüft, sonst leeres Array.
+- **N1** (`'unsafe-inline'`) bleibt für den lokalen Ein-Datei-Prototyp. In README, SECURITY.md und AGENTS.md steht: der Prototyp wird **nicht auf GitHub Pages** veröffentlicht (Pages liefert nur `dist/`).
+- Rebase auf `main` nach #75: Produktregeln aus #75 und die Prototyp-Zeile unter `prototype/gui/` stehen beide in `AGENTS.md`. Der frühere Konfliktvermerk («Prototyp liegt nicht im Repo») entfällt.
+
 ## Nachtrag 22.11.2026: GUI-Prototyp im Repo
 Branch `docs/gui-prototyp` (Draft-PR, nicht mergen bis Stabschef-Ok und Ja des Projektinhabers). Kein App-Code, kein Cloud Agent.
 - Neu: `prototype/gui/` – klickbarer GUI-Prototyp (Stand 16.11.2026, 4 Tabs, Tab-Leiste immer sichtbar). Nur Design-Referenz. Quelle war lokal; bereinigt (keine Vornamen, keine lokalen Pfade). Acht Screenshots (ca. 1,2 MB).
