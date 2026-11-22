@@ -16,4 +16,4 @@
 
 **Screenshots:** `screenshots/01-heute-sprachchip.png`, `02-lernsprache-wechseln.png`, `03-nachsprechen-5-sterne.png`, `04-profile.png`, `05-rtl-test-situation.png`, `06-onboarding-sprachen.png`, `07-ueben-tabs-sichtbar.png`, `08-phrase-tabs-sichtbar.png`.
 
-Sicherheit: siehe `SECURITY.md`. Nicht öffentlich gehostet.
+Sicherheit: siehe `SECURITY.md`. **Nicht auf GitHub Pages veröffentlicht:** Pages liefert nur den App-Build unter `dist/`, nicht `prototype/`. Der Prototyp bleibt lokal (Datei im Browser öffnen).

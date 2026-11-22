@@ -13,7 +13,7 @@ Nachtrag 22.11.2026: Der Prototyp liegt neu unter `prototype/gui/` im Repo. Bere
 | Mikrofon / Audio | **Nicht verwendet.** Nachsprechen und 5 Sterne sind simuliert (Zufallswerte), Hörproben sind Platzhalter. Keine Berechtigungsabfrage. |
 | Personendaten | Nur fiktive Beispielnamen (Anna, Luca, Mia). Nichts wird übertragen oder geloggt. |
 | RTL-Testschalter | Setzt nur `dir`/`lang` und die Pseudosprache `ar-XB` im aktiven Profil; keine neuen Eingabewege. |
-| Hosting | Nicht öffentlich gehostet. Eine öffentliche Demo nur nach Ja des Projektinhabers und Prüfung durch Stabschef. Dafür müsste die CSP als HTTP-Header gesetzt und `'unsafe-inline'` per Hash ersetzt werden. |
+| Hosting | **Wird nicht auf GitHub Pages veröffentlicht.** Pages liefert nur den App-Build unter `dist/`, nicht `prototype/`. Eine öffentliche Demo nur nach Ja des Projektinhabers und Prüfung durch Stabschef. Dafür müsste die CSP als HTTP-Header gesetzt und `'unsafe-inline'` per Hash ersetzt werden. `'unsafe-inline'` bleibt für den lokalen Ein-Datei-Prototyp bewusst bestehen (N1). |
 
 **Restrisiko:** gering. `'unsafe-inline'` ist nötig, weil alles in einer Datei liegt; ohne externe Quellen und mit `esc()` ist das für einen lokalen Prototyp vertretbar. Für die echte App gilt weiter die bestehende CSP von Travel Talk.
 
