@@ -4,7 +4,7 @@
 - **Wer:** Alle Coding-Schritte macht der **Entwickler-Bot mit Cloud Agents**, die ab dem Reset am 27.11.2026 wieder verfügbar sind. On-Demand bleibt aus. Ist das Kontingent aufgebraucht, wird pausiert und nicht nachgekauft.
 - **Pro PR (Daueregel des Projektinhabers):**
   - Sicherheits- und Schwachstellenprüfung nach jeder Code-Änderung, mit Schweregrad und Fix-Vorschlag. Sie steht im PR und in der Meldung an den Projektinhaber.
-  - `npm audit` gehört dazu.
+  - `pnpm audit` gehört dazu.
 - **Merge:**
   - Gemäss der gespeicherten Travel-Talk-Merge-Regel.
   - Das gilt auch für GUI-PRs (G1–G4) und die Änderung am Exportformat (R7), ohne extra Vorschau (Entscheid des Projektinhabers, 13.11.2026).
@@ -60,14 +60,14 @@ Die Daten sind Richtwerte. Sie hängen vom Cloud-Agent-Kontingent ab und davon, 
   - die bestehenden Feedback-Tests grün,
   - Version 1.0.0 gebaut und deployt.
 - **Sicherheit:**
-  - Vosk-Paket und Modell prüfen (Lizenz, Grösse, `npm audit`),
+  - Vosk-Paket und Modell prüfen (Lizenz, Grösse, `pnpm audit`),
   - Mikrofon nur nach Tippen,
   - keine Uploads.
 
 ### S1 · Audit-Fix (10:00)
 - **Voraussetzung:** V1 abgeschlossen. Ist V1 noch offen, wartet S1, damit es keinen Konflikt in `package-lock.json` gibt.
 - **PR-Umfang:** die 17 Schwachstellen beheben, die 2 hohen zuerst. Nur Lockfile und Versionssprünge, keine Refactorings.
-- **Fertig, wenn:** `npm audit` zeigt 0 hohe und 0 kritische Schwachstellen (Rest begründet), und Build, Tests und Layout-Specs sind grün.
+- **Fertig, wenn:** `pnpm audit` zeigt 0 hohe und 0 kritische Schwachstellen (Rest begründet), und Build, Tests und Layout-Specs sind grün.
 - **Sicherheit:** Das ist die Kernaufgabe. Der Bericht listet pro Schwachstelle Paket, Schweregrad und Fix.
 
 ### S2 · Dependabot und Major-Updates

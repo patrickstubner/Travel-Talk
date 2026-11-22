@@ -129,4 +129,4 @@ module.exports = {
 
 - **Positiv:** Typänderungen bleiben lokal, und es entstehen keine Zyklen mehr. Komponenten lassen sich für den GUI-Umbau frei austauschen, und eine neue Sprache betrifft nur `domain` und `content` (ADR-003).
 - **Negativ:** Die Importpfade ändern sich einmalig, das sind viele kleine Diffs. Ausserdem kommt eine devDependency dazu (dependency-cruiser), die vor der Aufnahme auf Schwachstellen geprüft wird.
-- **Sicherheit:** Keine Laufzeitänderung. Die neue devDependency wird mit `npm audit` und Lizenzcheck geprüft.
+- **Sicherheit:** Keine Laufzeitänderung. Die neue devDependency wird mit `pnpm audit` und Lizenzcheck geprüft.

@@ -2,6 +2,29 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## Audit-Fix und Umstellung auf pnpm (22.11.2026)
+
+Geprüft am Branch `chore/pnpm-audit-fix`, Basis `main` 15f2fec. Kein Anwendungs-Versionsbump (0.10.2 bleibt). Quelle: `pnpm audit` gegen `pnpm-lock.yaml` (Registry-Advisory-Daten vom 22.11.2026). Vorher (`npm audit`): 15 Funde, davon 3 hoch (happy-dom, undici, zod), 11 moderat, 1 niedrig. Nachher (`pnpm audit`): 0 Funde.
+
+Umstellung: `package-lock.json` entfällt, `pnpm-lock.yaml` kommt (aus `pnpm import`, Versionen bleiben). `packageManager` pinnt pnpm 10.34.9. `.npmrc` hält `ignore-scripts=true` (CA-3), die CI installiert mit `--frozen-lockfile --ignore-scripts`. Keine Phantom-Abhängigkeiten gefunden: Lint, Typecheck, Tests und Build laufen mit dem strikten pnpm-`node_modules` ohne `shamefully-hoist`. GitHub Action `pnpm/action-setup` ist auf den Commit von v6.1.1 gepinnt (73e46992e05b19abd31f2f3c20e0e7370d762115).
+
+| Paket | alt | neu | Art | Advisory |
+|---|---|---|---|---|
+| zod (Laufzeit, im Bundle) | 4.6.5 | 4.6.7 | Patch | GHSA-mrhx-c7xc-m3w5 (hoch) |
+| happy-dom (nur Tests) | 20.14.6 | 21.0.4 | Major, nur devDependency, 362 Tests grün | GHSA-834v-8h66-3h79, GHSA-c8p4-j97h-3vg8 (hoch) |
+| undici (war transitiv, nur Tests) | 8.11.2 | entfällt | fällt mit happy-dom 21 aus dem Baum | undici 8.0.0–8.12.1 (hoch, laut npm audit) |
+| eslint (nur Dev) | 10.12.0 | 10.15.0 | Minor | GHSA-g3hv-75wg-m249 (minimatch, moderat) |
+| typescript-eslint (nur Dev) | 8.71.1 | 8.73.0 | Minor | moderat |
+| glob (Override, über workbox-build, nur Build) | 11.1.0 | 14.0.2 | Override | GHSA-3g3m-2fjr-6pw4 (moderat) |
+| fast-uri (Override, über workbox-build) | 3.1.x | 3.1.9 | Override | GHSA-w74x-v6f9-j3xg, GHSA-wjr9-j795-jxcr (moderat), GHSA-xhq7-xmqj-769h, GHSA-333x-w4r6-6crp (niedrig) |
+| serialize-javascript (Override, über workbox-build) | <7.1.3 | 7.1.3 | Override | GHSA-m5mm-p8h7-m29v (niedrig) |
+
+Der Build erzeugt dieselben Dateien und denselben Service-Worker-Precache wie vorher (nur die Inhalts-Hashes ändern sich). Die Overrides gelten nur für Build-Werkzeuge, nicht für den ausgelieferten Code. Sie sind in `package.json` unter `pnpm.overrides` und fallen weg, sobald workbox-build die Versionen selbst anhebt.
+
+Im CI-Workflow laufen `clips` und `overflow` auf `ubuntu-24.04` statt `ubuntu-latest` (26.04): Playwright unterstützt 26.04 nicht, und die Clip-Prüfung schlug dort fehl. Das ist ein Versuch, die CI-Wirkung zeigt der PR.
+
+Keine kritischen, hohen oder mittleren offenen Befunde. Offen: pnpm 11 und 12 sind erschienen (Major, anderes Konfigurationsmodell), nicht übernommen.
+
 ## Cloud-Agent-Setup (16.11.2026)
 
 Geprüft am Branch `chore/cloud-agent-setup`. Kein Anwendungs-Versionsbump (0.10.2 bleibt). Kein neues Laufzeitpaket, kein neues Netz in der App, keine Secrets in den neuen Dateien.

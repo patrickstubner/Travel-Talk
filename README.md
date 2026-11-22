@@ -32,21 +32,22 @@ Vietnamesisch ist im Text südlich voreingestellt. Nord ist eine Variante, zum B
 Voraussetzung: Node 22.
 
 ```bash
-npm ci
-npm run dev
+corepack enable
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 Die App liegt unter `http://127.0.0.1:5173/Travel-Talk/`. Der Build ist Rsbuild. Der Service Worker entsteht nach dem Build mit `workbox-build`. Er speichert die Oberfläche. Audiodateien gehören nicht zum Installieren, und ein Update übernimmt sie nicht aus dem alten Cache. Die Startseite sagt «Für offline noch nicht vollständig geladen», solange die Lernsprache nicht vollständig geladen ist. Eine Stimme wird mit «Für offline laden» geholt. Ein Rspack-Plugin sähe nur die kompilierten Assets. Die Tests laufen mit Vitest, getrennt vom Build. Weitere Befehle:
 
 ```bash
-npm test
-npm run test:clips
-npm run typecheck
-npm run lint
-npm run build
+pnpm test
+pnpm run test:clips
+pnpm run typecheck
+pnpm run lint
+pnpm run build
 ```
 
-`npm test` braucht kein ffmpeg. `npm run test:clips` dekodiert die mitgelieferten Aufnahmen und rechnet die Melodie. Dafür wird ffmpeg benötigt. Ohne ffmpeg bricht der Lauf lokal mit einem Hinweis ab und wird übersprungen. In CI wird ffmpeg verlangt.
+`pnpm test` braucht kein ffmpeg. `pnpm run test:clips` dekodiert die mitgelieferten Aufnahmen und rechnet die Melodie. Dafür wird ffmpeg benötigt. Ohne ffmpeg bricht der Lauf lokal mit einem Hinweis ab und wird übersprungen. In CI wird ffmpeg verlangt.
 
 Der Build schreibt die App nach `dist/` und kopiert `index.html` nach `404.html`, weil GitHub Pages kein SPA-Fallback hat. Die Navigation läuft über den Hash. Die Basis ist `/Travel-Talk/`.
 
@@ -68,4 +69,4 @@ Audio neu bauen steht in [docs/audio.md](docs/audio.md). Die Prüfung der Abhän
 
 ## Veröffentlichung
 
-GitHub Pages baut über die Action in `.github/workflows/ci.yml`, nur beim Push auf `main`. Lint, Typprüfung, Tests, Build und `npm audit` laufen auch auf Pull Requests. Der Audit bricht ab der Stufe moderate ab.
+GitHub Pages baut über die Action in `.github/workflows/ci.yml`, nur beim Push auf `main`. Lint, Typprüfung, Tests, Build und `pnpm audit` laufen auch auf Pull Requests. Der Audit bricht ab der Stufe moderate ab.

@@ -50,7 +50,7 @@ content/
 1. [ ] Mit `phrase({ id, situationIds, context, de, en, pt, vi })` in `content/phrases/<situation>.ts` anlegen. Die ID nach dem Muster `situation.kurzname` wählen, sie bleibt für immer.
 2. [ ] Ein Eintrag pro Zielsprache, Varianten optional. `geprueft: false`, bis eine Muttersprachlerin oder ein Muttersprachler geprüft hat.
 3. [ ] Audio erzeugen und ausrichten: `tools/generate_audio.py` (3 Tempi 70/85/100 %) und `tools/align_clips.py`.
-4. [ ] `npm run check:content && npm run test:clips` müssen grün sein.
+4. [ ] `pnpm run check:content && pnpm run test:clips` müssen grün sein.
 
 **Neues Wort**
 1. [ ] In `content/words/<gruppe>.ts`: `id: 'w.<englisch>'`, `citation` pro Sprache, `sentences` mit Phrasen-IDs.
