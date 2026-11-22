@@ -1,4 +1,12 @@
-# STATUS.md – Stand 16.11.2026, Basis main 6166d70 (0.10.2), Branch `chore/cloud-agent-setup`
+# STATUS.md – Stand 22.11.2026, beruht auf Commit bfd1778 (Branch `docs/antigravity-setup`, Basis main 15f2fec)
+
+## Nachtrag 22.11.2026: Vorbereitung für lokale Arbeit mit Google Antigravity
+Branch `docs/antigravity-setup` (PR offen, nicht mergen bis Stabschef-Ok und Ja des Projektinhabers). Nur Doku, kein App-Code, kein Cloud Agent. Von der Doku-Änderung unberührt: `.cursor/`, `.cursorignore`, Code, `package*.json`.
+- `AGENTS.md`: neuer Abschnitt «Zusammenarbeit mehrerer Agents» (ein Branch pro Aufgabe und Agent, nur PRs, Sicherheitsprüfung nach jeder Änderung, STATUS.md mit Commit, keine Secrets, keine Kosten ohne Ja, empfohlene lokale MCP-Server) und ergänzte Projektregeln (nur Frontend, Profile und Sprachen, GUI-Ziel, was nicht im Repo liegt). Antigravity liest `AGENTS.md` automatisch; keine zweite Regel-Datei.
+- `README.md`: Abschnitt «Mit Agents arbeiten»; der lokale Start (`npm ci`, `npm run dev`, `npm test`) stand schon dort. `.gitignore`: `.agents/mcp_config.json`.
+- Nicht im Repo, bewusst: der frühere klickbare GUI-Prototyp (siehe `docs/architektur/README.md`) und die TTS-Stimmen/Rohdaten (`tools/voices/`). Beides nur bei Bedarf lokal beim Projektinhaber.
+- Stand `npm audit` (22.11.2026, `package-lock.json`): 16 Funde (1 niedrig, 12 moderat, 3 hoch). Unverändert, Behebung bleibt «Audit-Fix auf `main`» am 27.11.2026. Nicht Teil dieses PRs.
+- PR #74 (MCP-Allowlist) ändert ebenfalls `STATUS.md` und `AGENTS.md`. Probe-Merge beider Branches am 22.11.2026: keine Konflikte.
 
 ## Nachtrag 22.11.2026: Audit-Fix und pnpm
 Branch `chore/pnpm-audit-fix` (PR #77, gemergt, Basis war main 15f2fec). Kein App-Code, kein Versionsbump.
