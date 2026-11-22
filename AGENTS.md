@@ -35,6 +35,7 @@ Pflicht-Checks auf `main` (Ruleset): lint, typecheck, test, build, audit. CI lä
 - GUI-Ziel (Entscheid 16.11.2026): 4 Tabs (Heute, Situationen, Zeigen, Ich), «Nachschlagen» in Situationen, kein Fokus-Modus, Tab-Leiste immer sichtbar. Die Sterne-Bedingungen in `docs/architektur/gui-konzept.md` sind die Basis der 5-Sterne-Kalibrierung. Reihenfolge und Pakete (R1–R8, G1–G4): `docs/architektur/ablaufplan.md`, Stand in `STATUS.md`.
 - Neue Sprachen mit minimalem Aufwand (nur Inhalt, Audio, Registry-Eintrag); LTR/RTL aus der zentralen Sprachliste.
 - Generierte Audio-Clips liegen in `public/audio/` (im Repo). Die TTS-Stimmen und Rohdaten zum Neu-Erzeugen (`tools/voices/`, `tools/lines.json`, `*.wav`, `*.onnx`) sind nur lokal und nicht im Repo; für normale Entwicklung nicht nötig.
+- Klickbarer GUI-Prototyp (Stand 16.11.2026, 4 Tabs) liegt unter `prototype/gui/` (nur Design-Referenz, nicht produktiv, nicht in die App übernehmen, **nicht auf GitHub Pages**). Öffnen: `prototype/gui/index.html` im Browser.
 
 ## Arbeitsregeln für Agents
 

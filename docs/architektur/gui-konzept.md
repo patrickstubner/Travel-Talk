@@ -23,7 +23,7 @@
 
 ## Navigation
 
-**Entschieden am 16.11.2026 (Projektinhaber):** 4 Tabs. «Nachschlagen» gehört in den Tab Situationen. Die Wireframes in [`wireframes.html`](wireframes.html) zeigen die Tab-Leiste auch in Übungen und auf der Phrasen-Seite. Der frühere klickbare Prototyp liegt nicht in diesem Repo.
+**Entschieden am 16.11.2026 (Projektinhaber):** 4 Tabs. «Nachschlagen» gehört in den Tab Situationen. Die Wireframes in [`wireframes.html`](wireframes.html) zeigen die Tab-Leiste auch in Übungen und auf der Phrasen-Seite. Der klickbare Prototyp liegt unter `prototype/gui/`.
 
 Heute gibt es Heute, Nachschlagen, Zeigen und Einstellungen, auf einigen Screens zusätzlich Start, Üben und Kultur, also uneinheitlich. Neu sind es 4 Tabs:
 

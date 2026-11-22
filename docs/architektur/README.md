@@ -5,7 +5,7 @@
 
 Dieses Verzeichnis enthält das GUI-Konzept, die Architektur-Entscheidungen (ADRs), den Ablaufplan ab dem 27.11.2026 und die übrigen Planungsdokumente für den Umbau.
 
-Der frühere klickbare Prototyp und eine Read-only-Kopie des Quelltexts gehören nicht in dieses Repo und sind hier nicht enthalten.
+Der klickbare GUI-Prototyp (Stand 16.11.2026) liegt unter [`prototype/gui/`](../../prototype/gui/). Eine Read-only-Kopie des damaligen App-Quelltexts gehört nicht in dieses Repo und ist hier nicht enthalten.
 
 ## Inhalt
 
