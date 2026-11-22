@@ -23,6 +23,8 @@ Der Build erzeugt dieselben Dateien und denselben Service-Worker-Precache wie vo
 
 Im CI-Workflow laufen `clips` und `overflow` auf `ubuntu-24.04` statt `ubuntu-latest` (26.04): Playwright unterstützt 26.04 nicht, und die Clip-Prüfung schlug dort fehl. Das ist ein Versuch, die CI-Wirkung zeigt der PR.
 
+Mindestalter neuer Paketversionen (Auftrag vom 22.11.2026): `pnpm-workspace.yaml` setzt `minimumReleaseAge: 5760` (4 Tage, Schutz vor kompromittierten Releases). Geprüft: pnpm 10.34.9 lehnt eine jüngere Version beim Auflösen ab (Test mit einem am selben Tag veröffentlichten Paket) und nimmt sie nur über `minimumReleaseAgeExclude`. Alle Pakete im `pnpm-lock.yaml` sind älter als 4 Tage (jüngstes: minimatch 11.0.9, 5,7 Tage), keine Ausnahme war nötig. Ausnahmen künftig nur für nicht anders behebbare Sicherheitslücken, mit Kommentar (CVE/GHSA, Datum) und Rückbau nach 4 Tagen. Dependabot: `cooldown` mindestens 4 Tage (Sicherheits-Updates sind davon nicht betroffen).
+
 Keine kritischen, hohen oder mittleren offenen Befunde. Gegenprobe mit den GitHub-Dependabot-Alerts (15 offen auf `main`, darunter 7 hoch): alle bis auf einen fallen mit diesem PR weg. Bleibt offen: `deepmerge` 4.3.1 (niedrig, kein gepatchtes Release vorhanden), nur Build-Werkzeug über workbox-build, nicht im ausgelieferten Code. Offen: pnpm 11 und 12 sind erschienen (Major, anderes Konfigurationsmodell), nicht übernommen.
 
 ## Cloud-Agent-Setup (16.11.2026)

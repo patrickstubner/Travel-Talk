@@ -29,6 +29,7 @@ Pflicht-Checks auf `main` (Ruleset): lint, typecheck, test, build, audit. CI lä
 - Inhalte (content/) sind Daten: Beispielnamen erfunden, keine echten Personendaten, Kulturhinweise mit `https`-Quelle.
 - Testdaten ohne echte Personendaten.
 - **Paketmanager: nur pnpm** (Version in `packageManager`, über `corepack enable`). Kein `npm`, kein `yarn`, kein `package-lock.json`. Fehlt ein Paket, wird es sauber in `package.json` eingetragen, kein `shamefully-hoist`. `.npmrc` setzt `ignore-scripts=true` (Sicherheitshaltung CA-3): Install-Skripte von Paketen laufen nicht.
+- **Mindestalter neuer Paketversionen: 4 Tage.** `pnpm-workspace.yaml` setzt `minimumReleaseAge: 5760` (Minuten): pnpm installiert keine Version, die jünger ist (Schutz vor kompromittierten Releases). Die Zeile nie senken oder entfernen. Ausnahme nur, wenn eine Sicherheitslücke sich anders nicht beheben lässt: das Paket gezielt unter `minimumReleaseAgeExclude` eintragen, mit Kommentar (CVE/GHSA, Datum), im PR melden und nach 4 Tagen wieder entfernen. Dependabot hat `cooldown` von mindestens 4 Tagen. Das gilt für alle Agents (Cursor, Antigravity, weitere).
 
 ## Arbeitsregeln für Agents
 
