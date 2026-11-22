@@ -141,7 +141,7 @@ Die Daten sind Richtwerte. Sie hängen vom Cloud-Agent-Kontingent ab und davon, 
 
 - Review, ADR-001 bis ADR-004, Bausteine, GUI-Konzept mit Wireframes, Testplan und Issue-Entwürfe liegen in diesem Verzeichnis (`docs/architektur/`).
 - **Entschieden am 13.11.:** Tempo 100 % mit wählbarer Automatik, Rollenspiel nach dem GUI-Umbau, Merge-Regel ohne extra Vorschau.
-- **Entschieden am 16.11. (Projektinhaber):** 4 Tabs (Heute, Situationen, Zeigen, Ich), «Nachschlagen» in Situationen, kein Fokus-Modus (Tab-Leiste bleibt in Übungen und auf der Phrasen-Seite sichtbar), Sterne-Bedingungen in [`gui-konzept.md`](gui-konzept.md) als verbindliche Basis für die Kalibrierung am 27.11. Die Wireframes sind nachgeführt; der frühere klickbare Prototyp liegt nicht in diesem Repo.
+- **Entschieden am 16.11. (Projektinhaber):** 4 Tabs (Heute, Situationen, Zeigen, Ich), «Nachschlagen» in Situationen, kein Fokus-Modus (Tab-Leiste bleibt in Übungen und auf der Phrasen-Seite sichtbar), Sterne-Bedingungen in [`gui-konzept.md`](gui-konzept.md) als verbindliche Basis für die Kalibrierung am 27.11. Die Wireframes sind nachgeführt; der klickbare Prototyp liegt unter `prototype/gui/`.
 - Der Entwickler-Bot bekommt diese Unterlagen am 27.11. als Grundlage. Die Routinen um 09:30 und 10:00 bleiben, die Notiz zu V1 (`useRepeatScore` und Sterne-Basis) kommt dazu.
 
 ## Issue-Links

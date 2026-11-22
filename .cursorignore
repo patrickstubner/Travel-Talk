@@ -40,3 +40,6 @@ graphify-out/
 .env
 .env.*
 *.local
+
+# GUI-Prototyp-Screenshots (Markdown und HTML bleiben lesbar)
+prototype/gui/screenshots/
