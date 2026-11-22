@@ -46,11 +46,11 @@ Audit-Fix und pnpm-Umstellung liegen im Draft-PR `chore/pnpm-audit-fix` (22.11.2
 - Ein PR pro Issue, jeder mit Sicherheitsprüfung.
 
 ## Entscheide
-- **Navigation (Patrick, 16.11.2026):** genau 4 Tabs: Heute, Situationen, Zeigen, Ich. «Nachschlagen» liegt im Tab Situationen. Die Tab-Leiste ist immer sichtbar, auch in Übungen und auf der Phrasen-Seite. Kein Fokus-Modus. Der Navigationsentscheid ist kein Blocker mehr: G2 (#67) kann nach G1 (#66) und R6 (#64) starten.
-- **5 Sterne (Patrick, 16.11.2026):** Die Sterne-Bedingungen im GUI-Konzept sind die verbindliche Basis für die 5-Sterne-Kalibrierung in V1.
+- **Navigation (Projektinhaber, 16.11.2026):** genau 4 Tabs: Heute, Situationen, Zeigen, Ich. «Nachschlagen» liegt im Tab Situationen. Die Tab-Leiste ist immer sichtbar, auch in Übungen und auf der Phrasen-Seite. Kein Fokus-Modus. Der Navigationsentscheid ist kein Blocker mehr: G2 (#67) kann nach G1 (#66) und R6 (#64) starten.
+- **5 Sterne (Projektinhaber, 16.11.2026):** Die Sterne-Bedingungen im GUI-Konzept sind die verbindliche Basis für die 5-Sterne-Kalibrierung in V1.
 
 ## Offen / Entscheide nötig (wer?)
-- Spanisch als Sprache: nach Vosk 1.0, Umfang offen – Patrick
+- Spanisch als Sprache: nach Vosk 1.0, Umfang offen – Projektinhaber
 
 ## Offene PRs (16.11.2026)
 - #53 happy-dom 20.14.6 → 21.0.4 (Dependabot, Major): durch `chore/pnpm-audit-fix` überholt, nach dessen Merge schliessen oder neu bauen lassen (npm-Lockfile entfällt).
