@@ -30,6 +30,11 @@ Pflicht-Checks auf `main` (Ruleset): lint, typecheck, test, build, audit. CI lä
 - Testdaten ohne echte Personendaten.
 - **Paketmanager: nur pnpm** (Version in `packageManager`, über `corepack enable`). Kein `npm`, kein `yarn`, kein `package-lock.json`. Fehlt ein Paket, wird es sauber in `package.json` eingetragen, kein `shamefully-hoist`. `.npmrc` setzt `ignore-scripts=true` (Sicherheitshaltung CA-3): Install-Skripte von Paketen laufen nicht.
 - **Mindestalter neuer Paketversionen: 4 Tage.** `pnpm-workspace.yaml` setzt `minimumReleaseAge: 5760` (Minuten): pnpm installiert keine Version, die jünger ist (Schutz vor kompromittierten Releases). Die Zeile nie senken oder entfernen. Ausnahme nur, wenn eine Sicherheitslücke sich anders nicht beheben lässt: das Paket gezielt unter `minimumReleaseAgeExclude` eintragen, mit Kommentar (CVE/GHSA, Datum), im PR melden und nach 4 Tagen wieder entfernen. Dependabot hat `cooldown` von mindestens 4 Tagen. Das gilt für alle Agents (Cursor, Antigravity, weitere).
+- **Nur Frontend, ausdrücklich auch für Agents:** kein Backend, kein Server, kein Konto, kein Tracking, keine Uploads. Keine neue Infrastruktur ohne Ja des Projektinhabers.
+- GUI-Sprache aus der Browsersprache (Fallback Englisch), Lernsprache im Onboarding; mehrere Profile pro Gerät mit schnellem Flaggen-Chip-Umschalter; Fortschritt pro Sprache; Rollenspiel kommt nach dem GUI-Umbau. Spanisch ist die nächste geplante Sprache (nach Vosk 1.0).
+- GUI-Ziel (Entscheid 16.11.2026): 4 Tabs (Heute, Situationen, Zeigen, Ich), «Nachschlagen» in Situationen, kein Fokus-Modus, Tab-Leiste immer sichtbar. Die Sterne-Bedingungen in `docs/architektur/gui-konzept.md` sind die Basis der 5-Sterne-Kalibrierung. Reihenfolge und Pakete (R1–R8, G1–G4): `docs/architektur/ablaufplan.md`, Stand in `STATUS.md`.
+- Neue Sprachen mit minimalem Aufwand (nur Inhalt, Audio, Registry-Eintrag); LTR/RTL aus der zentralen Sprachliste.
+- Generierte Audio-Clips liegen in `public/audio/` (im Repo). Die TTS-Stimmen und Rohdaten zum Neu-Erzeugen (`tools/voices/`, `tools/lines.json`, `*.wav`, `*.onnx`) sind nur lokal und nicht im Repo; für normale Entwicklung nicht nötig.
 
 ## Arbeitsregeln für Agents
 
@@ -61,6 +66,44 @@ Pflicht-Checks auf `main` (Ruleset): lint, typecheck, test, build, audit. CI lä
 - Keine bezahlten Dienste und kein On-Demand ohne Patricks Ja.
 - Merge immer als Squash-Merge mit `--match-head-commit <SHA>`. Autor und Committer nur mit der GitHub-noreply-Adresse des Repo-Kontos.
 - Für Travel Talk gilt zusätzlich die gespeicherte Travel-Talk-Merge-Regel, auch für G1–G4 und R7 (ohne extra Vorschau, Entscheid Patrick 13.11.2026).
+
+## Zusammenarbeit mehrerer Agents (Cursor, Google Antigravity, weitere)
+
+Gilt für alle Agents und Menschen, die an diesem Repo arbeiten. Google Antigravity liest diese `AGENTS.md` im Repo-Stamm automatisch (Rules-Doku: https://antigravity.google/docs/rules); eine zweite Regel-Datei gibt es bewusst nicht, damit nichts doppelt gepflegt wird.
+
+### Branches und PRs
+- **Ein Branch pro Aufgabe und Agent.** Zwei Agents arbeiten nie auf demselben Branch. Branch-Name nach Muster `<typ>/<kurzer-name>` (z. B. `feat/…`, `fix/…`, `docs/…`), Basis immer aktuelles `main`.
+- **Änderungen nur per Pull Request.** Kein direkter Push auf `main`, kein Force-Push auf fremde Branches. Merge nur mit ausdrücklichem Ok des Projektinhabers. Die unabhängige Prüfung durch den Bot Stabschef läuft über den Projektinhaber; Agents ohne Zugang (z. B. Antigravity) nennen nur den Head-SHA im PR (Details: «Prüfung und Merge»).
+- Im PR den Head-SHA nennen. Kleine PRs mit einem Thema; fremde Branches und PRs nicht anfassen.
+
+### Sicherheitsprüfung nach jeder Codeänderung
+Nach jeder Code-Erstellung oder -Änderung, **bevor weitergebaut wird**, kurz prüfen und im PR (Abschnitt «Sicherheit») bzw. in der `SECURITY`-Notiz des Repos festhalten:
+- Eingabevalidierung und Injection (XSS, SQL/Command, Pfade, Prototype Pollution, Deserialisierung)
+- Geheimnisse und Zugangsdaten (Code, Konfiguration, Git-Historie, Logs)
+- Berechtigungen und Zugriffskontrolle
+- Abhängigkeiten und Versionen (direkt und indirekt, CDN, GitHub Actions): `npm audit` bzw. `pnpm audit`, verwundbare Libraries auf die nächste sichere Version heben; bei Major-Sprung vorher den Projektinhaber fragen
+- Fehlermeldungen und Logs mit sensiblen Daten
+- Neue Angriffsflächen (Endpunkte, Schnittstellen, Dateizugriff, Weiterleitungen, CSP/Header)
+
+Schwachstellen mit **Schweregrad** (kritisch / hoch / mittel / niedrig) und Fix-Vorschlag melden, bevor weitergebaut wird. Nichts als «sicher» bezeichnen, was nicht geprüft wurde.
+
+### Übergabe: STATUS.md
+- Am Ende **jeder Aufgabe** `STATUS.md` nachführen: was getan wurde, was offen ist, **Commit-Hash**, auf dem der Stand beruht, und welche lokalen Tools genutzt wurden. So kann der nächste Agent einsteigen, ohne alles neu zu lesen.
+- `ARCHITECTURE.md` nachführen, wenn sich Struktur oder Entscheide ändern. Keine Werte erfinden: Unbelegtes steht als «offen» da.
+- Ergebnisse lokaler Analysen (Hotspots, Aufrufer, Abhängigkeiten) kurz in `STATUS.md`; rohe Index-Ordner (`.codegraph/`, `graphify-out/`, `.serena/`, `.codebase-memory/`) bleiben lokal und stehen in `.gitignore`.
+
+### Verbote
+- **Keine Secrets, API-Keys, Tokens oder `.env`-Dateien ins Repo.** Auch nicht in MCP-Konfigurationen: `.agents/mcp_config.json` und `~/.gemini/…` liegen nur lokal (`.agents/mcp_config.json` steht in `.gitignore`).
+- **Keine kostenpflichtigen Dienste, Abos, Deploys oder Käufe** ohne ausdrückliches Ja des Projektinhabers. Im Zweifel stoppen und fragen.
+- Keine personenbezogenen Daten ins Repo, wenn es öffentlich ist.
+
+### Lokale MCP-Server (Empfehlung für Antigravity und andere lokale Agents)
+- **Sinnvoll:** GitHub (Repos, PRs, Issues), Graphify (Struktur-Graph) und `codebase-memory-mcp` (Aufrufer, Impact, Architektur; spart Tokens).
+- **Nicht nötig:** Sentry, Notion, PostHog, Vercel, Netlify. Jeder geladene MCP-Server kostet bei jeder Anfrage Tokens; nur aufnehmen, was beim Coden direkt hilft.
+- Antigravity: Konfiguration global in `~/.gemini/config/mcp_config.json` oder pro Workspace in `.agents/mcp_config.json` (nicht committen). Anleitung: https://antigravity.google/docs/mcp
+
+### Lokaler Start
+Installation, Start und Tests stehen in `README.md` und im Abschnitt «Befehle» oben. Vor dem ersten Commit `npm test` bzw. die dort genannten Prüfungen ausführen.
 
 ## Cursor Cloud specific instructions
 
