@@ -3,7 +3,7 @@
 - **Stand:** 16.11.2026
 - **Repo:** patrickstubner/Travel-Talk
 - **Hinweis:** Die Issues können so eingefügt werden. Angelegt werden sie erst nach Okay des Projektinhabers.
-- **Sicherheitsprüfung (gilt für alle Issues):** Nach jeder Code-Änderung macht der Entwickler-Bot eine detaillierte Sicherheits- und Schwachstellenprüfung, inklusive verwundbarer Libraries (`npm audit`). Er nennt die Schweregrade und schlägt Fixes vor. Das Ergebnis steht als Abschnitt «Sicherheitsprüfung» im PR.
+- **Sicherheitsprüfung (gilt für alle Issues):** Nach jeder Code-Änderung macht der Entwickler-Bot eine detaillierte Sicherheits- und Schwachstellenprüfung, inklusive verwundbarer Libraries (`pnpm audit`). Er nennt die Schweregrade und schlägt Fixes vor. Das Ergebnis steht als Abschnitt «Sicherheitsprüfung» im PR.
 - **Rahmen:** Travel Talk bleibt **reines Frontend**: kein Backend, keine Server-Calls, Daten bleiben lokal.
 - **Labels:** Es werden nur Labels verwendet, die im Repo existieren (Stand 13.11.: `enhancement`, `accessibility`, `documentation` und weitere Standard-Labels). Zugeordnet: R1–R7 ohne Label, G1–G4 `enhancement` (G1 zusätzlich `accessibility`), R8 `enhancement`.
 - **Entscheide vom 13.11.2026:** Tempo-Standard 100 % mit wählbarer Automatik. Rollenspiel nach dem GUI-Umbau. Die Merge-Regel für Travel-Talk reicht, keine extra Vorschau.
@@ -26,7 +26,7 @@
 **Akzeptanzkriterien**
 - [ ] J1–J6 laufen grün in der CI, 2× hintereinander ohne Flackern
 - [ ] Selektoren nur über Rolle, Name, Label oder fachliche `data-testid`
-- [ ] Neue Unit-Tests grün, `npm test`, `typecheck` und `lint` grün
+- [ ] Neue Unit-Tests grün, `pnpm test`, `typecheck` und `lint` grün
 - [ ] Kein Produktivcode geändert, ausser fehlenden `aria-label`s oder `data-testid`s
 
 **Abhängigkeiten:** Audit-Fix und Majors vom 27.11. sind gemergt.
@@ -56,7 +56,7 @@
 - [ ] Der Vollständigkeitstest läuft über alle registrierten Sprachen
 
 **Abhängigkeiten:** R1
-**Sicherheit:** neue devDependency `dependency-cruiser` mit `npm audit` und Lizenzcheck prüfen
+**Sicherheit:** neue devDependency `dependency-cruiser` mit `pnpm audit` und Lizenzcheck prüfen
 **Aufwand:** ca. 1–1,5 Agent-Tage
 
 ---
@@ -144,7 +144,7 @@
 - `catalogSchema` um `words` und `wordSounds` erweitern, inklusive Referenzprüfung
 - `tools/gen-content-index.ts` erzeugt `content/index.generated.ts` (prebuild, pretest, CI-Check)
 - Dateistruktur `content/situations/`, `content/words/`
-- `npm run check:content` mit lesbarem Bericht
+- `pnpm run check:content` mit lesbarem Bericht
 - Home, Practice-Module, Settings, RepeatFeedback und `srs/day` auf Abfragen umstellen
 
 **Akzeptanzkriterien**
@@ -167,7 +167,7 @@
 - Generische Optionen-UI aus `LanguageDef.options`
 - `src/i18n/<code>.ts` mit `satisfies Dictionary`, `dictionaries` aus der Registry
 - **RTL verbindlich (ADR-003 §6):** `dir` als Pflichtfeld pro Sprache in der Registry, Pseudosprache `ar-XB` (hidden, nur Dev/Test). `<html lang dir>` folgt der GUI-Sprache des aktiven Profils (auch beim Profilwechsel). Lerninhalte über `TargetText` mit eigener `lang`/`dir`, Freitext mit `dir="auto"`/`<bdi>`, Zähler isoliert.
-- CSS komplett auf logische Eigenschaften umstellen; Stylelint `use-logical` und ESLint-Regel gegen `marginLeft`/`left`/`right`/`textAlign:'left'` als CI-Fehler (`npm run lint:css`)
+- CSS komplett auf logische Eigenschaften umstellen; Stylelint `use-logical` und ESLint-Regel gegen `marginLeft`/`left`/`right`/`textAlign:'left'` als CI-Fehler (`pnpm run lint:css`)
 - Richtungs-Icons über `DirIcon` spiegeln (Play, Mikrofon, Sterne nicht), Swipe über `useDirection()` spiegeln
 - `splitWords` mit Segmentierer pro Sprache (`Intl.Segmenter`, falls vorhanden)
 - Checkliste «Neue Sprache hinzufügen» in `docs/neue-sprache.md`
@@ -177,7 +177,7 @@
 - [ ] `rg "'pt-BR'|'vi'" src --glob '!*.test.*' --glob '!src/domain/languages/**' --glob '!src/i18n/**'` liefert 0 Treffer
 - [ ] **Probe:** Eine Testsprache (z.B. `xx`, Status `hidden`, RTL) lässt sich nur mit Registry-Datei, i18n-Datei und Inhalten hinzufügen. `languages.complete.test.ts` meldet die Lücken korrekt, Seiten und Komponenten bleiben unverändert.
 - [ ] `settings.migration.test.ts` grün, J5 mit alter Format-3-Datei grün
-- [ ] `npm run lint:css` grün (0 physische left/right-Eigenschaften ausser `/* rtl-ok */`)
+- [ ] `pnpm run lint:css` grün (0 physische left/right-Eigenschaften ausser `/* rtl-ok */`)
 - [ ] J9 RTL (visuell, Pseudosprache `ar-XB`) grün, `direction.test.ts` grün; Profilwechsel LTR↔RTL setzt `<html dir>` sofort um
 
 **Abhängigkeiten:** R2, R4, R6

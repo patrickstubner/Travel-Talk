@@ -117,7 +117,7 @@ Der Service Worker legt Audiodateien und Zeitdateien nicht in den Precache. Er s
 Neu erzeugen, ohne die Modelle ins Repo zu legen:
 
 ```bash
-npm run export-speech
+pnpm run export-speech
 python3 tools/generate_audio.py de /pfad/zu/den/modellen
 python3 tools/generate_audio.py en /pfad/zu/den/modellen
 python3 tools/generate_audio.py pt-BR /pfad/zu/den/modellen

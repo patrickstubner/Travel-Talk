@@ -169,7 +169,7 @@ RTL-Sprachen (Arabisch, Hebräisch, Persisch, Urdu …) müssen ohne Umbau mögl
 `validateCatalog(catalog, LANGUAGES)` läuft in drei Stufen:
 
 - im Unit-Test,
-- im Build über das Script `npm run check:content`,
+- im Build über das Script `pnpm run check:content`,
 - zur Laufzeit wie heute `tryLoadCatalog`.
 
 Sie prüft für jede Sprache mit Status `live` fünf Punkte:
@@ -188,7 +188,7 @@ Sie prüft für jede Sprache mit Status `live` fünf Punkte:
 2. [ ] `src/domain/languages/es.ts` anlegen: Rollen, Leserichtung, Schrift, Regionen, tonal, Melodie-Grenzen, Fallback, Optionen (Anredeformen), Füllwörter. Start mit `status: 'hidden'`.
 3. [ ] Die Sprache in `LANGUAGES` eintragen. Das ist die **einzige** Code-Zeile ausserhalb der neuen Dateien.
 4. [ ] Nur wenn sie App-Sprache wird: `src/i18n/es.ts` mit `satisfies Dictionary` anlegen. Der Compiler zeigt jeden fehlenden Schlüssel. Die Browser-Erkennung (`resolveInitialUiLang`) berücksichtigt die Sprache danach automatisch.
-5. [ ] Inhalte ergänzen. Der Compiler und `npm run check:content` zeigen jede Lücke.
+5. [ ] Inhalte ergänzen. Der Compiler und `pnpm run check:content` zeigen jede Lücke.
    - In allen `Record<Lang,…>` in `content/` einen `es:`-Eintrag (Situationen, Kultur, Phrasen-Kontext, Wörter, Anredenotizen).
    - Nur wenn sie Zielsprache wird: Realisierungen in `content/phrases/*.ts` (`es: { text, speech? }`).
 6. [ ] Nur wenn sie Zielsprache wird: Stimmen.
@@ -196,10 +196,10 @@ Sie prüft für jede Sprache mit Status `live` fünf Punkte:
    - Audio mit `tools/generate_audio.py`, `generate_xtts.py` und `generate_words.py` erzeugen (3 Tempi).
    - Ausrichtung mit `tools/align_clips.py`.
    - Hörprobe mit 1–2 natürlichen Sätzen.
-   - `npm run test:clips`.
+   - `pnpm run test:clips`.
 7. [ ] Wenn nötig, sprachspezifische Anpassungen: Wortsegmentierung für Schriften ohne Leerzeichen, Ton-Darstellung bei tonalen Sprachen.
    - **Bei RTL-Sprachen:** `dir: 'rtl'` in der Registry, `fontStack` und Zeilenhöhe prüfen, J9 (RTL) einmal mit der echten Sprache statt der Pseudosprache laufen lassen und Screenshots von einer Muttersprachlerin oder einem Muttersprachler prüfen lassen. Kein Code in Seiten oder Komponenten nötig.
-8. [ ] `npm run typecheck && npm run lint:css && npm test && npm run check:content && npm run test:overflow` müssen grün sein, dazu J9 (RTL). Der Test «jede registrierte Sprache vollständig» steht im [`testplan.md`](../testplan.md).
+8. [ ] `pnpm run typecheck && pnpm run lint:css && pnpm test && pnpm run check:content && pnpm run test:overflow` müssen grün sein, dazu J9 (RTL). Der Test «jede registrierte Sprache vollständig» steht im [`testplan.md`](../testplan.md).
 9. [ ] Status `beta` setzen, die Sprache mit einer Muttersprachlerin oder einem Muttersprachler prüfen (Flag `geprueft`), danach `live`.
 10. [ ] Sicherheitsprüfung gemäss Regel des Projektinhabers. Bei reinen Inhalts-PRs heisst das: keine neuen Abhängigkeiten, keine externen URLs ausser bei `source.url` (https-Regex bleibt), Audio-Dateinamen passen zu `AUDIO_FILE`.
 

@@ -10,15 +10,15 @@
 ## Befehle (aus package.json und .github/workflows/ci.yml)
 | Zweck | Befehl |
 |---|---|
-| Installieren | `npm ci` (CI: `npm ci --ignore-scripts`) |
-| Entwickeln | `npm run dev` (http://127.0.0.1:5173/Travel-Talk/) |
-| Lint | `npm run lint` |
-| Typen | `npm run typecheck` |
-| Unit-Tests | `npm test` |
-| Audio-Clips | `npm run test:clips` (braucht ffmpeg, in CI je Sprache de/en/pt-BR/vi) |
-| Layout (Playwright) | `npx playwright install --with-deps chromium`, `npm run build`, dann `npm run test:overflow` |
-| Build | `npm run build` |
-| Audit | `npm audit --audit-level=moderate` (CI bricht ab moderate ab) |
+| Installieren | `corepack enable`, dann `pnpm install --frozen-lockfile` (CI: mit `--ignore-scripts`, `.npmrc` setzt es ohnehin) |
+| Entwickeln | `pnpm run dev` (http://127.0.0.1:5173/Travel-Talk/) |
+| Lint | `pnpm run lint` |
+| Typen | `pnpm run typecheck` |
+| Unit-Tests | `pnpm test` |
+| Audio-Clips | `pnpm run test:clips` (braucht ffmpeg, in CI je Sprache de/en/pt-BR/vi) |
+| Layout (Playwright) | `pnpm exec playwright install --with-deps chromium`, `pnpm run build`, dann `pnpm run test:overflow` |
+| Build | `pnpm run build` |
+| Audit | `pnpm audit --audit-level=moderate` (CI bricht ab moderate ab) |
 
 Pflicht-Checks auf `main` (Ruleset): lint, typecheck, test, build, audit. CI läuft bei jedem Pull Request, Deploy auf GitHub Pages nur beim Push auf `main`.
 
@@ -28,6 +28,8 @@ Pflicht-Checks auf `main` (Ruleset): lint, typecheck, test, build, audit. CI lä
 - Tempo: Standard 100 %, Automatik als Option.
 - Inhalte (content/) sind Daten: Beispielnamen erfunden, keine echten Personendaten, Kulturhinweise mit `https`-Quelle.
 - Testdaten ohne echte Personendaten.
+- **Paketmanager: nur pnpm** (Version in `packageManager`, über `corepack enable`). Kein `npm`, kein `yarn`, kein `package-lock.json`. Fehlt ein Paket, wird es sauber in `package.json` eingetragen, kein `shamefully-hoist`. `.npmrc` setzt `ignore-scripts=true` (Sicherheitshaltung CA-3): Install-Skripte von Paketen laufen nicht.
+- **Mindestalter neuer Paketversionen: 4 Tage.** `pnpm-workspace.yaml` setzt `minimumReleaseAge: 5760` (Minuten): pnpm installiert keine Version, die jünger ist (Schutz vor kompromittierten Releases). Die Zeile nie senken oder entfernen. Ausnahme nur, wenn eine Sicherheitslücke sich anders nicht beheben lässt: das Paket gezielt unter `minimumReleaseAgeExclude` eintragen, mit Kommentar (CVE/GHSA, Datum), im PR melden und nach 4 Tagen wieder entfernen. Dependabot hat `cooldown` von mindestens 4 Tagen. Das gilt für alle Agents (Cursor, Antigravity, weitere).
 
 ## Arbeitsregeln für Agents
 
@@ -78,7 +80,7 @@ Die Binaries liegen nur unter `~/.local/bin` (kein Kopieren nach `/usr/local/bin
 
 Weitere Tools können später im selben Skript ergänzt werden (Version und SHA-256 pinnen, kein `curl|bash`).
 
-Abhängigkeiten: das Skript erkennt `package-lock.json` (`npm ci --ignore-scripts`) oder `pnpm-lock.yaml` (`pnpm install --frozen-lockfile`, pnpm über corepack mit der in `packageManager` gepinnten Version). Node muss die `engines` in `package.json` erfüllen (typisch >= 22); das Skript installiert Node nicht.
+Abhängigkeiten: das Skript erkennt `pnpm-lock.yaml` (`pnpm install --frozen-lockfile --ignore-scripts`, pnpm über corepack mit der in `packageManager` gepinnten Version) oder `package-lock.json` (`npm ci --ignore-scripts`, nur für andere Repos). In diesem Repo gilt pnpm. Node muss die `engines` in `package.json` erfüllen (typisch >= 22); das Skript installiert Node nicht.
 
 ### Reihenfolge bei Struktur-Fragen
 1. STATUS.md und ARCHITECTURE.md.
