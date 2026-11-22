@@ -1,4 +1,19 @@
-# STATUS.md – Stand 16.11.2026, Basis main 6166d70 (0.10.2), Branch `chore/cloud-agent-setup`
+# STATUS.md – Stand 22.11.2026, Branch `docs/antigravity-setup`, Basis `main` nach #77 (a260d9c)
+
+## Nachtrag 22.11.2026 (Abend): Korrekturen nach Stabschef-Prüfung
+Commit `facb7ba`. Nur Doku, kein App-Code, kein Cloud Agent.
+- Abschnitt «Zusammenarbeit mehrerer Agents»: vor dem Merge geht der Head-SHA an Stabschef, auf dessen Ok warten, Merge erst nach dem Ja des Projektinhabers.
+- Vornamen in `AGENTS.md` und `STATUS.md` durch «Projektinhaber» ersetzt.
+- Dieser PR (#75) soll erst nach #74 (MCP-Allowlist) gemergt werden.
+- Rebase auf `main` nach #77: pnpm-Regeln in `AGENTS.md` und `README.md` bleiben. Die frühere Formulierung, der GUI-Prototyp liege bewusst nicht im Repo, ist gestrichen (der Prototyp kommt in PR #76 unter `prototype/gui/`). Stabschef-Befund N1: in der Nachtragszeile zu #77 steht «Ja des Projektinhabers» statt «Ja von Patrick».
+
+## Nachtrag 22.11.2026: Vorbereitung für lokale Arbeit mit Google Antigravity
+Branch `docs/antigravity-setup` (PR offen, nicht mergen bis Stabschef-Ok und Ja des Projektinhabers). Nur Doku, kein App-Code, kein Cloud Agent. Von der Doku-Änderung unberührt: `.cursor/`, `.cursorignore`, Code, `package*.json`.
+- `AGENTS.md`: neuer Abschnitt «Zusammenarbeit mehrerer Agents» (ein Branch pro Aufgabe und Agent, nur PRs, Sicherheitsprüfung nach jeder Änderung, STATUS.md mit Commit, keine Secrets, keine Kosten ohne Ja, empfohlene lokale MCP-Server) und ergänzte Projektregeln (nur Frontend, Profile und Sprachen, GUI-Ziel; TTS-Stimmen/Rohdaten bleiben lokal). Antigravity liest `AGENTS.md` automatisch; keine zweite Regel-Datei.
+- `README.md`: Abschnitt «Mit Agents arbeiten»; der lokale Start (`corepack enable`, `pnpm install --frozen-lockfile`, `pnpm run dev`, `pnpm test`) steht in der README. `.gitignore`: `.agents/mcp_config.json`.
+- Nicht im Repo, bewusst: die TTS-Stimmen und Rohdaten (`tools/voices/`), nur bei Bedarf lokal beim Projektinhaber. Ein klickbarer GUI-Prototyp unter `prototype/gui/` folgt in PR #76.
+- Audit: seit #77 (`pnpm audit`) 0 Funde. Nicht Teil dieses PRs.
+- PR #74 (MCP-Allowlist) ändert ebenfalls `STATUS.md` und `AGENTS.md` und soll zuerst gemergt werden; danach kann ein kurzer Rebase von #75 nötig sein.
 
 ## Nachtrag 22.11.2026: Audit-Fix und pnpm
 Branch `chore/pnpm-audit-fix` (PR #77, gemergt, Basis war main 15f2fec). Kein App-Code, kein Versionsbump.
@@ -38,11 +53,11 @@ Audit-Fix und pnpm-Umstellung liegen im Draft-PR `chore/pnpm-audit-fix` (22.11.2
 - Ein PR pro Issue, jeder mit Sicherheitsprüfung.
 
 ## Entscheide
-- **Navigation (Patrick, 16.11.2026):** genau 4 Tabs: Heute, Situationen, Zeigen, Ich. «Nachschlagen» liegt im Tab Situationen. Die Tab-Leiste ist immer sichtbar, auch in Übungen und auf der Phrasen-Seite. Kein Fokus-Modus. Der Navigationsentscheid ist kein Blocker mehr: G2 (#67) kann nach G1 (#66) und R6 (#64) starten.
-- **5 Sterne (Patrick, 16.11.2026):** Die Sterne-Bedingungen im GUI-Konzept sind die verbindliche Basis für die 5-Sterne-Kalibrierung in V1.
+- **Navigation (Projektinhaber, 16.11.2026):** genau 4 Tabs: Heute, Situationen, Zeigen, Ich. «Nachschlagen» liegt im Tab Situationen. Die Tab-Leiste ist immer sichtbar, auch in Übungen und auf der Phrasen-Seite. Kein Fokus-Modus. Der Navigationsentscheid ist kein Blocker mehr: G2 (#67) kann nach G1 (#66) und R6 (#64) starten.
+- **5 Sterne (Projektinhaber, 16.11.2026):** Die Sterne-Bedingungen im GUI-Konzept sind die verbindliche Basis für die 5-Sterne-Kalibrierung in V1.
 
 ## Offen / Entscheide nötig (wer?)
-- Spanisch als Sprache: nach Vosk 1.0, Umfang offen – Patrick
+- Spanisch als Sprache: nach Vosk 1.0, Umfang offen – Projektinhaber
 
 ## Offene PRs (16.11.2026)
 - #53 happy-dom 20.14.6 → 21.0.4 (Dependabot, Major): durch `chore/pnpm-audit-fix` überholt, nach dessen Merge schliessen oder neu bauen lassen (npm-Lockfile entfällt).

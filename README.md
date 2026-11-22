@@ -70,3 +70,9 @@ Audio neu bauen steht in [docs/audio.md](docs/audio.md). Die Prüfung der Abhän
 ## Veröffentlichung
 
 GitHub Pages baut über die Action in `.github/workflows/ci.yml`, nur beim Push auf `main`. Lint, Typprüfung, Tests, Build und `pnpm audit` laufen auch auf Pull Requests. Der Audit bricht ab der Stufe moderate ab.
+
+## Mit Agents arbeiten (Cursor, Google Antigravity)
+
+1. `AGENTS.md`, `ARCHITECTURE.md` und `STATUS.md` lesen. Antigravity lädt `AGENTS.md` automatisch.
+2. Ein Branch pro Aufgabe und Agent, Änderungen nur per Pull Request, nach jeder Änderung Sicherheitsprüfung, am Ende `STATUS.md` mit Commit nachführen.
+3. Keine Secrets ins Repo, keine kostenpflichtigen Dienste ohne Ja des Projektinhabers.
