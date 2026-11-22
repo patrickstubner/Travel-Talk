@@ -1,18 +1,19 @@
-# STATUS.md – Stand 22.11.2026, beruht auf Commit facb7ba (Branch `docs/antigravity-setup`, Basis main 15f2fec)
+# STATUS.md – Stand 22.11.2026, Branch `docs/antigravity-setup`, Basis `main` nach #77 (a260d9c)
 
 ## Nachtrag 22.11.2026 (Abend): Korrekturen nach Stabschef-Prüfung
 Commit `facb7ba`. Nur Doku, kein App-Code, kein Cloud Agent.
 - Abschnitt «Zusammenarbeit mehrerer Agents»: vor dem Merge geht der Head-SHA an Stabschef, auf dessen Ok warten, Merge erst nach dem Ja des Projektinhabers.
 - Vornamen in `AGENTS.md` und `STATUS.md` durch «Projektinhaber» ersetzt.
 - Dieser PR (#75) soll erst nach #74 (MCP-Allowlist) gemergt werden.
+- Rebase auf `main` nach #77: pnpm-Regeln in `AGENTS.md` und `README.md` bleiben. Die frühere Formulierung, der GUI-Prototyp liege bewusst nicht im Repo, ist gestrichen (der Prototyp kommt in PR #76 unter `prototype/gui/`). Stabschef-Befund N1: in der Nachtragszeile zu #77 steht «Ja des Projektinhabers» statt «Ja von Patrick».
 
 ## Nachtrag 22.11.2026: Vorbereitung für lokale Arbeit mit Google Antigravity
 Branch `docs/antigravity-setup` (PR offen, nicht mergen bis Stabschef-Ok und Ja des Projektinhabers). Nur Doku, kein App-Code, kein Cloud Agent. Von der Doku-Änderung unberührt: `.cursor/`, `.cursorignore`, Code, `package*.json`.
-- `AGENTS.md`: neuer Abschnitt «Zusammenarbeit mehrerer Agents» (ein Branch pro Aufgabe und Agent, nur PRs, Sicherheitsprüfung nach jeder Änderung, STATUS.md mit Commit, keine Secrets, keine Kosten ohne Ja, empfohlene lokale MCP-Server) und ergänzte Projektregeln (nur Frontend, Profile und Sprachen, GUI-Ziel, was nicht im Repo liegt). Antigravity liest `AGENTS.md` automatisch; keine zweite Regel-Datei.
-- `README.md`: Abschnitt «Mit Agents arbeiten»; der lokale Start (`npm ci`, `npm run dev`, `npm test`) stand schon dort. `.gitignore`: `.agents/mcp_config.json`.
-- Nicht im Repo, bewusst: der frühere klickbare GUI-Prototyp (siehe `docs/architektur/README.md`) und die TTS-Stimmen/Rohdaten (`tools/voices/`). Beides nur bei Bedarf lokal beim Projektinhaber.
-- Stand `npm audit` (22.11.2026, `package-lock.json`): 16 Funde (1 niedrig, 12 moderat, 3 hoch). Unverändert, Behebung bleibt «Audit-Fix auf `main`» am 27.11.2026. Nicht Teil dieses PRs.
-- PR #74 (MCP-Allowlist) ändert ebenfalls `STATUS.md` und `AGENTS.md`. Probe-Merge beider Branches am 22.11.2026: keine Konflikte.
+- `AGENTS.md`: neuer Abschnitt «Zusammenarbeit mehrerer Agents» (ein Branch pro Aufgabe und Agent, nur PRs, Sicherheitsprüfung nach jeder Änderung, STATUS.md mit Commit, keine Secrets, keine Kosten ohne Ja, empfohlene lokale MCP-Server) und ergänzte Projektregeln (nur Frontend, Profile und Sprachen, GUI-Ziel; TTS-Stimmen/Rohdaten bleiben lokal). Antigravity liest `AGENTS.md` automatisch; keine zweite Regel-Datei.
+- `README.md`: Abschnitt «Mit Agents arbeiten»; der lokale Start (`corepack enable`, `pnpm install --frozen-lockfile`, `pnpm run dev`, `pnpm test`) steht in der README. `.gitignore`: `.agents/mcp_config.json`.
+- Nicht im Repo, bewusst: die TTS-Stimmen und Rohdaten (`tools/voices/`), nur bei Bedarf lokal beim Projektinhaber. Ein klickbarer GUI-Prototyp unter `prototype/gui/` folgt in PR #76.
+- Audit: seit #77 (`pnpm audit`) 0 Funde. Nicht Teil dieses PRs.
+- PR #74 (MCP-Allowlist) ändert ebenfalls `STATUS.md` und `AGENTS.md` und soll zuerst gemergt werden; danach kann ein kurzer Rebase von #75 nötig sein.
 
 ## Nachtrag 22.11.2026: Audit-Fix und pnpm
 Branch `chore/pnpm-audit-fix` (PR #77, gemergt, Basis war main 15f2fec). Kein App-Code, kein Versionsbump.

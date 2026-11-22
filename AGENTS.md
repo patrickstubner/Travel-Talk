@@ -81,7 +81,7 @@ Nach jeder Code-Erstellung oder -Änderung, **bevor weitergebaut wird**, kurz pr
 - Eingabevalidierung und Injection (XSS, SQL/Command, Pfade, Prototype Pollution, Deserialisierung)
 - Geheimnisse und Zugangsdaten (Code, Konfiguration, Git-Historie, Logs)
 - Berechtigungen und Zugriffskontrolle
-- Abhängigkeiten und Versionen (direkt und indirekt, CDN, GitHub Actions): `npm audit` bzw. `pnpm audit`, verwundbare Libraries auf die nächste sichere Version heben; bei Major-Sprung vorher den Projektinhaber fragen
+- Abhängigkeiten und Versionen (direkt und indirekt, CDN, GitHub Actions): `pnpm audit`, verwundbare Libraries auf die nächste sichere Version heben; bei Major-Sprung vorher den Projektinhaber fragen
 - Fehlermeldungen und Logs mit sensiblen Daten
 - Neue Angriffsflächen (Endpunkte, Schnittstellen, Dateizugriff, Weiterleitungen, CSP/Header)
 
@@ -103,7 +103,7 @@ Schwachstellen mit **Schweregrad** (kritisch / hoch / mittel / niedrig) und Fix-
 - Antigravity: Konfiguration global in `~/.gemini/config/mcp_config.json` oder pro Workspace in `.agents/mcp_config.json` (nicht committen). Anleitung: https://antigravity.google/docs/mcp
 
 ### Lokaler Start
-Installation, Start und Tests stehen in `README.md` und im Abschnitt «Befehle» oben. Vor dem ersten Commit `npm test` bzw. die dort genannten Prüfungen ausführen.
+Installation, Start und Tests stehen in `README.md` und im Abschnitt «Befehle» oben. Vor dem ersten Commit `pnpm test` bzw. die dort genannten Prüfungen ausführen.
 
 ## Cursor Cloud specific instructions
 
