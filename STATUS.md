@@ -1,11 +1,17 @@
-# STATUS.md – Stand 22.11.2026, Branch `docs/antigravity-setup`, Basis `main` nach #77 (a260d9c)
+# STATUS.md – Stand 22.11.2026, Branch `docs/gui-prototyp`, Basis `main` nach #75 (f910f78)
+
+## Nachtrag 22.11.2026: GUI-Prototyp im Repo
+Branch `docs/gui-prototyp` (Draft-PR, nicht mergen bis Stabschef-Ok und Ja des Projektinhabers). Kein App-Code, kein Cloud Agent.
+- Neu: `prototype/gui/` – klickbarer GUI-Prototyp (Stand 16.11.2026, 4 Tabs, Tab-Leiste immer sichtbar). Nur Design-Referenz. Quelle war lokal; bereinigt (keine Vornamen, keine lokalen Pfade). Acht Screenshots (ca. 1,2 MB).
+- Docs angepasst, die bisher sagten, der Prototyp liege nicht im Repo: `AGENTS.md`, `docs/architektur/README.md`, `ablaufplan.md`, `gui-konzept.md`.
+- `.cursorignore`: Screenshots des Prototyps (HTML und README bleiben lesbar).
 
 ## Nachtrag 22.11.2026 (Abend): Korrekturen nach Stabschef-Prüfung
 Commit `facb7ba`. Nur Doku, kein App-Code, kein Cloud Agent.
 - Abschnitt «Zusammenarbeit mehrerer Agents»: vor dem Merge geht der Head-SHA an Stabschef, auf dessen Ok warten, Merge erst nach dem Ja des Projektinhabers.
 - Vornamen in `AGENTS.md` und `STATUS.md` durch «Projektinhaber» ersetzt.
 - Dieser PR (#75) soll erst nach #74 (MCP-Allowlist) gemergt werden.
-- Rebase auf `main` nach #77: pnpm-Regeln in `AGENTS.md` und `README.md` bleiben. Die frühere Formulierung, der GUI-Prototyp liege bewusst nicht im Repo, ist gestrichen (der Prototyp kommt in PR #76 unter `prototype/gui/`). Stabschef-Befund N1: in der Nachtragszeile zu #77 steht «Ja des Projektinhabers» statt «Ja von Patrick».
+- Rebase auf `main` nach #77: pnpm-Regeln in `AGENTS.md` und `README.md` bleiben. Die frühere Formulierung, der GUI-Prototyp liege bewusst nicht im Repo, ist gestrichen (der Prototyp kommt in PR #76 unter `prototype/gui/`). Stabschef-Befund N1: Vorname durch «Projektinhaber» ersetzt.
 
 ## Nachtrag 22.11.2026: Vorbereitung für lokale Arbeit mit Google Antigravity
 Branch `docs/antigravity-setup` (PR offen, nicht mergen bis Stabschef-Ok und Ja des Projektinhabers). Nur Doku, kein App-Code, kein Cloud Agent. Von der Doku-Änderung unberührt: `.cursor/`, `.cursorignore`, Code, `package*.json`.
@@ -24,7 +30,7 @@ Branch `chore/mcp-allowlist` (PR #74, Basis `main` nach #77, nicht mergen bis St
 - `.cursor/environment.json`: neu `mcpServerAllowlist` mit genau einem Eintrag, dem gehosteten Graphify-MCP (`https://api.graphify.com/mcp`). Alle anderen User- und Team-MCP-Server sind für Agents dieser Umgebung gesperrt, Cursor-eigene MCP-Server nicht. Feldnamen laut https://cursor.com/schemas/environment.schema.json; die Datei wurde gegen das Schema geprüft.
 - AGENTS.md (Cloud-Abschnitt): Regel «MCP-Liste schlank halten; Serena nur nach positivem lokalem Test, dann ersetzt es codebase-memory-mcp».
 - Die Datei wirkt nur, wenn «environment.json location» der Umgebung auf cursor.com auf dieses Repo zeigt. Sonst gleichen Eintrag im Dashboard von Hand setzen (Abschnitt «MCP servers» der Umgebung). Ungetestet: kein Cloud Agent gestartet (Kontingent bis 27.11.2026 erschöpft).
-- Stabschef-Befund N1: in der Nachtragszeile zu #77 steht «Ja des Projektinhabers» statt «Ja von Patrick».
+- Stabschef-Befund N1: Vorname durch «Projektinhaber» ersetzt.
 
 ## Nachtrag 16.11.2026: Cloud-Agent-Setup
 Branch `chore/cloud-agent-setup` (Draft-PR, Basis jetzt `main` nach Merge von #71 und #72, nicht mergen bis Stabschef und Projektinhaber Ja sagen).
