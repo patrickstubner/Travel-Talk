@@ -23,7 +23,7 @@ Der Build erzeugt dieselben Dateien und denselben Service-Worker-Precache wie vo
 
 Im CI-Workflow laufen `clips` und `overflow` auf `ubuntu-24.04` statt `ubuntu-latest` (26.04): Playwright unterstützt 26.04 nicht, und die Clip-Prüfung schlug dort fehl. Das ist ein Versuch, die CI-Wirkung zeigt der PR.
 
-Keine kritischen, hohen oder mittleren offenen Befunde. Offen: pnpm 11 und 12 sind erschienen (Major, anderes Konfigurationsmodell), nicht übernommen.
+Keine kritischen, hohen oder mittleren offenen Befunde. Gegenprobe mit den GitHub-Dependabot-Alerts (15 offen auf `main`, darunter 7 hoch): alle bis auf einen fallen mit diesem PR weg. Bleibt offen: `deepmerge` 4.3.1 (niedrig, kein gepatchtes Release vorhanden), nur Build-Werkzeug über workbox-build, nicht im ausgelieferten Code. Offen: pnpm 11 und 12 sind erschienen (Major, anderes Konfigurationsmodell), nicht übernommen.
 
 ## Cloud-Agent-Setup (16.11.2026)
 
