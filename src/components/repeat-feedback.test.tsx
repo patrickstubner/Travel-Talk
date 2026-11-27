@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { de, en, pt, vi as viCopy } from '../i18n/dictionary'
 import { playSequence, stopSlices } from '../audio/slice'
 import { scoreRepeat } from '../pitch/feedback'
+import type { SpeechRecognizer } from '../hooks/use-repeat-score'
 import { RepeatFeedback } from './RepeatFeedback'
 
 vi.mock('../audio/slice', () => ({
@@ -44,6 +45,7 @@ function renderFeedback(
   timed: typeof words | null = words,
   voiceId = 'vais1000',
   timingsPending = false,
+  recognizer: SpeechRecognizer | null = null,
 ): void {
   render(
     <RepeatFeedback
@@ -59,8 +61,14 @@ function renderFeedback(
       modelMissing={false}
       voiceId={voiceId}
       timingsPending={timingsPending}
+      recognizer={recognizer}
     />,
   )
+}
+
+/** A recogniser that "hears" the given text, for the words bar. */
+function hears(text: string): SpeechRecognizer {
+  return async () => ({ text, confidence: 0.95 })
 }
 
 afterEach(() => {
@@ -74,8 +82,10 @@ describe('repeat feedback view', () => {
     const view = screen.getByTestId('repeat-feedback')
     expect(view.hidden).toBe(false)
     expect(view.closest('details')).toBeNull()
-    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('3')
-    expect(screen.getByRole('img', { name: '3 von 3 Sternen' })).toBeTruthy()
+    // Without speech recognition the most is four.
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('4')
+    expect(screen.getByRole('img', { name: '4 von 5 Sternen' })).toBeTruthy()
+    expect(screen.getAllByText('★')).toHaveLength(5)
     expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
     expect(screen.getByTestId('rhythm-bar').getAttribute('data-state')).toBe('passt')
     expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('green')
@@ -93,7 +103,7 @@ describe('repeat feedback view', () => {
   it('shows the northern hint only for vais1000', () => {
     renderFeedback('vi', tone(140, 280, 1.2), words, 'vivos-22')
     expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
-    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('3')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('4')
     expect(screen.queryByText('Nördliche Stimme. Ein Hinweis, keine Note.')).toBeNull()
   })
 
@@ -134,7 +144,69 @@ describe('repeat feedback view', () => {
     renderFeedback('en', tone(140, 280, 1.2), words, 'joe')
     expect(screen.getByRole('button', { name: 'qua' }).getAttribute('data-color')).toBe('green')
     expect(screen.getByTestId('melody-bar').getAttribute('data-state')).toBe('passt')
-    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('3')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('4')
+  })
+
+  it('gives five stars only when the recogniser heard every word', async () => {
+    renderFeedback('en', tone(140, 280, 1.2), words, 'joe', false, hears('qua xin nha'))
+    await waitFor(() => expect(screen.getByTestId('repeat-feedback').getAttribute('data-speech-state')).toBe('ready'))
+    expect(screen.getByTestId('words-bar').getAttribute('data-state')).toBe('passt')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('5')
+  })
+
+  it('gives one star when the recogniser barely heard the words, even with a green melody', async () => {
+    renderFeedback('en', tone(140, 280, 1.2), words, 'joe', false, hears('bing bang bong'))
+    await waitFor(() => expect(screen.getByTestId('repeat-feedback').getAttribute('data-speech-state')).toBe('ready'))
+    expect(screen.getByTestId('words-bar').getAttribute('data-state')).toBe('daneben')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('1')
+  })
+
+  it('hides the stars while the recogniser is working', () => {
+    renderFeedback('en', tone(140, 280, 1.2), words, 'joe', false, () => new Promise(() => undefined))
+    expect(screen.getByTestId('repeat-feedback').getAttribute('data-speech-state')).toBe('pending')
+    expect(screen.queryByTestId('repeat-stars')).toBeNull()
+  })
+
+  it('falls back to at most four stars when the recogniser fails', async () => {
+    renderFeedback('en', tone(140, 280, 1.2), words, 'joe', false, async () => null)
+    await waitFor(() => expect(screen.getByTestId('repeat-feedback').getAttribute('data-speech-state')).toBe('failed'))
+    expect(screen.queryByTestId('words-bar')).toBeNull()
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('4')
+  })
+
+  it('shows Vietnamese words for information only and keeps at most four stars', async () => {
+    renderFeedback('vi', tone(140, 280, 1.2), words, 'vivos-22', false, hears('qua xin nha'))
+    await waitFor(() => expect(screen.getByTestId('repeat-feedback').getAttribute('data-speech-state')).toBe('ready'))
+    expect(screen.getByTestId('words-bar').getAttribute('data-state')).toBe('passt')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('4')
+  })
+
+  it('passes another voice contour into the score and keeps the played file', async () => {
+    const played = tone(140, 280, 1.2)
+    const other = tone(180, 120, 1.2)
+    render(
+      <RepeatFeedback
+        copy={de}
+        lang="pt-BR"
+        region="south"
+        speech="qua xin nha"
+        words={words}
+        modelSamples={played}
+        modelRate={16000}
+        userSamples={played}
+        userRate={16000}
+        modelMissing={false}
+        voiceId="cadu"
+        referenceClips={[{ samples: other, sampleRate: 16000 }]}
+      />,
+    )
+    await waitFor(() => {
+      const input = vi.mocked(scoreRepeat).mock.calls.at(-1)?.[0]
+      expect(input?.references?.length).toBe(1)
+    })
+    const input = vi.mocked(scoreRepeat).mock.calls.at(-1)?.[0]
+    expect(input?.model.length ?? 0).toBeGreaterThan(8)
+    expect(input?.references?.[0]).not.toEqual(input?.model)
   })
 
   it('passes the loudness of the model and the take into the score', () => {
@@ -230,7 +302,7 @@ describe('repeat feedback view', () => {
     for (const bar of screen.queryAllByTestId(/bar$/)) {
       expect(bar.getAttribute('data-state')).toBeTruthy()
     }
-    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toMatch(/^[0123]$/)
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toMatch(/^[0-5]$/)
   })
 
   it('keeps the not-assessable sentence readable in show mode', () => {
@@ -392,7 +464,7 @@ describe('repeat feedback view', () => {
     expect(screen.getByTestId('melody-bar')).toBeTruthy()
   })
 
-  it('keeps three stars off a wrong sentence and two stars on a fitting sentence with one off bar', async () => {
+  it('keeps five stars off a wrong sentence and maps the bars to the five-star scale', async () => {
     const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
     vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
       ...actual.scoreRepeat(input),
@@ -408,9 +480,47 @@ describe('repeat feedback view', () => {
       },
     }))
     renderFeedback('de')
-    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
-    expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(2)
-    expect(screen.getByTestId('bars-fit').textContent).toBe('Zwei Sterne. Die Balken passen, der Satz noch nicht ganz.')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('1')
+    expect(screen.getAllByText('★')).toHaveLength(5)
+    expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(1)
+    expect(screen.queryByTestId('bars-fit')).toBeNull()
+    cleanup()
+    vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
+      ...actual.scoreRepeat(input),
+      melodyBar: 'passt',
+      rhythmBar: 'passt',
+      verdict: 'teilweise',
+      sentenceCheck: {
+        correlation: 0.3,
+        opposedShare: 0.2,
+        order: 1,
+        bands: 0.3,
+        backwards: false,
+      },
+    }))
+    // Five words, two missed: a word error rate of 0.4 is a partial words bar.
+    const five = [0.1, 0.32, 0.54, 0.76, 0.98].map((start) => ({ start, end: start + 0.18 }))
+    const samples = tone(140, 280, 1.2)
+    render(
+      <RepeatFeedback
+        copy={de}
+        lang="de"
+        region="south"
+        speech="qua xin nha la ba"
+        words={five}
+        modelSamples={samples}
+        modelRate={16000}
+        userSamples={samples}
+        userRate={16000}
+        modelMissing={false}
+        voiceId="thorsten-high"
+        recognizer={hears('qua xin nha')}
+      />,
+    )
+    await waitFor(() => expect(screen.getByTestId('words-bar').getAttribute('data-state')).toBe('teilweise'))
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('4')
+    expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(4)
+    expect(screen.getByTestId('bars-fit').textContent).toBe('Vier Sterne. Die Balken passen, der Satz noch nicht ganz.')
     cleanup()
     vi.mocked(scoreRepeat).mockImplementationOnce((input) => ({
       ...actual.scoreRepeat(input),
@@ -419,6 +529,7 @@ describe('repeat feedback view', () => {
       verdict: 'passt',
     }))
     renderFeedback('de')
+    // One bar off is two stars.
     expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
     expect(screen.queryByTestId('bars-fit')).toBeNull()
     cleanup()
@@ -445,13 +556,14 @@ describe('repeat feedback view', () => {
       },
     }))
     renderFeedback('de')
-    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('0')
-    expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(0)
+    // 1 is the floor: reversed speech is «try again».
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('1')
+    expect(screen.getAllByText('★').filter((node) => node.classList.contains('on'))).toHaveLength(1)
     fireEvent.click(screen.getByRole('button', { name: 'Was die Sterne bedeuten' }))
-    expect(screen.getByRole('dialog').textContent ?? '').toMatch(/Ein falscher Satz bekommt nie drei/)
+    expect(screen.getByRole('dialog').textContent ?? '').toMatch(/ein anderer Satz oder rückwärts/)
   })
 
-  it('gives one German star when the pitches are close and two when the take is far above', async () => {
+  it('scores German partial bars the same whatever the pitch gap', async () => {
     const actual = await vi.importActual<typeof import('../pitch/feedback')>('../pitch/feedback')
     const paint = () => {
       vi.mocked(scoreRepeat).mockImplementationOnce((input) => {
@@ -512,19 +624,17 @@ describe('repeat feedback view', () => {
         />,
       )
     }
-    // 120 against 140 is about 2.7 semitones, inside the cut. The page sets no gender.
+    // Pitch gap and gender no longer change the stars: partial bars without words are two.
     paint()
     show(120, 140)
-    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('1')
+    expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
     cleanup()
-    // 110 against 280 is about 16 semitones. thorsten-high is male.
-    // A mutant that defaults the user gender to male would score this 1.
     paint()
     show(110, 280)
     expect(screen.getByTestId('repeat-stars').getAttribute('data-stars')).toBe('2')
     fireEvent.click(screen.getByRole('button', { name: 'Was die Sterne bedeuten' }))
     const dialog = screen.getByRole('dialog').textContent ?? ''
-    expect(dialog).toMatch(/Ein falscher Satz bekommt nie drei/)
+    expect(dialog).toMatch(/Ohne Spracherkennung sind es höchstens vier/)
     expect(dialog).not.toMatch(/Geschlecht|gender|gênero|giới/i)
     for (const hint of [de, en, pt, viCopy].map((copy) => copy.repeatFeedback.starsHint)) {
       expect(hint).not.toMatch(/Geschlecht|gender|gênero|giới/i)

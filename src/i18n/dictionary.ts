@@ -59,6 +59,8 @@ export type Dictionary = {
   repeatFeedback: {
     melody: string
     rhythm: string
+    /** Words bar label: local speech recognition. */
+    words: string
     pass: string
     part: string
     off: string
@@ -197,6 +199,13 @@ export type Dictionary = {
   installIos: string
   privacy: string
   loading: string
+  speechProgress: (language: string, percent: number) => string
+  speechFallback: string
+  speechOffer: (language: string, megabytes: number) => string
+  speechOfferSave: (language: string, megabytes: number) => string
+  speechLoad: string
+  speechStoredTitle: string
+  speechForget: (language: string, megabytes: number) => string
   storageError: string
   version: string
   exampleAudio: string
@@ -413,15 +422,16 @@ export const de: Dictionary = {
   repeatFeedback: {
     melody: 'Melodie',
     rhythm: 'Rhythmus',
+    words: 'Wörter',
     pass: 'passt',
     part: 'teilweise',
     off: 'daneben',
-    stars: (count) => `${count} von 3 Sternen`,
+    stars: (count) => `${count} von 5 Sternen`,
     starsInfo: 'Was die Sterne bedeuten',
     starsTitle: 'Sterne',
     starsHint:
-      'Drei Sterne nur, wenn der Satz passt und beide Balken passen. Liegt die Tonhöhe nahe an der Datei, geben passt und teilweise auf Deutsch zwei Sterne nur mit einem grünen Balken, sonst einen. Sonst zwei. Bei daneben zwei nur mit einem grünen Balken, einen, wenn der bessere Balken teilweise ist, sonst keinen. Rückwärts keinen. Ein falscher Satz bekommt nie drei.',
-    barsFit: 'Zwei Sterne. Die Balken passen, der Satz noch nicht ganz.',
+      'Fünf Sterne: Melodie und Rhythmus passen, und die Spracherkennung hat alle Wörter erkannt. Vier: zwei von drei passen, der Rest teilweise. Drei: die Wörter sind erkannt, Melodie oder Rhythmus teilweise. Zwei: die Wörter nur zum Teil erkannt oder ein Balken daneben. Ein Stern: kaum erkannt, ein anderer Satz oder rückwärts. Ohne Spracherkennung sind es höchstens vier. Auf Vietnamesisch zählen in dieser Version Melodie, Töne und Rhythmus, die Wörter nur zur Information, also höchstens vier.',
+    barsFit: 'Vier Sterne. Die Balken passen, der Satz noch nicht ganz.',
     unclear: 'Das lässt sich nicht zuordnen. Sprich in derselben Richtung wie die Datei, ohne lange Pause davor.',
     noWordTimes: 'Für diese Stimme gibt es keine Wortzeiten. Die Kurve bleibt, die Wörter bleiben grau.',
     tooShort: 'Zu kurz. Sprich den ganzen Satz.',
@@ -583,8 +593,16 @@ export const de: Dictionary = {
   privacy:
     'Lernstand, Aufnahmen und die Notiz bleiben auf diesem Gerät. Kein Konto, kein Tracking, keine Schrift aus dem Netz.',
   loading: 'Einen Moment.',
+  speechProgress: (language, percent) => `Spracherkennung für ${language}, ${percent} Prozent.`,
+  speechFallback: 'Die Spracherkennung fehlt. Es gilt die Wertung ohne die Wörter.',
+  speechOffer: (language, megabytes) => `Spracherkennung für ${language} laden, ${megabytes} MB?`,
+  speechOfferSave: (language, megabytes) =>
+    `Dein Gerät spart Daten. Spracherkennung für ${language} ist ${megabytes} MB. Sie lädt nur, wenn du tippst.`,
+  speechLoad: 'Laden',
+  speechStoredTitle: 'Spracherkennung auf dem Gerät',
+  speechForget: (language, megabytes) => `${language} löschen, ${megabytes} MB`,
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 0.10.2',
+  version: 'Version 1.0.0',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   aboutLine: 'Zum Satz',
   infoOpen: 'Erklärungen zum Satz',
@@ -799,15 +817,16 @@ export const en: Dictionary = {
   repeatFeedback: {
     melody: 'Melody',
     rhythm: 'Rhythm',
+    words: 'Words',
     pass: 'fits',
     part: 'partly',
     off: 'off',
-    stars: (count) => `${count} of 3 stars`,
+    stars: (count) => `${count} of 5 stars`,
     starsInfo: 'What the stars mean',
     starsTitle: 'Stars',
     starsHint:
-      'Three stars only when the sentence fits and both bars fit. When the pitch is close to the file, German fits or partly is two stars only with a green bar, otherwise one. Otherwise two. When the sentence is off, two only if a bar fits, one if the better bar is partly, otherwise none. Spoken backwards gets none. A wrong sentence never gets three.',
-    barsFit: 'Two stars. The bars fit, the sentence does not quite.',
+      'Five stars: melody and rhythm fit, and speech recognition heard every word. Four: two of the three fit, the rest partly. Three: the words were heard, melody or rhythm partly. Two: the words were partly heard, or one bar is off. One star: barely heard, another sentence, or spoken backwards. Without speech recognition the most is four. In Vietnamese this version scores melody, tones and rhythm; the words are shown for information only, so the most is four.',
+    barsFit: 'Four stars. The bars fit, the sentence does not quite.',
     unclear: 'This cannot be lined up. Speak in the same direction as the file, without a long pause first.',
     noWordTimes: 'This voice has no word timings. The curve stays, and the words stay grey.',
     tooShort: 'Too short. Say the whole sentence.',
@@ -965,8 +984,16 @@ export const en: Dictionary = {
   installIos: 'Tap Share, then Add to Home Screen.',
   privacy: 'Progress, recordings and the note stay on this device. No account, no tracking, no font from the network.',
   loading: 'One moment.',
+    speechProgress: (language, percent) => `${language} speech recognition, ${percent} percent.`,
+  speechFallback: 'Speech recognition is missing. The score stays without the words.',
+  speechOffer: (language, megabytes) => `Download ${language} speech recognition, ${megabytes} MB?`,
+  speechOfferSave: (language, megabytes) =>
+    `This device is saving data. ${language} speech recognition is ${megabytes} MB. It downloads only when you tap.`,
+  speechLoad: 'Download',
+  speechStoredTitle: 'Speech recognition on this device',
+  speechForget: (language, megabytes) => `Delete ${language}, ${megabytes} MB`,
   storageError: 'Local storage is not available.',
-  version: 'Version 0.10.2',
+  version: 'Version 1.0.0',
   exampleAudio: 'The audio speaks the example sentence.',
   aboutLine: 'About this line',
   infoOpen: 'Notes about this line',
@@ -1181,15 +1208,16 @@ export const pt: Dictionary = {
   repeatFeedback: {
     melody: 'Melodia',
     rhythm: 'Ritmo',
+    words: 'Palavras',
     pass: 'encaixa',
     part: 'em parte',
     off: 'fora',
-    stars: (count) => `${count} de 3 estrelas`,
+    stars: (count) => `${count} de 5 estrelas`,
     starsInfo: 'O que as estrelas significam',
     starsTitle: 'Estrelas',
     starsHint:
-      'Três estrelas só quando a frase encaixa e as duas barras encaixam. Quando o tom está perto do arquivo, encaixa ou em parte em alemão fica em duas só com uma barra verde, senão em uma. Senão duas. Quando a frase está fora, duas só se uma barra encaixa, uma se a melhor barra está em parte, senão nenhuma. Ao contrário, nenhuma. Uma frase errada nunca ganha três.',
-    barsFit: 'Duas estrelas. As barras encaixam, a frase ainda não.',
+      'Cinco estrelas: melodia e ritmo encaixam, e o reconhecimento de fala ouviu todas as palavras. Quatro: duas das três encaixam, o resto em parte. Três: as palavras foram ouvidas, melodia ou ritmo em parte. Duas: as palavras foram ouvidas em parte, ou uma barra está fora. Uma estrela: quase nada ouvido, outra frase ou falado ao contrário. Sem reconhecimento de fala, no máximo quatro. Em vietnamita esta versão avalia melodia, tons e ritmo; as palavras são só informação, então no máximo quatro.',
+    barsFit: 'Quatro estrelas. As barras encaixam, a frase ainda não.',
     unclear: 'Não dá para alinhar. Fale na mesma direção do arquivo, sem uma pausa longa antes.',
     noWordTimes: 'Esta voz não tem os tempos das palavras. A curva fica, e as palavras ficam cinza.',
     tooShort: 'Curto demais. Fale a frase inteira.',
@@ -1350,8 +1378,16 @@ export const pt: Dictionary = {
   installIos: 'Toque em Compartilhar e depois em Adicionar à Tela de Início.',
   privacy: 'Progresso, gravações e a nota ficam neste aparelho. Sem conta, sem rastreamento, sem fonte da rede.',
   loading: 'Um momento.',
+    speechProgress: (language, percent) => `Reconhecimento de fala em ${language}, ${percent} por cento.`,
+  speechFallback: 'O reconhecimento de fala não está aqui. A nota fica sem as palavras.',
+  speechOffer: (language, megabytes) => `Baixar o reconhecimento de fala em ${language}, ${megabytes} MB?`,
+  speechOfferSave: (language, megabytes) =>
+    `Este aparelho está economizando dados. O reconhecimento de fala em ${language} tem ${megabytes} MB. Só baixa quando você toca.`,
+  speechLoad: 'Baixar',
+  speechStoredTitle: 'Reconhecimento de fala neste aparelho',
+  speechForget: (language, megabytes) => `Apagar ${language}, ${megabytes} MB`,
   storageError: 'O armazenamento local não está disponível.',
-  version: 'Version 0.10.2',
+  version: 'Version 1.0.0',
   exampleAudio: 'O áudio fala a frase de exemplo.',
   aboutLine: 'Sobre a frase',
   infoOpen: 'Notas sobre a frase',
@@ -1566,15 +1602,16 @@ export const vi: Dictionary = {
   repeatFeedback: {
     melody: 'Giai điệu',
     rhythm: 'Nhịp',
+    words: 'Từ',
     pass: 'ổn',
     part: 'một phần',
     off: 'lệch',
-    stars: (count) => `${count} trên 3 sao`,
+    stars: (count) => `${count} trên 5 sao`,
     starsInfo: 'Sao có nghĩa là gì',
     starsTitle: 'Sao',
     starsHint:
-      'Ba sao chỉ khi câu ổn và cả hai cột ổn. Khi đường thanh gần tệp, với tiếng Đức ổn hoặc một phần là hai sao chỉ khi có một cột xanh, không thì một sao. Không thì hai sao. Khi câu lệch, hai sao chỉ nếu một cột ổn, một sao nếu cột tốt hơn là một phần, không thì không sao. Nói ngược không có sao. Câu sai không bao giờ được ba sao.',
-    barsFit: 'Hai sao. Hai cột ổn, câu chưa hẳn.',
+      'Năm sao: giai điệu và nhịp ổn, và nhận dạng giọng nói nghe được mọi từ. Bốn sao: hai trong ba ổn, phần còn lại một phần. Ba sao: nghe được các từ, giai điệu hoặc nhịp một phần. Hai sao: chỉ nghe được một phần các từ, hoặc một cột lệch. Một sao: gần như không nghe được, câu khác hoặc nói ngược. Không có nhận dạng giọng nói thì nhiều nhất bốn sao. Với tiếng Việt, bản này chấm giai điệu, thanh điệu và nhịp; các từ chỉ để tham khảo, nên nhiều nhất bốn sao.',
+    barsFit: 'Bốn sao. Hai cột ổn, câu chưa hẳn.',
     unclear: 'Không xếp được. Nói cùng hướng với tệp, đừng dừng lâu trước khi nói.',
     noWordTimes: 'Giọng này không có thời điểm từng từ. Đường cong vẫn còn, các từ vẫn xám.',
     tooShort: 'Quá ngắn. Nói cả câu.',
@@ -1729,8 +1766,16 @@ export const vi: Dictionary = {
   installIos: 'Chạm Chia sẻ, rồi Thêm vào Màn hình chính.',
   privacy: 'Tiến độ, bản ghi và ghi chú ở trên máy này. Không tài khoản, không theo dõi, không phông từ mạng.',
   loading: 'Một lát.',
+    speechProgress: (language, percent) => `Nhận dạng giọng nói ${language}, ${percent} phần trăm.`,
+  speechFallback: 'Không có nhận dạng giọng nói. Điểm giữ cách cũ, không đọc từ.',
+  speechOffer: (language, megabytes) => `Tải nhận dạng giọng nói ${language}, ${megabytes} MB?`,
+  speechOfferSave: (language, megabytes) =>
+    `Máy này đang tiết kiệm dữ liệu. Nhận dạng giọng nói ${language} nặng ${megabytes} MB. Chỉ tải khi bạn chạm.`,
+  speechLoad: 'Tải',
+  speechStoredTitle: 'Nhận dạng giọng nói trên máy',
+  speechForget: (language, megabytes) => `Xóa ${language}, ${megabytes} MB`,
   storageError: 'Bộ nhớ trên máy không dùng được.',
-  version: 'Version 0.10.2',
+  version: 'Version 1.0.0',
   exampleAudio: 'Audio đọc câu ví dụ.',
   aboutLine: 'Về câu này',
   infoOpen: 'Giải thích về câu này',

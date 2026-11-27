@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0 — 2026-11-27
+
+- Speech recognition on the device for the repeat check. Vosk (`vosk-browser` 0.0.8) runs in its own worker. Models for German, English, Brazilian Portuguese and Vietnamese (31–45 MB each) load only after the learner asks for them, with the size shown first. Each download is checked against a pinned SHA-256 before use and kept in the cache `travel-talk-vosk`. Settings can delete a stored model. Nothing is uploaded.
+- Five stars instead of three, after `docs/architektur/gui-konzept.md`: melody, rhythm and a new "Words" bar. All three fit = 5. Without recognition (model not loaded, failed) the maximum is 4. Portuguese uses a grammar of the expected words, as in the closed draft #42.
+- Vietnamese: words are shown as information only and the maximum stays 4, because the small Vosk model misses too many words with the northern default voice. A browser spike with sherpa-onnx is documented in `docs/analysis-speech-recognition.md`; it is a follow-up.
+- Scoring moved into the hook `useRepeatScore` (analyser and recogniser can be injected for tests). New `src/pitch/stars.ts` holds the five-star mapping.
+- Sticky action bars on the practice page also in landscape (from the closed draft #43).
+- Dependency: `vosk-browser` 0.0.8 (Apache-2.0). pnpm override `uuid` 11.1.1 for GHSA-w5hq-g745-h8pq.
+
 ## 0.10.2 — 2026-10-15
 
 - Ein neues Wort beginnt bei «Was bedeutet das Wort?». Die drei Seiten «Hören · n von 3» entfallen. Das Wort spielt einmal beim Öffnen, wenn der Browser es erlaubt. Schrift, Umschrift, Tempo, «Noch einmal hören» und «Wörter überspringen» stehen auf derselben Seite.

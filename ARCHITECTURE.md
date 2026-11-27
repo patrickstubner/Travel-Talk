@@ -27,6 +27,8 @@ src/srs (FSRS-Planung, Sitzung, Wortschritte)  ▼
 | `srs/` | Planung mit ts-fsrs, Tagesgrenzen, Sitzung, Wortschritte |
 | `audio/` | Wiedergabe, Tempo, Offline-Laden der Stimmen, Aufnahme, Ausrichtung |
 | `pitch/` | Tonhöhe und Satzbewertung (Web Worker `analyze.worker.ts`) |
+| `speech/` | (1.0.0) On-device speech recognition: Vosk worker client, model download with SHA-256 check and cache, word matching (`text-match.ts`), model status |
+| `hooks/` | (1.0.0) `useRepeatScore`: pitch analysis plus speech recognition to bars and five stars |
 | `pwa/` | Cache-Regeln, Home-Bildschirm |
 | `i18n/` | UI-Wörterbuch |
 
