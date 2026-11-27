@@ -1,7 +1,7 @@
 # STATUS.md – Stand 27.11.2026, app version 1.0.1. Older notes below keep their original dates.
 
 ## Addendum 27 Nov 2026: open low/info items after 1.0.1
-Docs-only list of residual items from the 1.0.0 and 1.0.1 reviews. None of these is blocking. Ready for chief-of-staff review; do not merge before an OK on the exact head SHA. No cloud agent, no on-demand usage.
+Docs-only list of residual items from the 1.0.0 and 1.0.1 reviews. None of these is blocking. Based on main 14e16013. No cloud agent, no on-demand usage.
 
 - Low: until the service worker controls the page (first visit, a private window, or a browser without a service worker), `vosk-worker.js` has no Content-Security-Policy of its own. The page policy only limits which script may start as a worker. The header is set once the service worker is in control; that path is covered by e2e since 1.0.1.
 - Low: `vosk-browser` 0.0.8 is unmaintained since 2022.
