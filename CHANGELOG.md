@@ -9,6 +9,7 @@
 - L4: AGENTS.md now describes how `vosk-worker.js` is generated and how to pin a replacement model.
 - L5: `public/models/NOTICE.txt` includes the vosk-browser 0.0.8 notices for Kaldi, OpenFst, CLAPACK/f2c, zlib and the other bundled WASM components.
 - L6: the security note now states that Embind used `new Function` to create JS wrappers; that is no longer required after the worker patch.
+- The landscape Playwright check for the record and next buttons waits for the sticky row to settle and reads both buttons from the action bar.
 
 
 ## 1.0.0 — 2026-11-27
