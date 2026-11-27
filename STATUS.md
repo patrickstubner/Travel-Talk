@@ -1,5 +1,12 @@
 # STATUS.md – Stand 22.11.2026, Branch `docs/gui-prototyp`, Basis `main` nach #75 (f910f78)
 
+## Addendum 27 Nov 2026: Travel Talk 1.0.0 (speech recognition)
+Branch `feat/speech-1.0`, base `main` `f6b61cb`. Draft PR, do not merge before the chief-of-staff review on the exact head SHA and the project owner's yes. No cloud agent, no on-demand usage.
+- Template from closed draft #43 (`refs/pull/43/head`, `1d6e5bb`) taken over onto current `main`, wired through the new hook `useRepeatScore`.
+- Vosk for de, en, pt-BR (pt with word grammar as in #42); five stars after `gui-konzept.md`. Vietnamese: Vosk with words as information only, at most 4 stars. sherpa-onnx was tested in the browser and deferred (needs cross-origin isolation, 512 MB wasm heap); details and measurements in `docs/analysis-speech-recognition.md`.
+- Version 1.0.0. Security review in `docs/SECURITY.md` (section 1.0.0).
+- Open: tests on real phones and with real learner voices; Vietnamese cross-voice false 1-star rate; German voice `mls-4576` is barely intelligible to recognisers.
+
 ## Nachtrag 22.11.2026 (Abend): Korrekturen nach Stabschef-Prüfung an #76
 Commit `92057a6`. Draft, nicht mergen. Kein Cloud Agent.
 - **M1 (mittel, behoben):** `prototype/**` steht in `eslint.config.js` unter `ignores`. `pnpm run lint` lokal grün.

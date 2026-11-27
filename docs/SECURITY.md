@@ -2,6 +2,43 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## Travel Talk 1.0.0: on-device speech recognition (27 Nov 2026)
+
+Reviewed on branch `feat/speech-1.0`, base `main` `f6b61cb`. Sources: `pnpm audit` (all and `--prod`, advisory data of 27 Nov 2026), manual code review of `src/speech`, `src/hooks/use-repeat-score.ts`, `src/pwa/csp.ts`, `scripts/emit-vosk-worker.mjs`, the CI workflow, gitleaks on the branch.
+
+Dependencies:
+
+| Package | Old | New | Kind | Advisory |
+|---|---|---|---|---|
+| vosk-browser (runtime, own worker) | – | 0.0.8 | new, Apache-2.0 | none known. Last release 12/2022: maintenance risk (low). |
+| uuid (transitive via vosk-browser) | 9.0.0 | 11.1.1 | pnpm override (major) | GHSA-w5hq-g745-h8pq (moderate). Not loaded by the worker bundle that ships, so the override only clears the audit. |
+
+Result after the change: `pnpm audit` reports no known vulnerabilities. `minimumReleaseAge` unchanged. GitHub Actions unchanged and still pinned to commits; the CI only gains checks for the page CSP, the worker CSP and the old worker cache.
+
+Models (all Apache-2.0, served from this site under `public/models/`, licence text and notice in the same folder):
+
+| Model | tar.gz bytes | tar.gz SHA-256 (pinned in `src/speech/vosk.ts`) | Upstream zip SHA-256 |
+|---|---|---|---|
+| vosk-model-small-de-0.15 | 46,501,380 | `96239a97c3ea21a5e10dc98a64ca90b33b321174fdaf1bf23330100cee318eae` | `b7e53c90b1f0a38456f4cd62b366ecd58803cd97cd42b06438e2c131713d5e43` |
+| vosk-model-small-en-us-0.15 | 41,206,105 | `c047d1aadfde789344ba10c5b7eb05665f77bdbc71e14fa17d138d66ae2bb6d6` | `30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498` |
+| vosk-model-small-pt-0.3 | 32,454,947 | `b0dba777c534e3adfce4c72340225182962dfc62d6dc4b4bf67dccd1bb4694dd` | `6e1ce909032e1afa7a88e68a3d628ecafff302bdf195befab308826c395e93b7` |
+| vosk-model-small-vn-0.4 | 33,657,483 | `28942c7bb5cc1ec7acc8937f56817ed08a6f935c0d9adfb68804e72736932d40` | `efe5c8494212110471a79befc48c79da679e5b1fc52a4ffb500222ff86d622e5` |
+
+Integrity: the four upstream zips were downloaded again from alphacephei.com on 27 Nov 2026; their SHA-256 match the values in `NOTICE.txt` and the code, and every file in each tar.gz is byte-identical to the zip (no extra files, no links, no absolute or `..` paths). In the app a model is fetched from the same origin only after the learner asks; the bytes are hashed with WebCrypto and passed to the worker only if the SHA-256 matches. A cached copy is re-hashed before use and dropped on mismatch. Unit tests (`src/speech/model-bytes.test.ts`, `model-integrity.test.ts`) cover tampered responses and cached copies; the Portuguese e2e test checks that a stored model is not downloaded again.
+
+Content Security Policy: the page keeps `script-src 'self'` and `worker-src 'self'` without `unsafe-eval`, `unsafe-inline` or `blob:`. The worker file gets its own policy from the service worker (`script-src 'unsafe-eval' 'wasm-unsafe-eval'`, `connect-src 'none'`), because the Emscripten build of Vosk needs eval for WASM. No `SharedArrayBuffer`, so no COOP/COEP is needed (GitHub Pages could not set them). sherpa-onnx was not taken because its browser build needs cross-origin isolation.
+
+Privacy: recordings stay in memory on the device; recognition runs in the worker; there is no upload and no new network target. Recognised text is rendered as React text, never as HTML.
+
+Findings:
+
+- Low: the worker CSP needs `'unsafe-eval'` (WASM via Emscripten). Limited to the worker, which has `connect-src 'none'` and receives only verified model bytes and audio.
+- Low: until the service worker controls the page (first visit), the worker response has no policy of its own. The page CSP (`worker-src 'self'`) only limits which script can start as a worker, not what the worker does. The worker is first-party code from this site.
+- Low: `vosk-browser` is unmaintained since 2022. Fallback if a problem appears: sherpa-onnx (Apache-2.0), see `docs/analysis-speech-recognition.md`.
+- Info: the `uuid` override is a major version for an unused transitive package; it can be removed if the audit result is accepted instead.
+
+No critical, high or moderate open findings.
+
 ## Audit-Fix und Umstellung auf pnpm (22.11.2026)
 
 Geprüft am Branch `chore/pnpm-audit-fix`, Basis `main` 15f2fec. Kein Anwendungs-Versionsbump (0.10.2 bleibt). Quelle: `pnpm audit` gegen `pnpm-lock.yaml` (Registry-Advisory-Daten vom 22.11.2026). Vorher (`npm audit`): 15 Funde, davon 3 hoch (happy-dom, undici, zod), 11 moderat, 1 niedrig. Nachher (`pnpm audit`): 0 Funde.

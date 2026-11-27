@@ -4,7 +4,7 @@
  */
 export const PRECACHE_GLOBS = ['**/*.{js,css,html,svg,png,webmanifest,json,txt}'] as const
 
-export const PRECACHE_IGNORES = ['**/sw.js', '**/workbox-*.js', '**/*.align.json'] as const
+export const PRECACHE_IGNORES = ['**/sw.js', '**/workbox-*.js', '**/*.align.json', '**/vosk*.js'] as const
 
 /** Shell only. The old help-clip precache was 623 entries and 24.5 MB. */
 export const PRECACHE_ENTRY_BUDGET = 40
@@ -25,6 +25,7 @@ export function precacheMatches(relativePath: string): boolean {
   if (normalized === 'sw.js' || normalized.endsWith('/sw.js')) return false
   if (normalized.endsWith('.align.json')) return false
   const base = normalized.slice(normalized.lastIndexOf('/') + 1)
+  if (base.startsWith('vosk') && base.endsWith('.js')) return false
   if (base.startsWith('workbox-') && base.endsWith('.js')) return false
   const dot = normalized.lastIndexOf('.')
   if (dot < 0) return false

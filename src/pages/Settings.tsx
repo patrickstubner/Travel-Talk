@@ -1,13 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DE_ADDRESS, PT_ADDRESS, PT_SPEAKER, VI_ADDRESS } from '../../content/address'
 import { wordIds } from '../../content/words'
 import { voicesKeptByOthers } from '../audio/voices'
 import { AddToHomeScreen } from '../components/AddToHomeScreen'
 import { LanguageChoice } from '../components/LanguageChoice'
 import { interfaceLang } from '../app/labels'
+import type { Lang } from '../../content/phrase'
 import { useApp } from '../app/state'
 import { useCopy, useSettings } from '../app/use-copy'
 import { publicUrl } from '../public-url'
+import { SpeechModelStore } from '../speech/SpeechModelStore'
+import { cachedSpeechModels, deleteSpeechModel, speechModelsInThisRun } from '../speech/vosk'
 import { IMPORT_FUTURE, IMPORT_LIMIT, IMPORT_NEWER, emptySnapshot, importKeepsLocalNote, parseImport, previewImport, retainLocalNote, toExport, type ImportPreview } from '../storage/import'
 import { cleanPersonName, cleanPersonalNote, usesLang, type ImportedPerson, type ProgressSnapshot, type Settings } from '../storage/types'
 
@@ -39,6 +42,11 @@ export function SettingsPage() {
   const [addName, setAddName] = useState('')
   const [confirmAll, setConfirmAll] = useState(false)
   const [persistState, setPersistState] = useState<'ok' | 'no' | null>(null)
+  const [speechModels, setSpeechModels] = useState<Array<{ lang: Lang; bytes: number }>>([])
+  useEffect(() => {
+    if (!speechModelsInThisRun()) return
+    void cachedSpeechModels().then(setSpeechModels)
+  }, [])
   if (!snapshot) return null
   const current = snapshot
   const activeName = cleanPersonName(current.people?.find((person) => person.id === current.activePersonId)?.name ?? '')
@@ -405,6 +413,14 @@ export function SettingsPage() {
       </button>
       {persistState === 'ok' ? <p>{copy.persistOk}</p> : null}
       {persistState === 'no' ? <p>{copy.persistNo}</p> : null}
+      <SpeechModelStore
+        copy={copy}
+        uiLang={ui}
+        models={speechModels}
+        onDelete={(lang) => {
+          void deleteSpeechModel(lang).then(() => setSpeechModels((current) => current.filter((item) => item.lang !== lang)))
+        }}
+      />
       <section className="card stack" aria-labelledby="voices-title">
         <h2 id="voices-title">{copy.voicesTitle}</h2>
         <p>{copy.voicesVi}</p>

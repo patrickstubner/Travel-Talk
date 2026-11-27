@@ -1,4 +1,5 @@
 node_modules/
+public/vosk-worker.js
 .cache/
 dist/
 dev-dist/
