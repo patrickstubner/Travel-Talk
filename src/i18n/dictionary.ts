@@ -204,6 +204,7 @@ export type Dictionary = {
   speechOffer: (language: string, megabytes: number) => string
   speechOfferSave: (language: string, megabytes: number) => string
   speechLoad: string
+  speechCancel: string
   speechStoredTitle: string
   speechForget: (language: string, megabytes: number) => string
   storageError: string
@@ -599,10 +600,11 @@ export const de: Dictionary = {
   speechOfferSave: (language, megabytes) =>
     `Dein Gerät spart Daten. Spracherkennung für ${language} ist ${megabytes} MB. Sie lädt nur, wenn du tippst.`,
   speechLoad: 'Laden',
+  speechCancel: 'Abbrechen',
   speechStoredTitle: 'Spracherkennung auf dem Gerät',
   speechForget: (language, megabytes) => `${language} löschen, ${megabytes} MB`,
   storageError: 'Der lokale Speicher ist nicht verfügbar.',
-  version: 'Version 1.0.0',
+  version: 'Version 1.0.1',
   exampleAudio: 'Das Audio spricht den Beispielsatz.',
   aboutLine: 'Zum Satz',
   infoOpen: 'Erklärungen zum Satz',
@@ -990,10 +992,11 @@ export const en: Dictionary = {
   speechOfferSave: (language, megabytes) =>
     `This device is saving data. ${language} speech recognition is ${megabytes} MB. It downloads only when you tap.`,
   speechLoad: 'Download',
+  speechCancel: 'Cancel',
   speechStoredTitle: 'Speech recognition on this device',
   speechForget: (language, megabytes) => `Delete ${language}, ${megabytes} MB`,
   storageError: 'Local storage is not available.',
-  version: 'Version 1.0.0',
+  version: 'Version 1.0.1',
   exampleAudio: 'The audio speaks the example sentence.',
   aboutLine: 'About this line',
   infoOpen: 'Notes about this line',
@@ -1384,10 +1387,11 @@ export const pt: Dictionary = {
   speechOfferSave: (language, megabytes) =>
     `Este aparelho está economizando dados. O reconhecimento de fala em ${language} tem ${megabytes} MB. Só baixa quando você toca.`,
   speechLoad: 'Baixar',
+  speechCancel: 'Cancelar',
   speechStoredTitle: 'Reconhecimento de fala neste aparelho',
   speechForget: (language, megabytes) => `Apagar ${language}, ${megabytes} MB`,
   storageError: 'O armazenamento local não está disponível.',
-  version: 'Version 1.0.0',
+  version: 'Version 1.0.1',
   exampleAudio: 'O áudio fala a frase de exemplo.',
   aboutLine: 'Sobre a frase',
   infoOpen: 'Notas sobre a frase',
@@ -1772,10 +1776,11 @@ export const vi: Dictionary = {
   speechOfferSave: (language, megabytes) =>
     `Máy này đang tiết kiệm dữ liệu. Nhận dạng giọng nói ${language} nặng ${megabytes} MB. Chỉ tải khi bạn chạm.`,
   speechLoad: 'Tải',
+  speechCancel: 'Hủy',
   speechStoredTitle: 'Nhận dạng giọng nói trên máy',
   speechForget: (language, megabytes) => `Xóa ${language}, ${megabytes} MB`,
   storageError: 'Bộ nhớ trên máy không dùng được.',
-  version: 'Version 1.0.0',
+  version: 'Version 1.0.1',
   exampleAudio: 'Audio đọc câu ví dụ.',
   aboutLine: 'Về câu này',
   infoOpen: 'Giải thích về câu này',

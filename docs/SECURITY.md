@@ -2,6 +2,25 @@
 
 Datum: 11. Oktober 2026. Geprüft am Quellstand dieser Version. Kein Backend, kein Konto, keine Schlüssel. Die Prüfung von 0.1.0 bleibt unten stehen, wo sie noch gilt.
 
+## Travel Talk 1.0.1: review follow-up L1–L6 (27 Nov 2026)
+
+Reviewed on branch `fix/speech-1.0.1-review`, base `main` after 1.0.0. Sources: `pnpm audit` (all and `--prod`, advisory data of 27 Nov 2026), `pnpm run lint`, `pnpm run typecheck`, `pnpm test`, `pnpm run build`, Playwright overflow including the new service-worker CSP spec, gitleaks on the branch, and a manual review of inputs, injection, secrets, permissions, dependencies (direct, transitive, CDN, GitHub Actions), error messages and attack surface.
+
+Dependencies: no new packages, no version bumps, no removed runtime libraries. The existing `uuid` 11.1.1 override (transitive via vosk-browser, not loaded at runtime) stays. `pnpm audit` reports no known vulnerabilities. GitHub Actions stay pinned to the same commits. The build's worker-CSP check now requires `script-src 'wasm-unsafe-eval'` and rejects `'unsafe-eval'`.
+
+Changes and residual risk:
+
+- L1 (low, fixed): `scripts/emit-vosk-worker.mjs` replaces Embind's `createNamedFunction`, `craftInvokerFunction` and `__emval_get_method_caller` so they do not call `new Function`. The generated worker is checked for the absence of `new Function` / `new_(Function`. Worker CSP is `script-src 'wasm-unsafe-eval'` with `connect-src 'none'`, `default-src 'none'`. `'wasm-unsafe-eval'` remains required to compile the WASM. If a future `vosk-browser` release changes the Embind helpers, the build fails closed (missing patch anchors).
+- L2 (low, fixed): e2e now includes a spec with `serviceWorkers: 'allow'` that asserts the `Content-Security-Policy` header on `vosk-worker.js` and loads the German model. Residual: until the service worker controls the page (first visit, private windows, browsers without a service worker) the worker response still has no policy of its own. The page policy only limits which script may start as a worker. Same first-party residual as in 1.0.0, now tested on the path that does set the header.
+- L3 (low / UX, fixed): `fetchVerifiedBytes` takes an `AbortSignal`, a five-minute timeout (`MODEL_DOWNLOAD_TIMEOUT_MS`) and aborts if `received > spec.bytes`. The loading UI has a cancel button. Changing the practised language aborts the previous download so it does not continue in the background. A user cancel returns to the offer, not to the failed state. A timeout, oversize body, hash mismatch or network error still yields the existing fallback (score without words, at most four stars). No new network target.
+- L4 (low, fixed): AGENTS.md documents the generated, gitignored `vosk-worker.js` and the three pin sites for a replacement model (`src/speech/vosk.ts`, `public/models/NOTICE.txt`, `docs/SECURITY.md`).
+- L5 (low, fixed): `public/models/NOTICE.txt` now appends the vosk-browser 0.0.8 NOTICE (Kaldi, OpenFst, CLAPACK/f2c, zlib, libarchive, Emscripten/musl).
+- L6 (low / docs, fixed): the 1.0.0 wording that eval was needed "for WASM" is corrected: Embind used `new Function` for JS wrappers.
+
+Other checks: no secrets added; gitleaks clean. Error paths do not expose stack traces or hashes to the UI beyond the existing fallback sentence. Recognised text is still rendered as React text. No CDN. Models remain same-origin and SHA-256 verified. Unused libraries were not added; none were removed (all in use).
+
+Findings after this change: no critical, high or moderate findings. Residual low: first-visit worker CSP gap (see L2); `vosk-browser` unmaintained since 2022 (unchanged from 1.0.0).
+
 ## Travel Talk 1.0.0: on-device speech recognition (27 Nov 2026)
 
 Reviewed on branch `feat/speech-1.0`, base `main` `f6b61cb`. Sources: `pnpm audit` (all and `--prod`, advisory data of 27 Nov 2026), manual code review of `src/speech`, `src/hooks/use-repeat-score.ts`, `src/pwa/csp.ts`, `scripts/emit-vosk-worker.mjs`, the CI workflow, gitleaks on the branch.
@@ -26,13 +45,13 @@ Models (all Apache-2.0, served from this site under `public/models/`, licence te
 
 Integrity: the four upstream zips were downloaded again from alphacephei.com on 27 Nov 2026; their SHA-256 match the values in `NOTICE.txt` and the code, and every file in each tar.gz is byte-identical to the zip (no extra files, no links, no absolute or `..` paths). In the app a model is fetched from the same origin only after the learner asks; the bytes are hashed with WebCrypto and passed to the worker only if the SHA-256 matches. A cached copy is re-hashed before use and dropped on mismatch. Unit tests (`src/speech/model-bytes.test.ts`, `model-integrity.test.ts`) cover tampered responses and cached copies; the Portuguese e2e test checks that a stored model is not downloaded again.
 
-Content Security Policy: the page keeps `script-src 'self'` and `worker-src 'self'` without `unsafe-eval`, `unsafe-inline` or `blob:`. The worker file gets its own policy from the service worker (`script-src 'unsafe-eval' 'wasm-unsafe-eval'`, `connect-src 'none'`), because the Emscripten build of Vosk needs eval for WASM. No `SharedArrayBuffer`, so no COOP/COEP is needed (GitHub Pages could not set them). sherpa-onnx was not taken because its browser build needs cross-origin isolation.
+Content Security Policy: the page keeps `script-src 'self'` and `worker-src 'self'` without `unsafe-eval`, `unsafe-inline` or `blob:`. The worker file gets its own policy from the service worker. In 1.0.0 that policy was `script-src 'unsafe-eval' 'wasm-unsafe-eval'`, `connect-src 'none'`, because Embind in the vosk-browser build created JS functions with `new Function` (not because WASM itself needs eval). 1.0.1 patches those helpers; see the 1.0.1 section. No `SharedArrayBuffer`, so no COOP/COEP is needed (GitHub Pages could not set them). sherpa-onnx was not taken because its browser build needs cross-origin isolation.
 
 Privacy: recordings stay in memory on the device; recognition runs in the worker; there is no upload and no new network target. Recognised text is rendered as React text, never as HTML.
 
 Findings:
 
-- Low: the worker CSP needs `'unsafe-eval'` (WASM via Emscripten). Limited to the worker, which has `connect-src 'none'` and receives only verified model bytes and audio.
+- Low (1.0.0): the worker CSP needed `'unsafe-eval'` because Embind used `new Function` to create JS wrappers. Limited to the worker, which has `connect-src 'none'` and receives only verified model bytes and audio. Addressed in 1.0.1.
 - Low: until the service worker controls the page (first visit), the worker response has no policy of its own. The page CSP (`worker-src 'self'`) only limits which script can start as a worker, not what the worker does. The worker is first-party code from this site.
 - Low: `vosk-browser` is unmaintained since 2022. Fallback if a problem appears: sherpa-onnx (Apache-2.0), see `docs/analysis-speech-recognition.md`.
 - Info: the `uuid` override is a major version for an unused transitive package; it can be removed if the audit result is accepted instead.

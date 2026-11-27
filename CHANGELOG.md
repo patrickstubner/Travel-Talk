@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.1 — 2026-11-27
+
+- Follow-up to the 1.0.0 review (findings L1–L6).
+- L1: the Vosk worker no longer needs `'unsafe-eval'`. The build patches Embind's `createNamedFunction`, `craftInvokerFunction` and `__emval_get_method_caller` so they do not use `new Function`. The worker policy is now `script-src 'wasm-unsafe-eval'` only, still with `connect-src 'none'`.
+- L2: a Playwright test with an active service worker checks the `Content-Security-Policy` header on `vosk-worker.js` and that the German model still loads under that policy.
+- L3: a model download can be cancelled, is aborted when the practised language changes, stops if more bytes arrive than the pinned size, and times out after five minutes.
+- L4: AGENTS.md now describes how `vosk-worker.js` is generated and how to pin a replacement model.
+- L5: `public/models/NOTICE.txt` includes the vosk-browser 0.0.8 notices for Kaldi, OpenFst, CLAPACK/f2c, zlib and the other bundled WASM components.
+- L6: the security note now states that Embind used `new Function` to create JS wrappers; that is no longer required after the worker patch.
+
+
 ## 1.0.0 — 2026-11-27
 
 - Speech recognition on the device for the repeat check. Vosk (`vosk-browser` 0.0.8) runs in its own worker. Models for German, English, Brazilian Portuguese and Vietnamese (31–45 MB each) load only after the learner asks for them, with the size shown first. Each download is checked against a pinned SHA-256 before use and kept in the cache `travel-talk-vosk`. Settings can delete a stored model. Nothing is uploaded.

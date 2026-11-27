@@ -1,6 +1,6 @@
 # ARCHITECTURE.md – Travel Talk
 
-Stand 16.11.2026, abgeleitet aus `main` = `8ae1686` (Version 0.10.2) mit codebase-memory-mcp, ast-grep und rg.
+Stand 27.11.2026, current app version 1.0.1. The body below was derived from `main` = `8ae1686` (then 0.10.2) with codebase-memory-mcp, ast-grep and rg.
 
 ## Überblick
 ```
