@@ -1,9 +1,18 @@
-# STATUS.md – Stand 27.11.2026, app version 1.0.1, `main` after 1.0.0. Older notes below keep their original dates.
+# STATUS.md – Stand 27.11.2026, app version 1.0.1. Older notes below keep their original dates.
+
+## Addendum 27 Nov 2026: open low/info items after 1.0.1
+Docs-only list of residual items from the 1.0.0 and 1.0.1 reviews. None of these is blocking. Based on main 14e16013. No cloud agent, no on-demand usage.
+
+- Low: until the service worker controls the page (first visit, a private window, or a browser without a service worker), `vosk-worker.js` has no Content-Security-Policy of its own. The page policy only limits which script may start as a worker. The header is set once the service worker is in control; that path is covered by e2e since 1.0.1.
+- Low: `vosk-browser` 0.0.8 is unmaintained since 2022.
+- Info: the 1.0.0 CHANGELOG entry still describes the models as 31–45 MB (the upstream list in MiB). The UI shows 32–47 MB. The 1.0.0 CHANGELOG text is left unchanged.
+- Info: the Workbox runtime route for `/Travel-Talk/models/vosk-model-small-*.tar.gz` in `rsbuild.config.ts` and the app cache in `src/speech/vosk.ts` share the Cache Storage name `travel-talk-vosk`. The service worker may store the raw download, and the app also writes the SHA-256-checked bytes into the same cache. Functionally harmless: a cached copy is re-hashed before use and dropped on mismatch. Optional follow-up: drop the Workbox route or give it a distinct name.
+
 
 ## Addendum 27 Nov 2026: Travel Talk 1.0.1 (review follow-up L1–L6)
-Branch `fix/speech-1.0.1-review`, base `main` after 1.0.0. Ready for chief-of-staff review; do not merge before an OK on the exact head SHA. No cloud agent, no on-demand usage.
+Merged as 1.0.1. No cloud agent, no on-demand usage.
 - Version 1.0.1. Fixes the six low findings from the 1.0.0 review: worker without `'unsafe-eval'`, e2e coverage of the worker CSP with an active service worker, download cancel/timeout/size cap, AGENTS.md for the generated worker and model pins, vosk-browser notices in `public/models/NOTICE.txt`, and a corrected explanation of why eval was needed.
-- 1.0.0 is on `main`. Security review in `docs/SECURITY.md` (section 1.0.1).
+- Security review in `docs/SECURITY.md` (section 1.0.1). Residual low/info items are listed in the addendum above.
 
 
 ## Addendum 27 Nov 2026: Travel Talk 1.0.0 (speech recognition)
