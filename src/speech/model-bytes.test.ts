@@ -97,5 +97,67 @@ describe('vosk worker file', () => {
     expect(worker).not.toContain('downloadAndExtract(fullModelUrl')
     expect(worker).toContain('The worker does not fetch the model')
     expect(worker).not.toContain('createObjectURL')
+    expect(worker).not.toContain('new Function')
+    expect(worker).not.toContain('new_(Function')
   })
 })
+
+describe('model download limits', () => {
+  it('drops a response that is larger than the pinned size', async () => {
+    const good = Uint8Array.from([1, 2, 3, 4, 5]).buffer
+    const hash = await sha256Hex(good)
+    const { cache, store } = memoryCache()
+    const oversized = await fetchVerifiedBytes(
+      { url: 'https://example.test/model.tar.gz', sha256: hash, bytes: 5 },
+      {
+        fetch: async () => new Response(Uint8Array.from([1, 2, 3, 4, 5, 6]).buffer),
+        openCache: async () => cache,
+      },
+    )
+    expect(oversized).toBeNull()
+    expect(store.size).toBe(0)
+  })
+
+  it('aborts an in-flight download without caching it', async () => {
+    const controller = new AbortController()
+    const { cache, store } = memoryCache()
+    const stream = new ReadableStream<Uint8Array>({
+      pull(target) {
+        target.enqueue(new Uint8Array([1, 2, 3]))
+        controller.abort('cancel')
+        return new Promise(() => {})
+      },
+    })
+    await expect(
+      fetchVerifiedBytes(
+        { url: 'https://example.test/model.tar.gz', sha256: 'nope', bytes: 100 },
+        {
+          fetch: async () => new Response(stream, { headers: { 'Content-Length': '100' } }),
+          openCache: async () => cache,
+          signal: controller.signal,
+          timeoutMs: 5_000,
+        },
+      ),
+    ).rejects.toMatchObject({ name: 'ModelDownloadAbortError', reason: 'cancel' })
+    expect(store.size).toBe(0)
+  })
+
+  it('times out a hanging download', async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      pull() {
+        return new Promise(() => {})
+      },
+    })
+    await expect(
+      fetchVerifiedBytes(
+        { url: 'https://example.test/model.tar.gz', sha256: 'nope', bytes: 4 },
+        {
+          fetch: async () => new Response(stream, { headers: { 'Content-Length': '4' } }),
+          openCache: async () => null,
+          timeoutMs: 30,
+        },
+      ),
+    ).rejects.toMatchObject({ name: 'ModelDownloadAbortError', reason: 'timeout' })
+  }, 3_000)
+})
+

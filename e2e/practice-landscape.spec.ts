@@ -48,10 +48,19 @@ async function openRepeat(page: Page): Promise<void> {
 test('sentence page keeps Aufnehmen visible beside Weiter at 844x390', async ({ page }) => {
   await page.setViewportSize({ width: 844, height: 390 })
   await openRepeat(page)
-  const record = page.getByRole('button', { name: 'Aufnehmen', exact: true })
-  const next = page.getByRole('button', { name: 'Weiter', exact: true })
+  const actions = page.getByTestId('speak-actions')
+  const record = actions.getByRole('button', { name: 'Aufnehmen', exact: true })
+  const next = actions.getByRole('button', { name: 'Weiter', exact: true })
   await expect(next).toBeVisible()
 
+  // Wait until the sticky row has settled. A late speech-offer reflow can
+  // briefly put the two buttons on different rows in short landscape.
+  await expect.poll(async () => {
+    const recordBox = await record.boundingBox()
+    const nextBox = await next.boundingBox()
+    if (!recordBox || !nextBox) return 999
+    return Math.abs(recordBox.y - nextBox.y)
+  }).toBeLessThan(8)
   const recordBox = await box(record)
   const nextBox = await box(next)
   const viewport = page.viewportSize()
@@ -63,7 +72,6 @@ test('sentence page keeps Aufnehmen visible beside Weiter at 844x390', async ({ 
     expect(item.x + item.width).toBeLessThanOrEqual(viewport!.width)
   }
   expect(overlaps(recordBox, nextBox)).toBe(false)
-  expect(Math.abs(recordBox.y - nextBox.y)).toBeLessThan(8)
   expect(recordBox.x + recordBox.width).toBeLessThanOrEqual(nextBox.x)
 
   const hit = await record.evaluate((element) => {

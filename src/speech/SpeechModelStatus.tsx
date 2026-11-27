@@ -5,6 +5,7 @@ import type { Dictionary } from '../i18n/dictionary'
 import {
   SPEECH_MODELS,
   acceptSpeechModel,
+  cancelSpeechModel,
   connectionSavesData,
   prepareSpeechModel,
   speechMegabytes,
@@ -34,6 +35,16 @@ export function SpeechModelStatus({ copy, lang, uiLang }: { copy: Dictionary; la
       <p className="voice-note" role="status" data-testid="speech-progress">
         {copy.speechProgress(name, state.progress)}
         <progress value={state.progress} max={100} />
+        <button
+          type="button"
+          data-testid="speech-cancel"
+          onClick={() => {
+            cancelSpeechModel(lang)
+            setOffer(true)
+          }}
+        >
+          {copy.speechCancel}
+        </button>
       </p>
     )
   }

@@ -1,7 +1,13 @@
-# STATUS.md – Stand 22.11.2026, Branch `docs/gui-prototyp`, Basis `main` nach #75 (f910f78)
+# STATUS.md – Stand 27.11.2026, app version 1.0.1, `main` after 1.0.0. Older notes below keep their original dates.
+
+## Addendum 27 Nov 2026: Travel Talk 1.0.1 (review follow-up L1–L6)
+Branch `fix/speech-1.0.1-review`, base `main` after 1.0.0. Ready for chief-of-staff review; do not merge before an OK on the exact head SHA. No cloud agent, no on-demand usage.
+- Version 1.0.1. Fixes the six low findings from the 1.0.0 review: worker without `'unsafe-eval'`, e2e coverage of the worker CSP with an active service worker, download cancel/timeout/size cap, AGENTS.md for the generated worker and model pins, vosk-browser notices in `public/models/NOTICE.txt`, and a corrected explanation of why eval was needed.
+- 1.0.0 is on `main`. Security review in `docs/SECURITY.md` (section 1.0.1).
+
 
 ## Addendum 27 Nov 2026: Travel Talk 1.0.0 (speech recognition)
-Branch `feat/speech-1.0`, base `main` `f6b61cb`. Draft PR, do not merge before the chief-of-staff review on the exact head SHA and the project owner's yes. No cloud agent, no on-demand usage.
+Branch `feat/speech-1.0`, base `main` `f6b61cb`. Merged as 1.0.0. No cloud agent, no on-demand usage.
 - Template from closed draft #43 (`refs/pull/43/head`, `1d6e5bb`) taken over onto current `main`, wired through the new hook `useRepeatScore`.
 - Vosk for de, en, pt-BR (pt with word grammar as in #42); five stars after `gui-konzept.md`. Vietnamese: Vosk with words as information only, at most 4 stars. sherpa-onnx was tested in the browser and deferred (needs cross-origin isolation, 512 MB wasm heap); details and measurements in `docs/analysis-speech-recognition.md`.
 - Version 1.0.0. Security review in `docs/SECURITY.md` (section 1.0.0).

@@ -1,6 +1,12 @@
 import { publicUrl } from '../public-url'
 import type { Lang } from '../../content/phrase'
-import { fetchVerifiedBytes, mayFetchModel, sha256Hex, type ModelCache } from './model-bytes'
+import {
+  fetchVerifiedBytes,
+  isCancelOrSwitchAbort,
+  mayFetchModel,
+  sha256Hex,
+  type ModelCache,
+} from './model-bytes'
 import { CONTENT_WER_CORRECT, CONTENT_WER_PARTIAL, confirmedPortuguese, portugueseContentRate, portugueseGrammar } from './text-match'
 import { VoskModel } from './vosk-client'
 
@@ -65,6 +71,7 @@ type Slot = {
   listeners: Set<Listener>
   loading: Promise<VoskModel | null> | null
   model: VoskModel | null
+  abort: AbortController | null
 }
 
 const slots = new Map<Lang, Slot>()
@@ -74,7 +81,7 @@ let active: Lang | null = null
 function slotFor(lang: Lang): Slot {
   const found = slots.get(lang)
   if (found) return found
-  const created: Slot = { state: { phase: 'idle', progress: 0 }, listeners: new Set(), loading: null, model: null }
+  const created: Slot = { state: { phase: 'idle', progress: 0 }, listeners: new Set(), loading: null, model: null, abort: null }
   slots.set(lang, created)
   return created
 }
@@ -155,6 +162,7 @@ export async function deleteSpeechModel(lang: Lang): Promise<void> {
   const cache = await browserCache()
   if (cache) await cache.drop(modelUrl(spec.file))
   accepted.delete(lang)
+  abortSlot(lang, 'cancel')
   if (active === lang) active = null
   release(lang)
 }
@@ -172,6 +180,11 @@ export async function speechModelCached(lang: Lang): Promise<boolean> {
   return false
 }
 
+function abortSlot(lang: Lang, reason: 'cancel' | 'switch'): void {
+  const slot = slots.get(lang)
+  slot?.abort?.abort(reason)
+}
+
 function release(lang: Lang): void {
   const slot = slots.get(lang)
   if (!slot) return
@@ -182,25 +195,43 @@ function release(lang: Lang): void {
   }
   slot.model = null
   slot.loading = null
+  slot.abort = null
   slot.state = { phase: 'idle', progress: 0 }
+}
+
+/** Stops an in-flight download and returns to the offer. Does not fetch. */
+export function cancelSpeechModel(lang: Lang): void {
+  accepted.delete(lang)
+  abortSlot(lang, 'cancel')
+  if (active === lang) active = null
+  release(lang)
+  publish(lang, { phase: 'idle', progress: 0 })
 }
 
 async function loadModel(lang: Lang): Promise<VoskModel | null> {
   const spec = SPEECH_MODELS[lang]
   const url = modelUrl(spec.file)
-  const bytes = await fetchVerifiedBytes(
-    { url, sha256: spec.sha256, bytes: spec.bytes },
-    {
-      fetch: (input, init) => fetch(input, init),
-      openCache: browserCache,
-      onProgress: (progress) => {
-        if (active === lang) publish(lang, { phase: 'loading', progress })
+  const slot = slotFor(lang)
+  const controller = new AbortController()
+  slot.abort = controller
+  try {
+    const bytes = await fetchVerifiedBytes(
+      { url, sha256: spec.sha256, bytes: spec.bytes },
+      {
+        fetch: (input, init) => fetch(input, init),
+        openCache: browserCache,
+        signal: controller.signal,
+        onProgress: (progress) => {
+          if (active === lang) publish(lang, { phase: 'loading', progress })
+        },
       },
-    },
-  )
-  if (!bytes || active !== lang) return null
-  publish(lang, { phase: 'loading', progress: 100 })
-  return VoskModel.open(url, bytes)
+    )
+    if (!bytes || active !== lang) return null
+    publish(lang, { phase: 'loading', progress: 100 })
+    return VoskModel.open(url, bytes)
+  } finally {
+    if (slot.abort === controller) slot.abort = null
+  }
 }
 
 /**
@@ -209,7 +240,10 @@ async function loadModel(lang: Lang): Promise<VoskModel | null> {
  */
 export function ensureSpeechModel(lang: Lang): Promise<VoskModel | null> {
   if (!speechModelsInThisRun()) return Promise.resolve(null)
-  if (active && active !== lang) release(active)
+  if (active && active !== lang) {
+    abortSlot(active, 'switch')
+    release(active)
+  }
   active = lang
   if (!accepted.has(lang)) return Promise.resolve(null)
   const slot = slotFor(lang)
@@ -226,7 +260,8 @@ export function ensureSpeechModel(lang: Lang): Promise<VoskModel | null> {
         publish(lang, next ? { phase: 'ready', progress: 100 } : { phase: 'failed', progress: 0 })
         return next
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (isCancelOrSwitchAbort(error)) return null
         if (slot.loading === pending && active === lang) publish(lang, { phase: 'failed', progress: 0 })
         return null
       })

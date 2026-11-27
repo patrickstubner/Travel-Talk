@@ -10,8 +10,8 @@ describe('content security policy', () => {
     expect(PAGE_CSP).not.toContain('wasm-unsafe-eval')
   })
 
-  it('allows eval only on the worker response and drops old script cache entries', () => {
-    expect(VOSK_WORKER_CSP).toContain("'unsafe-eval'")
+  it('allows WASM eval only on the worker response and drops old script cache entries', () => {
+    expect(VOSK_WORKER_CSP).not.toContain("'unsafe-eval'")
     expect(VOSK_WORKER_CSP).toContain("'wasm-unsafe-eval'")
     expect(VOSK_WORKER_CSP).toContain("connect-src 'none'")
     const prelude = voskServiceWorkerPrelude()

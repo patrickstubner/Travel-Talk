@@ -28,7 +28,7 @@ export const PAGE_CSP = [
  */
 export const VOSK_WORKER_CSP = [
   "default-src 'none'",
-  "script-src 'unsafe-eval' 'wasm-unsafe-eval'",
+  "script-src 'wasm-unsafe-eval'",
   "worker-src 'none'",
   "connect-src 'none'",
   "object-src 'none'",
